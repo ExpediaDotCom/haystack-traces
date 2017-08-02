@@ -32,7 +32,7 @@ object SpanStitcher extends MetricsSupport {
   def main(args: Array[String]): Unit = {
     startJmxReporter()
 
-    kstreams = new StreamTopology(kafkaStreamsConfig).start()
+    kstreams = new StreamTopology(kafkaConfig, spansConfig).start()
     Runtime.getRuntime.addShutdownHook(new ShutdownHookThread)
   }
 

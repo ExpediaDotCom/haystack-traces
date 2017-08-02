@@ -24,41 +24,51 @@ import scala.collection.JavaConversions._
 
 object ConfigurationLoader {
 
+  private val ENV_NAME_PREFIX = "HAYSTACK_"
+
   /**
     * Load and return the configuration
     * Env variables take the highest priority, followed by overrides config file and the last being base.conf
     */
   lazy val loadAppConfig: Config = {
 
-    val baseConfigPath = ConfigFactory.load("config/base.conf")
+    val baseConfig = ConfigFactory.load("config/base.conf")
 
     sys.env.get("OVERRIDES_CONFIG_PATH") match {
-      case Some(path) => ConfigFactory.load(path).withFallback(baseConfigPath)
-      case _ =>
-        val baseConfig = ConfigFactory.load(baseConfigPath)
-        overrideConfigWithEnvVars(baseConfig, "HAYSTACK")
+      case Some(path) => ConfigFactory.load(path).withFallback(baseConfig)
+      case _ => overrideConfigWithEnvVars(baseConfig)
     }
   }
 
 
   /**
     * @param config configuration object
-    * @param envPrefixName search the environment variables with this prefix name and config key
-    * @return new config with config' values overridden by environment variables(if present)
+    * @return new config object with configuration values overridden by haystack specific environment variables
     */
-  private def overrideConfigWithEnvVars(config: Config, envPrefixName: String): Config = {
+  private def overrideConfigWithEnvVars(config: Config): Config = {
     val result = new util.HashMap[String, Object]()
 
-    config.entrySet().foreach(e => {
-      val configKey = e.getKey
-      val envName = envPrefixName + "_" + configKey.toUpperCase.replace(".", "_")
+    config.entrySet().foreach(e => result.put(e.getKey, e.getValue.unwrapped()))
 
-      sys.env.get(envName) match {
-        case Some(envValue) => result.put(configKey, envValue)
-        case _ => result.put(configKey, e.getValue.unwrapped())
+    sys.env
+      .filter {
+        case (propName, _) => isHaystackProperty(propName)
       }
-    })
+      .map {
+        case (propName, propValue) => (transformPropertyName(propName), propValue)
+      }
+      .foreach {
+          case (propName, propValue) => result.put(propName, propValue)
+      }
 
     ConfigFactory.parseMap(result)
+  }
+
+  private def isHaystackProperty(propName: String) = propName.startsWith(ENV_NAME_PREFIX)
+  private def transformPropertyName(propName: String) = {
+    propName
+      .replaceFirst(ENV_NAME_PREFIX, "")
+      .toLowerCase
+      .replace("_", ".")
   }
 }

@@ -14,12 +14,10 @@
  *     limitations under the License.
  *
  */
-package com.expedia.www.haystack.span.stitcher.transformers
+package com.expedia.www.haystack.span.stitcher.config.entities
 
-import com.expedia.www.haystack.span.stitcher.config.KafkaStreamsConfiguration
-import com.expedia.open.tracing.Span
-import org.apache.kafka.streams.processor.{Processor, ProcessorSupplier}
-
-class SpanStitchProcessSupplier(config: KafkaStreamsConfiguration) extends ProcessorSupplier[Array[Byte], Span] {
-  override def get(): Processor[Array[Byte], Span] = new SpanStitchProcessor(config)
-}
+/**
+  * @param pollIntervalInMillis poll interval to gather the stitched-spans that are ready to emit out to sink
+  * @param stitchWindowInMillis time window for which unique traceId will be hold to gather its child spans
+  */
+case class SpanConfiguration(pollIntervalInMillis: Long, stitchWindowInMillis: Long)

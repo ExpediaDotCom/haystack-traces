@@ -16,59 +16,72 @@
  */
 package com.expedia.www.haystack.span.stitcher.config
 
+import java.util.Properties
+
+import com.expedia.www.haystack.span.stitcher.config.entities.{KafkaConfiguration, SpanConfiguration}
+import com.typesafe.config.Config
+import org.apache.kafka.streams.StreamsConfig
+import org.apache.kafka.streams.StreamsConfig._
 import org.apache.kafka.streams.processor.TopologyBuilder.AutoOffsetReset
 
-case class ProducerKafkaConfiguration(topic: String,
-                                      maxBufferSize: Long,
-                                      batchSize: Long,
-                                      maxBlockMillis: Long,
-                                      retries: Int)
-
-case class ConsumerKafkaConfiguration(topic: String)
-
-case class KafkaStreamsConfiguration(applicationId: String,
-                                     bootstrapServers: String,
-                                     numStreamThreads: Long,
-                                     metadataMaxAgeMs: Long,
-                                     reconnectBackOffMillis: Long,
-                                     retryBackoffMillis: Long,
-                                     commitIntervalMillis: Long,
-                                     offsetResetPolicy: AutoOffsetReset,
-                                     spanRecordingWindowMillis: Long,
-                                     producerConfig: ProducerKafkaConfiguration,
-                                     consumerConfig: ConsumerKafkaConfiguration)
-
+import scala.collection.JavaConversions._
 
 object ProjectConfiguration {
-  import ConfigurationLoader._
+  private val config = ConfigurationLoader.loadAppConfig
 
-  private val config = loadAppConfig
+  /**
+    * span related configuration like window interval for which spans will be collector for stitch operation
+    * @return a span config object
+    */
+  def spansConfig: SpanConfiguration = {
+    val stitchConfig = config.getConfig("span.stitch")
+    SpanConfiguration(
+      stitchConfig.getLong("poll.ms"),
+      stitchConfig.getLong("window.ms"))
+  }
 
-  def kafkaStreamsConfig: KafkaStreamsConfiguration = {
+  /**
+    *
+    * @return streams configuration object
+    */
+  def kafkaConfig: KafkaConfiguration = {
+
+    // verify if the applicationId and bootstrap server config are non empty
+    def verifyRequiredProps(props: Properties): Unit = {
+      require(props.getProperty(StreamsConfig.APPLICATION_ID_CONFIG).nonEmpty)
+      require(props.getProperty(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG).nonEmpty)
+    }
+
+    def addProps(config: Config, props: Properties, prefix: (String) => String = identity): Unit = {
+      config.entrySet().foreach(kv => {
+        val propKeyName = prefix(kv.getKey)
+        props.setProperty(propKeyName, kv.getValue.unwrapped().toString)
+      })
+    }
+
     val kafka = config.getConfig("kafka")
+    val producerConfig = kafka.getConfig("producer")
+    val consumerConfig = kafka.getConfig("consumer")
+    val streamsConfig = kafka.getConfig("streams")
 
-    val producer = kafka.getConfig("producer")
-    val producerConfig = ProducerKafkaConfiguration(
-      topic = producer.getString("topic"),
-      maxBufferSize = producer.getLong("buffer.memory"),
-      batchSize = producer.getLong("batch.size"),
-      maxBlockMillis = producer.getLong("max.block.ms"),
-      retries = producer.getInt("retries"))
+    val props = new Properties
 
-    val consumer = kafka.getConfig("consumer")
-    val consumerConfig = ConsumerKafkaConfiguration(topic = consumer.getString("topic"))
+    // add stream specific properties
+    addProps(streamsConfig, props)
 
-    KafkaStreamsConfiguration(
-      applicationId = kafka.getString("application.id"),
-      bootstrapServers = kafka.getString("bootstrap.servers"),
-      numStreamThreads = kafka.getLong("num.stream.threads"),
-      metadataMaxAgeMs = kafka.getLong("metadata.max.age.ms"),
-      reconnectBackOffMillis = kafka.getLong("reconnect.backoff.ms"),
-      retryBackoffMillis = kafka.getLong("retry.backoff.ms"),
-      commitIntervalMillis = kafka.getLong("commit.interval.ms"),
-      offsetResetPolicy = AutoOffsetReset.valueOf(kafka.getString("auto.offset.reset").toUpperCase),
-      spanRecordingWindowMillis = kafka.getLong("span.recording.window.ms"),
-      producerConfig = producerConfig,
-      consumerConfig = consumerConfig)
+    // producer specific properties
+    addProps(producerConfig, props, (k) => producerPrefix(k))
+
+    // consumer specific properties
+    addProps(consumerConfig, props, (k) => consumerPrefix(k))
+
+    // validate props
+    verifyRequiredProps(props)
+
+    KafkaConfiguration(new StreamsConfig(props),
+      produceTopic = producerConfig.getString("topic"),
+      consumeTopic = consumerConfig.getString("topic"),
+      if(streamsConfig.hasPath("auto.offset.reset"))
+        AutoOffsetReset.valueOf(streamsConfig.getString("auto.offset.reset").toUpperCase) else AutoOffsetReset.LATEST)
   }
 }

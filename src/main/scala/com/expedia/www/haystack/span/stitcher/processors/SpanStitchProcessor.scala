@@ -14,22 +14,31 @@
  *     limitations under the License.
  *
  */
-package com.expedia.www.haystack.span.stitcher.transformers
+package com.expedia.www.haystack.span.stitcher.processors
 
-import com.expedia.www.haystack.span.stitcher.config.KafkaStreamsConfiguration
-import org.apache.kafka.streams.processor.{Processor, ProcessorContext}
 import com.expedia.open.tracing.Span
+import com.expedia.www.haystack.span.stitcher.config.entities.SpanConfiguration
 import com.expedia.www.haystack.span.stitcher.metrics.MetricsSupport
+import org.apache.kafka.streams.processor.{Processor, ProcessorContext}
 
-class SpanStitchProcessor(config: KafkaStreamsConfiguration) extends Processor[Array[Byte], Span] with MetricsSupport {
+class SpanStitchProcessor(config: SpanConfiguration) extends Processor[Array[Byte], Span] with MetricsSupport {
 
+  private var context: ProcessorContext = _
+
+  /**
+    * initializes the span stitch processor
+    * @param context processor context object
+    */
   override def init(context: ProcessorContext): Unit = {
-    context.getStateStore("stitched-span-store")
+    this.context = context
+    this.context.schedule(config.pollIntervalInMillis)
   }
 
   override def punctuate(timestamp: Long): Unit = ???
 
-  override def process(key: Array[Byte], value: Span): Unit = ???
+  override def process(key: Array[Byte], value: Span): Unit = {
+    value.getStartTime
+  }
 
   override def close(): Unit = ???
 }

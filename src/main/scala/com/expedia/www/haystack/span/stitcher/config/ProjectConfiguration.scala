@@ -37,7 +37,8 @@ object ProjectConfiguration {
     val stitchConfig = config.getConfig("span.stitch")
     SpanConfiguration(
       stitchConfig.getLong("poll.ms"),
-      stitchConfig.getLong("window.ms"))
+      stitchConfig.getLong("window.ms"),
+      stitchConfig.getBoolean("logging.enabled"))
   }
 
   /**

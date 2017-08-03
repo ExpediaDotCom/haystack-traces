@@ -21,7 +21,7 @@ import java.util
 import org.apache.kafka.common.serialization.{Deserializer, Serde, Serializer}
 import com.google.protobuf.GeneratedMessageV3
 
-abstract class Serdes[T <: GeneratedMessageV3] extends Serde[T] {
+abstract class AbstractSerde[T <: GeneratedMessageV3] extends Serde[T] {
 
   def performDeserialize(data: Array[Byte]): T
 

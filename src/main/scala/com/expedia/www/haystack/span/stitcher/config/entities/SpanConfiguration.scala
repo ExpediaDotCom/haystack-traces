@@ -17,7 +17,8 @@
 package com.expedia.www.haystack.span.stitcher.config.entities
 
 /**
-  * @param pollIntervalInMillis poll interval to gather the stitched-spans that are ready to emit out to sink
-  * @param stitchWindowInMillis time window for which unique traceId will be hold to gather its child spans
+  * @param pollIntervalMillis poll interval to gather the stitched-spans that are ready to emit out to sink
+  * @param stitchWindowMillis time window for which unique traceId will be hold to gather its child spans
+  * @param loggingEnabled enable the logging for resiliency
   */
-case class SpanConfiguration(pollIntervalInMillis: Long, stitchWindowInMillis: Long)
+case class SpanConfiguration(pollIntervalMillis: Long, stitchWindowMillis: Long, loggingEnabled: Boolean)

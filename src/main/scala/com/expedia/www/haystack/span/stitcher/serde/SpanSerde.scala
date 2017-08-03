@@ -17,8 +17,11 @@
 package com.expedia.www.haystack.span.stitcher.serde
 
 import com.expedia.open.tracing.Span
+import com.expedia.www.haystack.span.stitcher.metrics.MetricsSupport
 
-object SpanSerde extends Serdes[Span] {
+object SpanSerde extends AbstractSerde[Span] with MetricsSupport {
+
+  private val spanDeserMeter = metricRegistry.meter("span.deser.failure")
 
   /**
     * converts the binary protobuf bytes into Span object
@@ -31,6 +34,7 @@ object SpanSerde extends Serdes[Span] {
     } catch {
       case _: Exception =>
         /* may be log and add metric */
+        spanDeserMeter.mark()
         null
     }
   }

@@ -14,24 +14,13 @@
  *     limitations under the License.
  *
  */
-package com.expedia.www.haystack.span.stitcher
+package com.expedia.www.haystack.span.stitcher.store.traits
 
-import com.codahale.metrics.JmxReporter
-import com.expedia.www.haystack.span.stitcher.config.ProjectConfiguration
-import com.expedia.www.haystack.span.stitcher.metrics.MetricsSupport
+import com.expedia.www.haystack.span.stitcher.store.data.model.StitchedSpanWithMetadata
 
-object SpanStitcher extends MetricsSupport {
-  import ProjectConfiguration._
-
-  private var jmxReporter: JmxReporter = _
-
-  def main(args: Array[String]): Unit = {
-    startJmxReporter()
-    new StreamTopology(kafkaConfig, spansConfig).start()
-  }
-
-  private def startJmxReporter() = {
-    jmxReporter = JmxReporter.forRegistry(metricRegistry).build()
-    jmxReporter.start()
-  }
+/**
+  * the listener is called when the eldest stitched span is removed from the cache
+  */
+trait EldestStitchedSpanRemovalListener {
+  def onRemove(key: Array[Byte], value: StitchedSpanWithMetadata): Unit
 }

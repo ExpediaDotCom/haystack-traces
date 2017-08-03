@@ -11,7 +11,6 @@
     <properties>
         <project.jdk.version>1.8</project.jdk.version>
 
-        <jackson.version>2.6.6</jackson.version>
         <kafka-version>0.10.2.1</kafka-version>
 
         <logback.version>1.2.3</logback.version>
@@ -19,7 +18,7 @@
 
         <scala.major.version>2</scala.major.version>
         <scala.minor.version>11</scala.minor.version>
-        <scala.tiny.version>7</scala.tiny.version>
+        <scala.tiny.version>8</scala.tiny.version>
         <scala.major.minor.version>${scala.major.version}.${scala.minor.version}</scala.major.minor.version>
         <scala-library.version>${scala.major.version}.${scala.minor.version}.${scala.tiny.version}</scala-library.version>
 
@@ -98,29 +97,11 @@
             <version>${kafka-version}</version>
         </dependency>
 
-        <dependency>
-            <groupId>com.fasterxml.jackson.module</groupId>
-            <artifactId>jackson-module-scala_${scala.major.minor.version}</artifactId>
-            <version>${jackson.version}</version>
-        </dependency>
-
         <!-- Test Dependencies  -->
         <dependency>
             <groupId>org.scalatest</groupId>
             <artifactId>scalatest_${scala.major.minor.version}</artifactId>
             <version>${scalatest.version}</version>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.testng</groupId>
-            <artifactId>testng</artifactId>
-            <version>${testng.version}</version>
-            <exclusions>
-                <exclusion>
-                    <artifactId>junit</artifactId>
-                    <groupId>junit</groupId>
-                </exclusion>
-            </exclusions>
             <scope>test</scope>
         </dependency>
         <dependency>

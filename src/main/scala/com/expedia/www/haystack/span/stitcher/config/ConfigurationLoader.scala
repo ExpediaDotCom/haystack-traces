@@ -16,8 +16,6 @@
  */
 package com.expedia.www.haystack.span.stitcher.config
 
-import java.util
-
 import com.typesafe.config.{Config, ConfigFactory}
 
 import scala.collection.JavaConversions._
@@ -28,7 +26,8 @@ object ConfigurationLoader {
 
   /**
     * Load and return the configuration
-    * Env variables take the highest priority, followed by overrides config file and the last being base.conf
+    * if overrides_config_path env variable exists, then we load that config file and use base.conf as fallback,
+    * else we load the config from env variables(prefixed with haystack) and use base.conf as fallback
     */
   lazy val loadAppConfig: Config = {
 
@@ -36,39 +35,28 @@ object ConfigurationLoader {
 
     sys.env.get("OVERRIDES_CONFIG_PATH") match {
       case Some(path) => ConfigFactory.load(path).withFallback(baseConfig)
-      case _ => overrideConfigWithEnvVars(baseConfig)
+      case _ => loadFromEnvVars().withFallback(baseConfig)
     }
   }
 
-
   /**
-    * @param config configuration object
-    * @return new config object with configuration values overridden by haystack specific environment variables
+    * @return new config object with haystack specific environment variables
     */
-  private def overrideConfigWithEnvVars(config: Config): Config = {
-    val result = new util.HashMap[String, Object]()
+  private def loadFromEnvVars(): Config = {
+    val envMap = sys.env.filter {
+      case (envName, _) => isHaystackEnvVar(envName)
+    } map {
+      case (envName, envValue) => (transformEnvVarName(envName), envValue)
+    }
 
-    config.entrySet().foreach(e => result.put(e.getKey, e.getValue.unwrapped()))
-
-    sys.env
-      .filter {
-        case (propName, _) => isHaystackProperty(propName)
-      }
-      .map {
-        case (propName, propValue) => (transformPropertyName(propName), propValue)
-      }
-      .foreach {
-          case (propName, propValue) => result.put(propName, propValue)
-      }
-
-    ConfigFactory.parseMap(result)
+    ConfigFactory.parseMap(envMap)
   }
 
-  private def isHaystackProperty(propName: String) = propName.startsWith(ENV_NAME_PREFIX)
-  private def transformPropertyName(propName: String) = {
-    propName
-      .replaceFirst(ENV_NAME_PREFIX, "")
-      .toLowerCase
-      .replace("_", ".")
+  private def isHaystackEnvVar(env: String): Boolean = env.startsWith(ENV_NAME_PREFIX)
+
+  // converts the env variable to HOCON format
+  // for e.g. env HAYSTACK_KAFKA_STREAMS_NUM_STREAM_THREADS to kafka.streams.num.stream.threads
+  private def transformEnvVarName(env: String): String = {
+    env.replaceFirst(ENV_NAME_PREFIX, "").toLowerCase.replace("_", ".")
   }
 }

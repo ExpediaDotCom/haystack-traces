@@ -19,7 +19,7 @@ package com.expedia.www.haystack.span.stitcher.metrics
 import com.codahale.metrics.MetricRegistry
 
 trait MetricsSupport {
-  implicit val metricRegistry: MetricRegistry = MetricsRegistries.metricRegistry
+  val metricRegistry: MetricRegistry = MetricsRegistries.metricRegistry
 }
 
 object MetricsRegistries {

@@ -18,8 +18,23 @@ package com.expedia.www.haystack.span.stitcher.processors
 
 import com.expedia.open.tracing.Span
 import com.expedia.www.haystack.span.stitcher.config.entities.SpanConfiguration
-import org.apache.kafka.streams.processor.{Processor, ProcessorSupplier}
+import com.expedia.www.haystack.span.stitcher.metrics.MetricsSupport
 
-class SpanStitchProcessSupplier(stitchConfig: SpanConfiguration) extends ProcessorSupplier[Array[Byte], Span] {
-  override def get(): Processor[Array[Byte], Span] = new MeteredSpanStitchProcessor(stitchConfig)
+class MeteredSpanStitchProcessor(stitchConfig: SpanConfiguration) extends SpanStitchProcessor(stitchConfig)
+  with MetricsSupport {
+
+  private val punctuateTimer = metricRegistry.timer("punctuate")
+  private val stitchProcessTimer = metricRegistry.timer("stitch.process")
+
+  override def punctuate(timestamp: Long): Unit = {
+    val timer = punctuateTimer.time()
+    super.punctuate(timestamp)
+    timer.stop()
+  }
+
+  override def process(key: Array[Byte], span: Span): Unit = {
+    val timer = stitchProcessTimer.time()
+    super.process(key, span)
+    timer.stop()
+  }
 }

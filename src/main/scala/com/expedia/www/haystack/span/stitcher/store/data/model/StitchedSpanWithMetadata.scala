@@ -9,17 +9,14 @@
  *
  *     Unless required by applicable law or agreed to in writing, software
  *     distributed under the License is distributed on an "AS IS" BASIS,
- *     WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *     WITHOUT WARRANTIES OR CONDITIONS OF ASpanGroupWithTimestampNY KIND, either express or implied.
  *     See the License for the specific language governing permissions and
  *     limitations under the License.
  *
  */
-package com.expedia.www.haystack.span.stitcher.processors
+package com.expedia.www.haystack.span.stitcher.store.data.model
 
-import com.expedia.open.tracing.Span
-import com.expedia.www.haystack.span.stitcher.config.entities.SpanConfiguration
-import org.apache.kafka.streams.processor.{Processor, ProcessorSupplier}
+import com.expedia.open.tracing.stitch.StitchedSpan
 
-class SpanStitchProcessSupplier(stitchConfig: SpanConfiguration) extends ProcessorSupplier[Array[Byte], Span] {
-  override def get(): Processor[Array[Byte], Span] = new MeteredSpanStitchProcessor(stitchConfig)
-}
+case class StitchedSpanWithMetadata(builder: StitchedSpan.Builder, firstRecordTimestamp: Long = System.currentTimeMillis())
+

@@ -47,9 +47,10 @@ class StitchedSpanMemStoreImpl(val name: String,
     override protected def removeEldestEntry(eldest: util.Map.Entry[Array[Byte], StitchedSpanWithMetadata]): Boolean = {
       if (size > maxEntries) {
         listeners.foreach(listener => listener.onRemove(eldest.getKey, eldest.getValue))
-        return true
+        true
+      } else {
+        false
       }
-      false
     }
   }
 
@@ -67,8 +68,12 @@ class StitchedSpanMemStoreImpl(val name: String,
     // register the store
     context.register(root, true, new StateRestoreCallback() {
       override def restore(key: Array[Byte], value: Array[Byte]): Unit = { // check value for null, to avoid  deserialization error.
-        if (value == null) restoreState(serdes.keyFrom(key), null)
-        else restoreState(serdes.keyFrom(key), serdes.valueFrom(value))
+        if (value == null) {
+          restoreState(serdes.keyFrom(key), null)
+        }
+        else {
+          restoreState(serdes.keyFrom(key), serdes.valueFrom(value))
+        }
       }
     })
 

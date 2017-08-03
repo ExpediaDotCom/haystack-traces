@@ -21,7 +21,6 @@ import java.util.Properties
 import com.expedia.www.haystack.span.stitcher.config.entities.{KafkaConfiguration, SpanConfiguration}
 import com.typesafe.config.Config
 import org.apache.kafka.streams.StreamsConfig
-import org.apache.kafka.streams.StreamsConfig._
 import org.apache.kafka.streams.processor.TopologyBuilder.AutoOffsetReset
 
 import scala.collection.JavaConversions._
@@ -71,10 +70,10 @@ object ProjectConfiguration {
     addProps(streamsConfig, props)
 
     // producer specific properties
-    addProps(producerConfig, props, (k) => producerPrefix(k))
+    addProps(producerConfig, props, (k) => StreamsConfig.producerPrefix(k))
 
     // consumer specific properties
-    addProps(consumerConfig, props, (k) => consumerPrefix(k))
+    addProps(consumerConfig, props, (k) => StreamsConfig.consumerPrefix(k))
 
     // validate props
     verifyRequiredProps(props)

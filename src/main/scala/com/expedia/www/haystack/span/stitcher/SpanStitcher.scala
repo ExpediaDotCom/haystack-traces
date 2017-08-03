@@ -17,11 +17,10 @@
 package com.expedia.www.haystack.span.stitcher
 
 import com.codahale.metrics.JmxReporter
-import com.expedia.www.haystack.span.stitcher.config.ProjectConfiguration
+import com.expedia.www.haystack.span.stitcher.config.ProjectConfiguration._
 import com.expedia.www.haystack.span.stitcher.metrics.MetricsSupport
 
 object SpanStitcher extends MetricsSupport {
-  import ProjectConfiguration._
 
   private var jmxReporter: JmxReporter = _
 

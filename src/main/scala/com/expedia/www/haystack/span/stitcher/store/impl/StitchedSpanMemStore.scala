@@ -20,24 +20,23 @@ import java.util
 
 import com.expedia.open.tracing.stitch.StitchedSpan
 import com.expedia.www.haystack.span.stitcher.serde.StitchedSpanSerde
-import com.expedia.www.haystack.span.stitcher.store.StitchedSpanMemStore
 import com.expedia.www.haystack.span.stitcher.store.data.model.StitchedSpanWithMetadata
-import com.expedia.www.haystack.span.stitcher.store.traits.EldestStitchedSpanRemovalListener
+import com.expedia.www.haystack.span.stitcher.store.traits.{EldestStitchedSpanRemovalListener, StitchedSpanKVStore}
 import org.apache.kafka.common.serialization.Serdes
 import org.apache.kafka.streams.KeyValue
 import org.apache.kafka.streams.processor.internals.ProcessorStateManager
 import org.apache.kafka.streams.processor.{ProcessorContext, StateRestoreCallback, StateStore}
-import org.apache.kafka.streams.state.StateSerdes
+import org.apache.kafka.streams.state.{KeyValueIterator, StateSerdes}
 
 import scala.collection.JavaConversions._
 import scala.collection.mutable
 
-class StitchedSpanMemStoreImpl(val name: String,
-                               maxEntries: Int) extends StitchedSpanMemStore {
+class StitchedSpanMemStore(val name: String, maxEntries: Int) extends StitchedSpanKVStore {
+
+  @volatile protected var open = false
+  protected var serdes: StateSerdes[Array[Byte], StitchedSpan] = _
 
   private val listeners: mutable.ListBuffer[EldestStitchedSpanRemovalListener] = mutable.ListBuffer()
-
-  private var serdes: StateSerdes[Array[Byte], StitchedSpan] = _
 
   // initialize the restored store
   private var restoredState = new util.HashMap[Array[Byte], StitchedSpan]()
@@ -135,5 +134,21 @@ class StitchedSpanMemStoreImpl(val name: String,
     if (!this.restoredState.isEmpty) {
       this.restoredState = new util.HashMap[Array[Byte], StitchedSpan]()
     }
+  }
+
+  override def flush(): Unit = ()
+
+  override def persistent(): Boolean = false
+
+  override def close(): Unit = open = false
+
+  override def isOpen: Boolean = open
+
+  override def range(from: Array[Byte], to: Array[Byte]): KeyValueIterator[Array[Byte], StitchedSpanWithMetadata] = {
+    throw new UnsupportedOperationException("StitchedSpanMemStore does not support range() function.")
+  }
+
+  override def all(): KeyValueIterator[Array[Byte], StitchedSpanWithMetadata] = {
+    throw new UnsupportedOperationException("StitchedSpanMemStore does not support all() function.")
   }
 }

@@ -20,73 +20,69 @@ package com.expedia.www.haystack.span.stitcher.store.impl
 import java.util
 
 import com.expedia.open.tracing.stitch.StitchedSpan
-import com.expedia.www.haystack.span.stitcher.serde.StitchedSpanSerde
+import com.expedia.www.haystack.span.stitcher.store.StitchedSpanStoreChangeLogger
 import com.expedia.www.haystack.span.stitcher.store.data.model.StitchedSpanWithMetadata
 import com.expedia.www.haystack.span.stitcher.store.traits.EldestStitchedSpanRemovalListener
-import com.expedia.www.haystack.span.stitcher.store.{StitchedSpanMemStore, StitchedSpanStoreChangeLogger}
-import org.apache.kafka.common.serialization.Serdes
 import org.apache.kafka.streams.KeyValue
 import org.apache.kafka.streams.processor.internals.ProcessorStateManager
 import org.apache.kafka.streams.processor.{ProcessorContext, StateStore}
-import org.apache.kafka.streams.state.StateSerdes
 
 import scala.collection.JavaConversions._
 
-class StitchedSpanLoggingEnabledMemStoreImpl(val name: String, innerStore: StitchedSpanMemStore) extends StitchedSpanMemStore {
+class StitchedSpanLoggingEnabledMemStore(val storeName: String, maxEntries: Int) extends StitchedSpanMemStore(storeName, maxEntries) {
 
   private var changeLogger: StitchedSpanStoreChangeLogger = _
 
   override def delete(key: Array[Byte]): StitchedSpanWithMetadata = {
-    val result = this.innerStore.delete(key)
+    val result = super.delete(key)
     removed(key)
     result
   }
 
   override def put(key: Array[Byte], value: StitchedSpanWithMetadata): Unit = {
-    this.innerStore.put(key, value)
+    super.put(key, value)
     changeLogger.logChange(key, value.builder.build())
   }
 
   override def putAll(entries: util.List[KeyValue[Array[Byte], StitchedSpanWithMetadata]]): Unit = {
-    this.innerStore.putAll(entries)
+    super.putAll(entries)
     entries.foreach {
       entry => changeLogger.logChange(entry.key, entry.value.builder.build())
     }
   }
 
   override def putIfAbsent(key: Array[Byte], value: StitchedSpanWithMetadata): StitchedSpanWithMetadata = {
-    val originalValue = this.innerStore.putIfAbsent(key, value)
+    val originalValue = super.putIfAbsent(key, value)
     if (originalValue == null) changeLogger.logChange(key, value.builder.build())
     originalValue
   }
 
   override def getAndRemoveSpansInWindow(stitchWindowMillis: Long): util.Map[Array[Byte], StitchedSpanWithMetadata] = {
-    val result = this.innerStore.getAndRemoveSpansInWindow(stitchWindowMillis)
+    val result = super.getAndRemoveSpansInWindow(stitchWindowMillis)
     result.keySet().foreach(removed)
     result
   }
 
-  override def get(key: Array[Byte]): StitchedSpanWithMetadata = innerStore.get(key)
+  override def get(key: Array[Byte]): StitchedSpanWithMetadata = super.get(key)
 
-  override def approximateNumEntries(): Long = innerStore.approximateNumEntries()
+  override def approximateNumEntries(): Long = super.approximateNumEntries()
 
   override def init(context: ProcessorContext, root: StateStore): Unit = {
-    this.innerStore.init(context, root)
+    super.init(context, root)
 
     // construct the serde for the state manager
     val changeLogTopic = ProcessorStateManager.storeChangelogTopic(context.applicationId, name)
-    val serdes= new StateSerdes[Array[Byte], StitchedSpan](changeLogTopic, Serdes.ByteArray(), StitchedSpanSerde)
 
     this.changeLogger = new StitchedSpanStoreChangeLogger(name, context, serdes)
 
-    innerStore.addRemovalListener(new EldestStitchedSpanRemovalListener {
+    super.addRemovalListener(new EldestStitchedSpanRemovalListener {
       override def onRemove(key: Array[Byte], value: StitchedSpanWithMetadata): Unit = removed(key)
     })
 
     open = true
   }
 
-  override def addRemovalListener(l: EldestStitchedSpanRemovalListener): Unit = this.innerStore.addRemovalListener(l)
+    override def addRemovalListener(l: EldestStitchedSpanRemovalListener): Unit = super.addRemovalListener(l)
 
   /**
     * Called when the underlying {@link #innerStore} {@link StitchedSpanMemStore} removes an entry in response to a call from this
@@ -99,8 +95,8 @@ class StitchedSpanLoggingEnabledMemStoreImpl(val name: String, innerStore: Stitc
   }
 
   override def getRestoredStateIterator(): util.Iterator[(Array[Byte], StitchedSpan)] = {
-    this.innerStore.getRestoredStateIterator()
+    super.getRestoredStateIterator()
   }
 
-  override def clearRestoredState(): Unit = this.innerStore.clearRestoredState()
+  override def clearRestoredState(): Unit = super.clearRestoredState()
 }

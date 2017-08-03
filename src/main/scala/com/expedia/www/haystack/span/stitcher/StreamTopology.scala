@@ -19,7 +19,7 @@ package com.expedia.www.haystack.span.stitcher
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 
-import com.expedia.www.haystack.span.stitcher.config.entities.{KafkaConfiguration, SpanConfiguration}
+import com.expedia.www.haystack.span.stitcher.config.entities.{KafkaConfiguration, StitchConfiguration}
 import com.expedia.www.haystack.span.stitcher.processors.SpanStitchProcessSupplier
 import com.expedia.www.haystack.span.stitcher.serde.{SpanSerde, StitchedSpanSerde}
 import com.expedia.www.haystack.span.stitcher.store.StitchedSpanMemStoreSupplier
@@ -29,7 +29,7 @@ import org.apache.kafka.streams.KafkaStreams.StateListener
 import org.apache.kafka.streams.processor.TopologyBuilder
 import org.slf4j.LoggerFactory
 
-class StreamTopology(kafkaConfig: KafkaConfiguration, stitchConfig: SpanConfiguration) extends StateListener
+class StreamTopology(kafkaConfig: KafkaConfiguration, stitchConfig: StitchConfiguration) extends StateListener
   with Thread.UncaughtExceptionHandler {
 
   private val LOGGER = LoggerFactory.getLogger(classOf[StreamTopology])
@@ -72,8 +72,8 @@ class StreamTopology(kafkaConfig: KafkaConfiguration, stitchConfig: SpanConfigur
       TOPOLOGY_SOURCE_NAME)
 
     // add the state store
-    builder.addStateStore(new StitchedSpanMemStoreSupplier(1000, "StitchedSpanStore", stitchConfig.loggingEnabled),
-      TOPOLOGY_STITCH_SPAN_PROCESSOR_NAME)
+    val storeSupplier = new StitchedSpanMemStoreSupplier(stitchConfig.maxEntries, "StitchedSpanStore", stitchConfig.loggingEnabled)
+    builder.addStateStore(storeSupplier, TOPOLOGY_STITCH_SPAN_PROCESSOR_NAME)
 
     builder.addSink(
       TOPOLOGY_SINK_NAME,

@@ -18,14 +18,14 @@ package com.expedia.www.haystack.span.stitcher.processors
 
 import com.expedia.open.tracing.Span
 import com.expedia.open.tracing.stitch.StitchedSpan
-import com.expedia.www.haystack.span.stitcher.config.entities.SpanConfiguration
+import com.expedia.www.haystack.span.stitcher.config.entities.StitchConfiguration
 import com.expedia.www.haystack.span.stitcher.store.data.model.StitchedSpanWithMetadata
 import com.expedia.www.haystack.span.stitcher.store.traits.{EldestStitchedSpanRemovalListener, StitchedSpanKVStore}
 import org.apache.kafka.streams.processor.{Processor, ProcessorContext}
 
 import scala.collection.JavaConversions._
 
-class SpanStitchProcessor(stitchConfig: SpanConfiguration) extends Processor[Array[Byte], Span]
+class SpanStitchProcessor(stitchConfig: StitchConfiguration) extends Processor[Array[Byte], Span]
   with EldestStitchedSpanRemovalListener {
 
   private var context: ProcessorContext = _

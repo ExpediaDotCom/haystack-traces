@@ -17,10 +17,10 @@
 package com.expedia.www.haystack.span.stitcher.processors
 
 import com.expedia.open.tracing.Span
-import com.expedia.www.haystack.span.stitcher.config.entities.SpanConfiguration
+import com.expedia.www.haystack.span.stitcher.config.entities.StitchConfiguration
 import com.expedia.www.haystack.span.stitcher.metrics.MetricsSupport
 
-class MeteredSpanStitchProcessor(stitchConfig: SpanConfiguration) extends SpanStitchProcessor(stitchConfig)
+class MeteredSpanStitchProcessor(stitchConfig: StitchConfiguration) extends SpanStitchProcessor(stitchConfig)
   with MetricsSupport {
 
   private val punctuateTimer = metricRegistry.timer("punctuate")

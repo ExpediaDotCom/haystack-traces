@@ -18,17 +18,21 @@ package com.expedia.www.haystack.span.stitcher.store
 
 import java.util
 
-import com.expedia.www.haystack.span.stitcher.store.impl.{StitchedSpanLoggingEnabledMemStoreImpl, StitchedSpanMemStoreImpl}
+import com.expedia.www.haystack.span.stitcher.store.impl.{StitchedSpanLoggingEnabledMemStore, StitchedSpanMemStore}
+import com.expedia.www.haystack.span.stitcher.store.traits.StitchedSpanKVStore
 import org.apache.kafka.streams.processor.StateStoreSupplier
 
 class StitchedSpanMemStoreSupplier(maxEntries: Int,
                                    val name: String,
                                    val loggingEnabled: Boolean = false,
                                    val logConfig: util.Map[String, String] = new util.HashMap[String, String]())
-  extends StateStoreSupplier[StitchedSpanMemStore] {
+  extends StateStoreSupplier[StitchedSpanKVStore] {
 
-  override def get(): StitchedSpanMemStore = {
-    val memStore = new StitchedSpanMemStoreImpl(name, maxEntries)
-    if(loggingEnabled) new StitchedSpanLoggingEnabledMemStoreImpl(name, memStore) else memStore
+  override def get(): StitchedSpanKVStore = {
+    if(loggingEnabled) {
+      new StitchedSpanLoggingEnabledMemStore(name, maxEntries)
+    } else {
+      new StitchedSpanMemStore(name, maxEntries)
+    }
   }
 }

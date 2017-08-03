@@ -18,7 +18,7 @@ package com.expedia.www.haystack.span.stitcher.config
 
 import java.util.Properties
 
-import com.expedia.www.haystack.span.stitcher.config.entities.{KafkaConfiguration, SpanConfiguration}
+import com.expedia.www.haystack.span.stitcher.config.entities.{KafkaConfiguration, StitchConfiguration}
 import com.typesafe.config.Config
 import org.apache.kafka.streams.StreamsConfig
 import org.apache.kafka.streams.processor.TopologyBuilder.AutoOffsetReset
@@ -32,9 +32,10 @@ object ProjectConfiguration {
     * span related configuration like window interval for which spans will be collector for stitch operation
     * @return a span config object
     */
-  def spansConfig: SpanConfiguration = {
+  def spansConfig: StitchConfiguration = {
     val stitchConfig = config.getConfig("span.stitch")
-    SpanConfiguration(
+    StitchConfiguration(
+      stitchConfig.getInt("max.entries"),
       stitchConfig.getLong("poll.ms"),
       stitchConfig.getLong("window.ms"),
       stitchConfig.getBoolean("logging.enabled"))

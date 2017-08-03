@@ -14,28 +14,27 @@
  *     limitations under the License.
  *
  */
-package com.expedia.www.haystack.span.stitcher.serde
+package com.expedia.www.haystack.span.stitcher.processors
 
 import com.expedia.open.tracing.Span
+import com.expedia.www.haystack.span.stitcher.config.entities.StitchConfiguration
 import com.expedia.www.haystack.span.stitcher.metrics.MetricsSupport
 
-object SpanSerde extends AbstractSerde[Span] with MetricsSupport {
+class MeteredSpanStitchProcessor(stitchConfig: StitchConfiguration) extends SpanStitchProcessor(stitchConfig)
+  with MetricsSupport {
 
-  private val spanDeserMeter = metricRegistry.meter("span.deser.failure")
+  private val punctuateTimer = metricRegistry.timer("punctuate")
+  private val stitchProcessTimer = metricRegistry.timer("stitch.process")
 
-  /**
-    * converts the binary protobuf bytes into Span object
-    * @param data serialized bytes of Span
-    * @return
-    */
-  override def performDeserialize(data: Array[Byte]): Span = {
-    try {
-      Span.parseFrom(data)
-    } catch {
-      case _: Exception =>
-        /* may be log and add metric */
-        spanDeserMeter.mark()
-        null
-    }
+  override def punctuate(timestamp: Long): Unit = {
+    val timer = punctuateTimer.time()
+    super.punctuate(timestamp)
+    timer.stop()
+  }
+
+  override def process(key: Array[Byte], span: Span): Unit = {
+    val timer = stitchProcessTimer.time()
+    super.process(key, span)
+    timer.stop()
   }
 }

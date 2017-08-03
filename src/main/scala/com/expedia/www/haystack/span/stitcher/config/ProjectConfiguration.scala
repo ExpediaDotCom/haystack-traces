@@ -18,10 +18,9 @@ package com.expedia.www.haystack.span.stitcher.config
 
 import java.util.Properties
 
-import com.expedia.www.haystack.span.stitcher.config.entities.{KafkaConfiguration, SpanConfiguration}
+import com.expedia.www.haystack.span.stitcher.config.entities.{KafkaConfiguration, StitchConfiguration}
 import com.typesafe.config.Config
 import org.apache.kafka.streams.StreamsConfig
-import org.apache.kafka.streams.StreamsConfig._
 import org.apache.kafka.streams.processor.TopologyBuilder.AutoOffsetReset
 
 import scala.collection.JavaConversions._
@@ -33,11 +32,13 @@ object ProjectConfiguration {
     * span related configuration like window interval for which spans will be collector for stitch operation
     * @return a span config object
     */
-  def spansConfig: SpanConfiguration = {
+  def spansConfig: StitchConfiguration = {
     val stitchConfig = config.getConfig("span.stitch")
-    SpanConfiguration(
+    StitchConfiguration(
+      stitchConfig.getInt("max.entries"),
       stitchConfig.getLong("poll.ms"),
-      stitchConfig.getLong("window.ms"))
+      stitchConfig.getLong("window.ms"),
+      stitchConfig.getBoolean("logging.enabled"))
   }
 
   /**
@@ -70,10 +71,10 @@ object ProjectConfiguration {
     addProps(streamsConfig, props)
 
     // producer specific properties
-    addProps(producerConfig, props, (k) => producerPrefix(k))
+    addProps(producerConfig, props, (k) => StreamsConfig.producerPrefix(k))
 
     // consumer specific properties
-    addProps(consumerConfig, props, (k) => consumerPrefix(k))
+    addProps(consumerConfig, props, (k) => StreamsConfig.consumerPrefix(k))
 
     // validate props
     verifyRequiredProps(props)

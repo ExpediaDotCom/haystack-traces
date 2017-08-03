@@ -14,14 +14,13 @@
  *     limitations under the License.
  *
  */
-package com.expedia.www.haystack.span.stitcher.metrics
+package com.expedia.www.haystack.span.stitcher.store.traits
 
-import com.codahale.metrics.MetricRegistry
+import com.expedia.www.haystack.span.stitcher.store.data.model.StitchedSpanWithMetadata
 
-trait MetricsSupport {
-  val metricRegistry: MetricRegistry = MetricsRegistries.metricRegistry
-}
-
-object MetricsRegistries {
-  val metricRegistry = new MetricRegistry()
+/**
+  * the listener is called when the eldest stitched span is removed from the cache
+  */
+trait EldestStitchedSpanRemovalListener {
+  def onRemove(key: Array[Byte], value: StitchedSpanWithMetadata): Unit
 }

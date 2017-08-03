@@ -17,28 +17,91 @@
 package com.expedia.www.haystack.span.stitcher.processors
 
 import com.expedia.open.tracing.Span
-import com.expedia.www.haystack.span.stitcher.config.entities.SpanConfiguration
-import com.expedia.www.haystack.span.stitcher.metrics.MetricsSupport
+import com.expedia.open.tracing.stitch.StitchedSpan
+import com.expedia.www.haystack.span.stitcher.config.entities.StitchConfiguration
+import com.expedia.www.haystack.span.stitcher.store.data.model.StitchedSpanWithMetadata
+import com.expedia.www.haystack.span.stitcher.store.traits.{EldestStitchedSpanRemovalListener, StitchedSpanKVStore}
 import org.apache.kafka.streams.processor.{Processor, ProcessorContext}
 
-class SpanStitchProcessor(config: SpanConfiguration) extends Processor[Array[Byte], Span] with MetricsSupport {
+import scala.collection.JavaConversions._
+
+class SpanStitchProcessor(stitchConfig: StitchConfiguration) extends Processor[Array[Byte], Span]
+  with EldestStitchedSpanRemovalListener {
 
   private var context: ProcessorContext = _
+  private var store: StitchedSpanKVStore = _
 
   /**
     * initializes the span stitch processor
+    *
     * @param context processor context object
     */
   override def init(context: ProcessorContext): Unit = {
     this.context = context
-    this.context.schedule(config.pollIntervalInMillis)
+    this.store = context.getStateStore("StitchedSpanStore").asInstanceOf[StitchedSpanKVStore]
+
+    this.store.addRemovalListener(this)
+    this.context.schedule(stitchConfig.pollIntervalMillis)
   }
 
-  override def punctuate(timestamp: Long): Unit = ???
-
-  override def process(key: Array[Byte], value: Span): Unit = {
-    value.getStartTime
+  /**
+    *
+    * @param timestamp the stream timestamp, not used in punctuate logic today
+    */
+  override def punctuate(timestamp: Long): Unit = {
+    this.store.getAndRemoveSpansInWindow(stitchConfig.stitchWindowMillis) foreach {
+      case (key, value) =>
+        val stitchedSpan = value.builder.build()
+        context.forward(key, stitchedSpan)
+    }
   }
 
-  override def close(): Unit = ???
+  /**
+    * finds the stitched-span object in state store using span's traceId. If not found,
+    * creates a new one, else adds to the child spans
+    *
+    * @param key  for spans, partition key always be its traceId
+    * @param span span object
+    */
+  override def process(key: Array[Byte], span: Span): Unit = {
+    // before processing new spans, verify if there exists any stitched span records in restored store.
+    // if yes, then emit them out to next processor/sink and clear up the restored store
+    handleRestoredStateStore()
+
+    if (span != null) {
+      val value = this.store.get(key)
+      if (value == null) {
+        val stitchSpanBuilder = StitchedSpan.newBuilder().setTraceId(span.getTraceId).addChildSpans(span)
+        this.store.put(key, StitchedSpanWithMetadata(stitchSpanBuilder))
+      } else {
+        // add this span as a child span to existing builder
+        value.builder.addChildSpans(span)
+      }
+    }
+  }
+
+  /**
+    * close the processor
+    */
+  override def close(): Unit = ()
+
+  /**
+    * this is called when the store evicts the oldest record due to size constraints,
+    * we forward this record to next processor
+    *
+    * @param key   partition key of the stitched span ie traceId
+    * @param value stiched span protobuf builder
+    */
+  override def onRemove(key: Array[Byte], value: StitchedSpanWithMetadata): Unit = {
+    this.context.forward(key, value.builder.build())
+  }
+
+  private def handleRestoredStateStore() = {
+    val iterator: java.util.Iterator[(Array[Byte], StitchedSpan)] = this.store.getRestoredStateIterator()
+    while (iterator.hasNext) {
+      val el = iterator.next()
+      context.forward(el._1, el._2)
+    }
+    this.store.clearRestoredState()
+  }
 }

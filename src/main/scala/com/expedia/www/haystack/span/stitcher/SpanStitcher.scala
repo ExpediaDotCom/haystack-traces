@@ -16,35 +16,21 @@
  */
 package com.expedia.www.haystack.span.stitcher
 
-import java.util.concurrent.TimeUnit
-
 import com.codahale.metrics.JmxReporter
-import com.expedia.www.haystack.span.stitcher.config.ProjectConfiguration
+import com.expedia.www.haystack.span.stitcher.config.ProjectConfiguration._
 import com.expedia.www.haystack.span.stitcher.metrics.MetricsSupport
-import org.apache.kafka.streams.KafkaStreams
 
 object SpanStitcher extends MetricsSupport {
-  import ProjectConfiguration._
 
   private var jmxReporter: JmxReporter = _
-  private var kstreams: KafkaStreams = _
 
   def main(args: Array[String]): Unit = {
     startJmxReporter()
-
-    kstreams = new StreamTopology(kafkaConfig, spansConfig).start()
-    Runtime.getRuntime.addShutdownHook(new ShutdownHookThread)
+    new StreamTopology(kafkaConfig, spansConfig).start()
   }
 
   private def startJmxReporter() = {
     jmxReporter = JmxReporter.forRegistry(metricRegistry).build()
     jmxReporter.start()
-  }
-
-  private class ShutdownHookThread extends Thread {
-    override def run(): Unit = {
-      if(kstreams != null) kstreams.close(30, TimeUnit.SECONDS)
-      if(jmxReporter != null) jmxReporter.close()
-    }
   }
 }

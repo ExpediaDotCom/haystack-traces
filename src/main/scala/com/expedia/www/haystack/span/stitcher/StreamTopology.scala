@@ -16,30 +16,44 @@
  */
 package com.expedia.www.haystack.span.stitcher
 
-import com.expedia.www.haystack.span.stitcher.config.entities.{KafkaConfiguration, SpanConfiguration}
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicBoolean
+
+import com.expedia.www.haystack.span.stitcher.config.entities.{KafkaConfiguration, StitchConfiguration}
 import com.expedia.www.haystack.span.stitcher.processors.SpanStitchProcessSupplier
 import com.expedia.www.haystack.span.stitcher.serde.{SpanSerde, StitchedSpanSerde}
+import com.expedia.www.haystack.span.stitcher.store.StitchedSpanMemStoreSupplier
 import org.apache.kafka.common.serialization.{ByteArrayDeserializer, ByteArraySerializer}
 import org.apache.kafka.streams.KafkaStreams
 import org.apache.kafka.streams.KafkaStreams.StateListener
 import org.apache.kafka.streams.processor.TopologyBuilder
 import org.slf4j.LoggerFactory
 
-class StreamTopology(kafkaConfig: KafkaConfiguration, spanConfig: SpanConfiguration) extends StateListener with Thread.UncaughtExceptionHandler {
+class StreamTopology(kafkaConfig: KafkaConfiguration, stitchConfig: StitchConfiguration) extends StateListener
+  with Thread.UncaughtExceptionHandler {
 
   private val LOGGER = LoggerFactory.getLogger(classOf[StreamTopology])
   private val TOPOLOGY_SOURCE_NAME = "span-source"
   private val TOPOLOGY_SINK_NAME = "stitch-span-sink"
   private val TOPOLOGY_STITCH_SPAN_PROCESSOR_NAME = "span-stitching-process"
 
+  private var streams: KafkaStreams = _
+  private val running = new AtomicBoolean(false)
+
+  Runtime.getRuntime.addShutdownHook(new ShutdownHookThread)
+
   /**
     * builds the topology and start kstreams
     */
-  def start(): KafkaStreams = {
-    val streams = new KafkaStreams(topology(), kafkaConfig.streamsConfig)
+  def start(): Unit = {
+    LOGGER.info("Starting the kafka stream topology.")
+
+    streams = new KafkaStreams(topology(), kafkaConfig.streamsConfig)
     streams.setStateListener(this)
     streams.setUncaughtExceptionHandler(this)
-    streams
+    streams.cleanUp()
+    streams.start()
+    running.set(true)
   }
 
   private def topology(): TopologyBuilder = {
@@ -54,8 +68,12 @@ class StreamTopology(kafkaConfig: KafkaConfiguration, spanConfig: SpanConfigurat
 
     builder.addProcessor(
       TOPOLOGY_STITCH_SPAN_PROCESSOR_NAME,
-      new SpanStitchProcessSupplier(spanConfig),
+      new SpanStitchProcessSupplier(stitchConfig),
       TOPOLOGY_SOURCE_NAME)
+
+    // add the state store
+    val storeSupplier = new StitchedSpanMemStoreSupplier(stitchConfig.maxEntries, "StitchedSpanStore", stitchConfig.loggingEnabled)
+    builder.addStateStore(storeSupplier, TOPOLOGY_STITCH_SPAN_PROCESSOR_NAME)
 
     builder.addSink(
       TOPOLOGY_SINK_NAME,
@@ -72,16 +90,34 @@ class StreamTopology(kafkaConfig: KafkaConfiguration, spanConfig: SpanConfigurat
     * @param newState new state of kafka streams
     * @param oldState old state of kafka streams
     */
-  override def onChange (newState: KafkaStreams.State, oldState: KafkaStreams.State): Unit = {
+  override def onChange(newState: KafkaStreams.State, oldState: KafkaStreams.State): Unit = {
     LOGGER.info(s"State change event called with newState=$newState and oldState=$oldState")
   }
 
   /**
-    *
+    * handle the uncaught exception by closing the current streams and rerunning it
     * @param t thread which raises the exception
     * @param e throwable object
     */
   override def uncaughtException(t: Thread, e: Throwable): Unit = {
     LOGGER.error(s"uncaught exception occurred running kafka streams for thread=${t.getName}", e)
+    // it may happen that uncaught exception gets called by multiple threads at the same time,
+    // so we let one of them close the kafka streams and restart it
+    if (closeKafkaStreams()) {
+      start() // start all over again
+    }
+  }
+
+  private def closeKafkaStreams(): Boolean = {
+    if(running.getAndSet(false)) {
+      LOGGER.info("Closing the kafka streams.")
+      streams.close(30, TimeUnit.SECONDS)
+      return true
+    }
+    false
+  }
+
+  private class ShutdownHookThread extends Thread {
+    override def run(): Unit = closeKafkaStreams()
   }
 }

@@ -75,7 +75,7 @@ class StitchedSpanLoggingEnabledMemStore(val storeName: String, maxEntries: Int)
   }
 
   /**
-    * Called when the underlying {@link #innerStore} {@link StitchedSpanMemStore} removes an entry in response to a call from this
+    * Called when the store removes an entry in response to a call from this
     * store.
     *
     * @param key the key for the entry that the inner store removed

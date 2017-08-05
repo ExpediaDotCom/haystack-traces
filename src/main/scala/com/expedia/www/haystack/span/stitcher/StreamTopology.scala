@@ -23,14 +23,16 @@ import com.expedia.www.haystack.span.stitcher.config.entities.{KafkaConfiguratio
 import com.expedia.www.haystack.span.stitcher.processors.SpanStitchProcessSupplier
 import com.expedia.www.haystack.span.stitcher.serde.{SpanSerde, StitchedSpanSerde}
 import com.expedia.www.haystack.span.stitcher.store.StitchedSpanMemStoreSupplier
-import org.apache.kafka.common.serialization.{ByteArrayDeserializer, ByteArraySerializer}
+import org.apache.kafka.common.serialization.{StringDeserializer, StringSerializer}
 import org.apache.kafka.streams.KafkaStreams
 import org.apache.kafka.streams.KafkaStreams.StateListener
 import org.apache.kafka.streams.processor.TopologyBuilder
 import org.slf4j.LoggerFactory
 
-class StreamTopology(kafkaConfig: KafkaConfiguration, stitchConfig: StitchConfiguration) extends StateListener
-  with Thread.UncaughtExceptionHandler {
+import scala.util.Try
+
+class StreamTopology(kafkaConfig: KafkaConfiguration, stitchConfig: StitchConfiguration)
+  extends StateListener with Thread.UncaughtExceptionHandler {
 
   private val LOGGER = LoggerFactory.getLogger(classOf[StreamTopology])
   private val TOPOLOGY_SOURCE_NAME = "span-source"
@@ -62,7 +64,7 @@ class StreamTopology(kafkaConfig: KafkaConfiguration, stitchConfig: StitchConfig
     builder.addSource(
       kafkaConfig.autoOffsetReset,
       TOPOLOGY_SOURCE_NAME,
-      new ByteArrayDeserializer,
+      new StringDeserializer,
       SpanSerde.deserializer,
       kafkaConfig.consumeTopic)
 
@@ -78,7 +80,7 @@ class StreamTopology(kafkaConfig: KafkaConfiguration, stitchConfig: StitchConfig
     builder.addSink(
       TOPOLOGY_SINK_NAME,
       kafkaConfig.produceTopic,
-      new ByteArraySerializer,
+      new StringSerializer,
       StitchedSpanSerde.serializer,
       TOPOLOGY_STITCH_SPAN_PROCESSOR_NAME)
 
@@ -103,21 +105,22 @@ class StreamTopology(kafkaConfig: KafkaConfiguration, stitchConfig: StitchConfig
     LOGGER.error(s"uncaught exception occurred running kafka streams for thread=${t.getName}", e)
     // it may happen that uncaught exception gets called by multiple threads at the same time,
     // so we let one of them close the kafka streams and restart it
-    if (closeKafkaStreams()) {
+    if (close()) {
       start() // start all over again
     }
   }
 
-  private def closeKafkaStreams(): Boolean = {
+  def close(): Boolean = {
     if(running.getAndSet(false)) {
       LOGGER.info("Closing the kafka streams.")
-      streams.close(30, TimeUnit.SECONDS)
-      return true
+      Try(streams.close(stitchConfig.streamsCloseTimeoutMillis, TimeUnit.MILLISECONDS))
+      true
+    } else {
+      false
     }
-    false
   }
 
   private class ShutdownHookThread extends Thread {
-    override def run(): Unit = closeKafkaStreams()
+    override def run(): Unit = close()
   }
 }

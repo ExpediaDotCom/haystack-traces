@@ -18,5 +18,5 @@ package com.expedia.www.haystack.span.stitcher.store.data.model
 
 import com.expedia.open.tracing.stitch.StitchedSpan
 
-case class StitchedSpanWithMetadata(builder: StitchedSpan.Builder, firstRecordTimestamp: Long = System.currentTimeMillis())
+case class StitchedSpanWithMetadata(builder: StitchedSpan.Builder, firstRecordTimestamp: Long)
 

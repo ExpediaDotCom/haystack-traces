@@ -22,5 +22,5 @@ import com.expedia.www.haystack.span.stitcher.store.data.model.StitchedSpanWithM
   * the listener is called when the eldest stitched span is removed from the cache
   */
 trait EldestStitchedSpanRemovalListener {
-  def onRemove(key: Array[Byte], value: StitchedSpanWithMetadata): Unit
+  def onRemove(key: String, value: StitchedSpanWithMetadata): Unit
 }

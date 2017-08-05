@@ -32,7 +32,7 @@ class MeteredSpanStitchProcessor(stitchConfig: StitchConfiguration) extends Span
     timer.stop()
   }
 
-  override def process(key: Array[Byte], span: Span): Unit = {
+  override def process(key: String, span: Span): Unit = {
     val timer = stitchProcessTimer.time()
     super.process(key, span)
     timer.stop()

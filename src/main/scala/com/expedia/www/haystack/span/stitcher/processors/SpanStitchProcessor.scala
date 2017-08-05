@@ -25,7 +25,7 @@ import org.apache.kafka.streams.processor.{Processor, ProcessorContext}
 
 import scala.collection.JavaConversions._
 
-class SpanStitchProcessor(stitchConfig: StitchConfiguration) extends Processor[Array[Byte], Span]
+class SpanStitchProcessor(stitchConfig: StitchConfiguration) extends Processor[String, Span]
   with EldestStitchedSpanRemovalListener {
 
   private var context: ProcessorContext = _
@@ -63,7 +63,7 @@ class SpanStitchProcessor(stitchConfig: StitchConfiguration) extends Processor[A
     * @param key  for spans, partition key always be its traceId
     * @param span span object
     */
-  override def process(key: Array[Byte], span: Span): Unit = {
+  override def process(key: String, span: Span): Unit = {
     // before processing new spans, verify if there exists any stitched span records in restored store.
     // if yes, then emit them out to next processor/sink and clear up the restored store
     handleRestoredStateStore()
@@ -72,7 +72,7 @@ class SpanStitchProcessor(stitchConfig: StitchConfiguration) extends Processor[A
       val value = this.store.get(key)
       if (value == null) {
         val stitchSpanBuilder = StitchedSpan.newBuilder().setTraceId(span.getTraceId).addChildSpans(span)
-        this.store.put(key, StitchedSpanWithMetadata(stitchSpanBuilder))
+        this.store.put(key, StitchedSpanWithMetadata(stitchSpanBuilder, System.currentTimeMillis()))
       } else {
         // add this span as a child span to existing builder
         value.builder.addChildSpans(span)
@@ -92,12 +92,12 @@ class SpanStitchProcessor(stitchConfig: StitchConfiguration) extends Processor[A
     * @param key   partition key of the stitched span ie traceId
     * @param value stiched span protobuf builder
     */
-  override def onRemove(key: Array[Byte], value: StitchedSpanWithMetadata): Unit = {
+  override def onRemove(key: String, value: StitchedSpanWithMetadata): Unit = {
     this.context.forward(key, value.builder.build())
   }
 
   private def handleRestoredStateStore() = {
-    val iterator: java.util.Iterator[(Array[Byte], StitchedSpan)] = this.store.getRestoredStateIterator()
+    val iterator: java.util.Iterator[(String, StitchedSpan)] = this.store.getRestoredStateIterator()
     while (iterator.hasNext) {
       val el = iterator.next()
       context.forward(el._1, el._2)

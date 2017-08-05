@@ -26,11 +26,11 @@ object ConfigurationLoader {
 
   /**
     * Load and return the configuration
-    * if overrides_config_path env variable exists, then we load that config file and use base.conf as fallback,
-    * else we load the config from env variables(prefixed with haystack) and use base.conf as fallback
+    * if overrides_config_path env variable exists, then we load that config file and use base conf as fallback,
+    * else we load the config from env variables(prefixed with haystack) and use base conf as fallback
+    *
     */
   lazy val loadAppConfig: Config = {
-
     val baseConfig = ConfigFactory.load("config/base.conf")
 
     sys.env.get("OVERRIDES_CONFIG_PATH") match {
@@ -42,7 +42,7 @@ object ConfigurationLoader {
   /**
     * @return new config object with haystack specific environment variables
     */
-  private def loadFromEnvVars(): Config = {
+  def loadFromEnvVars(): Config = {
     val envMap = sys.env.filter {
       case (envName, _) => isHaystackEnvVar(envName)
     } map {

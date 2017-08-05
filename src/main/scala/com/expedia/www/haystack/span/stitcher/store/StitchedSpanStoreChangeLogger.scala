@@ -30,12 +30,12 @@ import org.apache.kafka.streams.state.StateSerdes
   */
 class StitchedSpanStoreChangeLogger(val name: String,
                                     val context: ProcessorContext,
-                                    val serialization: StateSerdes[Array[Byte], StitchedSpan]) {
+                                    val serialization: StateSerdes[String, StitchedSpan]) {
   private val topic = ProcessorStateManager.storeChangelogTopic(context.applicationId, name)
   private val collector = context.asInstanceOf[RecordCollector.Supplier].recordCollector
   private val partition = context.taskId().partition
 
-  def logChange(key: Array[Byte], value: StitchedSpan): Unit = {
+  def logChange(key: String, value: StitchedSpan): Unit = {
     if (collector != null) {
       val keySerializer = serialization.keySerializer
       val valueSerializer = serialization.valueSerializer

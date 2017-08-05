@@ -17,7 +17,7 @@
 package com.expedia.www.haystack.span.stitcher
 
 import com.codahale.metrics.JmxReporter
-import com.expedia.www.haystack.span.stitcher.config.ProjectConfiguration._
+import com.expedia.www.haystack.span.stitcher.config.ProjectConfiguration.{kafkaConfig, stitchConfig}
 import com.expedia.www.haystack.span.stitcher.metrics.MetricsSupport
 
 object SpanStitcher extends MetricsSupport {
@@ -26,7 +26,7 @@ object SpanStitcher extends MetricsSupport {
 
   def main(args: Array[String]): Unit = {
     startJmxReporter()
-    new StreamTopology(kafkaConfig, spansConfig).start()
+    new StreamTopology(kafkaConfig, stitchConfig).start()
   }
 
   private def startJmxReporter() = {

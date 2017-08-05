@@ -21,5 +21,10 @@ package com.expedia.www.haystack.span.stitcher.config.entities
   * @param pollIntervalMillis poll interval to gather the stitched-spans that are ready to emit out to sink
   * @param stitchWindowMillis time window for which unique traceId will be hold to gather its child spans
   * @param loggingEnabled enable the logging for resiliency
+  * @param streamsCloseTimeoutMillis: maximum time allowed to close the kafka streams
   */
-case class StitchConfiguration(maxEntries: Int, pollIntervalMillis: Long, stitchWindowMillis: Long, loggingEnabled: Boolean)
+case class StitchConfiguration(maxEntries: Int,
+                               pollIntervalMillis: Long,
+                               stitchWindowMillis: Long,
+                               loggingEnabled: Boolean,
+                               streamsCloseTimeoutMillis: Long)

@@ -29,16 +29,17 @@ object ProjectConfiguration {
   private val config = ConfigurationLoader.loadAppConfig
 
   /**
-    * span related configuration like window interval for which spans will be collector for stitch operation
+    * span-stitch related configuration like max stitch records, stitching window, poll interval for stitch operation
     * @return a span config object
     */
-  def spansConfig: StitchConfiguration = {
+  def stitchConfig: StitchConfiguration = {
     val stitchConfig = config.getConfig("span.stitch")
     StitchConfiguration(
       stitchConfig.getInt("max.entries"),
       stitchConfig.getLong("poll.ms"),
       stitchConfig.getLong("window.ms"),
-      stitchConfig.getBoolean("logging.enabled"))
+      stitchConfig.getBoolean("logging.enabled"),
+      stitchConfig.getLong("streams.close.timeout.ms"))
   }
 
   /**
@@ -79,10 +80,15 @@ object ProjectConfiguration {
     // validate props
     verifyRequiredProps(props)
 
+    val offsetReset = if(streamsConfig.hasPath("auto.offset.reset")) {
+      AutoOffsetReset.valueOf(streamsConfig.getString("auto.offset.reset").toUpperCase)
+    } else {
+      AutoOffsetReset.LATEST
+    }
+
     KafkaConfiguration(new StreamsConfig(props),
       produceTopic = producerConfig.getString("topic"),
       consumeTopic = consumerConfig.getString("topic"),
-      if(streamsConfig.hasPath("auto.offset.reset"))
-        AutoOffsetReset.valueOf(streamsConfig.getString("auto.offset.reset").toUpperCase) else AutoOffsetReset.LATEST)
+      offsetReset)
   }
 }

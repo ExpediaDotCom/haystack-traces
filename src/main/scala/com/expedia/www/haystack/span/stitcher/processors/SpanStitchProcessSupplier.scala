@@ -20,6 +20,6 @@ import com.expedia.open.tracing.Span
 import com.expedia.www.haystack.span.stitcher.config.entities.StitchConfiguration
 import org.apache.kafka.streams.processor.{Processor, ProcessorSupplier}
 
-class SpanStitchProcessSupplier(stitchConfig: StitchConfiguration) extends ProcessorSupplier[Array[Byte], Span] {
-  override def get(): Processor[Array[Byte], Span] = new MeteredSpanStitchProcessor(stitchConfig)
+class SpanStitchProcessSupplier(stitchConfig: StitchConfiguration) extends ProcessorSupplier[String, Span] {
+  override def get(): Processor[String, Span] = new MeteredSpanStitchProcessor(stitchConfig)
 }

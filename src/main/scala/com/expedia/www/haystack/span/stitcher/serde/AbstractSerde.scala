@@ -35,7 +35,7 @@ abstract class AbstractSerde[T <: GeneratedMessageV3] extends Serde[T] {
 
       override def close(): Unit = ()
 
-      override def serialize(topic: String, obj: T): Array[Byte] = obj.toByteArray
+      override def serialize(topic: String, obj: T): Array[Byte] = if(obj != null) obj.toByteArray else null
     }
   }
 

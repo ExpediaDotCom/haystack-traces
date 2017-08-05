@@ -26,7 +26,7 @@ import com.expedia.www.haystack.span.stitcher.store.StitchedSpanMemStoreSupplier
 import org.apache.kafka.common.serialization.{StringDeserializer, StringSerializer}
 import org.apache.kafka.streams.KafkaStreams
 import org.apache.kafka.streams.KafkaStreams.StateListener
-import org.apache.kafka.streams.processor.TopologyBuilder
+import org.apache.kafka.streams.processor.{TopologyBuilder, WallclockTimestampExtractor}
 import org.slf4j.LoggerFactory
 
 import scala.util.Try
@@ -64,6 +64,7 @@ class StreamTopology(kafkaConfig: KafkaConfiguration, stitchConfig: StitchConfig
     builder.addSource(
       kafkaConfig.autoOffsetReset,
       TOPOLOGY_SOURCE_NAME,
+      new WallclockTimestampExtractor,
       new StringDeserializer,
       SpanSerde.deserializer,
       kafkaConfig.consumeTopic)

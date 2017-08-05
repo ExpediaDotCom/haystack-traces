@@ -42,7 +42,7 @@ object ConfigurationLoader {
   /**
     * @return new config object with haystack specific environment variables
     */
-  def loadFromEnvVars(): Config = {
+  private def loadFromEnvVars(): Config = {
     val envMap = sys.env.filter {
       case (envName, _) => isHaystackEnvVar(envName)
     } map {

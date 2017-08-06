@@ -16,10 +16,18 @@
  */
 package com.expedia.www.haystack.span.stitcher.store
 
+import com.codahale.metrics.Meter
 import com.expedia.open.tracing.stitch.StitchedSpan
+import com.expedia.www.haystack.span.stitcher.metrics.MetricsSupport
 import org.apache.kafka.streams.processor.ProcessorContext
 import org.apache.kafka.streams.processor.internals.{ProcessorStateManager, RecordCollector}
 import org.apache.kafka.streams.state.StateSerdes
+import org.slf4j.{Logger, LoggerFactory}
+
+object StitchedSpanStoreChangeLogger extends MetricsSupport {
+  protected val LOGGER: Logger = LoggerFactory.getLogger(classOf[StitchedSpanStoreChangeLogger])
+  protected val changeLogFailure: Meter = metricRegistry.meter("changelog.send.failure")
+}
 
 /**
   * unfortunately the change logger class in KStreams package is marked internal and can not be used
@@ -31,6 +39,9 @@ import org.apache.kafka.streams.state.StateSerdes
 class StitchedSpanStoreChangeLogger(val name: String,
                                     val context: ProcessorContext,
                                     val serialization: StateSerdes[String, StitchedSpan]) {
+
+  import StitchedSpanStoreChangeLogger._
+
   private val topic = ProcessorStateManager.storeChangelogTopic(context.applicationId, name)
   private val collector = context.asInstanceOf[RecordCollector.Supplier].recordCollector
   private val partition = context.taskId().partition
@@ -39,7 +50,14 @@ class StitchedSpanStoreChangeLogger(val name: String,
     if (collector != null) {
       val keySerializer = serialization.keySerializer
       val valueSerializer = serialization.valueSerializer
-      collector.send(this.topic, key, value, this.partition, context.timestamp, keySerializer, valueSerializer)
+      try {
+        collector.send(this.topic, key, value, this.partition, context.timestamp, keySerializer, valueSerializer)
+      } catch {
+        case ex: Exception => {
+          LOGGER.error(s"Fail to add the change in the changelog topic=$topic, partition=$partition", ex)
+          changeLogFailure.mark()
+        }
+      }
     }
   }
 }

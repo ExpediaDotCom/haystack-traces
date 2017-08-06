@@ -23,6 +23,7 @@ import com.expedia.www.haystack.span.stitcher.StreamTopology
 import com.expedia.www.haystack.span.stitcher.config.entities.{KafkaConfiguration, StitchConfiguration}
 import org.apache.kafka.streams.integration.utils.IntegrationTestUtils
 import org.apache.kafka.streams.processor.TopologyBuilder.AutoOffsetReset
+import org.apache.kafka.streams.processor.WallclockTimestampExtractor
 import org.apache.kafka.streams.{KeyValue, StreamsConfig}
 
 import scala.concurrent.duration._
@@ -41,7 +42,7 @@ class SpanStitchWithMultiTraceIdsTopology extends BaseIntegrationTestSpec {
     "consume spans from input topic and stitch them together" in {
       Given("a set of spans with two different traceIds and stitching/kafka specific configurations")
       val stitchConfig = StitchConfiguration(1000, PUNCTUATE_INTERVAL_MS, SPAN_STITCH_WINDOW_MS, loggingEnabled = true, 3000)
-      val kafkaConfig = KafkaConfiguration(new StreamsConfig(STREAMS_CONFIG), OUTPUT_TOPIC, INPUT_TOPIC, AutoOffsetReset.EARLIEST)
+      val kafkaConfig = KafkaConfiguration(new StreamsConfig(STREAMS_CONFIG), OUTPUT_TOPIC, INPUT_TOPIC, AutoOffsetReset.EARLIEST, new WallclockTimestampExtractor)
 
       When("spans are produced in 'input' topic async, and kafka-streams topology is started")
       produceSpansAsync(MAX_CHILD_SPANS,

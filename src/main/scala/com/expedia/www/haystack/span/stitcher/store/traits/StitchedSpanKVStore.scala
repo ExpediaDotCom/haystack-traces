@@ -28,6 +28,4 @@ import org.apache.kafka.streams.state.KeyValueStore
 trait StitchedSpanKVStore extends KeyValueStore[String, StitchedSpanWithMetadata] {
   def getAndRemoveSpansInWindow(stitchWindowMillis: Long): util.Map[String, StitchedSpanWithMetadata]
   def addRemovalListener(l: EldestStitchedSpanRemovalListener): Unit
-  def getRestoredStateIterator(): util.Iterator[(String, StitchedSpan)]
-  def clearRestoredState(): Unit
 }

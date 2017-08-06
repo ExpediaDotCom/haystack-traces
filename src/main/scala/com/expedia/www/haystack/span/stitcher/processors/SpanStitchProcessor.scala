@@ -64,10 +64,6 @@ class SpanStitchProcessor(stitchConfig: StitchConfiguration) extends Processor[S
     * @param span span object
     */
   override def process(key: String, span: Span): Unit = {
-    // before processing new spans, verify if there exists any stitched span records in restored store.
-    // if yes, then emit them out to next processor/sink and clear up the restored store
-    handleRestoredStateStore()
-
     if (span != null) {
       val value = this.store.get(key)
       if (value == null) {
@@ -94,14 +90,5 @@ class SpanStitchProcessor(stitchConfig: StitchConfiguration) extends Processor[S
     */
   override def onRemove(key: String, value: StitchedSpanWithMetadata): Unit = {
     this.context.forward(key, value.builder.build())
-  }
-
-  private def handleRestoredStateStore() = {
-    val iterator: java.util.Iterator[(String, StitchedSpan)] = this.store.getRestoredStateIterator()
-    while (iterator.hasNext) {
-      val el = iterator.next()
-      context.forward(el._1, el._2)
-    }
-    this.store.clearRestoredState()
   }
 }

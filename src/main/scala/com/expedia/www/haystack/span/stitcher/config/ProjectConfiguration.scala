@@ -21,6 +21,7 @@ import java.util.Properties
 import com.expedia.www.haystack.span.stitcher.config.entities.{KafkaConfiguration, StitchConfiguration}
 import com.typesafe.config.Config
 import org.apache.kafka.streams.StreamsConfig
+import org.apache.kafka.streams.processor.TimestampExtractor
 import org.apache.kafka.streams.processor.TopologyBuilder.AutoOffsetReset
 
 import scala.collection.JavaConversions._
@@ -86,9 +87,13 @@ object ProjectConfiguration {
       AutoOffsetReset.LATEST
     }
 
+    val timestampExtractor = Class.forName(props.getProperty("timestamp.extractor",
+      "org.apache.kafka.streams.processor.WallclockTimestampExtractor"))
+
     KafkaConfiguration(new StreamsConfig(props),
       produceTopic = producerConfig.getString("topic"),
       consumeTopic = consumerConfig.getString("topic"),
-      offsetReset)
+      offsetReset,
+      timestampExtractor.newInstance().asInstanceOf[TimestampExtractor])
   }
 }

@@ -64,7 +64,7 @@ class StreamTopology(kafkaConfig: KafkaConfiguration, stitchConfig: StitchConfig
     builder.addSource(
       kafkaConfig.autoOffsetReset,
       TOPOLOGY_SOURCE_NAME,
-      new WallclockTimestampExtractor,
+      kafkaConfig.timestampExtractor,
       new StringDeserializer,
       SpanSerde.deserializer,
       kafkaConfig.consumeTopic)

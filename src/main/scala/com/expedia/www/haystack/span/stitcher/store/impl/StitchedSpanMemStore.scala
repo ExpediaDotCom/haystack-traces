@@ -38,12 +38,6 @@ class StitchedSpanMemStore(val name: String, maxEntries: Int) extends StitchedSp
 
   private val listeners: mutable.ListBuffer[EldestStitchedSpanRemovalListener] = mutable.ListBuffer()
 
-  // initialize the restored state store as an empty hashmap.
-  // The restored stitched-span objects are not populated in the main state store(linkedhashmap) because the insertion
-  // guarantee may not be the same as before. The processor who owns this state store should read out all the stitched
-  // span objects (present in this restored state store) and clear it at start time
-  private var restoredStateStore = new util.HashMap[String, StitchedSpan]()
-
   // initialize the map
   protected val map = new util.LinkedHashMap[String, StitchedSpanWithMetadata](maxEntries + 1, 1.01f, false) {
     override protected def removeEldestEntry(eldest: util.Map.Entry[String, StitchedSpanWithMetadata]): Boolean = {
@@ -70,20 +64,16 @@ class StitchedSpanMemStore(val name: String, maxEntries: Int) extends StitchedSp
     // register the store
     context.register(root, true, new StateRestoreCallback() {
       override def restore(key: Array[Byte], value: Array[Byte]): Unit = { // check value for null, to avoid  deserialization error.
-        if (value == null) {
-          restoreStitchedSpan(serdes.keyFrom(key), null)
-        }
-        else {
-          restoreStitchedSpan(serdes.keyFrom(key), serdes.valueFrom(value))
+        if (value != null) {
+          // restore the stitched span object with Long.MinValue as the first recorded timestamp
+          // this makes sure that all these stitched span objects will be collected and emitted out in the first
+          // punctuate call.
+          map.put(serdes.keyFrom(key), StitchedSpanWithMetadata(serdes.valueFrom(value).toBuilder, Long.MinValue))
         }
       }
     })
 
     open = true
-  }
-
-  private def restoreStitchedSpan(key: String, stitchedSpan: StitchedSpan): Unit = {
-    this.restoredStateStore.put(key, stitchedSpan)
   }
 
   /**
@@ -132,14 +122,6 @@ class StitchedSpanMemStore(val name: String, maxEntries: Int) extends StitchedSp
   override def approximateNumEntries(): Long = this.map.size()
 
   override def addRemovalListener(l: EldestStitchedSpanRemovalListener): Unit = this.listeners += l
-
-  override def getRestoredStateIterator(): util.Iterator[(String, StitchedSpan)] = this.restoredStateStore.iterator
-
-  override def clearRestoredState(): Unit = {
-    if (!this.restoredStateStore.isEmpty) {
-      this.restoredStateStore = new util.HashMap[String, StitchedSpan]()
-    }
-  }
 
   override def flush(): Unit = ()
 

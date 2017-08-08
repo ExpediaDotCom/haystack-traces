@@ -60,7 +60,7 @@ abstract class BaseIntegrationTestSpec extends WordSpec with GivenWhenThen with 
   protected val CHANGELOG_TOPIC = s"$APP_ID-StitchedSpanStore-changelog"
 
   override def beforeAll() {
-    scheduler = Executors.newSingleThreadScheduledExecutor()
+    scheduler = Executors.newScheduledThreadPool(2)
   }
 
   override def afterAll(): Unit = {
@@ -117,7 +117,7 @@ abstract class BaseIntegrationTestSpec extends WordSpec with GivenWhenThen with 
   protected def produceSpansAsync(maxSpans: Int,
                                   produceInterval: FiniteDuration,
                                   spansDescr: List[SpanDescription],
-                                  startTimestamp: Long = 0L): Unit = {
+                                  startTimestamp: Long = 0L): ScheduledFuture[_] = {
     var timestamp = startTimestamp
     var idx = 0L
     scheduler.scheduleWithFixedDelay(new Runnable {

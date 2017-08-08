@@ -13,50 +13,81 @@
  *     See the License for the specific language governing permissions and
  *     limitations under the License.
  *
- */package com.expedia.www.haystack.span.stitcher.integration
+ */
+package com.expedia.www.haystack.span.stitcher.integration
 
 import java.util.{List => JList}
 
 import com.expedia.open.tracing.stitch.StitchedSpan
 import com.expedia.www.haystack.span.stitcher.StreamTopology
-import com.expedia.www.haystack.span.stitcher.config.entities.{KafkaConfiguration, StitchConfiguration}
+import com.expedia.www.haystack.span.stitcher.config.entities.{ChangelogConfiguration, KafkaConfiguration, StitchConfiguration}
 import org.apache.kafka.streams.integration.utils.IntegrationTestUtils
+import org.apache.kafka.streams.processor.FailOnInvalidTimestamp
 import org.apache.kafka.streams.processor.TopologyBuilder.AutoOffsetReset
-import org.apache.kafka.streams.processor.WallclockTimestampExtractor
 import org.apache.kafka.streams.{KeyValue, StreamsConfig}
 
 import scala.collection.JavaConversions._
 import scala.concurrent.duration._
 
 class SpanStitchTopologySpec extends BaseIntegrationTestSpec {
-
   private val MAX_CHILD_SPANS = 5
   private val TRACE_ID = "unique-trace-id"
-  private val SPAN_ID_PREFIX = "span-id"
-  APP_ID = "haystack-topology-test"
 
   "Stitch Span Topology" should {
-    "consume spans from input topic and stitch them together" in {
+    s"consume spans from '$INPUT_TOPIC' topic and stitch them together" in {
       Given("a set of spans with stitching and kafka specific configurations")
-      val stitchConfig = StitchConfiguration(1000, PUNCTUATE_INTERVAL_MS, SPAN_STITCH_WINDOW_MS, loggingEnabled = false, 3000)
-      val kafkaConfig = KafkaConfiguration(new StreamsConfig(STREAMS_CONFIG), OUTPUT_TOPIC, INPUT_TOPIC, AutoOffsetReset.EARLIEST, new WallclockTimestampExtractor)
+      val stitchConfig = StitchConfiguration(MAX_STITCHED_RECORDS_IN_MEM,
+        PUNCTUATE_INTERVAL_MS,
+        SPAN_STITCH_WINDOW_MS,
+        AUTO_COMMIT_INTERVAL_MS)
+      val kafkaConfig = KafkaConfiguration(new StreamsConfig(STREAMS_CONFIG),
+        OUTPUT_TOPIC,
+        INPUT_TOPIC,
+        AutoOffsetReset.EARLIEST,
+        new FailOnInvalidTimestamp,
+        ChangelogConfiguration(enabled = false))
 
-      When("spans are produced in 'input' topic async, and kafka-streams topology is started")
-      produceSpansAsync(MAX_CHILD_SPANS, 2.seconds, List(SpanDescription(TRACE_ID, SPAN_ID_PREFIX)))
-      new StreamTopology(kafkaConfig, stitchConfig).start()
+      When(s"spans are produced in '$INPUT_TOPIC' topic async, and kafka-streams topology is started")
+      val SPAN_ID_PREFIX = "span-id"
+      produceSpansAsync(MAX_CHILD_SPANS,
+        2.seconds,
+        List(SpanDescription(TRACE_ID, SPAN_ID_PREFIX)))
+      val topology = new StreamTopology(kafkaConfig, stitchConfig)
+      topology.start()
 
-      Then("we should read one stitch span object from 'output' topic")
+      Then(s"we should read one stitch span object from '$OUTPUT_TOPIC' topic")
       val result: JList[KeyValue[String, StitchedSpan]] =
-          IntegrationTestUtils.waitUntilMinKeyValueRecordsReceived(RESULT_CONSUMER_CONFIG, OUTPUT_TOPIC, 1, 15000)
-      validateStitchedSpan(result, MAX_CHILD_SPANS)
+          IntegrationTestUtils.waitUntilMinKeyValueRecordsReceived(RESULT_CONSUMER_CONFIG, OUTPUT_TOPIC, 1, MAX_WAIT_FOR_OUTPUT_MS)
+      validateStitchedSpan(result, MAX_CHILD_SPANS, SPAN_ID_PREFIX)
+
+      repeatTestWithNewerSpanIds()
+      topology.close() shouldBe true
     }
   }
 
+  // this test is useful to check if we are not emitting the old spans if the same traceId reappears later
+  private def repeatTestWithNewerSpanIds(): Unit = {
+    Given(s"a set of new span ids and same traceId '$TRACE_ID'")
+    val SPAN_ID_2_PREFIX = "span-id-2"
+    When(s"these spans are produced in '$INPUT_TOPIC' topic on the currently running topology")
+    produceSpansAsync(MAX_CHILD_SPANS,
+      2.seconds,
+      List(SpanDescription(TRACE_ID, SPAN_ID_2_PREFIX)), startTimestamp = PUNCTUATE_INTERVAL_MS + 100L)
+
+    Then(s"we should read see newer spans in the stitched object from '$OUTPUT_TOPIC' topic")
+    val result: JList[KeyValue[String, StitchedSpan]] =
+      IntegrationTestUtils.waitUntilMinKeyValueRecordsReceived(RESULT_CONSUMER_CONFIG, OUTPUT_TOPIC, 1, MAX_WAIT_FOR_OUTPUT_MS)
+
+    validateStitchedSpan(result, MAX_CHILD_SPANS, SPAN_ID_2_PREFIX)
+  }
+
   // validate the stitched span object
-  private def validateStitchedSpan(records: JList[KeyValue[String, StitchedSpan]], childSpanCount: Int) = {
+  private def validateStitchedSpan(records: JList[KeyValue[String, StitchedSpan]],
+                                   childSpanCount: Int,
+                                   spanIdPrefix: String): Unit = {
     // expect only one stitched span object
     records.size() shouldBe 1
-    validateChildSpans(records.head.value, TRACE_ID, SPAN_ID_PREFIX, MAX_CHILD_SPANS)
+    validateChildSpans(records.head.value, TRACE_ID, spanIdPrefix, MAX_CHILD_SPANS)
   }
 }
 

@@ -31,7 +31,6 @@ class ConfigurationLoaderSpec extends FunSpec with Matchers {
       spanStitchConfig.pollIntervalMillis shouldBe 1000L
       spanStitchConfig.streamsCloseTimeoutMillis shouldBe 300L
       spanStitchConfig.maxEntries shouldBe 10
-      spanStitchConfig.loggingEnabled shouldBe false
       spanStitchConfig.stitchWindowMillis shouldBe 1000L
     }
 
@@ -44,6 +43,9 @@ class ConfigurationLoaderSpec extends FunSpec with Matchers {
       kafkaConfig.streamsConfig.getString(StreamsConfig.APPLICATION_ID_CONFIG) shouldBe "haystack-span-stitch-app"
       kafkaConfig.streamsConfig.getInt(StreamsConfig.NUM_STREAM_THREADS_CONFIG) shouldBe 4
       kafkaConfig.streamsConfig.getLong(StreamsConfig.COMMIT_INTERVAL_MS_CONFIG) shouldBe 500L
+      kafkaConfig.changelogConfig.enabled shouldBe true
+      kafkaConfig.changelogConfig.logConfig.get("retention.bytes") shouldBe "104857600"
+      kafkaConfig.changelogConfig.logConfig.get("retention.ms") shouldBe "86400"
     }
   }
 }

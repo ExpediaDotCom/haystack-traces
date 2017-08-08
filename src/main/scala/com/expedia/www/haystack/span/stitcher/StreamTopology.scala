@@ -31,7 +31,8 @@ import org.slf4j.LoggerFactory
 
 import scala.util.Try
 
-class StreamTopology(kafkaConfig: KafkaConfiguration, stitchConfig: StitchConfiguration)
+class StreamTopology(kafkaConfig: KafkaConfiguration,
+                     stitchConfig: StitchConfiguration)
   extends StateListener with Thread.UncaughtExceptionHandler {
 
   private val LOGGER = LoggerFactory.getLogger(classOf[StreamTopology])
@@ -75,7 +76,11 @@ class StreamTopology(kafkaConfig: KafkaConfiguration, stitchConfig: StitchConfig
       TOPOLOGY_SOURCE_NAME)
 
     // add the state store
-    val storeSupplier = new StitchedSpanMemStoreSupplier(stitchConfig.maxEntries, "StitchedSpanStore", stitchConfig.loggingEnabled)
+    val storeSupplier = new StitchedSpanMemStoreSupplier(stitchConfig.maxEntries,
+      "StitchedSpanStore",
+      kafkaConfig.changelogConfig.enabled,
+      kafkaConfig.changelogConfig.logConfig)
+
     builder.addStateStore(storeSupplier, TOPOLOGY_STITCH_SPAN_PROCESSOR_NAME)
 
     builder.addSink(

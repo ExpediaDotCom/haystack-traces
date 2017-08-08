@@ -18,7 +18,7 @@ package com.expedia.www.haystack.span.stitcher.config
 
 import java.util.Properties
 
-import com.expedia.www.haystack.span.stitcher.config.entities.{KafkaConfiguration, StitchConfiguration}
+import com.expedia.www.haystack.span.stitcher.config.entities.{ChangelogConfiguration, KafkaConfiguration, StitchConfiguration}
 import com.typesafe.config.Config
 import org.apache.kafka.streams.StreamsConfig
 import org.apache.kafka.streams.processor.TimestampExtractor
@@ -34,13 +34,26 @@ object ProjectConfiguration {
     * @return a span config object
     */
   def stitchConfig: StitchConfiguration = {
-    val stitchConfig = config.getConfig("span.stitch")
+    val cfg = config.getConfig("span.stitch")
     StitchConfiguration(
-      stitchConfig.getInt("max.entries"),
-      stitchConfig.getLong("poll.ms"),
-      stitchConfig.getLong("window.ms"),
-      stitchConfig.getBoolean("logging.enabled"),
-      stitchConfig.getLong("streams.close.timeout.ms"))
+      cfg.getInt("max.entries"),
+      cfg.getLong("poll.ms"),
+      cfg.getLong("window.ms"),
+      cfg.getLong("streams.close.timeout.ms"))
+  }
+
+  private def changelogConfig: ChangelogConfiguration = {
+    val cfg = config.getConfig("kafka.changelog")
+    val enabled = cfg.getBoolean("enabled")
+    val logConfigMap = new java.util.HashMap[String, String]()
+
+    if(enabled && cfg.hasPath("logConfig")) {
+      for(entry <- cfg.getConfig("logConfig").entrySet()) {
+        logConfigMap.put(entry.getKey, entry.getValue.unwrapped().toString)
+      }
+    }
+
+    ChangelogConfiguration(enabled, logConfigMap)
   }
 
   /**
@@ -94,6 +107,7 @@ object ProjectConfiguration {
       produceTopic = producerConfig.getString("topic"),
       consumeTopic = consumerConfig.getString("topic"),
       offsetReset,
-      timestampExtractor.newInstance().asInstanceOf[TimestampExtractor])
+      timestampExtractor.newInstance().asInstanceOf[TimestampExtractor],
+      changelogConfig)
   }
 }

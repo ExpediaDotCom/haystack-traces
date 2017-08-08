@@ -24,8 +24,8 @@ import org.apache.kafka.streams.processor.StateStoreSupplier
 
 class StitchedSpanMemStoreSupplier(maxEntries: Int,
                                    val name: String,
-                                   val loggingEnabled: Boolean = false,
-                                   val logConfig: util.Map[String, String] = new util.HashMap[String, String]())
+                                   val loggingEnabled: Boolean,
+                                   val logConfig: util.Map[String, String])
   extends StateStoreSupplier[StitchedSpanKVStore] {
 
   override def get(): StitchedSpanKVStore = {

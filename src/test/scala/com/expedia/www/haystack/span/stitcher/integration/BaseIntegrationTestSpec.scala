@@ -37,23 +37,27 @@ object EmbeddedKafka {
   CLUSTER.start()
 }
 
-class BaseIntegrationTestSpec extends WordSpec with GivenWhenThen with Matchers with BeforeAndAfterAll with BeforeAndAfterEach {
+abstract class BaseIntegrationTestSpec extends WordSpec with GivenWhenThen with Matchers with BeforeAndAfterAll with BeforeAndAfterEach {
   case class SpanDescription(traceId: String, spanIdPrefix: String)
 
-  protected var scheduler: ScheduledExecutorService = null
+  protected var scheduler: ScheduledExecutorService = _
 
-  protected val PUNCTUATE_INTERVAL_MS = 2000
+  protected val PUNCTUATE_INTERVAL_MS = 2000L
   protected val SPAN_STITCH_WINDOW_MS = 5000
+  protected val AUTO_COMMIT_INTERVAL_MS = 3000
+  protected val MAX_STITCHED_RECORDS_IN_MEM = 100
+  protected val MAX_WAIT_FOR_OUTPUT_MS = 12000
 
   protected val PRODUCER_CONFIG = new Properties()
   protected val RESULT_CONSUMER_CONFIG = new Properties()
+  protected val CHANGELOG_CONSUMER_CONFIG = new Properties()
   protected val STREAMS_CONFIG = new Properties()
   protected val scheduledJobFuture: ScheduledFuture[_] = null
 
-  protected var APP_ID = ""
-  protected var CHANGELOG_TOPIC = ""
+  private val APP_ID = getClass.getSimpleName
   protected val INPUT_TOPIC = "spans"
   protected val OUTPUT_TOPIC = "stitchspans"
+  protected val CHANGELOG_TOPIC = s"$APP_ID-StitchedSpanStore-changelog"
 
   override def beforeAll() {
     scheduler = Executors.newSingleThreadScheduledExecutor()
@@ -64,7 +68,7 @@ class BaseIntegrationTestSpec extends WordSpec with GivenWhenThen with Matchers 
   }
 
   override def beforeEach() {
-    EmbeddedKafka.CLUSTER.createTopic(INPUT_TOPIC)
+    EmbeddedKafka.CLUSTER.createTopic(INPUT_TOPIC, 2, 1)
     EmbeddedKafka.CLUSTER.createTopic(OUTPUT_TOPIC)
 
     PRODUCER_CONFIG.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, EmbeddedKafka.CLUSTER.bootstrapServers)
@@ -79,6 +83,12 @@ class BaseIntegrationTestSpec extends WordSpec with GivenWhenThen with Matchers 
     RESULT_CONSUMER_CONFIG.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, classOf[StringDeserializer])
     RESULT_CONSUMER_CONFIG.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, classOf[StitchSpanDeserializer])
 
+    CHANGELOG_CONSUMER_CONFIG.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, EmbeddedKafka.CLUSTER.bootstrapServers)
+    CHANGELOG_CONSUMER_CONFIG.put(ConsumerConfig.GROUP_ID_CONFIG, APP_ID + "-changelog-consumer")
+    CHANGELOG_CONSUMER_CONFIG.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest")
+    CHANGELOG_CONSUMER_CONFIG.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, classOf[StringDeserializer])
+    CHANGELOG_CONSUMER_CONFIG.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, classOf[StitchSpanDeserializer])
+
     STREAMS_CONFIG.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, EmbeddedKafka.CLUSTER.bootstrapServers)
     STREAMS_CONFIG.put(StreamsConfig.APPLICATION_ID_CONFIG, APP_ID)
     STREAMS_CONFIG.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest")
@@ -87,36 +97,32 @@ class BaseIntegrationTestSpec extends WordSpec with GivenWhenThen with Matchers 
     STREAMS_CONFIG.put(StreamsConfig.STATE_DIR_CONFIG, "/tmp/kafka-streams")
 
     IntegrationTestUtils.purgeLocalStreamsState(STREAMS_CONFIG)
-
-    CHANGELOG_TOPIC = s"$APP_ID-StitchedSpanStore-changelog"
   }
 
   override def afterEach(): Unit = {
-    EmbeddedKafka.CLUSTER.deleteTopic(INPUT_TOPIC)
-    EmbeddedKafka.CLUSTER.deleteTopic(OUTPUT_TOPIC)
+    EmbeddedKafka.CLUSTER.deleteTopicsAndWait(INPUT_TOPIC, OUTPUT_TOPIC)
   }
 
   def randomSpan(traceId: String,
-                 spanId: String = UUID.randomUUID().toString,
-                 startTime: Long = System.currentTimeMillis()): Span = {
+                 spanId: String = UUID.randomUUID().toString): Span = {
     Span.newBuilder()
       .setTraceId(traceId)
       .setParentSpanId(UUID.randomUUID().toString)
       .setSpanId(spanId)
       .setOperationName("some-op")
-      .setStartTime(startTime)
+      .setStartTime(System.currentTimeMillis())
       .build()
   }
 
   protected def produceSpansAsync(maxSpans: Int,
-                                 produceInterval: FiniteDuration,
-                                 spansDescr: List[SpanDescription]): Unit = {
-    var currentTime = System.currentTimeMillis()
-    var idx = 0
+                                  produceInterval: FiniteDuration,
+                                  spansDescr: List[SpanDescription],
+                                  startTimestamp: Long = 0L): Unit = {
+    var timestamp = startTimestamp
+    var idx = 0L
     scheduler.scheduleWithFixedDelay(new Runnable {
       override def run(): Unit = {
         if(idx < maxSpans) {
-          currentTime = currentTime + ((idx * PUNCTUATE_INTERVAL_MS) / (maxSpans - 1))
           val spans = spansDescr.map(sd => {
             new KeyValue[String, Span](sd.traceId, randomSpan(sd.traceId, s"${sd.spanIdPrefix}-$idx"))
           }).asJava
@@ -124,7 +130,8 @@ class BaseIntegrationTestSpec extends WordSpec with GivenWhenThen with Matchers 
             INPUT_TOPIC,
             spans,
             PRODUCER_CONFIG,
-            currentTime)
+            timestamp)
+          timestamp = timestamp + (PUNCTUATE_INTERVAL_MS / (maxSpans - 1))
         }
         idx = idx + 1
       }
@@ -137,12 +144,13 @@ class BaseIntegrationTestSpec extends WordSpec with GivenWhenThen with Matchers 
                                    childSpanCount: Int): Unit = {
     stitchedSpan.getTraceId shouldBe traceId
 
-    stitchedSpan.getChildSpansCount should (be >= (childSpanCount - 1) and be <= childSpanCount)
+    stitchedSpan.getChildSpansCount shouldBe childSpanCount
 
     (0 until stitchedSpan.getChildSpansCount).toList foreach { idx =>
       stitchedSpan.getChildSpans(idx).getSpanId shouldBe s"$spanIdPrefix-$idx"
       stitchedSpan.getChildSpans(idx).getTraceId shouldBe stitchedSpan.getTraceId
       stitchedSpan.getChildSpans(idx).getParentSpanId should not be null
+      stitchedSpan.getChildSpans(idx).getOperationName shouldBe "some-op"
     }
   }
 }

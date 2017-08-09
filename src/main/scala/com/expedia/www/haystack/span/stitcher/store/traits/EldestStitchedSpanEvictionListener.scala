@@ -14,16 +14,13 @@
  *     limitations under the License.
  *
  */
-package com.expedia.www.haystack.span.stitcher.processors
+package com.expedia.www.haystack.span.stitcher.store.traits
 
-import com.expedia.open.tracing.Span
-import com.expedia.www.haystack.span.stitcher.config.entities.StitchConfiguration
-import org.apache.kafka.streams.processor.{Processor, ProcessorSupplier}
+import com.expedia.www.haystack.span.stitcher.store.data.model.StitchedSpanWithMetadata
 
-class SpanStitchProcessSupplier(stitchConfig: StitchConfiguration) extends ProcessorSupplier[String, Span] {
-
-  /**
-    * @return processor that does the stitching and emits out the stitched-span object
-    */
-  override def get(): Processor[String, Span] = new MeteredSpanStitchProcessor(stitchConfig)
+/**
+  * the listener is called when the eldest stitched span is evicted from the cache
+  */
+trait EldestStitchedSpanEvictionListener {
+  def onEvict(key: String, value: StitchedSpanWithMetadata): Unit
 }

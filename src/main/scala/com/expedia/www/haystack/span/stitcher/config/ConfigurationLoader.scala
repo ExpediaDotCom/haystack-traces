@@ -54,8 +54,12 @@ object ConfigurationLoader {
 
   private def isHaystackEnvVar(env: String): Boolean = env.startsWith(ENV_NAME_PREFIX)
 
-  // converts the env variable to HOCON format
-  // for e.g. env HAYSTACK_KAFKA_STREAMS_NUM_STREAM_THREADS to kafka.streams.num.stream.threads
+  /**
+    * converts the env variable to HOCON format
+    * for e.g. env variable HAYSTACK_KAFKA_STREAMS_NUM_STREAM_THREADS gets converted to kafka.streams.num.stream.threads
+    * @param env environment variable name
+    * @return
+    */
   private def transformEnvVarName(env: String): String = {
     env.replaceFirst(ENV_NAME_PREFIX, "").toLowerCase.replace("_", ".")
   }

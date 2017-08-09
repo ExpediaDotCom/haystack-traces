@@ -14,21 +14,20 @@
  *     limitations under the License.
  *
  */
-
 package com.expedia.www.haystack.span.stitcher.store.impl
 
 import java.util
 
-import com.expedia.www.haystack.span.stitcher.store.StitchedSpanStoreChangeLogger
+import com.expedia.www.haystack.span.stitcher.store.{DynamicCacheSizer, StitchedSpanStoreChangeLogger}
 import com.expedia.www.haystack.span.stitcher.store.data.model.StitchedSpanWithMetadata
-import com.expedia.www.haystack.span.stitcher.store.traits.EldestStitchedSpanRemovalListener
+import com.expedia.www.haystack.span.stitcher.store.traits.EldestStitchedSpanEvictionListener
 import org.apache.kafka.streams.KeyValue
 import org.apache.kafka.streams.processor.{ProcessorContext, StateStore}
 
 import scala.collection.JavaConversions._
 
-class StitchedSpanLoggingEnabledMemStore(val storeName: String, maxEntries: Int)
-  extends StitchedSpanMemStore(storeName, maxEntries) {
+class StitchedSpanLoggingEnabledMemStore(val storeName: String, dynamicCacheSizer: DynamicCacheSizer)
+  extends StitchedSpanMemStore(storeName, dynamicCacheSizer) {
 
   private var changeLogger: StitchedSpanStoreChangeLogger = _
 
@@ -67,8 +66,8 @@ class StitchedSpanLoggingEnabledMemStore(val storeName: String, maxEntries: Int)
 
     this.changeLogger = new StitchedSpanStoreChangeLogger(name, context, serdes)
 
-    super.addRemovalListener(new EldestStitchedSpanRemovalListener {
-      override def onRemove(key: String, value: StitchedSpanWithMetadata): Unit = removed(key)
+    super.addEvictionListener(new EldestStitchedSpanEvictionListener {
+      override def onEvict(key: String, value: StitchedSpanWithMetadata): Unit = removed(key)
     })
 
     open = true
@@ -81,6 +80,6 @@ class StitchedSpanLoggingEnabledMemStore(val storeName: String, maxEntries: Int)
     * @param key the key for the entry that the inner store removed
     */
   protected def removed(key: String): Unit = {
-    changeLogger.logChange(key, null)
+    if (changeLogger != null) changeLogger.logChange(key, null)
   }
 }

@@ -36,7 +36,9 @@ class SpanStitchTopologySpec extends BaseIntegrationTestSpec {
   "Stitch Span Topology" should {
     s"consume spans from '$INPUT_TOPIC' topic and stitch them together" in {
       Given("a set of spans with stitching and kafka specific configurations")
-      val stitchConfig = StitchConfiguration(MAX_STITCHED_RECORDS_IN_MEM,
+      val stitchConfig = StitchConfiguration(
+        INITIAL_STORE_CAPACITY,
+        MAX_STITCHED_RECORDS_IN_MEM,
         PUNCTUATE_INTERVAL_MS,
         SPAN_STITCH_WINDOW_MS,
         AUTO_COMMIT_INTERVAL_MS)

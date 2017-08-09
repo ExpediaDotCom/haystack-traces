@@ -40,6 +40,7 @@ class SpanStitchWithMultiTraceIdsTopology extends BaseIntegrationTestSpec {
     s"consume spans from input '$INPUT_TOPIC' and stitch them together" in {
       Given("a set of spans with two different traceIds and stitching/kafka specific configurations")
       val stitchConfig = StitchConfiguration(
+        INITIAL_STORE_CAPACITY,
         MAX_STITCHED_RECORDS_IN_MEM,
         PUNCTUATE_INTERVAL_MS,
         SPAN_STITCH_WINDOW_MS,

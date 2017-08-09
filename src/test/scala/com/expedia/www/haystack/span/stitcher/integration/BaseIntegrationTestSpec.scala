@@ -45,7 +45,8 @@ abstract class BaseIntegrationTestSpec extends WordSpec with GivenWhenThen with 
   protected val PUNCTUATE_INTERVAL_MS = 2000L
   protected val SPAN_STITCH_WINDOW_MS = 5000
   protected val AUTO_COMMIT_INTERVAL_MS = 3000
-  protected val MAX_STITCHED_RECORDS_IN_MEM = 100
+  protected val INITIAL_STORE_CAPACITY = 100
+  protected val MAX_STITCHED_RECORDS_IN_MEM = 500
   protected val MAX_WAIT_FOR_OUTPUT_MS = 12000
 
   protected val PRODUCER_CONFIG = new Properties()

@@ -17,11 +17,13 @@
 package com.expedia.www.haystack.span.stitcher.store.impl
 
 import java.util
+import java.util.concurrent.atomic.AtomicInteger
 
 import com.expedia.open.tracing.stitch.StitchedSpan
 import com.expedia.www.haystack.span.stitcher.serde.StitchedSpanSerde
+import com.expedia.www.haystack.span.stitcher.store.DynamicCacheSizer
 import com.expedia.www.haystack.span.stitcher.store.data.model.StitchedSpanWithMetadata
-import com.expedia.www.haystack.span.stitcher.store.traits.{EldestStitchedSpanRemovalListener, StitchedSpanKVStore}
+import com.expedia.www.haystack.span.stitcher.store.traits.{CacheSizeObserver, EldestStitchedSpanEvictionListener, StitchedSpanKVStore}
 import org.apache.kafka.common.serialization.Serdes
 import org.apache.kafka.streams.KeyValue
 import org.apache.kafka.streams.processor.internals.ProcessorStateManager
@@ -31,18 +33,20 @@ import org.apache.kafka.streams.state.{KeyValueIterator, StateSerdes}
 import scala.collection.JavaConversions._
 import scala.collection.mutable
 
-class StitchedSpanMemStore(val name: String, maxEntries: Int) extends StitchedSpanKVStore {
+class StitchedSpanMemStore(val name: String, cacheSizer: DynamicCacheSizer) extends StitchedSpanKVStore with CacheSizeObserver {
 
   @volatile protected var open = false
   protected var serdes: StateSerdes[String, StitchedSpan] = _
 
-  private val listeners: mutable.ListBuffer[EldestStitchedSpanRemovalListener] = mutable.ListBuffer()
+  protected val maxEntries = new AtomicInteger(cacheSizer.defaultSizePerCache)
+
+  private val listeners: mutable.ListBuffer[EldestStitchedSpanEvictionListener] = mutable.ListBuffer()
 
   // initialize the map
-  protected val map = new util.LinkedHashMap[String, StitchedSpanWithMetadata](maxEntries + 1, 1.01f, false) {
+  protected val map = new util.LinkedHashMap[String, StitchedSpanWithMetadata](maxEntries.get() + 1, 1.01f, false) {
     override protected def removeEldestEntry(eldest: util.Map.Entry[String, StitchedSpanWithMetadata]): Boolean = {
-      if (size > maxEntries) {
-        listeners.foreach(listener => listener.onRemove(eldest.getKey, eldest.getValue))
+      if (size > maxEntries.get()) {
+        listeners.foreach(listener => listener.onEvict(eldest.getKey, eldest.getValue))
         true
       } else {
         false
@@ -56,6 +60,8 @@ class StitchedSpanMemStore(val name: String, maxEntries: Int) extends StitchedSp
     * @param root root state store
     */
   override def init(context: ProcessorContext, root: StateStore): Unit = {
+    cacheSizer.addCacheObserver(this)
+
     val storeChangelogTopic = ProcessorStateManager.storeChangelogTopic(context.applicationId, name)
 
     // construct the serde for the state manager
@@ -63,8 +69,10 @@ class StitchedSpanMemStore(val name: String, maxEntries: Int) extends StitchedSp
 
     // register the store
     context.register(root, true, new StateRestoreCallback() {
-      override def restore(key: Array[Byte], value: Array[Byte]): Unit = { // check value for null, to avoid  deserialization error.
-        if (value != null) {
+      override def restore(key: Array[Byte], value: Array[Byte]): Unit = {
+        if (value == null) {
+          map.remove(serdes.keyFrom(key))
+        } else {
           // restore the stitched span object with Long.MinValue as the first recorded timestamp
           // this makes sure that all these stitched span objects will be collected and emitted out in the first
           // punctuate call.
@@ -77,7 +85,7 @@ class StitchedSpanMemStore(val name: String, maxEntries: Int) extends StitchedSp
   }
 
   /**
-    * removes and returns all the stitched span objects from the map that have the timestamp less than current time
+    * removes and returns all the stitched span objects from the map that are recorded before the current time
     * minus stitch-window interval
     * @param stitchWindowMillis stitch window interval in millis
     * @return
@@ -90,7 +98,7 @@ class StitchedSpanMemStore(val name: String, maxEntries: Int) extends StitchedSp
 
     while (!done && iterator.hasNext) {
       val el = iterator.next()
-      if (el.getValue.firstRecordTimestamp + stitchWindowMillis <= System.currentTimeMillis()) {
+      if (el.getValue.firstSpanSeenAt + stitchWindowMillis <= System.currentTimeMillis()) {
         iterator.remove()
         result.put(el.getKey, el.getValue)
       } else {
@@ -121,13 +129,23 @@ class StitchedSpanMemStore(val name: String, maxEntries: Int) extends StitchedSp
 
   override def approximateNumEntries(): Long = this.map.size()
 
-  override def addRemovalListener(l: EldestStitchedSpanRemovalListener): Unit = this.listeners += l
+  override def addEvictionListener(l: EldestStitchedSpanEvictionListener): Unit = this.listeners += l
 
+  /**
+    * for an in-memory store, no flush operation is required
+    */
   override def flush(): Unit = ()
 
+  /**
+    * this is an in-memory store
+    * @return false
+    */
   override def persistent(): Boolean = false
 
-  override def close(): Unit = open = false
+  override def close(): Unit = {
+    cacheSizer.removeCacheObserver(this)
+    open = false
+  }
 
   override def isOpen: Boolean = open
 
@@ -138,4 +156,6 @@ class StitchedSpanMemStore(val name: String, maxEntries: Int) extends StitchedSp
   override def all(): KeyValueIterator[String, StitchedSpanWithMetadata] = {
     throw new UnsupportedOperationException("StitchedSpanMemStore does not support all() function.")
   }
+
+  def onCacheSizeChange(maxEntries: Int): Unit = this.maxEntries.set(maxEntries)
 }

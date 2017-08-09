@@ -18,14 +18,26 @@ package com.expedia.www.haystack.span.stitcher.store.traits
 
 import java.util
 
-import com.expedia.open.tracing.stitch.StitchedSpan
 import com.expedia.www.haystack.span.stitcher.store.data.model.StitchedSpanWithMetadata
 import org.apache.kafka.streams.state.KeyValueStore
 
 /**
-  *
+  * this interface extends KeyValueStore to provide stitch span operations
   */
 trait StitchedSpanKVStore extends KeyValueStore[String, StitchedSpanWithMetadata] {
+
+  /**
+    * get all stitched span objects that are recorded before the stitch-window timestamp.
+    * Stitch window timestamp is measured as (currentTimeMs - stitchWindowMillis)
+    * @param stitchWindowMillis stitch window in millis
+    * @return
+    */
   def getAndRemoveSpansInWindow(stitchWindowMillis: Long): util.Map[String, StitchedSpanWithMetadata]
-  def addRemovalListener(l: EldestStitchedSpanRemovalListener): Unit
+
+  /**
+    * add a listener to the store, that gets called when the eldest stitched span object is evicted
+    * due to constraints of maxEntries in the store cache
+    * @param l listener object that is called by the store
+    */
+  def addEvictionListener(l: EldestStitchedSpanEvictionListener): Unit
 }

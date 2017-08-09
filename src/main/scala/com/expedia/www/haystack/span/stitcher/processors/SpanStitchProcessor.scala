@@ -20,13 +20,13 @@ import com.expedia.open.tracing.Span
 import com.expedia.open.tracing.stitch.StitchedSpan
 import com.expedia.www.haystack.span.stitcher.config.entities.StitchConfiguration
 import com.expedia.www.haystack.span.stitcher.store.data.model.StitchedSpanWithMetadata
-import com.expedia.www.haystack.span.stitcher.store.traits.{EldestStitchedSpanRemovalListener, StitchedSpanKVStore}
+import com.expedia.www.haystack.span.stitcher.store.traits.{EldestStitchedSpanEvictionListener, StitchedSpanKVStore}
 import org.apache.kafka.streams.processor.{Processor, ProcessorContext}
 
 import scala.collection.JavaConversions._
 
 class SpanStitchProcessor(stitchConfig: StitchConfiguration) extends Processor[String, Span]
-  with EldestStitchedSpanRemovalListener {
+  with EldestStitchedSpanEvictionListener {
 
   private var context: ProcessorContext = _
   private var store: StitchedSpanKVStore = _
@@ -40,7 +40,7 @@ class SpanStitchProcessor(stitchConfig: StitchConfiguration) extends Processor[S
     this.context = context
     this.store = context.getStateStore("StitchedSpanStore").asInstanceOf[StitchedSpanKVStore]
 
-    this.store.addRemovalListener(this)
+    this.store.addEvictionListener(this)
     this.context.schedule(stitchConfig.pollIntervalMillis)
   }
 
@@ -88,7 +88,7 @@ class SpanStitchProcessor(stitchConfig: StitchConfiguration) extends Processor[S
     * @param key   partition key of the stitched span ie traceId
     * @param value stiched span protobuf builder
     */
-  override def onRemove(key: String, value: StitchedSpanWithMetadata): Unit = {
+  override def onEvict(key: String, value: StitchedSpanWithMetadata): Unit = {
     this.context.forward(key, value.builder.build())
   }
 }

@@ -18,5 +18,9 @@ package com.expedia.www.haystack.span.stitcher.store.data.model
 
 import com.expedia.open.tracing.stitch.StitchedSpan
 
-case class StitchedSpanWithMetadata(builder: StitchedSpan.Builder, firstRecordTimestamp: Long)
+/**
+  * @param builder protobuf builder for building stitched span object.
+  * @param firstSpanSeenAt timestamp when the first span of a given traceId is seen
+  */
+case class StitchedSpanWithMetadata(builder: StitchedSpan.Builder, firstSpanSeenAt: Long)
 

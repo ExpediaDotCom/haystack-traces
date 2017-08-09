@@ -19,8 +19,8 @@ package com.expedia.www.haystack.span.stitcher.store.traits
 import com.expedia.www.haystack.span.stitcher.store.data.model.StitchedSpanWithMetadata
 
 /**
-  * the listener is called when the eldest stitched span is removed from the cache
+  * the listener is called when the eldest stitched span is evicted from the cache
   */
-trait EldestStitchedSpanRemovalListener {
-  def onRemove(key: String, value: StitchedSpanWithMetadata): Unit
+trait EldestStitchedSpanEvictionListener {
+  def onEvict(key: String, value: StitchedSpanWithMetadata): Unit
 }

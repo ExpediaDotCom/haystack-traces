@@ -30,7 +30,8 @@ class ConfigurationLoaderSpec extends FunSpec with Matchers {
       val spanStitchConfig = ProjectConfiguration.stitchConfig
       spanStitchConfig.pollIntervalMillis shouldBe 1000L
       spanStitchConfig.streamsCloseTimeoutMillis shouldBe 300L
-      spanStitchConfig.maxEntries shouldBe 10
+      spanStitchConfig.maxEntriesAllStores shouldBe 20000
+      spanStitchConfig.initialStoreSize shouldBe 1000
       spanStitchConfig.stitchWindowMillis shouldBe 1000L
     }
 

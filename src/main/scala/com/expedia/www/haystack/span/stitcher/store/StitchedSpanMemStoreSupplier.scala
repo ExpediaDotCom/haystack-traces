@@ -22,17 +22,24 @@ import com.expedia.www.haystack.span.stitcher.store.impl.{StitchedSpanLoggingEna
 import com.expedia.www.haystack.span.stitcher.store.traits.StitchedSpanKVStore
 import org.apache.kafka.streams.processor.StateStoreSupplier
 
-class StitchedSpanMemStoreSupplier(maxEntries: Int,
+class StitchedSpanMemStoreSupplier(initialStoreSize: Int,
+                                   maxEntriesAcrossStores: Int,
                                    val name: String,
                                    val loggingEnabled: Boolean,
                                    val logConfig: util.Map[String, String])
   extends StateStoreSupplier[StitchedSpanKVStore] {
 
+  private val dynamicCacheSizer = new DynamicCacheSizer(initialStoreSize, maxEntriesAcrossStores)
+
+  /**
+    * @return kv store for maintaining stitched-spans. If logging is enabled, we persist the changelog to kafka topic
+    *         else it is purely in-memory
+    */
   override def get(): StitchedSpanKVStore = {
     if(loggingEnabled) {
-      new StitchedSpanLoggingEnabledMemStore(name, maxEntries)
+      new StitchedSpanLoggingEnabledMemStore(name, dynamicCacheSizer)
     } else {
-      new StitchedSpanMemStore(name, maxEntries)
+      new StitchedSpanMemStore(name, dynamicCacheSizer)
     }
   }
 }

@@ -36,7 +36,8 @@ object ProjectConfiguration {
   def stitchConfig: StitchConfiguration = {
     val cfg = config.getConfig("span.stitch")
     StitchConfiguration(
-      cfg.getInt("max.entries"),
+      cfg.getInt("store.initial.size"),
+      cfg.getInt("store.all.max.entries"),
       cfg.getLong("poll.ms"),
       cfg.getLong("window.ms"),
       cfg.getLong("streams.close.timeout.ms"))

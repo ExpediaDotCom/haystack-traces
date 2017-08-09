@@ -26,10 +26,8 @@ import com.expedia.www.haystack.span.stitcher.store.StitchedSpanMemStoreSupplier
 import org.apache.kafka.common.serialization.{StringDeserializer, StringSerializer}
 import org.apache.kafka.streams.KafkaStreams
 import org.apache.kafka.streams.KafkaStreams.StateListener
-import org.apache.kafka.streams.processor.{TopologyBuilder, WallclockTimestampExtractor}
+import org.apache.kafka.streams.processor.TopologyBuilder
 import org.slf4j.LoggerFactory
-
-import scala.util.Try
 
 class StreamTopology(kafkaConfig: KafkaConfiguration,
                      stitchConfig: StitchConfiguration)
@@ -76,7 +74,9 @@ class StreamTopology(kafkaConfig: KafkaConfiguration,
       TOPOLOGY_SOURCE_NAME)
 
     // add the state store
-    val storeSupplier = new StitchedSpanMemStoreSupplier(stitchConfig.maxEntries,
+    val storeSupplier = new StitchedSpanMemStoreSupplier(
+      stitchConfig.initialStoreSize,
+      stitchConfig.maxEntriesAllStores,
       "StitchedSpanStore",
       kafkaConfig.changelogConfig.enabled,
       kafkaConfig.changelogConfig.logConfig)
@@ -116,10 +116,18 @@ class StreamTopology(kafkaConfig: KafkaConfiguration,
     }
   }
 
+  /**
+    * close the stream if it is not running
+    * @return
+    */
   def close(): Boolean = {
     if(running.getAndSet(false)) {
       LOGGER.info("Closing the kafka streams.")
-      Try(streams.close(stitchConfig.streamsCloseTimeoutMillis, TimeUnit.MILLISECONDS))
+      try {
+        streams.close(stitchConfig.streamsCloseTimeoutMillis, TimeUnit.MILLISECONDS)
+      } catch {
+        case ex: Exception => LOGGER.error("Fail to close the kafka streams with reason", ex)
+      }
       true
     } else {
       false

@@ -17,12 +17,14 @@
 package com.expedia.www.haystack.span.stitcher.config.entities
 
 /**
-  * @param maxEntries maximum number of records in the state store, one record is one stitched-span object
+  * @param initialStoreSize initial size of state store
+  * @param maxEntriesAllStores maximum number of records across all state stores, one record is one stitched-span object
   * @param pollIntervalMillis poll interval to gather the stitched-spans that are ready to emit out to sink
   * @param stitchWindowMillis time window for which unique traceId will be hold to gather its child spans
   * @param streamsCloseTimeoutMillis: maximum time allowed to close the kafka streams
   */
-case class StitchConfiguration(maxEntries: Int,
+case class StitchConfiguration(initialStoreSize: Int,
+                               maxEntriesAllStores: Int,
                                pollIntervalMillis: Long,
                                stitchWindowMillis: Long,
                                streamsCloseTimeoutMillis: Long)

@@ -21,5 +21,9 @@ import com.expedia.www.haystack.span.stitcher.config.entities.StitchConfiguratio
 import org.apache.kafka.streams.processor.{Processor, ProcessorSupplier}
 
 class SpanStitchProcessSupplier(stitchConfig: StitchConfiguration) extends ProcessorSupplier[String, Span] {
+
+  /**
+    * @return processor that does the stitching and emits out the stitched-span object
+    */
   override def get(): Processor[String, Span] = new MeteredSpanStitchProcessor(stitchConfig)
 }

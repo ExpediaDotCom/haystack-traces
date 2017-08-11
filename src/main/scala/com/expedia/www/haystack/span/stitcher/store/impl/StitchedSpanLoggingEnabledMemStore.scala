@@ -55,8 +55,8 @@ class StitchedSpanLoggingEnabledMemStore(val storeName: String, dynamicCacheSize
     originalValue
   }
 
-  override def getAndRemoveSpansInWindow(currentTimestampMillis: Long, stitchWindowMillis: Long): util.Map[String, StitchedSpanWithMetadata] = {
-    val result = super.getAndRemoveSpansInWindow(currentTimestampMillis, stitchWindowMillis)
+  override def getAndRemoveSpansOlderThan(timestamp: Long): util.Map[String, StitchedSpanWithMetadata] = {
+    val result = super.getAndRemoveSpansOlderThan(timestamp)
     result.keySet().foreach(removed)
     result
   }

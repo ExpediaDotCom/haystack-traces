@@ -16,7 +16,7 @@
  */
 package com.expedia.www.haystack.span.stitcher.integration
 
-import java.util.{List => JList}
+import java.util
 
 import com.expedia.open.tracing.stitch.StitchedSpan
 import com.expedia.www.haystack.span.stitcher.StreamTopology
@@ -66,9 +66,9 @@ class FailedTopologyRecoverySpec extends BaseIntegrationTestSpec {
       produceSpansAsync(1,
         produceInterval = 1.seconds,
         List(SpanDescription(TRACE_ID_1, SPAN_ID_PREFIX)),
-        startTimestamp =  + 100)
+        startTimestamp = SPAN_STITCH_WINDOW_MS + 100)
 
-      val records: JList[KeyValue[String, StitchedSpan]] =
+      val records: util.List[KeyValue[String, StitchedSpan]] =
         IntegrationTestUtils.waitUntilMinKeyValueRecordsReceived(RESULT_CONSUMER_CONFIG, OUTPUT_TOPIC, 1, MAX_WAIT_FOR_OUTPUT_MS)
 
       validateStitchedSpan(records, MAX_CHILD_SPANS + 1) // 1 extra span is created in the rerun
@@ -78,7 +78,7 @@ class FailedTopologyRecoverySpec extends BaseIntegrationTestSpec {
   }
 
   // validate the received records
-  private def validateStitchedSpan(records: JList[KeyValue[String, StitchedSpan]], childSpanCount: Int) = {
+  private def validateStitchedSpan(records: util.List[KeyValue[String, StitchedSpan]], childSpanCount: Int) = {
     // expect only one stitched span object
     records.size() shouldBe 1
     records.head.key shouldBe TRACE_ID_1

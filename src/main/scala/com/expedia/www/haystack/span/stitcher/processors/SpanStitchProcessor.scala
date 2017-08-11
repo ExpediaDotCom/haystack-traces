@@ -49,10 +49,10 @@ class SpanStitchProcessor(stitchConfig: StitchConfiguration) extends Processor[S
     * @param timestamp the stream's current timestamp.
     */
   override def punctuate(timestamp: Long): Unit = {
-    this.store.getAndRemoveSpansInWindow(timestamp, stitchConfig.stitchWindowMillis) foreach {
+    this.store.getAndRemoveSpansOlderThan(timestamp - stitchConfig.stitchWindowMillis) foreach {
       case (key, value) =>
         val stitchedSpan = value.builder.build()
-        context.forward(key, stitchedSpan)
+        forward(key, stitchedSpan)
     }
   }
 
@@ -89,6 +89,10 @@ class SpanStitchProcessor(stitchConfig: StitchConfiguration) extends Processor[S
     * @param value stiched span protobuf builder
     */
   override def onEvict(key: String, value: StitchedSpanWithMetadata): Unit = {
-    this.context.forward(key, value.builder.build())
+    forward(key, value.builder.build())
+  }
+
+  protected def forward(key: String, stitchedSpan: StitchedSpan): Unit = {
+    this.context.forward(key, stitchedSpan)
   }
 }

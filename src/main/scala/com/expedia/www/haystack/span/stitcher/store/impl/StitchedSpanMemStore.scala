@@ -19,7 +19,10 @@ package com.expedia.www.haystack.span.stitcher.store.impl
 import java.util
 import java.util.concurrent.atomic.AtomicInteger
 
+import com.codahale.metrics.Meter
 import com.expedia.open.tracing.stitch.StitchedSpan
+import com.expedia.www.haystack.span.stitcher.metrics.AppMetricNames._
+import com.expedia.www.haystack.span.stitcher.metrics.MetricsSupport
 import com.expedia.www.haystack.span.stitcher.serde.StitchedSpanSerde
 import com.expedia.www.haystack.span.stitcher.store.DynamicCacheSizer
 import com.expedia.www.haystack.span.stitcher.store.data.model.StitchedSpanWithMetadata
@@ -33,6 +36,10 @@ import org.apache.kafka.streams.state.{KeyValueIterator, StateSerdes}
 import scala.collection.JavaConversions._
 import scala.collection.mutable
 
+object StitchedSpanMemStore extends MetricsSupport {
+  protected val evictionMeter: Meter = metricRegistry.meter(STATE_STORE_EVICTION)
+}
+
 class StitchedSpanMemStore(val name: String, cacheSizer: DynamicCacheSizer) extends StitchedSpanKVStore with CacheSizeObserver {
 
   @volatile protected var open = false
@@ -43,9 +50,10 @@ class StitchedSpanMemStore(val name: String, cacheSizer: DynamicCacheSizer) exte
   private val listeners: mutable.ListBuffer[EldestStitchedSpanEvictionListener] = mutable.ListBuffer()
 
   // initialize the map
-  protected val map = new util.LinkedHashMap[String, StitchedSpanWithMetadata](maxEntries.get() + 1, 1.01f, false) {
+  protected val map = new util.LinkedHashMap[String, StitchedSpanWithMetadata](cacheSizer.defaultSizePerCache, 1.01f, false) {
     override protected def removeEldestEntry(eldest: util.Map.Entry[String, StitchedSpanWithMetadata]): Boolean = {
-      if (size > maxEntries.get()) {
+      if (size >= maxEntries.get()) {
+        StitchedSpanMemStore.evictionMeter.mark()
         listeners.foreach(listener => listener.onEvict(eldest.getKey, eldest.getValue))
         true
       } else {
@@ -85,13 +93,11 @@ class StitchedSpanMemStore(val name: String, cacheSizer: DynamicCacheSizer) exte
   }
 
   /**
-    * removes and returns all the stitched span objects from the map that are recorded before the current time
-    * minus stitch-window interval
-    * @param currentTimestampMillis current timestamp
-    * @param stitchWindowMillis stitch window interval in millis
+    * removes and returns all the stitched span objects from the map that are recorded before the given timestamp
+    * @param timestamp timestamp before which all stitched spans should be read and removed
     * @return
     */
-  override def getAndRemoveSpansInWindow(currentTimestampMillis: Long, stitchWindowMillis: Long): util.Map[String, StitchedSpanWithMetadata] = {
+  override def getAndRemoveSpansOlderThan(timestamp: Long): util.Map[String, StitchedSpanWithMetadata] = {
     val result = new util.HashMap[String, StitchedSpanWithMetadata]()
 
     val iterator = this.map.entrySet().iterator()
@@ -99,7 +105,7 @@ class StitchedSpanMemStore(val name: String, cacheSizer: DynamicCacheSizer) exte
 
     while (!done && iterator.hasNext) {
       val el = iterator.next()
-      if (el.getValue.firstSpanSeenAt + stitchWindowMillis <= currentTimestampMillis) {
+      if (el.getValue.firstSpanSeenAt <= timestamp) {
         iterator.remove()
         result.put(el.getKey, el.getValue)
       } else {

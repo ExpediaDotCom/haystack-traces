@@ -17,14 +17,17 @@
 package com.expedia.www.haystack.span.stitcher.processors
 
 import com.expedia.open.tracing.Span
+import com.expedia.open.tracing.stitch.StitchedSpan
 import com.expedia.www.haystack.span.stitcher.config.entities.StitchConfiguration
 import com.expedia.www.haystack.span.stitcher.metrics.MetricsSupport
+import com.expedia.www.haystack.span.stitcher.metrics.AppMetricNames._
 
 class MeteredSpanStitchProcessor(stitchConfig: StitchConfiguration) extends SpanStitchProcessor(stitchConfig)
   with MetricsSupport {
 
-  private val punctuateTimer = metricRegistry.timer("punctuate")
-  private val stitchProcessTimer = metricRegistry.timer("stitch.process")
+  private val punctuateTimer = metricRegistry.timer(STITCH_PUNCTUATE_TIMER)
+  private val stitchProcessTimer = metricRegistry.timer(STITCH_PROCESS_TIMER)
+  private val stitchedSpansHistogram = metricRegistry.histogram(STITCH_SPAN_COUNT)
 
   override def punctuate(timestamp: Long): Unit = {
     val timer = punctuateTimer.time()
@@ -36,5 +39,10 @@ class MeteredSpanStitchProcessor(stitchConfig: StitchConfiguration) extends Span
     val timer = stitchProcessTimer.time()
     super.process(key, span)
     timer.stop()
+  }
+
+  override def forward(key: String, stitchedSpan: StitchedSpan): Unit = {
+    stitchedSpansHistogram.update(stitchedSpan.getChildSpansCount)
+    super.forward(key, stitchedSpan)
   }
 }

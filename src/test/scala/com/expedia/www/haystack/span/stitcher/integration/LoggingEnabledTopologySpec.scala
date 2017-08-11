@@ -16,7 +16,7 @@
  */
 package com.expedia.www.haystack.span.stitcher.integration
 
-import java.util.{List => JList}
+import java.util
 
 import com.expedia.open.tracing.stitch.StitchedSpan
 import com.expedia.www.haystack.span.stitcher.StreamTopology
@@ -58,7 +58,7 @@ class LoggingEnabledTopologySpec extends BaseIntegrationTestSpec {
       topology.start()
 
       Then(s"we should read one stitch span objects from '$OUTPUT_TOPIC' topic")
-      val result: JList[KeyValue[String, StitchedSpan]] =
+      val result: util.List[KeyValue[String, StitchedSpan]] =
         IntegrationTestUtils.waitUntilMinKeyValueRecordsReceived(RESULT_CONSUMER_CONFIG, OUTPUT_TOPIC, 1, MAX_WAIT_FOR_OUTPUT_MS)
 
       validateStitchedSpan(result, MAX_CHILD_SPANS)
@@ -78,7 +78,7 @@ class LoggingEnabledTopologySpec extends BaseIntegrationTestSpec {
   }
 
   // validate the received records
-  private def validateStitchedSpan(records: JList[KeyValue[String, StitchedSpan]], childSpanCount: Int) = {
+  private def validateStitchedSpan(records: util.List[KeyValue[String, StitchedSpan]], childSpanCount: Int) = {
     // expect only one stitched span object
     records.size() shouldBe 1
     records.head.key shouldBe TRACE_ID_1

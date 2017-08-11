@@ -16,7 +16,7 @@
  */
 package com.expedia.www.haystack.span.stitcher.integration
 
-import java.util.{List => JList}
+import java.util
 
 import com.expedia.open.tracing.stitch.StitchedSpan
 import com.expedia.www.haystack.span.stitcher.StreamTopology
@@ -60,7 +60,7 @@ class SpanStitchWithMultiTraceIdsTopology extends BaseIntegrationTestSpec {
       topology.start()
 
       Then(s"we should read two stitch span objects with differet traceIds from '$OUTPUT_TOPIC' topic")
-      val result: JList[KeyValue[String, StitchedSpan]] =
+      val result: util.List[KeyValue[String, StitchedSpan]] =
         IntegrationTestUtils.waitUntilMinKeyValueRecordsReceived(RESULT_CONSUMER_CONFIG, OUTPUT_TOPIC, 2, MAX_WAIT_FOR_OUTPUT_MS)
 
       validateStitchedSpan(result, MAX_CHILD_SPANS)
@@ -70,8 +70,7 @@ class SpanStitchWithMultiTraceIdsTopology extends BaseIntegrationTestSpec {
   }
 
   // validate the received records
-  private def validateStitchedSpan(records: JList[KeyValue[String, StitchedSpan]], childSpanCount: Int) = {
-    // expect only one stitched span object
+  private def validateStitchedSpan(records: util.List[KeyValue[String, StitchedSpan]], childSpanCount: Int) = {
     records.size() shouldBe 2
 
     // both traceIds should be present as different stitched span objects

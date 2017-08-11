@@ -18,6 +18,7 @@ package com.expedia.www.haystack.span.stitcher.store
 
 import com.codahale.metrics.Meter
 import com.expedia.open.tracing.stitch.StitchedSpan
+import com.expedia.www.haystack.span.stitcher.metrics.AppMetricNames._
 import com.expedia.www.haystack.span.stitcher.metrics.MetricsSupport
 import org.apache.kafka.streams.processor.ProcessorContext
 import org.apache.kafka.streams.processor.internals.{ProcessorStateManager, RecordCollector}
@@ -26,7 +27,7 @@ import org.slf4j.{Logger, LoggerFactory}
 
 object StitchedSpanStoreChangeLogger extends MetricsSupport {
   protected val LOGGER: Logger = LoggerFactory.getLogger(classOf[StitchedSpanStoreChangeLogger])
-  protected val changeLogFailure: Meter = metricRegistry.meter("changelog.send.failure")
+  protected val changeLogFailure: Meter = metricRegistry.meter(CHANGELOG_SEND_FAILURE)
 }
 
 /**

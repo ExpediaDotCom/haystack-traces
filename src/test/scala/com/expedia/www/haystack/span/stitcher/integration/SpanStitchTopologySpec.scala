@@ -16,7 +16,7 @@
  */
 package com.expedia.www.haystack.span.stitcher.integration
 
-import java.util.{List => JList}
+import java.util
 
 import com.expedia.open.tracing.stitch.StitchedSpan
 import com.expedia.www.haystack.span.stitcher.StreamTopology
@@ -58,7 +58,7 @@ class SpanStitchTopologySpec extends BaseIntegrationTestSpec {
       topology.start()
 
       Then(s"we should read one stitch span object from '$OUTPUT_TOPIC' topic")
-      val result: JList[KeyValue[String, StitchedSpan]] =
+      val result: util.List[KeyValue[String, StitchedSpan]] =
           IntegrationTestUtils.waitUntilMinKeyValueRecordsReceived(RESULT_CONSUMER_CONFIG, OUTPUT_TOPIC, 1, MAX_WAIT_FOR_OUTPUT_MS)
       validateStitchedSpan(result, MAX_CHILD_SPANS, SPAN_ID_PREFIX)
 
@@ -74,17 +74,17 @@ class SpanStitchTopologySpec extends BaseIntegrationTestSpec {
     When(s"these spans are produced in '$INPUT_TOPIC' topic on the currently running topology")
     produceSpansAsync(MAX_CHILD_SPANS,
       1.seconds,
-      List(SpanDescription(TRACE_ID, SPAN_ID_2_PREFIX)), startTimestamp = PUNCTUATE_INTERVAL_MS + 100L)
+      List(SpanDescription(TRACE_ID, SPAN_ID_2_PREFIX)), startTimestamp = SPAN_STITCH_WINDOW_MS + 100L)
 
     Then(s"we should read see newer spans in the stitched object from '$OUTPUT_TOPIC' topic")
-    val result: JList[KeyValue[String, StitchedSpan]] =
+    val result: util.List[KeyValue[String, StitchedSpan]] =
       IntegrationTestUtils.waitUntilMinKeyValueRecordsReceived(RESULT_CONSUMER_CONFIG, OUTPUT_TOPIC, 1, MAX_WAIT_FOR_OUTPUT_MS)
 
     validateStitchedSpan(result, MAX_CHILD_SPANS, SPAN_ID_2_PREFIX)
   }
 
   // validate the stitched span object
-  private def validateStitchedSpan(records: JList[KeyValue[String, StitchedSpan]],
+  private def validateStitchedSpan(records: util.List[KeyValue[String, StitchedSpan]],
                                    childSpanCount: Int,
                                    spanIdPrefix: String): Unit = {
     // expect only one stitched span object

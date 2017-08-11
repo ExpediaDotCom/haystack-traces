@@ -61,15 +61,15 @@
             <parameter name="regex"><![CDATA[println]]></parameter>
         </parameters>
     </check>
-<!--    <check level="error" class="org.scalastyle.scalariform.IllegalImportsChecker" enabled="true">
-        <parameters>
-            &lt;!&ndash; Only spaces may surround the commas, no newlines! &ndash;&gt;
-            <parameter name="illegalImports">
-                <![CDATA[org.apache.hadoop.mapred._, org.apache.flink.api.java.hadoop.mapred._, org.apache.flink.api.scala.hadoop.mapred._]]>
-            </parameter>
-        </parameters>
-        <customMessage>Don't import old Hadoop package, use mapreduce instead.</customMessage>
-    </check>-->
+    <!--    <check level="error" class="org.scalastyle.scalariform.IllegalImportsChecker" enabled="true">
+            <parameters>
+                &lt;!&ndash; Only spaces may surround the commas, no newlines! &ndash;&gt;
+                <parameter name="illegalImports">
+                    <![CDATA[org.apache.hadoop.mapred._, org.apache.flink.api.java.hadoop.mapred._, org.apache.flink.api.scala.hadoop.mapred._]]>
+                </parameter>
+            </parameters>
+            <customMessage>Don't import old Hadoop package, use mapreduce instead.</customMessage>
+        </check>-->
     <check level="warning" class="org.scalastyle.scalariform.NumberOfTypesChecker" enabled="true">
         <parameters>
             <parameter name="maxTypes"><![CDATA[30]]></parameter>

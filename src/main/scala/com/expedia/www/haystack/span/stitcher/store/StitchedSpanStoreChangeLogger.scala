@@ -40,8 +40,6 @@ class StitchedSpanStoreChangeLogger(val name: String,
                                     val context: ProcessorContext,
                                     val serialization: StateSerdes[String, StitchedSpan]) {
 
-  import StitchedSpanStoreChangeLogger._
-
   private val topic = ProcessorStateManager.storeChangelogTopic(context.applicationId, name)
   private val collector = context.asInstanceOf[RecordCollector.Supplier].recordCollector
   private val partition = context.taskId().partition
@@ -53,10 +51,10 @@ class StitchedSpanStoreChangeLogger(val name: String,
       try {
         collector.send(this.topic, key, value, this.partition, context.timestamp, keySerializer, valueSerializer)
       } catch {
-        case ex: Exception => {
-          LOGGER.error(s"Fail to add the change in the changelog topic=$topic, partition=$partition", ex)
-          changeLogFailure.mark()
-        }
+        case ex: Exception =>
+          StitchedSpanStoreChangeLogger.LOGGER.error(s"Fail to add the change in the changelog topic=$topic, " +
+            s"partition=$partition", ex)
+          StitchedSpanStoreChangeLogger.changeLogFailure.mark()
       }
     }
   }

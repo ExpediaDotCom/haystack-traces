@@ -54,7 +54,7 @@ class SpanStitchWithMultiTraceIdsTopology extends BaseIntegrationTestSpec {
 
       When(s"spans are produced in '$INPUT_TOPIC' topic async, and kafka-streams topology is started")
       produceSpansAsync(MAX_CHILD_SPANS,
-        2.seconds,
+        1.seconds,
         List(SpanDescription(TRACE_ID_1, SPAN_ID_PREFIX_1), SpanDescription(TRACE_ID_2, SPAN_ID_PREFIX_2)))
       val topology = new StreamTopology(kafkaConfig, stitchConfig)
       topology.start()

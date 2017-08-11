@@ -52,7 +52,7 @@ class SpanStitchTopologySpec extends BaseIntegrationTestSpec {
       When(s"spans are produced in '$INPUT_TOPIC' topic async, and kafka-streams topology is started")
       val SPAN_ID_PREFIX = "span-id"
       produceSpansAsync(MAX_CHILD_SPANS,
-        2.seconds,
+        1.seconds,
         List(SpanDescription(TRACE_ID, SPAN_ID_PREFIX)))
       val topology = new StreamTopology(kafkaConfig, stitchConfig)
       topology.start()
@@ -73,7 +73,7 @@ class SpanStitchTopologySpec extends BaseIntegrationTestSpec {
     val SPAN_ID_2_PREFIX = "span-id-2"
     When(s"these spans are produced in '$INPUT_TOPIC' topic on the currently running topology")
     produceSpansAsync(MAX_CHILD_SPANS,
-      2.seconds,
+      1.seconds,
       List(SpanDescription(TRACE_ID, SPAN_ID_2_PREFIX)), startTimestamp = PUNCTUATE_INTERVAL_MS + 100L)
 
     Then(s"we should read see newer spans in the stitched object from '$OUTPUT_TOPIC' topic")

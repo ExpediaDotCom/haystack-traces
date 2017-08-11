@@ -43,7 +43,7 @@ abstract class BaseIntegrationTestSpec extends WordSpec with GivenWhenThen with 
   protected var scheduler: ScheduledExecutorService = _
 
   protected val PUNCTUATE_INTERVAL_MS = 2000L
-  protected val SPAN_STITCH_WINDOW_MS = 5000
+  protected val SPAN_STITCH_WINDOW_MS = 6000
   protected val AUTO_COMMIT_INTERVAL_MS = 3000
   protected val INITIAL_STORE_CAPACITY = 100
   protected val MAX_STITCHED_RECORDS_IN_MEM = 500
@@ -61,7 +61,7 @@ abstract class BaseIntegrationTestSpec extends WordSpec with GivenWhenThen with 
   protected val CHANGELOG_TOPIC = s"$APP_ID-StitchedSpanStore-changelog"
 
   override def beforeAll() {
-    scheduler = Executors.newScheduledThreadPool(2)
+    scheduler = Executors.newSingleThreadScheduledExecutor()
   }
 
   override def afterAll(): Unit = {
@@ -132,7 +132,7 @@ abstract class BaseIntegrationTestSpec extends WordSpec with GivenWhenThen with 
             spans,
             PRODUCER_CONFIG,
             timestamp)
-          timestamp = timestamp + (PUNCTUATE_INTERVAL_MS / (maxSpans - 1))
+          timestamp = timestamp + (SPAN_STITCH_WINDOW_MS / (maxSpans - 1))
         }
         idx = idx + 1
       }

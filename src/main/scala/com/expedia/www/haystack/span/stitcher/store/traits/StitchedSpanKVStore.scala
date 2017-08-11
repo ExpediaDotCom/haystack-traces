@@ -29,10 +29,11 @@ trait StitchedSpanKVStore extends KeyValueStore[String, StitchedSpanWithMetadata
   /**
     * get all stitched span objects that are recorded before the stitch-window timestamp.
     * Stitch window timestamp is measured as (currentTimeMs - stitchWindowMillis)
+    * @param currentTimestampMillis current timestamp in millis
     * @param stitchWindowMillis stitch window in millis
     * @return
     */
-  def getAndRemoveSpansInWindow(stitchWindowMillis: Long): util.Map[String, StitchedSpanWithMetadata]
+  def getAndRemoveSpansInWindow(currentTimestampMillis: Long, stitchWindowMillis: Long): util.Map[String, StitchedSpanWithMetadata]
 
   /**
     * add a listener to the store, that gets called when the eldest stitched span object is evicted

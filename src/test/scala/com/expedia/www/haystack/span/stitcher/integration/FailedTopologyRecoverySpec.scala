@@ -40,7 +40,7 @@ class FailedTopologyRecoverySpec extends BaseIntegrationTestSpec {
         INITIAL_STORE_CAPACITY,
         MAX_STITCHED_RECORDS_IN_MEM,
         PUNCTUATE_INTERVAL_MS,
-        1 << 10,
+        SPAN_STITCH_WINDOW_MS,
         AUTO_COMMIT_INTERVAL_MS)
       val kafkaConfig = KafkaConfiguration(new StreamsConfig(STREAMS_CONFIG),
         OUTPUT_TOPIC,
@@ -49,13 +49,13 @@ class FailedTopologyRecoverySpec extends BaseIntegrationTestSpec {
         new FailOnInvalidTimestamp,
         ChangelogConfiguration(enabled = true))
       produceSpansAsync(MAX_CHILD_SPANS,
-        produceInterval = 2.seconds,
+        produceInterval = 1.seconds,
         List(SpanDescription(TRACE_ID_1, SPAN_ID_PREFIX)))
 
       When(s"kafka-streams topology is started and then stopped forcefully after few sec")
       var topology = new StreamTopology(kafkaConfig, stitchConfig)
       topology.start()
-      Thread.sleep(12000)
+      Thread.sleep(10000)
       topology.close() shouldBe true
 
       Then(s"on restart of the topology, we should be able to read stitch span object created in previous run from the '$OUTPUT_TOPIC' topic")
@@ -66,7 +66,7 @@ class FailedTopologyRecoverySpec extends BaseIntegrationTestSpec {
       produceSpansAsync(1,
         produceInterval = 1.seconds,
         List(SpanDescription(TRACE_ID_1, SPAN_ID_PREFIX)),
-        startTimestamp = PUNCTUATE_INTERVAL_MS + 100)
+        startTimestamp =  + 100)
 
       val records: JList[KeyValue[String, StitchedSpan]] =
         IntegrationTestUtils.waitUntilMinKeyValueRecordsReceived(RESULT_CONSUMER_CONFIG, OUTPUT_TOPIC, 1, MAX_WAIT_FOR_OUTPUT_MS)

@@ -46,10 +46,10 @@ class SpanStitchProcessor(stitchConfig: StitchConfiguration) extends Processor[S
 
   /**
     *
-    * @param timestamp the stream timestamp, not used in punctuate logic today
+    * @param timestamp the stream's current timestamp.
     */
   override def punctuate(timestamp: Long): Unit = {
-    this.store.getAndRemoveSpansInWindow(stitchConfig.stitchWindowMillis) foreach {
+    this.store.getAndRemoveSpansInWindow(timestamp, stitchConfig.stitchWindowMillis) foreach {
       case (key, value) =>
         val stitchedSpan = value.builder.build()
         context.forward(key, stitchedSpan)
@@ -68,7 +68,7 @@ class SpanStitchProcessor(stitchConfig: StitchConfiguration) extends Processor[S
       val value = this.store.get(key)
       if (value == null) {
         val stitchSpanBuilder = StitchedSpan.newBuilder().setTraceId(span.getTraceId).addChildSpans(span)
-        this.store.put(key, StitchedSpanWithMetadata(stitchSpanBuilder, System.currentTimeMillis()))
+        this.store.put(key, StitchedSpanWithMetadata(stitchSpanBuilder, this.context.timestamp()))
       } else {
         // add this span as a child span to existing builder
         value.builder.addChildSpans(span)

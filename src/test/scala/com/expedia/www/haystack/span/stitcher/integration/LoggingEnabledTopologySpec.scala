@@ -52,7 +52,7 @@ class LoggingEnabledTopologySpec extends BaseIntegrationTestSpec {
         ChangelogConfiguration(enabled = true))
       When(s"spans are produced in '$INPUT_TOPIC' topic async, and kafka-streams topology is started")
       produceSpansAsync(MAX_CHILD_SPANS,
-        produceInterval = 2.seconds,
+        produceInterval = 1.seconds,
         List(SpanDescription(TRACE_ID_1, SPAN_ID_PREFIX)))
       val topology = new StreamTopology(kafkaConfig, stitchConfig)
       topology.start()

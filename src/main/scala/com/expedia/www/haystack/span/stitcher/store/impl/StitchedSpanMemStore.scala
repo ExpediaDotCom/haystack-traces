@@ -87,10 +87,11 @@ class StitchedSpanMemStore(val name: String, cacheSizer: DynamicCacheSizer) exte
   /**
     * removes and returns all the stitched span objects from the map that are recorded before the current time
     * minus stitch-window interval
+    * @param currentTimestampMillis current timestamp
     * @param stitchWindowMillis stitch window interval in millis
     * @return
     */
-  override def getAndRemoveSpansInWindow(stitchWindowMillis: Long): util.Map[String, StitchedSpanWithMetadata] = {
+  override def getAndRemoveSpansInWindow(currentTimestampMillis: Long, stitchWindowMillis: Long): util.Map[String, StitchedSpanWithMetadata] = {
     val result = new util.HashMap[String, StitchedSpanWithMetadata]()
 
     val iterator = this.map.entrySet().iterator()
@@ -98,13 +99,13 @@ class StitchedSpanMemStore(val name: String, cacheSizer: DynamicCacheSizer) exte
 
     while (!done && iterator.hasNext) {
       val el = iterator.next()
-      if (el.getValue.firstSpanSeenAt + stitchWindowMillis <= System.currentTimeMillis()) {
+      if (el.getValue.firstSpanSeenAt + stitchWindowMillis <= currentTimestampMillis) {
         iterator.remove()
         result.put(el.getKey, el.getValue)
       } else {
         // here we apply a basic optimization and skip further iteration because all following records
         // in this map will have higher recordTimestamp. When we insert the first span for a unique traceId
-        // in the map, we set the 'firstRecordTimestamp' attribute with System.currentTimeMillis
+        // in the map, we set the 'firstRecordTimestamp' attribute with record's timestamp
         done = true
       }
     }

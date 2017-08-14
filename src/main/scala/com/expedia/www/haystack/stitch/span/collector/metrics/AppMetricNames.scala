@@ -14,22 +14,17 @@
  *     limitations under the License.
  *
  */
-package com.expedia.www.haystack.stitch.span
 
-import com.codahale.metrics.JmxReporter
-import com.expedia.www.haystack.stitch.span.metrics.MetricsSupport
+package com.expedia.www.haystack.stitch.span.collector.metrics
 
+object AppMetricNames {
 
-object Collector extends MetricsSupport {
+  val CASSANDRA_WRITE_TIME = "cassandra.write.time"
+  val CASSANDRA_WRITE_FAILURE = "cassandra.write.failure"
+  val CASSANDRA_WRITE_WARNINGS = "cassandra.write.warnings"
 
-  private var jmxReporter: JmxReporter = _
-
-  def main(args: Array[String]): Unit = {
-    startJmxReporter()
-  }
-
-  private def startJmxReporter() = {
-    jmxReporter = JmxReporter.forRegistry(metricRegistry).build()
-    jmxReporter.start()
-  }
+  val ES_WRITE_DOCS = "es.write.docs"
+  val ES_WRITE_FAILURE = "es.write.failure"
+  val ES_WRITE_DUPLICATES = "es.writer.duplicates"
+  val ES_WRITE_TIME = "es.writer.time"
 }

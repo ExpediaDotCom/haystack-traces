@@ -9,6 +9,8 @@ RUN mkdir -p ${APP_HOME}
 COPY target/${APP_NAME}.jar ${APP_HOME}/
 COPY build/start-app.sh ${APP_HOME}/
 
+RUN chmod +x ${APP_HOME}/start-app.sh
+
 WORKDIR ${APP_HOME}
 
 ENTRYPOINT ["./start-app.sh"]

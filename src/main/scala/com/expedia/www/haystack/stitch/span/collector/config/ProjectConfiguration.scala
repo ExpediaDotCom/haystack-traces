@@ -1,0 +1,92 @@
+/*
+ *  Copyright 2017 Expedia, Inc.
+ *
+ *     Licensed under the Apache License, Version 2.0 (the "License");
+ *     you may not use this file except in compliance with the License.
+ *     You may obtain a copy of the License at
+ *
+ *         http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *     Unless required by applicable law or agreed to in writing, software
+ *     distributed under the License is distributed on an "AS IS" BASIS,
+ *     WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *     See the License for the specific language governing permissions and
+ *     limitations under the License.
+ *
+ */
+
+package com.expedia.www.haystack.stitch.span.collector.config
+
+import com.datastax.driver.core.ConsistencyLevel
+import com.expedia.www.haystack.stitch.span.collector.config.entities._
+import com.typesafe.config.Config
+
+import scala.collection.JavaConversions._
+
+object ProjectConfiguration {
+  val config: Config = ConfigurationLoader.loadAppConfig
+
+  val collectorConfig: CollectorConfiguration = {
+    val collector = config.getConfig("collector")
+    CollectorConfiguration(
+      collector.getInt("parallelism"),
+      collector.getString("topic"),
+      collector.getInt("batch.size"),
+      collector.getInt("batch.interval.ms"),
+      collector.getInt("commit.batch.size"))
+  }
+
+  /**
+    *
+    * @return cassandra configuration object
+    */
+  val cassandraConfig: CassandraConfiguration = {
+    val cs = config.getConfig("cassandra")
+
+    val awsConfig =
+      if(cs.hasPath("auto.discovery.aws")) {
+        val aws = cs.getConfig("auto.discovery.aws")
+        val tags = aws.getConfig("tags")
+          .entrySet()
+          .map(elem => elem.getKey -> elem.getValue.unwrapped().toString)
+          .toMap
+        Some(AwsNodeDiscoveryConfiguration(aws.getString("region"), tags))
+      } else {
+        None
+      }
+
+    val socketConfig = cs.getConfig("connections")
+
+    val socket = SocketConfiguration(
+      socketConfig.getInt("max.per.host"),
+      socketConfig.getBoolean("keep.alive"),
+      socketConfig.getInt("conn.timeout.ms"),
+      socketConfig.getInt("read.timeout.ms"))
+
+    CassandraConfiguration(
+      if(cs.hasPath("endpoints")) cs.getStringList("endpoints").toList else Nil,
+      awsConfig,
+      cs.getString("keyspace.name"),
+      cs.getString("keyspace.table.name"),
+      cs.getBoolean("keyspace.auto.create"),
+      ConsistencyLevel.valueOf(cs.getString("consistency.level")),
+      socket)
+  }
+
+  /**
+    *
+    * @return elastic search configuration object
+    */
+  val elasticSearchConfig: ElasticSearchConfiguration = {
+    val es = config.getConfig("elasticsearch")
+    ElasticSearchConfiguration(
+      host = es.getString("host"),
+      port = if(es.hasPath("port")) Some(es.getInt("port")) else None,
+      consistencyLevel = es.getString("consistency.level"),
+      indexNamePrefix = es.getString("index.name.prefix"),
+      parentType = es.getString("index.parent.type"),
+      childType = es.getString("index.child.type"),
+      es.getInt("conn.timeout.ms"),
+      es.getInt("read.timeout.ms"))
+  }
+}

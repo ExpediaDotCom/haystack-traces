@@ -21,10 +21,9 @@ package com.expedia.www.haystack.stitch.span.collector.config.entities
 case class IndexConfiguration(tagKeys: Set[String])
 
 case class ElasticSearchConfiguration(host: String,
-                                      port: Option[Int],
+                                      port: Int,
                                       consistencyLevel: String,
                                       indexNamePrefix: String,
-                                      parentType: String,
-                                      childType: String,
+                                      indexType: String,
                                       connectionTimeoutMillis: Int,
                                       readTimeoutMillis: Int)

@@ -26,21 +26,24 @@ import scala.collection.JavaConversions._
 object ProjectConfiguration {
   val config: Config = ConfigurationLoader.loadAppConfig
 
-  val collectorConfig: CollectorConfiguration = {
+  /**
+    * collector specific configuration like parallelism, write batch-size, batch-interval
+    */
+  lazy val collectorConfig: CollectorConfiguration = {
     val collector = config.getConfig("collector")
     CollectorConfiguration(
       collector.getInt("parallelism"),
       collector.getString("topic"),
-      collector.getInt("batch.size"),
-      collector.getInt("batch.interval.ms"),
+      collector.getInt("write.batch.size"),
+      collector.getInt("write.batch.timeout.ms"),
       collector.getInt("commit.batch.size"))
   }
 
   /**
     *
-    * @return cassandra configuration object
+    * cassandra configuration object
     */
-  val cassandraConfig: CassandraConfiguration = {
+  lazy val cassandraConfig: CassandraConfiguration = {
     val cs = config.getConfig("cassandra")
 
     val awsConfig =
@@ -63,29 +66,32 @@ object ProjectConfiguration {
       socketConfig.getInt("conn.timeout.ms"),
       socketConfig.getInt("read.timeout.ms"))
 
+    val consistencyLevel = ConsistencyLevel.values().find(_.toString.equalsIgnoreCase(cs.getString("consistency.level"))).get
+
     CassandraConfiguration(
-      if(cs.hasPath("endpoints")) cs.getStringList("endpoints").toList else Nil,
+      if(cs.hasPath("endpoints")) cs.getString("endpoints").split(",").toList else Nil,
+      cs.getBoolean("auto.discovery.enabled"),
       awsConfig,
       cs.getString("keyspace.name"),
       cs.getString("keyspace.table.name"),
       cs.getBoolean("keyspace.auto.create"),
-      ConsistencyLevel.valueOf(cs.getString("consistency.level")),
+      consistencyLevel,
+      cs.getInt("ttl.sec"),
       socket)
   }
 
   /**
     *
-    * @return elastic search configuration object
+    * elastic search configuration object
     */
-  val elasticSearchConfig: ElasticSearchConfiguration = {
+  lazy val elasticSearchConfig: ElasticSearchConfiguration = {
     val es = config.getConfig("elasticsearch")
     ElasticSearchConfiguration(
       host = es.getString("host"),
-      port = if(es.hasPath("port")) Some(es.getInt("port")) else None,
+      port = es.getInt("port"),
       consistencyLevel = es.getString("consistency.level"),
       indexNamePrefix = es.getString("index.name.prefix"),
-      parentType = es.getString("index.parent.type"),
-      childType = es.getString("index.child.type"),
+      indexType = es.getString("index.type"),
       es.getInt("conn.timeout.ms"),
       es.getInt("read.timeout.ms"))
   }

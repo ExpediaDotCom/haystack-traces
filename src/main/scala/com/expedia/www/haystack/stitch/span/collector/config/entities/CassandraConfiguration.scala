@@ -28,9 +28,11 @@ case class SocketConfiguration(maxConnectionPerHost: Int,
                                readTimeoutMills: Int)
 
 case class CassandraConfiguration(endpoints: List[String],
+                                  autoDiscoverEnabled: Boolean,
                                   awsNodeDiscovery: Option[AwsNodeDiscoveryConfiguration],
                                   keyspace: String,
                                   tableName: String,
                                   autoCreateKeyspace: Boolean,
                                   consistencyLevel: ConsistencyLevel,
+                                  recordTTLInSec: Int,
                                   socket: SocketConfiguration)

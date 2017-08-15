@@ -20,5 +20,5 @@ package com.expedia.www.haystack.stitch.span.collector.config.entities
 case class CollectorConfiguration(parallelism: Int,
                                   consumerTopic: String,
                                   batchSize: Int,
-                                  batchIntervalMillis: Int,
+                                  batchTimeoutMillis: Int,
                                   commitBatch: Int)

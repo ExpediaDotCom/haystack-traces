@@ -46,8 +46,7 @@ class CassandraSessionFactory(config: CassandraConfiguration) {
   }
 
   private def buildCluster(): Cluster = {
-    val contactPoints = if(config.endpoints.nonEmpty) config.endpoints else discoverNodes()
-
+    val contactPoints = if(config.autoDiscoverEnabled) discoverNodes() else config.endpoints
     require(contactPoints.nonEmpty, "cassandra contact points can't be empty!!!")
 
     val tokenAwarePolicy = new TokenAwarePolicy(new LatencyAwarePolicy.Builder(new RoundRobinPolicy()).build())

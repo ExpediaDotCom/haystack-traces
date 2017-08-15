@@ -213,7 +213,13 @@
                 <groupId>org.scalatest</groupId>
                 <artifactId>scalatest-maven-plugin</artifactId>
                 <configuration>
-                    <wildcardSuites>com.expedia.www.haystack.stitch.span.unit</wildcardSuites>
+                    <environmentVariables>
+                        <HAYSTACK_CASSANDRA_CONNECTIONS_MAX_PER_HOST>100</HAYSTACK_CASSANDRA_CONNECTIONS_MAX_PER_HOST>
+                        <HAYSTACK_CASSANDRA_ENDPOINTS>cass1,cass2</HAYSTACK_CASSANDRA_ENDPOINTS>
+                        <HAYSTACK_ELASTICSEARCH_INDEX_NAME_PREFIX>haystack-test</HAYSTACK_ELASTICSEARCH_INDEX_NAME_PREFIX>
+                        <HAYSTACK_AKKA_KAFKA_CONSUMER_KAFKA-CLIENTS_ENABLE_AUTO_COMMIT>true</HAYSTACK_AKKA_KAFKA_CONSUMER_KAFKA-CLIENTS_ENABLE_AUTO_COMMIT>
+                    </environmentVariables>
+                    <wildcardSuites>com.expedia.www.haystack.stitch.span.collector.unit</wildcardSuites>
                 </configuration>
                 <executions>
                     <execution>

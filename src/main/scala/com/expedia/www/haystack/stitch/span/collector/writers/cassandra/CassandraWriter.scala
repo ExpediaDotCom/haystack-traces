@@ -18,11 +18,9 @@
 package com.expedia.www.haystack.stitch.span.collector.writers.cassandra
 
 import java.nio.ByteBuffer
-import java.util.concurrent.atomic.AtomicLong
 
-import com.codahale.metrics.Timer
-import com.datastax.driver.core.querybuilder.QueryBuilder
 import com.datastax.driver.core._
+import com.datastax.driver.core.querybuilder.QueryBuilder
 import com.expedia.open.tracing.stitch.StitchedSpan
 import com.expedia.www.haystack.stitch.span.collector.config.entities.CassandraConfiguration
 import com.expedia.www.haystack.stitch.span.collector.metrics.AppMetricNames
@@ -39,19 +37,21 @@ class CassandraWriter(config: CassandraConfiguration)(implicit val dispatcher: E
 
   private val writeTimer = metricRegistry.timer(AppMetricNames.CASSANDRA_WRITE_TIME)
   private val writeFailures = metricRegistry.meter(AppMetricNames.CASSANDRA_WRITE_FAILURE)
-  private val writeWarnings = metricRegistry.meter(AppMetricNames.CASSANDRA_WRITE_WARNINGS)
-
   private val sessionFactory = new CassandraSessionFactory(config)
 
-  private val errorLogCounter = new AtomicLong(0)
+  //insert into table(id, sid, span) values (?, ?, ?) using ttl ?
+  private lazy val insertSpan: PreparedStatement = {
+    import QueryBuilder.{bindMarker, ttl}
 
-  //insert into table(id, sid, span) values (?, ?, ?)
-  private lazy val insertSpan: PreparedStatement = sessionFactory.session.prepare(
-    QueryBuilder
-      .insertInto(config.tableName)
-      .value(ID_COLUMN_NAME, QueryBuilder.bindMarker(ID_COLUMN_NAME))
-      .value(SPAN_ID_COLUMN_NAME, QueryBuilder.bindMarker(SPAN_ID_COLUMN_NAME))
-      .value(SPAN_COLUMN_NAME, QueryBuilder.bindMarker(SPAN_COLUMN_NAME)))
+    sessionFactory.session.prepare(
+      QueryBuilder
+        .insertInto(config.tableName)
+        .value(ID_COLUMN_NAME, bindMarker(ID_COLUMN_NAME))
+        .value(SPAN_ID_COLUMN_NAME, bindMarker(SPAN_ID_COLUMN_NAME))
+        .value(SPAN_COLUMN_NAME, bindMarker(SPAN_COLUMN_NAME))
+        .using(ttl(config.recordTTLInSec)))
+  }
+
 
   private def prepareBatchStatement(stitchedSpan: StitchedSpan): BatchStatement = {
     val batch = new BatchStatement(BatchStatement.Type.UNLOGGED)
@@ -75,7 +75,7 @@ class CassandraWriter(config: CassandraConfiguration)(implicit val dispatcher: E
         val promise = Promise[Boolean]()
         val batchStatement = prepareBatchStatement(stitchedSpan)
         val asyncResult = sessionFactory.session.executeAsync(batchStatement)
-        asyncResult.addListener(new CassandraResultListener(asyncResult, timer, promise), dispatcher)
+        asyncResult.addListener(new CassandraWriteResultListener(asyncResult, timer, promise), dispatcher)
         promise.future
       }
       Future.sequence(futures)
@@ -88,31 +88,4 @@ class CassandraWriter(config: CassandraConfiguration)(implicit val dispatcher: E
   }
 
   override def close(): Unit = sessionFactory.close()
-
-  private class CassandraResultListener(asyncResult: ResultSetFuture,
-                                        timer: Timer.Context,
-                                        promise: Promise[Boolean]) extends Runnable {
-    override def run(): Unit = {
-      try {
-        timer.close()
-
-        if (asyncResult.get != null &&
-          asyncResult.get.getExecutionInfo != null &&
-          asyncResult.get.getExecutionInfo.getWarnings != null &&
-          asyncResult.get.getExecutionInfo.getWarnings.nonEmpty) {
-          LOGGER.warn(s"Warning received in cassandra writes {}", asyncResult.get.getExecutionInfo.getWarnings.toList.mkString(","))
-          writeWarnings.mark(asyncResult.get.getExecutionInfo.getWarnings.size())
-        }
-        promise.success(true)
-      } catch {
-        case ex: Exception =>
-          if (errorLogCounter.incrementAndGet() % 100 == 0) {
-            LOGGER.error("Fail to write the record to cassandra with exception", ex)
-            errorLogCounter.set(0)
-          }
-          writeFailures.mark()
-          promise.failure(ex)
-      }
-    }
-  }
 }

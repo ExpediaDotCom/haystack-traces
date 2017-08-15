@@ -48,7 +48,7 @@ class StreamTopology(collectorConfig: CollectorConfiguration,
     Consumer
       .committableSource(settings, Subscriptions.topics(collectorConfig.consumerTopic))
       .viaMat(KillSwitches.single)(Keep.right)
-      .groupedWithin(collectorConfig.batchSize, collectorConfig.batchIntervalMillis.millis)
+      .groupedWithin(collectorConfig.batchSize, collectorConfig.batchTimeoutMillis.millis)
       .mapAsync(collectorConfig.parallelism) { msg =>
         writeStitchedSpans(msg).map(writeResultFuture => writeResultFuture.map(_.committableOffset))
       }

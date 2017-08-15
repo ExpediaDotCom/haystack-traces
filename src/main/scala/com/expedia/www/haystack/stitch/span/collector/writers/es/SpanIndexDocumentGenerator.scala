@@ -27,27 +27,20 @@ import org.json4s.jackson.Serialization
 import scala.collection.JavaConversions._
 import scala.collection.mutable
 
+case class IndexDocument(doc: Map[String, Any], upsert: Map[String, Any])
 
-case class SpanIndexDocument(id: String, doc: String)
-
-class SpanIndexer(config: IndexConfiguration) {
+class SpanIndexDocumentGenerator(config: IndexConfiguration) {
   implicit val formats = DefaultFormats
 
   private val SERVICE_KEY = "service"
   private val OPERATION_KEY = "operation"
   private val DURATION = "duration"
 
-  def createIndexDocument(spans: util.List[Span]): SpanIndexDocument = {
-    // pick the last spanId as the document Id
-    var docId = ""
-    val indexDoc = mutable.ListBuffer[Map[String, Any]]()
+  def create(spans: util.List[Span]): String = {
+    val updateDocument = for(sp <- spans;
+        indexKeyValueMap = transform(sp)) yield IndexDocument(doc = indexKeyValueMap, upsert = indexKeyValueMap)
 
-    spans.foreach(sp => {
-      indexDoc += transform(sp)
-      docId = sp.getSpanId
-    })
-
-    SpanIndexDocument(docId, Serialization.write(indexDoc))
+    Serialization.write(updateDocument)
   }
 
   private def transform(span: Span): Map[String, Any] = {
@@ -75,7 +68,7 @@ class SpanIndexer(config: IndexConfiguration) {
       case LONG => (key, tag.getVLong)
       case DOUBLE => (key, tag.getVDouble)
       case BINARY => (key, tag.getVBytes.toStringUtf8)
-      case _ => throw new RuntimeException(s"Fail to understand the tag type ${tag.getType} !!!")
+      case _ => throw new RuntimeException(s"Fail to understand the span tag type ${tag.getType} !!!")
     }
   }
 }

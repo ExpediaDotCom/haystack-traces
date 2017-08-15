@@ -27,35 +27,37 @@ import org.slf4j.LoggerFactory
 import scala.collection.JavaConversions._
 
 object AwsNodeDiscoverer {
-
   private val LOGGER = LoggerFactory.getLogger(AwsNodeDiscoverer.getClass)
+
+  def discover(client: AmazonEC2Client, tags: Map[String, String]): Seq[String] = {
+    val filters = tags.map { case (key, value) => new Filter("tag:" + key, Collections.singletonList(value)) }
+    val request = new DescribeInstancesRequest().withFilters(filters)
+
+    val result = client.describeInstances(request)
+
+    val nodes = result.getReservations
+      .flatMap(_.getInstances)
+      .filter(isValidInstance)
+      .map(_.getPrivateIpAddress)
+
+    LOGGER.info("ec2 nodes discovered [{}]", nodes.mkString(","))
+    nodes
+  }
 
   def discover(region: String,
                tags: Map[String, String]): Seq[String] = {
-    LOGGER.info(s"discovering ec2 nodes for region=$region, and filters=${tags.mkString(",")}")
+    LOGGER.info(s"discovering ec2 nodes for region=$region, and tags=${tags.mkString(",")}")
 
-    val ec2Client = new AmazonEC2Client()
+    val awsRegion = Region.getRegion(Regions.fromName(region))
+    val client:AmazonEC2Client = new AmazonEC2Client().withRegion(awsRegion)
     try {
-      ec2Client.setRegion(Region.getRegion(Regions.fromName(region)))
-      val filters = tags.map {
-        case (key, value) => new Filter("tag:" + key, Collections.singletonList(value) )
-      }
-
-      val request = new DescribeInstancesRequest().withFilters(filters)
-      val result = ec2Client.describeInstances(request)
-      val nodes = result.getReservations
-        .flatMap(_.getInstances)
-        .filter(isValidInstance)
-        .map(_.getPrivateIpAddress)
-
-      LOGGER.info("ec2 nodes discovered [{}]", nodes.mkString(","))
-      nodes
+      discover(client, tags)
     } catch {
       case ex: Exception =>
-        LOGGER.error("Fail to discover cassandra ec2 nodes with reason", ex)
+        LOGGER.error(s"Fail to discover ec2 nodes for region=$region and tags=$tags with reason", ex)
         throw new RuntimeException(ex)
     } finally {
-      ec2Client.shutdown()
+      client.shutdown()
     }
   }
 

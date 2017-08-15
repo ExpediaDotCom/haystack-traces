@@ -56,7 +56,7 @@ object ConfigurationLoader {
 
   /**
     * converts the env variable to HOCON format
-    * for e.g. env variable HAYSTACK_KAFKA_STREAMS_NUM_STREAM_THREADS gets converted to kafka.streams.num.stream.threads
+    * for e.g. env variable HAYSTACK_CASSANDRA_KEYSPACE_NAME gets converted to cassandra.keyspace.name
     * @param env environment variable name
     * @return
     */

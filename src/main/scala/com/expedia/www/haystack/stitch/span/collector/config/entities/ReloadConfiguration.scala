@@ -17,10 +17,10 @@
 
 package com.expedia.www.haystack.stitch.span.collector.config.entities
 
-case class ElasticSearchConfiguration(host: String,
-                                      port: Int,
-                                      consistencyLevel: String,
-                                      indexNamePrefix: String,
-                                      indexType: String,
-                                      connectionTimeoutMillis: Int,
-                                      readTimeoutMillis: Int)
+import com.expedia.www.haystack.stitch.span.collector.config.reload.Reloadable
+
+case class ReloadConfiguration(configStoreEndpoint: String,
+                               databaseName: String,
+                               reloadIntervalInMillis: Int,
+                               observers: Seq[Reloadable],
+                               loadOnStartup: Boolean = true)

@@ -18,6 +18,7 @@
         <slf4j-api.version>1.7.25</slf4j-api.version>
 
         <jest.version>5.3.2</jest.version>
+
         <cassandra.driver.version>3.1.0</cassandra.driver.version>
         <httpclient.version>4.5.3</httpclient.version>
 
@@ -140,27 +141,6 @@
 
         <!-- Test Dependencies  -->
         <dependency>
-            <groupId>org.apache.kafka</groupId>
-            <artifactId>kafka_${scala.major.minor.version}</artifactId>
-            <version>${kafka.version}</version>
-            <exclusions>
-                <exclusion>
-                    <groupId>org.slf4j</groupId>
-                    <artifactId>slf4j-log4j12</artifactId>
-                </exclusion>
-            </exclusions>
-            <classifier>test</classifier>
-            <scope>test</scope>
-        </dependency>
-
-        <dependency>
-            <groupId>org.apache.kafka</groupId>
-            <artifactId>kafka-clients</artifactId>
-            <version>${kafka.version}</version>
-            <classifier>test</classifier>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
             <groupId>org.scalatest</groupId>
             <artifactId>scalatest_${scala.major.minor.version}</artifactId>
             <version>${scalatest.version}</version>
@@ -173,9 +153,9 @@
             <scope>test</scope>
         </dependency>
         <dependency>
-            <groupId>junit</groupId>
-            <artifactId>junit</artifactId>
-            <version>4.12</version>
+            <groupId>org.easymock</groupId>
+            <artifactId>easymock</artifactId>
+            <version>3.4</version>
             <scope>test</scope>
         </dependency>
     </dependencies>

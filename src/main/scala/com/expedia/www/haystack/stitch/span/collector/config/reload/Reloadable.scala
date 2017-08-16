@@ -15,12 +15,10 @@
  *
  */
 
-package com.expedia.www.haystack.stitch.span.collector.config.entities
+package com.expedia.www.haystack.stitch.span.collector.config.reload
 
-case class ElasticSearchConfiguration(host: String,
-                                      port: Int,
-                                      consistencyLevel: String,
-                                      indexNamePrefix: String,
-                                      indexType: String,
-                                      connectionTimeoutMillis: Int,
-                                      readTimeoutMillis: Int)
+trait Reloadable {
+  val name: String
+
+  def onReload(newConfig: String): Unit
+}

@@ -31,16 +31,17 @@ import io.searchbox.core._
 import io.searchbox.params.Parameters
 import org.slf4j.LoggerFactory
 
+import scala.collection.JavaConversions._
 import scala.concurrent.{Future, Promise}
 
-class ElasticSearchWriter(config: ElasticSearchConfiguration) extends StitchedSpanWriter {
+class ElasticSearchWriter(esConfig: ElasticSearchConfiguration, indexConf: IndexConfiguration) extends StitchedSpanWriter {
   private val LOGGER = LoggerFactory.getLogger(classOf[ElasticSearchWriter])
 
   private val esWriteDocsHistogram = metricRegistry.histogram(AppMetricNames.ES_WRITE_DOCS)
   private val esWriteFailureMeter = metricRegistry.meter(AppMetricNames.ES_WRITE_FAILURE)
   private val esWriteTime = metricRegistry.timer(AppMetricNames.ES_WRITE_TIME)
 
-  private val spanIndexer = new SpanIndexDocumentGenerator(IndexConfiguration(Set()))
+  private val spanIndexer = new SpanIndexDocumentGenerator(indexConf)
 
   private val esClient: JestClient = {
     val host = esHost()
@@ -50,14 +51,14 @@ class ElasticSearchWriter(config: ElasticSearchConfiguration) extends StitchedSp
     factory.setHttpClientConfig(
       new HttpClientConfig.Builder(host)
         .multiThreaded(true)
-        .connTimeout(config.connectionTimeoutMillis)
-        .readTimeout(config.readTimeoutMillis)
+        .connTimeout(esConfig.connectionTimeoutMillis)
+        .readTimeout(esConfig.readTimeoutMillis)
         .build())
     factory.getObject
   }
 
   private def esHost(): String = {
-    val configHostName = config.host + ":" + config.port
+    val configHostName = esConfig.host + ":" + esConfig.port
     if (configHostName.startsWith("http://") || configHostName.startsWith("https://")) configHostName else "http://" + configHostName
   }
 
@@ -102,8 +103,8 @@ class ElasticSearchWriter(config: ElasticSearchConfiguration) extends StitchedSp
     new Update.Builder(updateDocument)
       .id(stitchedSpan.getTraceId)
       .index(indexName)
-      .`type`(config.indexType)
-      .setParameter(Parameters.CONSISTENCY, config.consistencyLevel)
+      .`type`(esConfig.indexType)
+      .setParameter(Parameters.CONSISTENCY, esConfig.consistencyLevel)
       .setParameter(Parameters.PARENT, stitchedSpan.getTraceId)
       .setParameter(Parameters.OP_TYPE, "create")
       .build()
@@ -111,6 +112,6 @@ class ElasticSearchWriter(config: ElasticSearchConfiguration) extends StitchedSp
 
   private def createIndexName(): String = {
     val formatter = new SimpleDateFormat("yyyy-MM-dd")
-    s"${config.indexNamePrefix}-${formatter.format(new Date())}"
+    s"${esConfig.indexNamePrefix}-${formatter.format(new Date())}"
   }
 }

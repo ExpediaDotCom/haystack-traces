@@ -19,11 +19,12 @@ package com.expedia.www.haystack.stitch.span.collector.config
 
 import com.datastax.driver.core.ConsistencyLevel
 import com.expedia.www.haystack.stitch.span.collector.config.entities._
+import com.expedia.www.haystack.stitch.span.collector.config.reload.{ConfigurationReloadElasticSearchProvider, Reloadable}
 import com.typesafe.config.Config
 
 import scala.collection.JavaConversions._
 
-object ProjectConfiguration {
+class ProjectConfiguration extends AutoCloseable {
   val config: Config = ConfigurationLoader.loadAppConfig
 
   /**
@@ -94,5 +95,25 @@ object ProjectConfiguration {
       indexType = es.getString("index.type"),
       es.getInt("conn.timeout.ms"),
       es.getInt("read.timeout.ms"))
+  }
+
+  val indexConfig: IndexConfiguration = IndexConfiguration()
+
+  private val reloader = registerReloadableConfigurations(List(indexConfig))
+
+  private def registerReloadableConfigurations(observers: Seq[Reloadable]): ConfigurationReloadElasticSearchProvider = {
+    val reload = config.getConfig("reload")
+    val reloadConfig = ReloadConfiguration(
+      reload.getString("config.endpoint"),
+      reload.getString("config.database"),
+      reload.getInt("interval.ms"),
+      observers,
+      loadOnStartup = reload.getBoolean("startup.load"))
+
+    new ConfigurationReloadElasticSearchProvider(reloadConfig)
+  }
+
+  override def close(): Unit = {
+    if(reloader != null) reloader.close()
   }
 }

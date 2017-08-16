@@ -23,8 +23,10 @@ import org.scalatest.{FunSpec, Matchers}
 class ConfigurationLoaderSpec extends FunSpec with Matchers {
 
   describe("Configuration loader") {
+    val project = new ProjectConfiguration()
+
     it("should load the collector config only from base.conf") {
-      val collector = ProjectConfiguration.collectorConfig
+      val collector = new ProjectConfiguration().collectorConfig
       collector.batchSize shouldBe 250
       collector.batchTimeoutMillis shouldBe 250
       collector.consumerTopic shouldBe "stitch-spans"
@@ -33,7 +35,7 @@ class ConfigurationLoaderSpec extends FunSpec with Matchers {
     }
 
     it("should load the cassandra config from base.conf and few properties overridden from env variable") {
-      val cassandra = ProjectConfiguration.cassandraConfig
+      val cassandra = project.cassandraConfig
       cassandra.consistencyLevel shouldEqual ConsistencyLevel.ONE
       cassandra.autoDiscoverEnabled shouldBe false
       cassandra.endpoints should contain allOf("cass1", "cass2")
@@ -47,7 +49,7 @@ class ConfigurationLoaderSpec extends FunSpec with Matchers {
     }
 
     it("should load the elastic search config from base.conf and one property overridden from env variable") {
-      val elastic = ProjectConfiguration.elasticSearchConfig
+      val elastic = project.elasticSearchConfig
       elastic.port shouldBe 9200
       elastic.host shouldBe "elasticSearch"
       elastic.consistencyLevel shouldBe "one"
@@ -58,7 +60,7 @@ class ConfigurationLoaderSpec extends FunSpec with Matchers {
     }
 
     it("should load akka config from base.conf and one property overridden from env variable") {
-      val akka = ProjectConfiguration.config.getConfig("akka")
+      val akka = project.config.getConfig("akka")
       akka should not be null
       val kafkaClients = akka.getConfig("kafka.consumer").getConfig("kafka-clients")
       kafkaClients should not be null

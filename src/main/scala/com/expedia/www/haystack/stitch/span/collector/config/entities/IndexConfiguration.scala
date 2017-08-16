@@ -17,10 +17,17 @@
 
 package com.expedia.www.haystack.stitch.span.collector.config.entities
 
-case class ElasticSearchConfiguration(host: String,
-                                      port: Int,
-                                      consistencyLevel: String,
-                                      indexNamePrefix: String,
-                                      indexType: String,
-                                      connectionTimeoutMillis: Int,
-                                      readTimeoutMillis: Int)
+import com.expedia.www.haystack.stitch.span.collector.config.reload.Reloadable
+
+case class IndexAttribute(name: String, `type`: String)
+
+case class IndexConfiguration(var serviceFieldName: String = "",
+                              var operationFieldName: String = "",
+                              var durationFieldName: String = "",
+                              var indexableTags: Map[String, IndexAttribute] = Map()) extends Reloadable {
+
+  override val name: String = "indexingFields"
+  override def onReload(newConfig: String): Unit = {
+    // update the tagKeys with this new config
+  }
+}

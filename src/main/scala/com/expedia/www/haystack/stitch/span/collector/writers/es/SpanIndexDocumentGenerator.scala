@@ -17,8 +17,6 @@
 
 package com.expedia.www.haystack.stitch.span.collector.writers.es
 
-import java.util
-
 import com.expedia.open.tracing.{Span, Tag}
 import com.expedia.www.haystack.stitch.span.collector.config.entities.IndexConfiguration
 import org.json4s.DefaultFormats
@@ -27,37 +25,45 @@ import org.json4s.jackson.Serialization
 import scala.collection.JavaConversions._
 import scala.collection.mutable
 
-case class IndexDocument(doc: Map[String, Any], upsert: Map[String, Any])
+case class IndexDocument(doc: Seq[Map[String, Any]], upsert: Seq[Map[String, Any]])
 
 class SpanIndexDocumentGenerator(config: IndexConfiguration) {
-  implicit val formats = DefaultFormats
+  protected implicit val formats = DefaultFormats
 
-  private val SERVICE_KEY = "service"
-  private val OPERATION_KEY = "operation"
-  private val DURATION = "duration"
-
-  def create(spans: util.List[Span]): String = {
-    val updateDocument = for(sp <- spans;
-        indexKeyValueMap = transform(sp)) yield IndexDocument(doc = indexKeyValueMap, upsert = indexKeyValueMap)
-
-    Serialization.write(updateDocument)
+  def create(spans: Seq[Span]): String = {
+    val doc = for(sp <- spans) yield transform(sp)
+    Serialization.write(IndexDocument(doc, doc))
   }
 
   private def transform(span: Span): Map[String, Any] = {
     // add service and operation names as default indexing keys
     val indexMap = mutable.Map[String, Any](
-      SERVICE_KEY -> span.getProcess.getServiceName,
-      OPERATION_KEY -> span.getOperationName,
-      DURATION -> span.getDuration)
+      config.serviceFieldName -> span.getProcess.getServiceName,
+      config.operationFieldName -> span.getOperationName,
+      config.durationFieldName -> span.getDuration)
 
     span.getTagsList
-      .filter(tag => config.tagKeys.contains(tag.getKey))
-      .map(tag => convertToKeyValue(tag))
-      .foreach( { case (k, v) => indexMap.put(k, v ) })
+      .foreach { tag =>
+        config.indexableTags.get(tag.getKey) match {
+          case Some(attr) =>
+            val tagKeyValue = convertToKeyValue(tag)
+            indexMap.put(tagKeyValue._1, convertValueToIndexAttrType(attr.`type`, tagKeyValue._2))
+          case _ =>
+        }
+      }
 
     indexMap.toMap
   }
 
+  private def convertValueToIndexAttrType(attrType: String, value: Any): Any = {
+    attrType match {
+      case "string" => value.toString
+      case "long" => value.toString.toLong
+      case "bool" => value.toString.toBoolean
+      case "double" => value.toString.toDouble
+      case _ => value
+    }
+  }
   private def convertToKeyValue(tag: Tag): (String, Any) = {
     import Tag.TagType._
 

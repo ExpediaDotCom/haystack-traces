@@ -20,9 +20,8 @@ package com.expedia.www.haystack.stitch.span.collector
 import akka.actor.ActorSystem
 import com.codahale.metrics.JmxReporter
 import com.expedia.www.haystack.stitch.span.collector.config.ProjectConfiguration
-import com.expedia.www.haystack.stitch.span.collector.config.ProjectConfiguration._
 import com.expedia.www.haystack.stitch.span.collector.metrics.MetricsSupport
-import com.expedia.www.haystack.stitch.span.collector.writers.cassandra.{CassandraSessionFactory, CassandraWriter}
+import com.expedia.www.haystack.stitch.span.collector.writers.cassandra.CassandraWriter
 import com.expedia.www.haystack.stitch.span.collector.writers.es.ElasticSearchWriter
 import org.slf4j.LoggerFactory
 
@@ -36,13 +35,14 @@ object Collector extends MetricsSupport {
   def main(args: Array[String]): Unit = {
     startJmxReporter()
 
-    implicit val system = ActorSystem.create("stitched-span-collector-system", ProjectConfiguration.config)
+    val project = new ProjectConfiguration
+    implicit val system = ActorSystem.create("stitched-span-collector-system", project.config)
     implicit val dispatcher = system.dispatcher
 
-    val cassandraWriter = new CassandraWriter(cassandraConfig)
-    val elasticSearchWriter = new ElasticSearchWriter(elasticSearchConfig)
+    val cassandraWriter = new CassandraWriter(project.cassandraConfig)
+    val elasticSearchWriter = new ElasticSearchWriter(project.elasticSearchConfig, project.indexConfig)
 
-    val topology = new StreamTopology(collectorConfig, List(cassandraWriter, elasticSearchWriter))
+    val topology = new StreamTopology(project.collectorConfig, List(cassandraWriter, elasticSearchWriter))
     val (killSwitch, streamResult) = topology.start()
 
     // add shutdown hook to kill the stream topology
@@ -53,7 +53,7 @@ object Collector extends MetricsSupport {
     // attach onComplete event of the stream topology and tear down the actor system and all writers
     streamResult.onComplete {
       case Success(_) =>
-        LOGGER.info("Stream has completed with success!!")
+        LOGGER.info("Collector stream has completed with success!!")
         shutdown()
       case Failure(reason) =>
         LOGGER.error("Stream has been closed with error, shutting down the actor system", reason)
@@ -64,6 +64,7 @@ object Collector extends MetricsSupport {
       system.terminate()
       elasticSearchWriter.close()
       cassandraWriter.close()
+      project.close()
     }
 
     Await.ready(system.whenTerminated, Duration.Inf)

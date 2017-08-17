@@ -64,10 +64,13 @@ class StreamTopology(collectorConfig: CollectorConfiguration,
   private def writeStitchedSpans(records: Seq[CommittableMessage[Array[Byte], StitchedSpan]]): Future[Seq[CommittableMessage[Array[Byte], StitchedSpan]]] = {
     val promise = Promise[Seq[CommittableMessage[Array[Byte], StitchedSpan]]]()
 
-    val stitchedSpans: Seq[StitchedSpan] = records.map(_.record.value())
-    val allWrites: Seq[Future[Any]] = writers.map(_.write(stitchedSpans))
-    Future.sequence(allWrites).onComplete(_ => promise.success(records))
+    val stitchedSpans: Seq[StitchedSpan] = records
+      .map(_.record.value())
+      .filter(_ != null)
 
+    val allWrites: Seq[Future[Any]] = writers.map(_.write(stitchedSpans))
+
+    Future.sequence(allWrites).onComplete(_ => promise.success(records))
     promise.future
   }
 

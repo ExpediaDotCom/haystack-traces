@@ -36,6 +36,7 @@ object Collector extends MetricsSupport {
     startJmxReporter()
 
     val project = new ProjectConfiguration
+
     implicit val system = ActorSystem.create("stitched-span-collector-system", project.config)
     implicit val dispatcher = system.dispatcher
 
@@ -47,24 +48,24 @@ object Collector extends MetricsSupport {
 
     // add shutdown hook to kill the stream topology
     Runtime.getRuntime.addShutdownHook(new Thread() {
-      killSwitch.shutdown()
+      override def run(): Unit = killSwitch.shutdown()
     })
 
     // attach onComplete event of the stream topology and tear down the actor system and all writers
     streamResult.onComplete {
       case Success(_) =>
-        LOGGER.info("Collector stream has completed with success!!")
+        LOGGER.info("Stitch span collector stream has completed with success!!")
         shutdown()
       case Failure(reason) =>
-        LOGGER.error("Stream has been closed with error, shutting down the actor system", reason)
+        LOGGER.error("Stitch span collector has closed with some error, tearing down the system", reason)
         shutdown()
     }
 
     def shutdown(): Unit = {
-      system.terminate()
       elasticSearchWriter.close()
       cassandraWriter.close()
       project.close()
+      system.terminate()
     }
 
     Await.ready(system.whenTerminated, Duration.Inf)

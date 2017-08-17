@@ -1,4 +1,4 @@
-.PHONY: all
+.PHONY: all integration_test release
 
 DOCKER_IMAGE_TAG := haystack-span-stitcher
 
@@ -9,16 +9,14 @@ build:  clean
 	mvn package
 
 docker_build:
-	docker build -t $(DOCKER_IMAGE_TAG) -f build/Dockerfile .
+	docker build -t $(DOCKER_IMAGE_TAG) -f build/docker/Dockerfile .
 
-.PHONY: integration_test
 integration_test:
 	mvn test -P integration-tests
 
 all: build integration_test docker_build
 
 # build all and release
-.PHONY: release
 REPO := lib/haystack-span-stitcher
 BRANCH := $(shell git rev-parse --abbrev-ref HEAD)
 ifeq ($(BRANCH), master)

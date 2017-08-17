@@ -23,6 +23,7 @@ import com.expedia.www.haystack.stitch.span.collector.config.reload.{Configurati
 import com.typesafe.config.Config
 
 import scala.collection.JavaConversions._
+import scala.util.Try
 
 class ProjectConfiguration extends AutoCloseable {
   val config: Config = ConfigurationLoader.loadAppConfig
@@ -88,8 +89,7 @@ class ProjectConfiguration extends AutoCloseable {
   lazy val elasticSearchConfig: ElasticSearchConfiguration = {
     val es = config.getConfig("elasticsearch")
     ElasticSearchConfiguration(
-      host = es.getString("host"),
-      port = es.getInt("port"),
+      endpoint = es.getString("endpoint"),
       consistencyLevel = es.getString("consistency.level"),
       indexNamePrefix = es.getString("index.name.prefix"),
       indexType = es.getString("index.type"),
@@ -114,6 +114,6 @@ class ProjectConfiguration extends AutoCloseable {
   }
 
   override def close(): Unit = {
-    if(reloader != null) reloader.close()
+    Try(reloader.close())
   }
 }

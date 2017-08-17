@@ -19,51 +19,70 @@ package com.expedia.www.haystack.stitch.span.collector.writers.es
 
 import com.expedia.open.tracing.{Span, Tag}
 import com.expedia.www.haystack.stitch.span.collector.config.entities.IndexConfiguration
+import org.apache.commons.lang3.StringUtils
 import org.json4s.DefaultFormats
 import org.json4s.jackson.Serialization
 
 import scala.collection.JavaConversions._
 import scala.collection.mutable
+import scala.util.{Failure, Success, Try}
 
-case class IndexDocument(doc: Seq[Map[String, Any]], upsert: Seq[Map[String, Any]])
+case class SpansDoc(spans: Seq[Map[String, Any]])
+case class IndexDocument(doc: SpansDoc, upsert: SpansDoc)
 
 class SpanIndexDocumentGenerator(config: IndexConfiguration) {
   protected implicit val formats = DefaultFormats
 
-  def create(spans: Seq[Span]): String = {
-    val doc = for(sp <- spans) yield transform(sp)
-    Serialization.write(IndexDocument(doc, doc))
+  def create(spans: Seq[Span]): Option[String] = {
+    val doc = for (sp <- spans; result = transform(sp); if result.nonEmpty) yield result
+    if (doc.nonEmpty) Some(Serialization.write(IndexDocument(SpansDoc(doc), SpansDoc(doc)))) else None
   }
 
+  /**
+    * transforms a span object into a map of key-value pairs for indexing
+    * @param span a span object
+    * @return map of key-values
+    */
   private def transform(span: Span): Map[String, Any] = {
-    // add service and operation names as default indexing keys
-    val indexMap = mutable.Map[String, Any](
-      config.serviceFieldName -> span.getProcess.getServiceName,
-      config.operationFieldName -> span.getOperationName,
-      config.durationFieldName -> span.getDuration)
+    val indexMap = mutable.Map[String, Any]()
 
-    span.getTagsList
-      .foreach { tag =>
-        config.indexableTags.get(tag.getKey) match {
-          case Some(attr) =>
-            val tagKeyValue = convertToKeyValue(tag)
-            indexMap.put(tagKeyValue._1, convertValueToIndexAttrType(attr.`type`, tagKeyValue._2))
-          case _ =>
-        }
-      }
+    // add service, operation names and duration as default indexing fields
+    if(config.serviceField.enabled && span.getProcess != null && StringUtils.isNotEmpty(span.getProcess.getServiceName)) {
+      indexMap.put(config.serviceField.name, span.getProcess.getServiceName)
+    }
+    if(config.operationField.enabled && StringUtils.isNotEmpty(span.getOperationName)) {
+      indexMap.put(config.operationField.name, span.getOperationName)
+    }
+    if(config.durationField.enabled) {
+      indexMap.put(config.durationField.name, span.getDuration)
+    }
+
+    // index the tags that are configured to be indexed.
+    for(tag <- span.getTagsList;
+        indexField = config.tags.get(tag.getKey); if indexField.isDefined;
+        kvPair = convertToKeyValue(tag);
+        convertedToIndexingType = convertValueToIndexAttrType(indexField.get.`type`, kvPair._2); if convertedToIndexingType.isDefined) {
+      indexMap.put(kvPair._1, convertedToIndexingType.get)
+    }
 
     indexMap.toMap
   }
 
-  private def convertValueToIndexAttrType(attrType: String, value: Any): Any = {
-    attrType match {
+  private def convertValueToIndexAttrType(attrType: String, value: Any): Option[Any] = {
+    Try (attrType match {
       case "string" => value.toString
-      case "long" => value.toString.toLong
+      case "long" | "int" => value.toString.toLong
       case "bool" => value.toString.toBoolean
       case "double" => value.toString.toDouble
       case _ => value
+    }) match {
+      case Success(result) => Some(result)
+      case Failure(_) =>
+        //TODO: should log this? wondering if input is crazy, then we might end up logging too many errors
+        None
     }
   }
+
   private def convertToKeyValue(tag: Tag): (String, Any) = {
     import Tag.TagType._
 

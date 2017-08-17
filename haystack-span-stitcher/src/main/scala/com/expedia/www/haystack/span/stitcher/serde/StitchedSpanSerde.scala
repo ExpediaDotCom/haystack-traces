@@ -31,7 +31,7 @@ object StitchedSpanSerde extends AbstractSerde[StitchedSpan] with MetricsSupport
     */
   override def performDeserialize(data: Array[Byte]): StitchedSpan = {
     try {
-      if(data == null) null else StitchedSpan.parseFrom(data)
+      if(data == null || data.length == 0) null else StitchedSpan.parseFrom(data)
     } catch {
       case _: Exception =>
         /* may be log and add metric */

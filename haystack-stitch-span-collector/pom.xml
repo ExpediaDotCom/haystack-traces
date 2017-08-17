@@ -223,10 +223,10 @@
                         </goals>
                         <configuration>
                             <includeDirectories>
-                                <include>haystack-idl/proto</include>
+                                <include>../haystack-idl/proto</include>
                             </includeDirectories>
                             <inputDirectories>
-                                <include>haystack-idl/proto</include>
+                                <include>../haystack-idl/proto</include>
                             </inputDirectories>
                             <outputDirectory>target/generated-sources</outputDirectory>
                         </configuration>

@@ -1,16 +1,18 @@
 FROM openjdk:8-jre
 MAINTAINER Haystack <haystack@expedia.com>
 
-ENV APP_NAME haystack-span-stitcher
+ENV APP_NAME haystack-stitch-span-collector
 ENV APP_HOME /app/bin
 
 RUN mkdir -p ${APP_HOME}
 
 COPY target/${APP_NAME}.jar ${APP_HOME}/
-COPY build/start-app.sh ${APP_HOME}/
+COPY build/docker/start-app.sh ${APP_HOME}/
 
 RUN chmod +x ${APP_HOME}/start-app.sh
 
 WORKDIR ${APP_HOME}
+
+EXPOSE 5005
 
 ENTRYPOINT ["./start-app.sh"]

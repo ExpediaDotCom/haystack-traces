@@ -17,8 +17,7 @@
 
 package com.expedia.www.haystack.stitch.span.collector.config.entities
 
-case class ElasticSearchConfiguration(host: String,
-                                      port: Int,
+case class ElasticSearchConfiguration(endpoint: String,
                                       consistencyLevel: String,
                                       indexNamePrefix: String,
                                       indexType: String,

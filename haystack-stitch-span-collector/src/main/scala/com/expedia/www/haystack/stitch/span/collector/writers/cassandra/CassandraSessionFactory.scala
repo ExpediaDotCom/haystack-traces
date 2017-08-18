@@ -24,7 +24,7 @@ import com.expedia.www.haystack.stitch.span.collector.writers.AwsNodeDiscoverer
 
 class CassandraSessionFactory(config: CassandraConfiguration) {
 
-  lazy val session: Session = {
+  val session: Session = {
     val  cluster = buildCluster()
     val newSession = cluster.connect()
     Schema.ensureExists(config.keyspace, config.tableName, newSession, config.autoCreateKeyspace)

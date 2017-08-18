@@ -30,6 +30,7 @@ import org.slf4j.LoggerFactory
 
 import scala.collection.JavaConversions._
 import scala.concurrent.{ExecutionContextExecutor, Future, Promise}
+import scala.util.Try
 
 class CassandraWriter(config: CassandraConfiguration)(implicit val dispatcher: ExecutionContextExecutor) extends StitchedSpanWriter {
 
@@ -87,5 +88,5 @@ class CassandraWriter(config: CassandraConfiguration)(implicit val dispatcher: E
     }
   }
 
-  override def close(): Unit = sessionFactory.close()
+  override def close(): Unit = Try(sessionFactory.close())
 }

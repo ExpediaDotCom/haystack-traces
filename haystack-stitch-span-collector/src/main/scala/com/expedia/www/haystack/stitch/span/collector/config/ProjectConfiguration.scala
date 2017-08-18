@@ -23,6 +23,7 @@ import com.expedia.www.haystack.stitch.span.collector.config.reload.{Configurati
 import com.typesafe.config.Config
 
 import scala.collection.JavaConversions._
+import scala.util.Try
 
 class ProjectConfiguration extends AutoCloseable {
   val config: Config = ConfigurationLoader.loadAppConfig
@@ -88,8 +89,7 @@ class ProjectConfiguration extends AutoCloseable {
   lazy val elasticSearchConfig: ElasticSearchConfiguration = {
     val es = config.getConfig("elasticsearch")
     ElasticSearchConfiguration(
-      host = es.getString("host"),
-      port = es.getInt("port"),
+      endpoint = es.getString("endpoint"),
       consistencyLevel = es.getString("consistency.level"),
       indexNamePrefix = es.getString("index.name.prefix"),
       indexType = es.getString("index.type"),
@@ -97,7 +97,11 @@ class ProjectConfiguration extends AutoCloseable {
       es.getInt("read.timeout.ms"))
   }
 
-  val indexConfig: IndexConfiguration = IndexConfiguration()
+  val indexConfig: IndexConfiguration = {
+    val indexConfig = IndexConfiguration(Nil)
+    indexConfig.reloadConfigFromTable = config.getConfig("reload.tables").getString("index.fields.config")
+    indexConfig
+  }
 
   private val reloader = registerReloadableConfigurations(List(indexConfig))
 
@@ -105,7 +109,7 @@ class ProjectConfiguration extends AutoCloseable {
     val reload = config.getConfig("reload")
     val reloadConfig = ReloadConfiguration(
       reload.getString("config.endpoint"),
-      reload.getString("config.database"),
+      reload.getString("config.database.name"),
       reload.getInt("interval.ms"),
       observers,
       loadOnStartup = reload.getBoolean("startup.load"))
@@ -114,6 +118,6 @@ class ProjectConfiguration extends AutoCloseable {
   }
 
   override def close(): Unit = {
-    if(reloader != null) reloader.close()
+    Try(reloader.close())
   }
 }

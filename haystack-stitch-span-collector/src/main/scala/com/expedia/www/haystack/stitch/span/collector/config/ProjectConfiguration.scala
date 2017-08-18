@@ -99,7 +99,7 @@ class ProjectConfiguration extends AutoCloseable {
 
   val indexConfig: IndexConfiguration = {
     val indexConfig = IndexConfiguration(Nil)
-    indexConfig.reloadConfigFromTable = config.getConfig("reload.tables").getString("index.fields.config")
+    indexConfig.reloadConfigTableName = config.getConfig("reload.tables").getString("index.fields.config")
     indexConfig
   }
 

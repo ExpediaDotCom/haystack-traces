@@ -19,14 +19,14 @@ package com.expedia.www.haystack.stitch.span.collector.unit
 
 import com.expedia.open.tracing.{Process, Span, Tag}
 import com.expedia.www.haystack.stitch.span.collector.config.entities.{IndexAttribute, IndexConfiguration}
-import com.expedia.www.haystack.stitch.span.collector.writers.es.SpanIndexDocumentGenerator
+import com.expedia.www.haystack.stitch.span.collector.writers.es.index.generator.IndexDocumentGenerator
 import org.scalatest.{FunSpec, Matchers}
 
 class SpanIndexDocumentGeneratorSpec extends FunSpec with Matchers {
 
   describe("Span to IndexDocument Generator") {
     it ("should extract serviceName, operationName, duration and create json document for indexing") {
-      val generator = new SpanIndexDocumentGenerator(IndexConfiguration(Nil))
+      val generator = new IndexDocumentGenerator(IndexConfiguration(Nil))
 
       val span_1 = Span.newBuilder().setTraceId("traceId")
         .setProcess(Process.newBuilder().setServiceName("service1"))
@@ -43,12 +43,13 @@ class SpanIndexDocumentGeneratorSpec extends FunSpec with Matchers {
         .setDuration(1000L)
         .setOperationName("op3").build()
 
-      val json = generator.create(List(span_1, span_2, span_3))
-      json shouldBe Some("{\"service2\":{\"_all\":{\"tags\":{},\"minduration\":1000,\"maxduration\":1000},\"op3\":{\"tags\":{},\"minduration\":1000,\"maxduration\":1000}},\"service1\":{\"_all\":{\"tags\":{},\"minduration\":500,\"maxduration\":600},\"op1\":{\"tags\":{},\"minduration\":500,\"maxduration\":600}}}")
+      val doc = generator.create("traceId", List(span_1, span_2, span_3)).get
+      doc.id shouldBe "traceId_" + span_3.getSpanId
+      doc.indexJson shouldBe "{\"service2\":{\"_all\":{\"tags\":{},\"minduration\":1000,\"maxduration\":1000},\"op3\":{\"tags\":{},\"minduration\":1000,\"maxduration\":1000}},\"service1\":{\"_all\":{\"tags\":{},\"minduration\":500,\"maxduration\":600},\"op1\":{\"tags\":{},\"minduration\":500,\"maxduration\":600}}}"
     }
 
     it ("should not create an index document if service name is absent") {
-      val generator = new SpanIndexDocumentGenerator(IndexConfiguration(Nil))
+      val generator = new IndexDocumentGenerator(IndexConfiguration(Nil))
 
       val span_1 = Span.newBuilder().setTraceId("traceId")
         .setOperationName("op1")
@@ -57,15 +58,15 @@ class SpanIndexDocumentGeneratorSpec extends FunSpec with Matchers {
         .setDuration(1000L)
         .setOperationName("op2").build()
 
-      val json = generator.create(List(span_1, span_2))
-      json shouldBe None
+      val doc = generator.create("traceId", List(span_1, span_2))
+      doc shouldBe None
     }
 
     it ("should extract tags along with serviceName, operationName and duration and create json document for indexing") {
       val indexableTags = List(
         IndexAttribute(name = "role", `type` = "string", true),
         IndexAttribute(name = "errorCode", `type` = "long", true))
-      val generator = new SpanIndexDocumentGenerator(IndexConfiguration(indexableTags))
+      val generator = new IndexDocumentGenerator(IndexConfiguration(indexableTags))
 
       val tag_1 = Tag.newBuilder().setKey("role").setType(Tag.TagType.STRING).setVStr("haystack").build()
       val tag_2  = Tag.newBuilder().setKey("errorCode").setType(Tag.TagType.LONG).setVLong(3).build()
@@ -88,15 +89,16 @@ class SpanIndexDocumentGeneratorSpec extends FunSpec with Matchers {
         .addTags(tag_2)
         .setOperationName("op3").build()
 
-      val json = generator.create(List(span_1, span_2, span_3))
-      json shouldBe Some("{\"service2\":{\"_all\":{\"tags\":{\"errorCode\":[3]},\"minduration\":1000,\"maxduration\":1000},\"op3\":{\"tags\":{\"errorCode\":[3]},\"minduration\":1000,\"maxduration\":1000}},\"service1\":{\"_all\":{\"tags\":{\"errorCode\":[3],\"role\":[\"haystack\"]},\"minduration\":100,\"maxduration\":200},\"op2\":{\"tags\":{\"errorCode\":[3]},\"minduration\":200,\"maxduration\":200},\"op1\":{\"tags\":{\"role\":[\"haystack\"]},\"minduration\":100,\"maxduration\":100}}}")
+      val doc = generator.create("traceId", List(span_1, span_2, span_3)).get
+      doc.id shouldBe "traceId_" + span_3.getSpanId
+      doc.indexJson shouldBe "{\"service2\":{\"_all\":{\"tags\":{\"errorCode\":[3]},\"minduration\":1000,\"maxduration\":1000},\"op3\":{\"tags\":{\"errorCode\":[3]},\"minduration\":1000,\"maxduration\":1000}},\"service1\":{\"_all\":{\"tags\":{\"errorCode\":[3],\"role\":[\"haystack\"]},\"minduration\":100,\"maxduration\":200},\"op2\":{\"tags\":{\"errorCode\":[3]},\"minduration\":200,\"maxduration\":200},\"op1\":{\"tags\":{\"role\":[\"haystack\"]},\"minduration\":100,\"maxduration\":100}}}"
     }
 
     it ("should respect enabled flag of tags create right json document for indexing") {
       val indexableTags = List(
         IndexAttribute(name = "role", `type` = "string", false),
         IndexAttribute(name = "errorCode", `type` = "long", true))
-      val generator = new SpanIndexDocumentGenerator(IndexConfiguration(indexableTags))
+      val generator = new IndexDocumentGenerator(IndexConfiguration(indexableTags))
 
       val tag_1 = Tag.newBuilder().setKey("role").setType(Tag.TagType.STRING).setVStr("haystack").build()
       val tag_2  = Tag.newBuilder().setKey("errorCode").setType(Tag.TagType.LONG).setVLong(3).build()
@@ -114,14 +116,15 @@ class SpanIndexDocumentGeneratorSpec extends FunSpec with Matchers {
         .addTags(tag_2)
         .build()
 
-      val json = generator.create(List(span_1, span_2))
-      json shouldBe Some("{\"service1\":{\"_all\":{\"tags\":{\"errorCode\":[3]},\"minduration\":100,\"maxduration\":200},\"op2\":{\"tags\":{\"errorCode\":[3]},\"minduration\":200,\"maxduration\":200},\"op1\":{\"tags\":{},\"minduration\":100,\"maxduration\":100}}}")
+      val doc = generator.create("traceId", List(span_1, span_2)).get
+      doc.id shouldBe "traceId_" + span_2.getSpanId
+      doc.indexJson shouldBe "{\"service1\":{\"_all\":{\"tags\":{\"errorCode\":[3]},\"minduration\":100,\"maxduration\":200},\"op2\":{\"tags\":{\"errorCode\":[3]},\"minduration\":200,\"maxduration\":200},\"op1\":{\"tags\":{},\"minduration\":100,\"maxduration\":100}}}"
     }
 
     it ("should merge tag values with the same key and create right json document for indexing") {
       val indexableTags = List(
         IndexAttribute(name = "errorCode", `type` = "long", true))
-      val generator = new SpanIndexDocumentGenerator(IndexConfiguration(indexableTags))
+      val generator = new IndexDocumentGenerator(IndexConfiguration(indexableTags))
 
       val tag_1 = Tag.newBuilder().setKey("errorCode").setType(Tag.TagType.LONG).setVLong(5).build()
       val tag_2  = Tag.newBuilder().setKey("errorCode").setType(Tag.TagType.LONG).setVLong(3).build()
@@ -139,15 +142,16 @@ class SpanIndexDocumentGeneratorSpec extends FunSpec with Matchers {
         .addTags(tag_2)
         .build()
 
-      val json = generator.create(List(span_1, span_2))
-      json shouldBe Some("{\"service1\":{\"_all\":{\"tags\":{\"errorCode\":[5,3]},\"minduration\":100,\"maxduration\":200},\"op2\":{\"tags\":{\"errorCode\":[3]},\"minduration\":200,\"maxduration\":200},\"op1\":{\"tags\":{\"errorCode\":[5]},\"minduration\":100,\"maxduration\":100}}}")
+      val doc = generator.create("traceId", List(span_1, span_2)).get
+      doc.id shouldBe "traceId_" + span_2.getSpanId
+      doc.indexJson shouldBe "{\"service1\":{\"_all\":{\"tags\":{\"errorCode\":[5,3]},\"minduration\":100,\"maxduration\":200},\"op2\":{\"tags\":{\"errorCode\":[3]},\"minduration\":200,\"maxduration\":200},\"op1\":{\"tags\":{\"errorCode\":[5]},\"minduration\":100,\"maxduration\":100}}}"
     }
 
     it ("should extract unique tag values along with serviceName, operationName and duration and create json document for indexing") {
       val indexableTags = List(
         IndexAttribute(name = "role", `type` = "string"),
         IndexAttribute(name = "errorCode", `type` = "long"))
-      val generator = new SpanIndexDocumentGenerator(IndexConfiguration(indexableTags))
+      val generator = new IndexDocumentGenerator(IndexConfiguration(indexableTags))
 
       val tag_1 = Tag.newBuilder().setKey("role").setType(Tag.TagType.STRING).setVStr("haystack").build()
       val tag_2  = Tag.newBuilder().setKey("error").setType(Tag.TagType.LONG).setVLong(3).build()
@@ -170,8 +174,9 @@ class SpanIndexDocumentGeneratorSpec extends FunSpec with Matchers {
         .addTags(tag_2)
         .setOperationName("op3").build()
 
-      val json = generator.create(List(span_1, span_2, span_3))
-      json shouldBe Some("{\"service2\":{\"_all\":{\"tags\":{},\"minduration\":1000,\"maxduration\":1000},\"op3\":{\"tags\":{},\"minduration\":1000,\"maxduration\":1000}},\"service1\":{\"_all\":{\"tags\":{\"role\":[\"haystack\"]},\"minduration\":100,\"maxduration\":200},\"op1\":{\"tags\":{\"role\":[\"haystack\"]},\"minduration\":100,\"maxduration\":200}}}")
+      val doc = generator.create("traceId", List(span_1, span_2, span_3)).get
+      doc.id shouldBe "traceId_" + span_3.getSpanId
+      doc.indexJson shouldBe "{\"service2\":{\"_all\":{\"tags\":{},\"minduration\":1000,\"maxduration\":1000},\"op3\":{\"tags\":{},\"minduration\":1000,\"maxduration\":1000}},\"service1\":{\"_all\":{\"tags\":{\"role\":[\"haystack\"]},\"minduration\":100,\"maxduration\":200},\"op1\":{\"tags\":{\"role\":[\"haystack\"]},\"minduration\":100,\"maxduration\":200}}}"
     }
   }
 }

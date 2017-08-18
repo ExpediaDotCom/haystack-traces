@@ -18,19 +18,46 @@ package com.expedia.www.haystack.trace.provider
 
 import com.codahale.metrics.JmxReporter
 import com.expedia.www.haystack.trace.provider.metrics.MetricsSupport
+import com.expedia.www.haystack.trace.provider.providers.{FieldProvider, TraceProvider}
+import io.grpc.{Server, ServerBuilder}
 import org.slf4j.{Logger, LoggerFactory}
 
-object TraceProvider extends MetricsSupport {
+object Provider extends MetricsSupport {
   private val LOGGER: Logger = LoggerFactory.getLogger("TraceProvider")
   private var jmxReporter: JmxReporter = _
 
   def main(args: Array[String]): Unit = {
-    startJmxReporter()
-    LOGGER.info("Service Started")
+    try {
+      startJmxReporter()
+      startService()
+    }
+    catch {
+      case th: Throwable => LOGGER.error("service failed with exception", th)
+    }
   }
 
   private def startJmxReporter() = {
     jmxReporter = JmxReporter.forRegistry(metricRegistry).build()
     jmxReporter.start()
+  }
+
+  def startService(): Unit = {
+    val server: Server = ServerBuilder
+      .forPort(80)
+      .addService(new TraceProvider)
+      .addService(new FieldProvider)
+      .build
+      .start
+
+    LOGGER.info("server started, listening on 8080")
+    server.awaitTermination()
+
+    Runtime.getRuntime.addShutdownHook(new Thread() {
+      override def run(): Unit = {
+        LOGGER.info("shutting down gRPC server since JVM is shutting down")
+        server.shutdown()
+        LOGGER.info("server shut down")
+      }
+    })
   }
 }

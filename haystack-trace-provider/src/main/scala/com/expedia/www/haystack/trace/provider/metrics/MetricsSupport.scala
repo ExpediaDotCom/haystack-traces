@@ -14,7 +14,7 @@
  *     limitations under the License.
  *
  */
-package com.expedia.www.haystack.trace.query.metrics
+package com.expedia.www.haystack.trace.provider.metrics
 
 import com.codahale.metrics.MetricRegistry
 

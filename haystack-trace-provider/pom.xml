@@ -4,7 +4,7 @@
 
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.expedia.www</groupId>
-    <artifactId>haystack-trace-query</artifactId>
+    <artifactId>haystack-trace-provider</artifactId>
     <version>1.0-SNAPSHOT</version>
     <packaging>jar</packaging>
 
@@ -24,7 +24,7 @@
         <pegdown.version>1.6.0</pegdown.version>
         <scalatest.version>3.0.3</scalatest.version>
 
-        <mainClass>com.expedia.www.haystack.trace.query.TraceQuery</mainClass>
+        <mainClass>com.expedia.www.haystack.trace.provider.TraceProvider</mainClass>
     </properties>
 
     <dependencies>
@@ -102,7 +102,7 @@
                         <groupId>org.scalatest</groupId>
                         <artifactId>scalatest-maven-plugin</artifactId>
                         <configuration>
-                            <wildcardSuites>com.expedia.www.haystack.trace.query.integration</wildcardSuites>
+                            <wildcardSuites>com.expedia.www.haystack.trace.provider.integration</wildcardSuites>
                         </configuration>
                     </plugin>
                 </plugins>
@@ -111,7 +111,7 @@
     </profiles>
 
     <build>
-        <finalName>haystack-trace-query</finalName>
+        <finalName>haystack-trace-provider</finalName>
         <resources>
             <resource>
                 <directory>src/main/resources</directory>
@@ -123,7 +123,7 @@
                 <groupId>org.scalatest</groupId>
                 <artifactId>scalatest-maven-plugin</artifactId>
                 <configuration>
-                    <wildcardSuites>com.expedia.www.haystack.trace.query.unit</wildcardSuites>
+                    <wildcardSuites>com.expedia.www.haystack.trace.provider.unit</wildcardSuites>
                 </configuration>
                 <executions>
                     <execution>

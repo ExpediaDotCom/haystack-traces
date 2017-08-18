@@ -14,7 +14,7 @@
  *     limitations under the License.
  *
  */
-package com.expedia.www.haystack.trace.query.config
+package com.expedia.www.haystack.trace.provider.config
 
 import com.typesafe.config.{Config, ConfigFactory}
 

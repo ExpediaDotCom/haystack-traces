@@ -1,6 +1,6 @@
 .PHONY: all
 
-DOCKER_IMAGE_TAG := haystack-trace-query
+DOCKER_IMAGE_TAG := haystack-trace-provider
 
 clean:
 	mvn clean
@@ -19,7 +19,7 @@ all: build integration_test docker_build
 
 # build all and release
 .PHONY: release
-REPO := lib/haystack-trace-query
+REPO := lib/haystack-trace-provider
 BRANCH := $(shell git rev-parse --abbrev-ref HEAD)
 ifeq ($(BRANCH), master)
 release: all

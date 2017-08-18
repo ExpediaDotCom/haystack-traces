@@ -1,7 +1,7 @@
 FROM openjdk:8-jre
 MAINTAINER Haystack <haystack@expedia.com>
 
-ENV APP_NAME haystack-trace-query
+ENV APP_NAME haystack-trace-provider
 ENV APP_HOME /app/bin
 
 RUN mkdir -p ${APP_HOME}

@@ -14,23 +14,9 @@
  *     limitations under the License.
  *
  */
-package com.expedia.www.haystack.trace.query
+package com.expedia.www.haystack.trace.provider.config.entities
 
-import com.codahale.metrics.JmxReporter
-import com.expedia.www.haystack.trace.query.metrics.MetricsSupport
-import org.slf4j.{Logger, LoggerFactory}
-
-object TraceQuery extends MetricsSupport {
-  private val LOGGER: Logger = LoggerFactory.getLogger("TraceQuery")
-  private var jmxReporter: JmxReporter = _
-
-  def main(args: Array[String]): Unit = {
-    startJmxReporter()
-    LOGGER.info("Service Started")
-  }
-
-  private def startJmxReporter() = {
-    jmxReporter = JmxReporter.forRegistry(metricRegistry).build()
-    jmxReporter.start()
-  }
-}
+/**
+  * @param endpoint ElasticSearch endpoint URI
+  */
+case class ElasticSearchConfiguration(endpoint: String)

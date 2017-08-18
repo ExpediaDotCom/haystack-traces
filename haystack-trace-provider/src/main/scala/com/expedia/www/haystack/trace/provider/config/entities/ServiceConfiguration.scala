@@ -14,7 +14,7 @@
  *       limitations under the License.
  */
 
-package com.expedia.www.haystack.trace.query.config.entities
+package com.expedia.www.haystack.trace.provider.config.entities
 
 /**
   * @param port port to start grpc servicer on

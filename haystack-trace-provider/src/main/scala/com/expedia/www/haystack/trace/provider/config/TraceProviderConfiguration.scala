@@ -14,12 +14,12 @@
  *       limitations under the License.
  */
 
-package com.expedia.www.haystack.trace.query.config
+package com.expedia.www.haystack.trace.provider.config
 
-import com.expedia.www.haystack.trace.query.config.entities.{CassandraConfiguration, ElasticSearchConfiguration, ServiceConfiguration}
+import com.expedia.www.haystack.trace.provider.config.entities.{CassandraConfiguration, ElasticSearchConfiguration, ServiceConfiguration}
 import com.typesafe.config.Config
 
-object TraceQueryConfiguration {
+object TraceProviderConfiguration {
   private val config: Config = ConfigurationLoader.loadAppConfig
 
   def serviceConfig: ServiceConfiguration = {

@@ -1,6 +1,6 @@
-# haystack-trace-query
+# haystack-trace-provider
 
-Service for querying and fetching Traces from persistent storages.
+Service for fetching traces and fields from persistent storages.
  
 ##Technical Details
 
@@ -35,8 +35,3 @@ If you are developing and just want to run integration tests
 make integration_test
 
 ```
-
-##Endpoints
-* Query
-* Fetch
-* Metadata

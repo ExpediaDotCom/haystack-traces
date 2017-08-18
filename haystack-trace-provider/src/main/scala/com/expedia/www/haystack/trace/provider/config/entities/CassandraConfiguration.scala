@@ -14,9 +14,9 @@
  *     limitations under the License.
  *
  */
-package com.expedia.www.haystack.trace.query.config.entities
+package com.expedia.www.haystack.trace.provider.config.entities
 
 /**
-  * @param endpoint ElasticSearch endpoint URI
+  * @param endpoint cassandra endpoint URI
   */
-case class ElasticSearchConfiguration(endpoint: String)
+case class CassandraConfiguration(endpoint: String)

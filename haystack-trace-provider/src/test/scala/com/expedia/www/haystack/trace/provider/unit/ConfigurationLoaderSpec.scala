@@ -13,16 +13,16 @@
  *       See the License for the specific language governing permissions and
  *       limitations under the License.
  */
-package com.expedia.www.haystack.trace.query.unit
+package com.expedia.www.haystack.trace.provider.unit
 
-import com.expedia.www.haystack.trace.query.config.TraceQueryConfiguration
-import com.expedia.www.haystack.trace.query.config.entities.ServiceConfiguration
+import com.expedia.www.haystack.trace.provider.config.TraceProviderConfiguration
+import com.expedia.www.haystack.trace.provider.config.entities.ServiceConfiguration
 import org.scalatest.{FunSpec, Matchers}
 
 class ConfigurationLoaderSpec extends FunSpec with Matchers {
   describe("ConfigurationLoader") {
     it("should load the service config from base.conf") {
-      val serviceConfig: ServiceConfiguration = TraceQueryConfiguration.serviceConfig
+      val serviceConfig: ServiceConfiguration = TraceProviderConfiguration.serviceConfig
       serviceConfig.port shouldBe 80
     }
   }

@@ -14,9 +14,23 @@
  *     limitations under the License.
  *
  */
-package com.expedia.www.haystack.trace.query.config.entities
+package com.expedia.www.haystack.trace.provider
 
-/**
-  * @param endpoint cassandra endpoint URI
-  */
-case class CassandraConfiguration(endpoint: String)
+import com.codahale.metrics.JmxReporter
+import com.expedia.www.haystack.trace.provider.metrics.MetricsSupport
+import org.slf4j.{Logger, LoggerFactory}
+
+object TraceProvider extends MetricsSupport {
+  private val LOGGER: Logger = LoggerFactory.getLogger("TraceProvider")
+  private var jmxReporter: JmxReporter = _
+
+  def main(args: Array[String]): Unit = {
+    startJmxReporter()
+    LOGGER.info("Service Started")
+  }
+
+  private def startJmxReporter() = {
+    jmxReporter = JmxReporter.forRegistry(metricRegistry).build()
+    jmxReporter.start()
+  }
+}

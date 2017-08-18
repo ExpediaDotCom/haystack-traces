@@ -97,7 +97,11 @@ class ProjectConfiguration extends AutoCloseable {
       es.getInt("read.timeout.ms"))
   }
 
-  val indexConfig: IndexConfiguration = IndexConfiguration()
+  val indexConfig: IndexConfiguration = {
+    val indexConfig = IndexConfiguration(Nil)
+    indexConfig.reloadConfigFromTable = config.getConfig("reload.tables").getString("index.fields.config")
+    indexConfig
+  }
 
   private val reloader = registerReloadableConfigurations(List(indexConfig))
 
@@ -105,7 +109,7 @@ class ProjectConfiguration extends AutoCloseable {
     val reload = config.getConfig("reload")
     val reloadConfig = ReloadConfiguration(
       reload.getString("config.endpoint"),
-      reload.getString("config.database"),
+      reload.getString("config.database.name"),
       reload.getInt("interval.ms"),
       observers,
       loadOnStartup = reload.getBoolean("startup.load"))

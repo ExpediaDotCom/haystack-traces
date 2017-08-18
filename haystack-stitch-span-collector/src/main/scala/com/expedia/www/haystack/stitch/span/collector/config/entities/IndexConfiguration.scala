@@ -23,48 +23,36 @@ import org.json4s.DefaultFormats
 import org.json4s.jackson.Serialization
 import org.slf4j.LoggerFactory
 
-object IndexAttribute {
-  val empty = IndexAttribute("", "", enabled = false)
-}
+case class IndexAttribute(name: String, `type`: String, enabled: Boolean = true)
 
-case class IndexAttribute(name: String, `type`: String, enabled: Boolean)
-
-case class IndexConfigDatabaseModel(serviceField: IndexAttribute,
-                                    operationField: IndexAttribute,
-                                    durationField: IndexAttribute,
-                                    tags: List[IndexAttribute],
-                                    logTags: List[IndexAttribute])
-
-case class IndexConfiguration(var serviceField: IndexAttribute = IndexAttribute.empty,
-                              var operationField: IndexAttribute = IndexAttribute.empty,
-                              var durationField: IndexAttribute = IndexAttribute.empty,
-                              var tags: Map[String, IndexAttribute] = Map.empty,
-                              var logTags: Map[String, IndexAttribute] = Map.empty) extends Reloadable {
+case class IndexConfiguration(var tags: List[IndexAttribute] = Nil) extends Reloadable {
+  var keyedTags: Map[String, IndexAttribute] = groupTagsWithKey()
 
   private val LOGGER = LoggerFactory.getLogger(classOf[IndexConfiguration])
 
   implicit val formats = DefaultFormats
   private var currentVersion: Int = 0
+  var reloadConfigFromTable: String = ""
 
-  override val name: String = "indexing-fields"
+  override def name: String = reloadConfigFromTable
 
   override def onReload(newConfigStr: String): Unit = {
     if(StringUtils.isNotEmpty(newConfigStr) && hasConfigChanged(newConfigStr)) {
       LOGGER.info("new indexing configuration has arrived: " + newConfigStr)
-      val newConfig = Serialization.read[IndexConfigDatabaseModel](newConfigStr)
+      val newConfig = Serialization.read[IndexConfiguration](newConfigStr)
       update(newConfig)
       // set the current version to newer one
       currentVersion = newConfigStr.hashCode
     }
   }
 
-  private def update(newConfig: IndexConfigDatabaseModel): Unit = {
-    serviceField = newConfig.serviceField
-    operationField = newConfig.operationField
-    durationField = newConfig.durationField
-    tags = if (newConfig.tags != null) newConfig.tags.groupBy(_.name).mapValues(_.head) else Map.empty
-    logTags = if (newConfig.logTags != null) newConfig.logTags.groupBy(_.name).mapValues(_.head) else Map.empty
+  private def update(newConfig: IndexConfiguration): Unit = {
+     if (newConfig.tags != null) {
+       this.tags = newConfig.tags
+       this.keyedTags = groupTagsWithKey()
+    }
   }
 
+  private def groupTagsWithKey(): Map[String, IndexAttribute] = this.tags.groupBy(_.name).mapValues(_.head)
   private def hasConfigChanged(newConfigStr: String): Boolean = newConfigStr.hashCode != currentVersion
 }

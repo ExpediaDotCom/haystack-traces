@@ -2,7 +2,7 @@
 
 DOCKER_IMAGE_TAG := haystack-stitch-span-collector
 PWD := $(shell pwd)
-SERVICE_DEBUG_ON := false
+SERVICE_DEBUG_ON ?= false
 
 clean:
 	mvn clean

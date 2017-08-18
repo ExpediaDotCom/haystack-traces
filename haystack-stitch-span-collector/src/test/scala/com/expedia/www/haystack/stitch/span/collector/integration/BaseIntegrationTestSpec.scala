@@ -5,10 +5,10 @@ import java.util.{Date, Properties}
 
 import com.expedia.open.tracing.Span
 import com.expedia.open.tracing.stitch.StitchedSpan
-import com.expedia.www.haystack.stitch.span.collector.config.entities.{IndexAttribute, IndexConfigDatabaseModel}
-import io.searchbox.client.{JestClient, JestClientFactory}
+import com.expedia.www.haystack.stitch.span.collector.config.entities.{IndexAttribute, IndexConfiguration}
 import io.searchbox.client.config.HttpClientConfig
-import io.searchbox.core.{Delete, Index, Search}
+import io.searchbox.client.{JestClient, JestClientFactory}
+import io.searchbox.core.{Index, Search}
 import io.searchbox.indices.DeleteIndex
 import org.apache.kafka.clients.producer._
 import org.apache.kafka.common.serialization.ByteArraySerializer
@@ -26,7 +26,6 @@ abstract class BaseIntegrationTestSpec extends WordSpec with GivenWhenThen with 
   protected val CONSUMER_TOPIC = "stitch-spans"
   private val ELASTIC_SEARCH_ENDPOINT = "http://elasticsearch:9200"
   private val SPANS_INDEX_TYPE = "spans"
-
   private val HAYSTACK_SPAN_INDEX = {
     val formatter = new SimpleDateFormat("yyyy-MM-dd")
     s"haystack-span-${formatter.format(new Date())}"
@@ -43,8 +42,9 @@ abstract class BaseIntegrationTestSpec extends WordSpec with GivenWhenThen with 
     }
   }
 
-  private def dropHaystackSpanIndex(): Unit = {
+  private def dropIndexes(): Unit = {
     esClient.execute(new DeleteIndex.Builder(HAYSTACK_SPAN_INDEX).build())
+    esClient.execute(new DeleteIndex.Builder("reload-configs").build())
   }
 
   override def beforeAll() {
@@ -63,7 +63,7 @@ abstract class BaseIntegrationTestSpec extends WordSpec with GivenWhenThen with 
     }
 
     // drop the haystack-span index
-    dropHaystackSpanIndex()
+    dropIndexes()
 
     createIndexConfigInES()
     // wait for few seconds(5 sec is the schedule interval) to let app consume the new indexing config
@@ -120,12 +120,9 @@ abstract class BaseIntegrationTestSpec extends WordSpec with GivenWhenThen with 
   }
 
   private def indexConfigInDatabase(): String = {
-    Serialization.write(
-      IndexConfigDatabaseModel(
-      IndexAttribute("service", "string", enabled = true),
-      IndexAttribute("operation", "string", enabled = true),
-      IndexAttribute("duration", "long", enabled = true),
-      null,
-      null))
+    val indexTagFields = List(
+      IndexAttribute(name = "role", `type` = "string", true),
+      IndexAttribute(name = "errorCode", `type` = "long", true))
+    Serialization.write(IndexConfiguration(indexTagFields))
   }
 }

@@ -18,14 +18,7 @@ class StitchedSpanCollectorIntegrationTest extends BaseIntegrationTestSpec {
   }
 
   private def verifyElasticSearchWrites(): Unit = {
-    (0 until 3).toList foreach { idx =>
-      var docs = queryElasticSearch("{\"query\": {\"match\": {\"spans.operation\": \"op-" + idx.toString + "\"}}}")
-      docs.size shouldBe TOTAL_STITCHED_SPANS
-
-      docs = queryElasticSearch("{\"query\": {\"match\": {\"spans.service\": \"service-" + idx.toString + "\"}}}")
-      docs.size shouldBe TOTAL_STITCHED_SPANS
-    }
-    val docs = queryElasticSearch("{\"query\": {\"match\": {\"spans.duration\": " + SPAN_DURATION + "}}}")
+    val docs = queryElasticSearch("{\"query\": {\"match\": {\"service-1.op-1\": \"service-1\"}}}")
     docs.size shouldBe TOTAL_STITCHED_SPANS
   }
 }

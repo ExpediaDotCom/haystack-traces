@@ -22,7 +22,9 @@ import com.expedia.www.haystack.stitch.span.collector.metrics.MetricsSupport
 
 import scala.concurrent.Future
 
+case class StitchedSpanDataElement(stitchedSpan: StitchedSpan, stitchedSpanBytes: Array[Byte])
+
 trait StitchedSpanWriter extends MetricsSupport with AutoCloseable {
-  def write(stitchedSpans: Seq[StitchedSpan]): Future[_]
+  def write(elems: Seq[StitchedSpanDataElement]): Future[_]
 }
 

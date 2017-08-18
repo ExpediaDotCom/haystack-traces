@@ -44,7 +44,7 @@ class SpanIndexDocumentGeneratorSpec extends FunSpec with Matchers {
         .setOperationName("op3").build()
 
       val doc = generator.create("traceId", List(span_1, span_2, span_3)).get
-      doc.id shouldBe "traceId_" + span_3.getSpanId
+      doc.id should startWith("traceId_")
       doc.indexJson shouldBe "{\"service2\":{\"_all\":{\"tags\":{},\"minduration\":1000,\"maxduration\":1000},\"op3\":{\"tags\":{},\"minduration\":1000,\"maxduration\":1000}},\"service1\":{\"_all\":{\"tags\":{},\"minduration\":500,\"maxduration\":600},\"op1\":{\"tags\":{},\"minduration\":500,\"maxduration\":600}}}"
     }
 
@@ -90,7 +90,7 @@ class SpanIndexDocumentGeneratorSpec extends FunSpec with Matchers {
         .setOperationName("op3").build()
 
       val doc = generator.create("traceId", List(span_1, span_2, span_3)).get
-      doc.id shouldBe "traceId_" + span_3.getSpanId
+      doc.id should startWith("traceId_")
       doc.indexJson shouldBe "{\"service2\":{\"_all\":{\"tags\":{\"errorCode\":[3]},\"minduration\":1000,\"maxduration\":1000},\"op3\":{\"tags\":{\"errorCode\":[3]},\"minduration\":1000,\"maxduration\":1000}},\"service1\":{\"_all\":{\"tags\":{\"errorCode\":[3],\"role\":[\"haystack\"]},\"minduration\":100,\"maxduration\":200},\"op2\":{\"tags\":{\"errorCode\":[3]},\"minduration\":200,\"maxduration\":200},\"op1\":{\"tags\":{\"role\":[\"haystack\"]},\"minduration\":100,\"maxduration\":100}}}"
     }
 
@@ -117,7 +117,7 @@ class SpanIndexDocumentGeneratorSpec extends FunSpec with Matchers {
         .build()
 
       val doc = generator.create("traceId", List(span_1, span_2)).get
-      doc.id shouldBe "traceId_" + span_2.getSpanId
+      doc.id should startWith("traceId_")
       doc.indexJson shouldBe "{\"service1\":{\"_all\":{\"tags\":{\"errorCode\":[3]},\"minduration\":100,\"maxduration\":200},\"op2\":{\"tags\":{\"errorCode\":[3]},\"minduration\":200,\"maxduration\":200},\"op1\":{\"tags\":{},\"minduration\":100,\"maxduration\":100}}}"
     }
 
@@ -143,7 +143,7 @@ class SpanIndexDocumentGeneratorSpec extends FunSpec with Matchers {
         .build()
 
       val doc = generator.create("traceId", List(span_1, span_2)).get
-      doc.id shouldBe "traceId_" + span_2.getSpanId
+      doc.id should startWith("traceId_")
       doc.indexJson shouldBe "{\"service1\":{\"_all\":{\"tags\":{\"errorCode\":[5,3]},\"minduration\":100,\"maxduration\":200},\"op2\":{\"tags\":{\"errorCode\":[3]},\"minduration\":200,\"maxduration\":200},\"op1\":{\"tags\":{\"errorCode\":[5]},\"minduration\":100,\"maxduration\":100}}}"
     }
 
@@ -175,7 +175,7 @@ class SpanIndexDocumentGeneratorSpec extends FunSpec with Matchers {
         .setOperationName("op3").build()
 
       val doc = generator.create("traceId", List(span_1, span_2, span_3)).get
-      doc.id shouldBe "traceId_" + span_3.getSpanId
+      doc.id should startWith("traceId_")
       doc.indexJson shouldBe "{\"service2\":{\"_all\":{\"tags\":{},\"minduration\":1000,\"maxduration\":1000},\"op3\":{\"tags\":{},\"minduration\":1000,\"maxduration\":1000}},\"service1\":{\"_all\":{\"tags\":{\"role\":[\"haystack\"]},\"minduration\":100,\"maxduration\":200},\"op1\":{\"tags\":{\"role\":[\"haystack\"]},\"minduration\":100,\"maxduration\":200}}}"
     }
   }

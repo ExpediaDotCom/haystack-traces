@@ -26,7 +26,7 @@ import org.json4s.jackson.Serialization
 
 import scala.collection.JavaConversions._
 import scala.collection.mutable
-import scala.util.{Failure, Success, Try}
+import scala.util.{Failure, Random, Success, Try}
 
 class IndexDocumentGenerator(config: IndexConfiguration) {
 
@@ -34,7 +34,7 @@ class IndexDocumentGenerator(config: IndexConfiguration) {
 
   def create(traceId: String, spans: Seq[Span]): Option[Document] = {
     val result = transform(spans)
-    if (result.nonEmpty) Some(Document(s"${traceId}_${spans.last.getSpanId}", Serialization.write(result))) else None
+    if (result.nonEmpty) Some(Document(s"${traceId}_${Random.alphanumeric.take(4).mkString}", Serialization.write(result))) else None
   }
 
   private def isValidSpanForIndex(sp: Span): Boolean = {

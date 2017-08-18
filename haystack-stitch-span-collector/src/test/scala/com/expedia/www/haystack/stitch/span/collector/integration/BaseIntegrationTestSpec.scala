@@ -3,6 +3,7 @@ package com.expedia.www.haystack.stitch.span.collector.integration
 import java.text.SimpleDateFormat
 import java.util.{Date, Properties}
 
+import com.datastax.driver.core.{Cluster, Session, SimpleStatement}
 import com.expedia.open.tracing.Span
 import com.expedia.open.tracing.stitch.StitchedSpan
 import com.expedia.www.haystack.stitch.span.collector.config.entities.{IndexAttribute, IndexConfiguration}
@@ -18,12 +19,17 @@ import org.scalatest._
 
 import scala.collection.JavaConversions._
 
+case class CassandraRow(id: String, timestamp: java.util.Date, stitchedSpan: StitchedSpan)
+
 abstract class BaseIntegrationTestSpec extends WordSpec with GivenWhenThen with Matchers with BeforeAndAfterAll with BeforeAndAfterEach {
 
   implicit val formats = DefaultFormats
 
   private val KAFKA_BROKERS = "kafkasvc:9092"
   protected val CONSUMER_TOPIC = "stitch-spans"
+  private val CASSANDRA_ENDPOINT = "cassandra"
+  private val CASSANDRA_KEYSPACE = "haystack"
+
   private val ELASTIC_SEARCH_ENDPOINT = "http://elasticsearch:9200"
   private val SPANS_INDEX_TYPE = "spans"
   private val HAYSTACK_SPAN_INDEX = {
@@ -33,6 +39,7 @@ abstract class BaseIntegrationTestSpec extends WordSpec with GivenWhenThen with 
 
   private var producer: KafkaProducer[Array[Byte], Array[Byte]] = _
   private var esClient: JestClient = _
+  private var cassandraSession: Session = _
 
   private def createIndexConfigInES(): Unit = {
     val request = new Index.Builder(indexConfigInDatabase()).index("reload-configs").`type`("indexing-fields").build()
@@ -45,6 +52,10 @@ abstract class BaseIntegrationTestSpec extends WordSpec with GivenWhenThen with 
   private def dropIndexes(): Unit = {
     esClient.execute(new DeleteIndex.Builder(HAYSTACK_SPAN_INDEX).build())
     esClient.execute(new DeleteIndex.Builder("reload-configs").build())
+  }
+
+  private def deleteCassandraTableRows(): Unit = {
+    cassandraSession.execute(new SimpleStatement("TRUNCATE stitchedspans"))
   }
 
   override def beforeAll() {
@@ -62,6 +73,10 @@ abstract class BaseIntegrationTestSpec extends WordSpec with GivenWhenThen with 
       factory.getObject
     }
 
+    cassandraSession = Cluster.builder().addContactPoints(CASSANDRA_ENDPOINT).build().connect(CASSANDRA_KEYSPACE)
+
+    deleteCassandraTableRows()
+
     // drop the haystack-span index
     dropIndexes()
 
@@ -73,6 +88,7 @@ abstract class BaseIntegrationTestSpec extends WordSpec with GivenWhenThen with 
   override def afterAll(): Unit = {
     if(producer != null) producer.close()
     if(esClient != null) esClient.shutdownClient()
+    if(cassandraSession != null) cassandraSession.close()
   }
 
   protected def produceToKafka(stitchedSpans: Seq[StitchedSpan]): Unit = {
@@ -89,6 +105,13 @@ abstract class BaseIntegrationTestSpec extends WordSpec with GivenWhenThen with 
     producer.flush()
   }
 
+  protected def queryAllCassandra(): Seq[CassandraRow] = {
+    val rows = cassandraSession.execute("SELECT id, ts, stitchedspans from stitchedspans")
+    rows.map(row => {
+      CassandraRow(row.getString("id"), row.getTimestamp("ts"), StitchedSpan.parseFrom(row.getBytes("stitchedspans")))
+    }).toList
+  }
+
   protected def queryElasticSearch(query: String): List[String] = {
     val searchQuery = new Search.Builder(query)
       .addIndex(HAYSTACK_SPAN_INDEX)
@@ -98,13 +121,13 @@ abstract class BaseIntegrationTestSpec extends WordSpec with GivenWhenThen with 
     if(result.getSourceAsStringList == null) Nil else result.getSourceAsStringList.toList
   }
 
-  protected def createStitchedSpans(total: Int, withSpanCount: Int, duration: Long): Seq[StitchedSpan] = {
+  protected def createStitchedSpans(total: Int, spanCount: Int, duration: Long): Seq[StitchedSpan] = {
     ( 0 until total ).toList map { traceId =>
       val stitchedSpanBuilder = StitchedSpan.newBuilder()
       stitchedSpanBuilder.setTraceId(traceId.toString)
 
       // add spans
-      ( 0 until withSpanCount ).toList foreach { spanId =>
+      ( 0 until spanCount ).toList foreach { spanId =>
         val process = com.expedia.open.tracing.Process.newBuilder().setServiceName(s"service-$spanId")
         val span = Span.newBuilder()
           .setTraceId(traceId.toString)

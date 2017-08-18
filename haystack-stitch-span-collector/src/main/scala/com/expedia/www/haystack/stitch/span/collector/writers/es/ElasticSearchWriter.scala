@@ -23,8 +23,8 @@ import java.util.Date
 import com.expedia.open.tracing.stitch.StitchedSpan
 import com.expedia.www.haystack.stitch.span.collector.config.entities.{ElasticSearchConfiguration, IndexConfiguration}
 import com.expedia.www.haystack.stitch.span.collector.metrics.AppMetricNames
-import com.expedia.www.haystack.stitch.span.collector.writers.StitchedSpanWriter
 import com.expedia.www.haystack.stitch.span.collector.writers.es.index.generator.IndexDocumentGenerator
+import com.expedia.www.haystack.stitch.span.collector.writers.{StitchedSpanDataElement, StitchedSpanWriter}
 import io.searchbox.action.BulkableAction
 import io.searchbox.client.config.HttpClientConfig
 import io.searchbox.client.{JestClient, JestClientFactory}
@@ -63,12 +63,12 @@ class ElasticSearchWriter(esConfig: ElasticSearchConfiguration, indexConf: Index
     Try(esClient.shutdownClient())
   }
 
-  override def write(stitchedSpans: Seq[StitchedSpan]): Future[_] = {
+  override def write(elems: Seq[StitchedSpanDataElement]): Future[_] = {
     try {
-      val request = buildIndexingRequest(stitchedSpans)
+      val request = buildIndexingRequest(elems)
       val promise = Promise[Boolean]()
       esClient.executeAsync(request, new SpanIndexResultHandler(promise, esWriteTime.time()))
-      esWriteDocsHistogram.update(stitchedSpans.size)
+      esWriteDocsHistogram.update(elems.size)
       promise.future
     } catch {
       case ex: Exception =>
@@ -78,21 +78,21 @@ class ElasticSearchWriter(esConfig: ElasticSearchConfiguration, indexConf: Index
     }
   }
 
-  private def buildIndexingRequest(stitchedSpans: Seq[StitchedSpan]): Bulk = {
+  private def buildIndexingRequest(elems: Seq[StitchedSpanDataElement]): Bulk = {
     val bulkActions = new Bulk.Builder()
 
     // create the index name
     val indexName = createIndexName()
 
-    for(sp <- stitchedSpans;
-        op = createUpdateIndexOp(sp, indexName); if op.isDefined) {
-      bulkActions.addAction(op.get)
+    for(el <- elems;
+        action = createIndexAction(el.stitchedSpan, indexName); if action.isDefined) {
+      bulkActions.addAction(action.get)
     }
 
     bulkActions.build()
   }
 
-  private def createUpdateIndexOp(stitchedSpan: StitchedSpan, indexName: String): Option[BulkableAction[DocumentResult]] = {
+  private def createIndexAction(stitchedSpan: StitchedSpan, indexName: String): Option[BulkableAction[DocumentResult]] = {
     // add all the spans as one document
     spanIndexer.create(stitchedSpan.getTraceId, stitchedSpan.getChildSpansList) match {
       case Some(document) =>

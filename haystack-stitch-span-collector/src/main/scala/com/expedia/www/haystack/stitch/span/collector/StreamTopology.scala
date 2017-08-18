@@ -27,7 +27,7 @@ import akka.stream.{ActorMaterializer, KillSwitch, KillSwitches}
 import com.expedia.open.tracing.stitch.StitchedSpan
 import com.expedia.www.haystack.stitch.span.collector.config.entities.CollectorConfiguration
 import com.expedia.www.haystack.stitch.span.collector.serdes.StitchedSpanDeserializer
-import com.expedia.www.haystack.stitch.span.collector.writers.StitchedSpanWriter
+import com.expedia.www.haystack.stitch.span.collector.writers.{StitchedSpanDataElement, StitchedSpanWriter}
 import org.apache.kafka.common.serialization.ByteArrayDeserializer
 
 import scala.concurrent.duration._
@@ -38,12 +38,13 @@ class StreamTopology(collectorConfig: CollectorConfiguration,
 
   implicit val materializer = ActorMaterializer()
   implicit val dispatcher = system.dispatcher
+  private val stitchedSpanDeser = new StitchedSpanDeserializer()
 
   /**
     * build and start the topology
     */
   def start(): (KillSwitch, Future[Done]) = {
-    val settings = ConsumerSettings.create(system, new ByteArrayDeserializer, new StitchedSpanDeserializer)
+    val settings = ConsumerSettings.create(system, new ByteArrayDeserializer, new ByteArrayDeserializer)
 
     Consumer
       .committableSource(settings, Subscriptions.topics(collectorConfig.consumerTopic))
@@ -61,12 +62,12 @@ class StreamTopology(collectorConfig: CollectorConfiguration,
       .run()
   }
 
-  private def writeStitchedSpans(records: Seq[CommittableMessage[Array[Byte], StitchedSpan]]): Future[Seq[CommittableMessage[Array[Byte], StitchedSpan]]] = {
-    val promise = Promise[Seq[CommittableMessage[Array[Byte], StitchedSpan]]]()
+  private def writeStitchedSpans(records: Seq[CommittableMessage[Array[Byte], Array[Byte]]]): Future[Seq[CommittableMessage[Array[Byte], Array[Byte]]]] = {
+    val promise = Promise[Seq[CommittableMessage[Array[Byte], Array[Byte]]]]()
 
-    val stitchedSpans: Seq[StitchedSpan] = records
-      .map(_.record.value())
-      .filter(_ != null)
+    val stitchedSpans: Seq[StitchedSpanDataElement] = records
+      .map(rec => StitchedSpanDataElement(stitchedSpanDeser.deserialize(rec.record.value()), rec.record.value()))
+      .filter(el => el.stitchedSpan != null)
 
     val allWrites: Seq[Future[Any]] = writers.map(_.write(stitchedSpans))
 

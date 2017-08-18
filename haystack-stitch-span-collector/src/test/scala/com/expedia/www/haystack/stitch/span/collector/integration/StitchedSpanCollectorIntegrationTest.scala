@@ -2,6 +2,7 @@ package com.expedia.www.haystack.stitch.span.collector.integration
 
 import com.expedia.www.haystack.stitch.span.collector.writers.es.index.generator.Document.IndexDataModel
 import org.json4s.jackson.Serialization
+import scala.collection.JavaConversions._
 
 class StitchedSpanCollectorIntegrationTest extends BaseIntegrationTestSpec {
   private val TOTAL_STITCHED_SPANS = 10
@@ -18,17 +19,37 @@ class StitchedSpanCollectorIntegrationTest extends BaseIntegrationTestSpec {
       Then("indexing data should be written to elastic search and full trace is stored in cassandra")
       Thread.sleep(5000)
       verifyElasticSearchWrites()
+      verifyCassandraWrites()
     }
+  }
+
+  private def verifyCassandraWrites(): Unit = {
+    val records = queryAllCassandra()
+    records should have size 10
+    records.foreach(rec => {
+      (0 until 10).toSet should contain(rec.id.toInt)
+      rec.stitchedSpan should not be null
+      rec.stitchedSpan.getChildSpansCount shouldBe 3
+      rec.stitchedSpan.getChildSpansList.zipWithIndex foreach {
+        case (sp, idx) =>
+          sp.getSpanId shouldBe s"${rec.id}_$idx"
+          sp.getProcess.getServiceName shouldBe s"service-$idx"
+          sp.getOperationName shouldBe s"op-$idx"
+      }
+    })
   }
 
   private def verifyElasticSearchWrites(): Unit = {
     val docs = queryElasticSearch(matchAllQuery)
     docs.size shouldBe TOTAL_STITCHED_SPANS
-    for (elem <- docs) {
-      val data = Serialization.read[IndexDataModel](elem)
-      data should contain key "service-2"
-      data should contain key "service-1"
-      data should contain key "service-0"
+    for (doc <- docs;
+         indexMap = Serialization.read[IndexDataModel](doc)) {
+      (0 until 3).toList foreach { idx =>
+        val serviceName = s"service-$idx"
+        indexMap should contain key serviceName
+        indexMap(serviceName) should contain key "_all"
+        indexMap(serviceName) should contain key s"op-$idx"
+      }
     }
   }
 }

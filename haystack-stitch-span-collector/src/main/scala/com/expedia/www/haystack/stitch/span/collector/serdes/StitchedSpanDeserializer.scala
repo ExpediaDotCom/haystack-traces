@@ -42,7 +42,11 @@ class StitchedSpanDeserializer extends Deserializer[StitchedSpan] {
     */
   override def deserialize(topic: String, data: Array[Byte]): StitchedSpan = {
     try {
-      StitchedSpan.parseFrom(data)
+      if(data.length > 0) {
+        StitchedSpan.parseFrom(data)
+      } else {
+        null
+      }
     } catch {
       case _: Exception =>
         StitchedSpanDeserializer.deserFailure.mark()

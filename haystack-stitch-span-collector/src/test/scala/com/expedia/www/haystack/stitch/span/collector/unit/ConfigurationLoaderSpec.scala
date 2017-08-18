@@ -50,8 +50,7 @@ class ConfigurationLoaderSpec extends FunSpec with Matchers {
 
     it("should load the elastic search config from base.conf and one property overridden from env variable") {
       val elastic = project.elasticSearchConfig
-      elastic.port shouldBe 9200
-      elastic.host shouldBe "elasticSearch"
+      elastic.endpoint shouldBe "http://elasticsearch:9200"
       elastic.consistencyLevel shouldBe "one"
       elastic.readTimeoutMillis shouldBe 5000
       elastic.connectionTimeoutMillis shouldBe 10000

@@ -18,7 +18,7 @@
 package com.expedia.www.haystack.stitch.span.collector.config.reload
 
 trait Reloadable {
-  val name: String
+  def name: String
 
   def onReload(newConfig: String): Unit
 }

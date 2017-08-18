@@ -33,6 +33,7 @@ import org.slf4j.LoggerFactory
 
 import scala.collection.JavaConversions._
 import scala.concurrent.{Future, Promise}
+import scala.util.Try
 
 class ElasticSearchWriter(esConfig: ElasticSearchConfiguration, indexConf: IndexConfiguration) extends StitchedSpanWriter {
   private val LOGGER = LoggerFactory.getLogger(classOf[ElasticSearchWriter])
@@ -44,12 +45,11 @@ class ElasticSearchWriter(esConfig: ElasticSearchConfiguration, indexConf: Index
   private val spanIndexer = new SpanIndexDocumentGenerator(indexConf)
 
   private val esClient: JestClient = {
-    val host = esHost()
-    LOGGER.info("Initializing the http elastic search client with host={}", host)
+    LOGGER.info("Initializing the http elastic search client with endpoint={}", esConfig.endpoint)
     val factory = new JestClientFactory()
 
     factory.setHttpClientConfig(
-      new HttpClientConfig.Builder(host)
+      new HttpClientConfig.Builder(esConfig.endpoint)
         .multiThreaded(true)
         .connTimeout(esConfig.connectionTimeoutMillis)
         .readTimeout(esConfig.readTimeoutMillis)
@@ -57,14 +57,9 @@ class ElasticSearchWriter(esConfig: ElasticSearchConfiguration, indexConf: Index
     factory.getObject
   }
 
-  private def esHost(): String = {
-    val configHostName = esConfig.host + ":" + esConfig.port
-    if (configHostName.startsWith("http://") || configHostName.startsWith("https://")) configHostName else "http://" + configHostName
-  }
-
   override def close(): Unit = {
     LOGGER.info("Closing the elastic search client now.")
-    esClient.shutdownClient()
+    Try(esClient.shutdownClient())
   }
 
   override def write(stitchedSpans: Seq[StitchedSpan]): Future[_] = {
@@ -89,25 +84,25 @@ class ElasticSearchWriter(esConfig: ElasticSearchConfiguration, indexConf: Index
     val indexName = createIndexName()
 
     for(sp <- stitchedSpans;
-        op = createUpdateIndexOp(sp, indexName)) {
-      bulkActions.addAction(op)
+        op = createUpdateIndexOp(sp, indexName); if op.isDefined) {
+      bulkActions.addAction(op.get)
     }
 
     bulkActions.build()
   }
 
-  private def createUpdateIndexOp(stitchedSpan: StitchedSpan, indexName: String): BulkableAction[DocumentResult] = {
+  private def createUpdateIndexOp(stitchedSpan: StitchedSpan, indexName: String): Option[BulkableAction[DocumentResult]] = {
     // add all the spans as one document
-    val updateDocument = spanIndexer.create(stitchedSpan.getChildSpansList)
-
-    new Update.Builder(updateDocument)
-      .id(stitchedSpan.getTraceId)
-      .index(indexName)
-      .`type`(esConfig.indexType)
-      .setParameter(Parameters.CONSISTENCY, esConfig.consistencyLevel)
-      .setParameter(Parameters.PARENT, stitchedSpan.getTraceId)
-      .setParameter(Parameters.OP_TYPE, "create")
-      .build()
+    spanIndexer.create(stitchedSpan.getChildSpansList) match {
+      case Some(updateDocument) =>
+        Some(new Update.Builder(updateDocument)
+          .id(stitchedSpan.getTraceId)
+          .index(indexName)
+          .`type`(esConfig.indexType)
+          .setParameter(Parameters.CONSISTENCY, esConfig.consistencyLevel)
+          .build())
+      case _ => None
+    }
   }
 
   private def createIndexName(): String = {

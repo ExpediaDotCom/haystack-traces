@@ -24,6 +24,7 @@ import com.expedia.open.tracing.stitch.StitchedSpan
 import com.expedia.www.haystack.stitch.span.collector.config.entities.{ElasticSearchConfiguration, IndexConfiguration}
 import com.expedia.www.haystack.stitch.span.collector.metrics.AppMetricNames
 import com.expedia.www.haystack.stitch.span.collector.writers.StitchedSpanWriter
+import com.expedia.www.haystack.stitch.span.collector.writers.es.index.generator.IndexDocumentGenerator
 import io.searchbox.action.BulkableAction
 import io.searchbox.client.config.HttpClientConfig
 import io.searchbox.client.{JestClient, JestClientFactory}
@@ -42,7 +43,7 @@ class ElasticSearchWriter(esConfig: ElasticSearchConfiguration, indexConf: Index
   private val esWriteFailureMeter = metricRegistry.meter(AppMetricNames.ES_WRITE_FAILURE)
   private val esWriteTime = metricRegistry.timer(AppMetricNames.ES_WRITE_TIME)
 
-  private val spanIndexer = new SpanIndexDocumentGenerator(indexConf)
+  private val spanIndexer = new IndexDocumentGenerator(indexConf)
 
   private val esClient: JestClient = {
     LOGGER.info("Initializing the http elastic search client with endpoint={}", esConfig.endpoint)
@@ -93,13 +94,14 @@ class ElasticSearchWriter(esConfig: ElasticSearchConfiguration, indexConf: Index
 
   private def createUpdateIndexOp(stitchedSpan: StitchedSpan, indexName: String): Option[BulkableAction[DocumentResult]] = {
     // add all the spans as one document
-    spanIndexer.create(stitchedSpan.getChildSpansList) match {
-      case Some(updateDocument) =>
-        Some(new Update.Builder(updateDocument)
-          .id(stitchedSpan.getTraceId)
+    spanIndexer.create(stitchedSpan.getTraceId, stitchedSpan.getChildSpansList) match {
+      case Some(document) =>
+        Some(new Index.Builder(document.indexJson)
+          .id(document.id)
           .index(indexName)
           .`type`(esConfig.indexType)
           .setParameter(Parameters.CONSISTENCY, esConfig.consistencyLevel)
+          .setParameter(Parameters.OP_TYPE, "create")
           .build())
       case _ => None
     }

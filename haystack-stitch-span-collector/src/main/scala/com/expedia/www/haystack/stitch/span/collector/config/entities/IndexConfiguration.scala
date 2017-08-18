@@ -32,9 +32,9 @@ case class IndexConfiguration(var tags: List[IndexAttribute] = Nil) extends Relo
 
   implicit val formats = DefaultFormats
   private var currentVersion: Int = 0
-  var reloadConfigFromTable: String = ""
+  var reloadConfigTableName: String = ""
 
-  override def name: String = reloadConfigFromTable
+  override def name: String = reloadConfigTableName
 
   override def onReload(newConfigStr: String): Unit = {
     if(StringUtils.isNotEmpty(newConfigStr) && hasConfigChanged(newConfigStr)) {

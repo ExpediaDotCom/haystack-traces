@@ -121,8 +121,8 @@ abstract class BaseIntegrationTestSpec extends WordSpec with GivenWhenThen with 
 
   private def indexConfigInDatabase(): String = {
     val indexTagFields = List(
-      IndexAttribute(name = "role", `type` = "string", true),
-      IndexAttribute(name = "errorCode", `type` = "long", true))
+      IndexAttribute(name = "role", `type` = "string", enabled = true),
+      IndexAttribute(name = "errorCode", `type` = "long", enabled = true))
     Serialization.write(IndexConfiguration(indexTagFields))
   }
 }

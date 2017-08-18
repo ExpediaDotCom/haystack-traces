@@ -15,59 +15,26 @@
  *
  */
 
-package com.expedia.www.haystack.stitch.span.collector.writers.es
+package com.expedia.www.haystack.stitch.span.collector.writers.es.index.generator
 
 import com.expedia.open.tracing.{Span, Tag}
 import com.expedia.www.haystack.stitch.span.collector.config.entities.IndexConfiguration
+import com.expedia.www.haystack.stitch.span.collector.writers.es.index.generator.Document.{IndexDataModel, OperationName, TagKey, TagValue}
 import org.apache.commons.lang3.StringUtils
 import org.json4s.DefaultFormats
 import org.json4s.jackson.Serialization
 
+import scala.collection.JavaConversions._
 import scala.collection.mutable
 import scala.util.{Failure, Success, Try}
-import SpanIndexDocumentGenerator._
-import scala.collection.JavaConversions._
 
-object SpanIndexDocumentGenerator {
-  type ServiceName = String
-  type OperationName = String
-  type TagKey = String
-  type TagValue = Any
-}
-
-case class ServiceOperationIndexData(tags: mutable.Map[TagKey, mutable.Set[TagValue]],
-                                     var minduration: Long,
-                                     var maxduration: Long) {
-  def merge(from: ServiceOperationIndexData): ServiceOperationIndexData = {
-    from.tags.foreach({
-      case (k, v) => this.tags.getOrElseUpdate(k, mutable.Set[TagValue]()) ++= v
-    })
-    if (minduration > from.minduration) minduration = from.minduration
-    if (maxduration < from.maxduration) maxduration = from.maxduration
-    this
-  }
-
-  def updateTags(tagKey: TagKey, value: TagValue): Unit = {
-    val tagIndexMap = tags.getOrElseUpdate(tagKey, mutable.Set[TagValue]())
-    tagIndexMap += value
-  }
-
-  def updateMinMaxDuration(newDuration: Long): Unit = {
-    if (newDuration < minduration) {
-      minduration = newDuration
-    } else if (newDuration > maxduration) {
-      maxduration = newDuration
-    }
-  }
-}
-
-class SpanIndexDocumentGenerator(config: IndexConfiguration) {
+class IndexDocumentGenerator(config: IndexConfiguration) {
 
   protected implicit val formats = DefaultFormats
 
-  def create(spans: Seq[Span]): Option[String] = {
+  def create(traceId: String, spans: Seq[Span]): Option[Document] = {
     val result = transform(spans)
-    if (result.nonEmpty) Some(Serialization.write(result)) else None
+    if (result.nonEmpty) Some(Document(s"${traceId}_${spans.last.getSpanId}", Serialization.write(result))) else None
   }
 
   private def isValidSpanForIndex(sp: Span): Boolean = {
@@ -79,17 +46,16 @@ class SpanIndexDocumentGenerator(config: IndexConfiguration) {
     * @param spans a span object
     * @return map of key-values
     */
-  private def transform(spans: Seq[Span]): mutable.Map[ServiceName, mutable.Map[OperationName, ServiceOperationIndexData]] = {
-    val serviceNameMap = mutable.Map[ServiceName, mutable.Map[OperationName, ServiceOperationIndexData]]()
+  private def transform(spans: Seq[Span]): IndexDataModel = {
+    val serviceNameMap = Document.newIndexDataModel
 
     // add service, operation names and duration as default indexing fields
     for (sp <- spans; if isValidSpanForIndex(sp)) {
 
-      val operationMap = serviceNameMap.getOrElseUpdate(sp.getProcess.getServiceName,
-        mutable.Map[OperationName, ServiceOperationIndexData]())
+      val operationMap = serviceNameMap.getOrElseUpdate(sp.getProcess.getServiceName, mutable.Map[OperationName, IndexingAttributes]())
 
       val indexData = operationMap.getOrElseUpdate(sp.getOperationName,
-        ServiceOperationIndexData(mutable.Map[TagKey, mutable.Set[TagValue]](), sp.getDuration, sp.getDuration))
+        IndexingAttributes(mutable.Map[TagKey, mutable.Set[TagValue]](), sp.getDuration, sp.getDuration))
 
       indexData.updateMinMaxDuration(sp.getDuration)
 
@@ -102,7 +68,7 @@ class SpanIndexDocumentGenerator(config: IndexConfiguration) {
       }
     }
     serviceNameMap.values foreach { operationMap =>
-      operationMap.put("_all", operationMap.values.foldRight(ServiceOperationIndexData(mutable.Map(), Long.MaxValue, Long.MinValue)){
+      operationMap.put("_all", operationMap.values.foldRight(IndexingAttributes(mutable.Map(), Long.MaxValue, Long.MinValue)){
         (v, aggr) => aggr.merge(v)
       })
     }

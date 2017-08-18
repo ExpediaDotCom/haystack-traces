@@ -1,9 +1,13 @@
 package com.expedia.www.haystack.stitch.span.collector.integration
 
+import com.expedia.www.haystack.stitch.span.collector.writers.es.index.generator.Document.IndexDataModel
+import org.json4s.jackson.Serialization
+
 class StitchedSpanCollectorIntegrationTest extends BaseIntegrationTestSpec {
   private val TOTAL_STITCHED_SPANS = 10
   private val TOTAL_SPANS_PER_STITCHED_SPAN = 3
   private val SPAN_DURATION = 1000
+  private val matchAllQuery = "{\"query\":{\"match_all\":{\"boost\":1.0}}}"
 
   "StitchedSpan collector" should {
     s"read stitched spans from kafka topic '$CONSUMER_TOPIC' and write to es/casandra" in {
@@ -18,7 +22,13 @@ class StitchedSpanCollectorIntegrationTest extends BaseIntegrationTestSpec {
   }
 
   private def verifyElasticSearchWrites(): Unit = {
-    val docs = queryElasticSearch("{\"query\": {\"match\": {\"service-1.op-1\": \"service-1\"}}}")
+    val docs = queryElasticSearch(matchAllQuery)
     docs.size shouldBe TOTAL_STITCHED_SPANS
+    for (elem <- docs) {
+      val data = Serialization.read[IndexDataModel](elem)
+      data should contain key "service-2"
+      data should contain key "service-1"
+      data should contain key "service-0"
+    }
   }
 }

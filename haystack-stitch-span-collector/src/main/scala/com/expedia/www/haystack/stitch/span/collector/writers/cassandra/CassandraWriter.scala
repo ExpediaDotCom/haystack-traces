@@ -18,17 +18,16 @@
 package com.expedia.www.haystack.stitch.span.collector.writers.cassandra
 
 import java.nio.ByteBuffer
+import java.util.Date
 
 import com.datastax.driver.core._
 import com.datastax.driver.core.querybuilder.QueryBuilder
-import com.expedia.open.tracing.stitch.StitchedSpan
 import com.expedia.www.haystack.stitch.span.collector.config.entities.CassandraConfiguration
 import com.expedia.www.haystack.stitch.span.collector.metrics.AppMetricNames
-import com.expedia.www.haystack.stitch.span.collector.writers.StitchedSpanWriter
 import com.expedia.www.haystack.stitch.span.collector.writers.cassandra.Schema._
+import com.expedia.www.haystack.stitch.span.collector.writers.{StitchedSpanDataElement, StitchedSpanWriter}
 import org.slf4j.LoggerFactory
 
-import scala.collection.JavaConversions._
 import scala.concurrent.{ExecutionContextExecutor, Future, Promise}
 import scala.util.Try
 
@@ -40,7 +39,7 @@ class CassandraWriter(config: CassandraConfiguration)(implicit val dispatcher: E
   private val writeFailures = metricRegistry.meter(AppMetricNames.CASSANDRA_WRITE_FAILURE)
   private val sessionFactory = new CassandraSessionFactory(config)
 
-  //insert into table(id, sid, span) values (?, ?, ?) using ttl ?
+  //insert into table(id, ts, span) values (?, ?, ?) using ttl ?
   private lazy val insertSpan: PreparedStatement = {
     import QueryBuilder.{bindMarker, ttl}
 
@@ -48,33 +47,26 @@ class CassandraWriter(config: CassandraConfiguration)(implicit val dispatcher: E
       QueryBuilder
         .insertInto(config.tableName)
         .value(ID_COLUMN_NAME, bindMarker(ID_COLUMN_NAME))
-        .value(SPAN_ID_COLUMN_NAME, bindMarker(SPAN_ID_COLUMN_NAME))
-        .value(SPAN_COLUMN_NAME, bindMarker(SPAN_COLUMN_NAME))
+        .value(TIMESTAMP_COLUMN_NAME, bindMarker(TIMESTAMP_COLUMN_NAME))
+        .value(STITCHED_SPANS_COLUMNE_NAME, bindMarker(STITCHED_SPANS_COLUMNE_NAME))
         .using(ttl(config.recordTTLInSec)))
   }
 
 
-  private def prepareBatchStatement(stitchedSpan: StitchedSpan): BatchStatement = {
-    val batch = new BatchStatement(BatchStatement.Type.UNLOGGED)
-
-    stitchedSpan.getChildSpansList.foreach(span => {
-      val bound = new BoundStatement(insertSpan)
-        .setString(ID_COLUMN_NAME, stitchedSpan.getTraceId)
-        .setString(SPAN_ID_COLUMN_NAME, span.getSpanId)
-        .setBytes(SPAN_COLUMN_NAME, ByteBuffer.wrap(span.toByteArray))
-        .setConsistencyLevel(config.consistencyLevel)
-      batch.add(bound)
-    })
-
-    batch
+  private def prepareBatchStatement(traceId: String, stitchedSpanBytes: Array[Byte]): Statement = {
+    new BoundStatement(insertSpan)
+      .setString(ID_COLUMN_NAME, traceId)
+      .setTimestamp(TIMESTAMP_COLUMN_NAME, new Date())
+      .setBytes(STITCHED_SPANS_COLUMNE_NAME, ByteBuffer.wrap(stitchedSpanBytes))
+      .setConsistencyLevel(config.consistencyLevel)
   }
 
-  override def write(stitchedSpans: Seq[StitchedSpan]): Future[_] = {
+  override def write(elems: Seq[StitchedSpanDataElement]): Future[_] = {
     try {
-      val futures: Seq[Future[Boolean]] = stitchedSpans.map { stitchedSpan =>
+      val futures: Seq[Future[Boolean]] = elems.map { el =>
         val timer = writeTimer.time()
         val promise = Promise[Boolean]()
-        val batchStatement = prepareBatchStatement(stitchedSpan)
+        val batchStatement = prepareBatchStatement(el.stitchedSpan.getTraceId, el.stitchedSpanBytes)
         val asyncResult = sessionFactory.session.executeAsync(batchStatement)
         asyncResult.addListener(new CassandraWriteResultListener(asyncResult, timer, promise), dispatcher)
         promise.future

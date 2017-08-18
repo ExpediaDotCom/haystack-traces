@@ -4,9 +4,9 @@ use {{keyspace}};
 
 CREATE TABLE {{table}} (
 id varchar,
-sid varchar,
-span blob,
-PRIMARY KEY ((id), sid)
-) WITH CLUSTERING ORDER BY (sid ASC);
+ts timestamp,
+stitchedspans blob,
+PRIMARY KEY ((id), ts)
+) WITH CLUSTERING ORDER BY (ts ASC);
 
 ALTER TABLE {{table}} WITH compaction = { 'class' :  'DateTieredCompactionStrategy'  };

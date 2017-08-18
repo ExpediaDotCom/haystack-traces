@@ -17,30 +17,22 @@
 
 package com.expedia.www.haystack.stitch.span.collector.serdes
 
-import java.util
-
 import com.codahale.metrics.Meter
 import com.expedia.open.tracing.stitch.StitchedSpan
 import com.expedia.www.haystack.stitch.span.collector.metrics.MetricsSupport
-import org.apache.kafka.common.serialization.Deserializer
 
 object StitchedSpanDeserializer extends MetricsSupport {
   protected val deserFailure: Meter = metricRegistry.meter("stitched.span.deser.failure")
 }
 
-class StitchedSpanDeserializer extends Deserializer[StitchedSpan] {
-
-  override def configure(configs: util.Map[String, _], isKey: Boolean): Unit = ()
-
-  override def close(): Unit = ()
+class StitchedSpanDeserializer  {
 
   /**
     * deserialize the data bytes to StitchedSpan proto object
-    * @param topic the input topic
     * @param data serialized bytes
     * @return a deserialized stitched span object
     */
-  override def deserialize(topic: String, data: Array[Byte]): StitchedSpan = {
+  def deserialize(data: Array[Byte]): StitchedSpan = {
     try {
       if(data.length > 0) {
         StitchedSpan.parseFrom(data)

@@ -25,8 +25,8 @@ import scala.io.Source
 
 object Schema {
   val ID_COLUMN_NAME = "id"
-  val SPAN_ID_COLUMN_NAME = "sid"
-  val SPAN_COLUMN_NAME = "span"
+  val TIMESTAMP_COLUMN_NAME = "ts"
+  val STITCHED_SPANS_COLUMNE_NAME = "stitchedspans"
 
   private val LOGGER = LoggerFactory.getLogger(Schema.getClass)
 
@@ -46,9 +46,7 @@ object Schema {
     val reader = Source.fromInputStream(getClass.getResourceAsStream(cqlResourcePath)).bufferedReader
     try {
       for (cmd <- CharStreams.toString(reader).split(";")) {
-        val execCommand = cmd.trim()
-          .replace("{{keyspace}}", keyspace)
-          .replace("{{table}}", tableName)
+        val execCommand = cmd.trim().replace("{{keyspace}}", keyspace).replace("{{table}}", tableName)
         if (execCommand.nonEmpty) {
           session.execute(execCommand)
         }

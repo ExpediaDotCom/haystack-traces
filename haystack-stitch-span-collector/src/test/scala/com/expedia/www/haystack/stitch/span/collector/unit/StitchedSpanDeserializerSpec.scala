@@ -15,7 +15,7 @@ class StitchedSpanDeserializerSpec extends FunSpec with Matchers {
       val deser = new StitchedSpanDeserializer()
       val span = Span.newBuilder().setTraceId(traceId).setDuration(100).setSpanId(spanId).setParentSpanId(parentId)
       val stitchedSpan = StitchedSpan.newBuilder().setTraceId(traceId).addChildSpans(span).build()
-      val obj = deser.deserialize("topic", stitchedSpan.toByteArray)
+      val obj = deser.deserialize(stitchedSpan.toByteArray)
       obj.getTraceId shouldEqual traceId
       obj.getChildSpansCount shouldBe 1
       obj.getChildSpans(0).getTraceId shouldEqual traceId
@@ -26,13 +26,13 @@ class StitchedSpanDeserializerSpec extends FunSpec with Matchers {
 
     it("should return null if deserialize the empty data bytes") {
       val deser = new StitchedSpanDeserializer()
-      deser.deserialize("", Array.emptyByteArray) shouldBe null
+      deser.deserialize(Array.emptyByteArray) shouldBe null
     }
 
     it("should return null if deserialize the illegal data bytes") {
       val span = Span.newBuilder().setTraceId(traceId).setDuration(100).setSpanId(spanId).setParentSpanId(parentId).build()
       val deser = new StitchedSpanDeserializer()
-      deser.deserialize("", span.toByteArray) shouldBe null
+      deser.deserialize(span.toByteArray) shouldBe null
     }
   }
 }

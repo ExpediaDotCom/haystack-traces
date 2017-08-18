@@ -17,9 +17,10 @@
 package com.expedia.www.haystack.trace.provider.providers
 
 import com.expedia.open.tracing.internal._
+import com.expedia.www.haystack.trace.provider.config.entities.ElasticSearchConfiguration
 import io.grpc.stub.StreamObserver
 
-class FieldProvider extends FieldProviderGrpc.FieldProviderImplBase {
+class FieldProvider(elasticSearchConfiguration: ElasticSearchConfiguration) extends FieldProviderGrpc.FieldProviderImplBase {
   override def getFieldNames(request: Empty, responseObserver: StreamObserver[FieldNames]): Unit = super.getFieldNames(request, responseObserver)
   override def getFieldCardinality(request: FieldQuery, responseObserver: StreamObserver[FieldCardinality]): Unit = super.getFieldCardinality(request, responseObserver)
   override def getFieldValues(request: FieldQuery, responseObserver: StreamObserver[FieldValues]): Unit = super.getFieldValues(request, responseObserver)

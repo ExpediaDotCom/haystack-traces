@@ -19,7 +19,7 @@ package com.expedia.www.haystack.trace.provider.config
 import com.expedia.www.haystack.trace.provider.config.entities.{CassandraConfiguration, ElasticSearchConfiguration, ServiceConfiguration}
 import com.typesafe.config.Config
 
-object TraceProviderConfiguration {
+object ProviderConfiguration {
   private val config: Config = ConfigurationLoader.loadAppConfig
 
   def serviceConfig: ServiceConfiguration = {

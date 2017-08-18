@@ -15,14 +15,14 @@
  */
 package com.expedia.www.haystack.trace.provider.unit
 
-import com.expedia.www.haystack.trace.provider.config.TraceProviderConfiguration
+import com.expedia.www.haystack.trace.provider.config.ProviderConfiguration
 import com.expedia.www.haystack.trace.provider.config.entities.ServiceConfiguration
 import org.scalatest.{FunSpec, Matchers}
 
 class ConfigurationLoaderSpec extends FunSpec with Matchers {
   describe("ConfigurationLoader") {
     it("should load the service config from base.conf") {
-      val serviceConfig: ServiceConfiguration = TraceProviderConfiguration.serviceConfig
+      val serviceConfig: ServiceConfiguration = ProviderConfiguration.serviceConfig
       serviceConfig.port shouldBe 80
     }
   }

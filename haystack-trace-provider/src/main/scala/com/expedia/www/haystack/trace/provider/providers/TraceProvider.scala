@@ -17,18 +17,19 @@
 package com.expedia.www.haystack.trace.provider.providers
 
 import com.expedia.open.tracing.internal._
+import com.expedia.www.haystack.trace.provider.config.entities.{CassandraConfiguration, ElasticSearchConfiguration}
 import io.grpc.Status
 import io.grpc.stub.StreamObserver
 
-class TraceProvider extends TraceProviderGrpc.TraceProviderImplBase {
+class TraceProvider(elasticSearchConfiguration: ElasticSearchConfiguration, cassandraConfiguration: CassandraConfiguration) extends TraceProviderGrpc.TraceProviderImplBase {
   override def searchTraces(request: TracesSearchRequest, responseObserver: StreamObserver[TracesSearchResult]): Unit = {
     try {
-      val searchResult = TracesSearchResult.newBuilder().addTraces(new Trace()).build()
+      val searchResult = TracesSearchResult.newBuilder().build()
 
       responseObserver.onNext(searchResult)
       responseObserver.onCompleted()
     } catch {
-      case th:Throwable => responseObserver.onError(Status.fromThrowable(th).asRuntimeException())
+      case th: Throwable => responseObserver.onError(Status.fromThrowable(th).asRuntimeException())
     }
   }
 

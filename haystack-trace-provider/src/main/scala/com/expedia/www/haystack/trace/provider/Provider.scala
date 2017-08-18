@@ -19,7 +19,9 @@ package com.expedia.www.haystack.trace.provider
 import com.codahale.metrics.JmxReporter
 import com.expedia.www.haystack.trace.provider.metrics.MetricsSupport
 import com.expedia.www.haystack.trace.provider.providers.{FieldProvider, TraceProvider}
-import io.grpc.{Server, ServerBuilder}
+import com.expedia.www.haystack.trace.provider.config.ProviderConfiguration._
+import io.grpc.netty.NettyServerBuilder
+import io.grpc.Server
 import org.slf4j.{Logger, LoggerFactory}
 
 object Provider extends MetricsSupport {
@@ -41,11 +43,11 @@ object Provider extends MetricsSupport {
     jmxReporter.start()
   }
 
-  def startService(): Unit = {
-    val server: Server = ServerBuilder
-      .forPort(80)
-      .addService(new TraceProvider)
-      .addService(new FieldProvider)
+  private def startService(): Unit = {
+    val server: Server = NettyServerBuilder
+      .forPort(serviceConfig.port)
+      .addService(new TraceProvider(elasticSearchConfig, cassandraConfig))
+      .addService(new FieldProvider(elasticSearchConfig))
       .build
       .start
 

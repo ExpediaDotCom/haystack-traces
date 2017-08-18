@@ -24,6 +24,9 @@
         <pegdown.version>1.6.0</pegdown.version>
         <scalatest.version>3.0.3</scalatest.version>
 
+        <protobuf.version>3.3.1</protobuf.version>
+        <grpc.version>1.4.0</grpc.version>
+
         <mainClass>com.expedia.www.haystack.trace.provider.TraceProvider</mainClass>
     </properties>
 
@@ -69,7 +72,24 @@
             <version>${slf4j-api.version}</version>
         </dependency>
 
-        <!-- Test Dependencies  -->
+        <!-- grpc -->
+        <dependency>
+            <groupId>com.google.protobuf</groupId>
+            <artifactId>protobuf-java</artifactId>
+            <version>${protobuf.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.grpc</groupId>
+            <artifactId>grpc-protobuf</artifactId>
+            <version>${grpc.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.grpc</groupId>
+            <artifactId>grpc-stub</artifactId>
+            <version>${grpc.version}</version>
+        </dependency>
+
+    <!-- Test Dependencies  -->
         <dependency>
             <groupId>org.scalatest</groupId>
             <artifactId>scalatest_${scala.major.minor.version}</artifactId>
@@ -146,13 +166,24 @@
                             <goal>run</goal>
                         </goals>
                         <configuration>
+                            <protocArtifact>com.google.protobuf:protoc:3.0.0</protocArtifact>
                             <includeDirectories>
-                                <include>haystack-idl/proto</include>
+                                <include>../haystack-idl/proto</include>
+                                <include>../haystack-idl/proto/internal</include>
                             </includeDirectories>
                             <inputDirectories>
-                                <include>haystack-idl/proto</include>
+                                <include>../haystack-idl/proto</include>
+                                <include>../haystack-idl/proto/internal</include>
                             </inputDirectories>
-                            <outputDirectory>target/generated-sources</outputDirectory>
+                            <outputTargets>
+                                <outputTarget>
+                                    <type>java</type>
+                                </outputTarget>
+                                <outputTarget>
+                                    <type>grpc-java</type>
+                                    <pluginArtifact>io.grpc:protoc-gen-grpc-java:1.0.1</pluginArtifact>
+                                </outputTarget>
+                            </outputTargets>
                         </configuration>
                     </execution>
                 </executions>

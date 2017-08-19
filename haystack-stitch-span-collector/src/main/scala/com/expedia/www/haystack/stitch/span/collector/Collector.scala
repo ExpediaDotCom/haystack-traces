@@ -57,7 +57,7 @@ object Collector extends MetricsSupport {
         LOGGER.info("Stitch span collector stream has completed with success!!")
         shutdown()
       case Failure(reason) =>
-        LOGGER.error("Stitch span collector has closed with some error, tearing down the system", reason)
+        LOGGER.error("Stitch span collector has closed with following error, tearing down the app", reason)
         shutdown()
     }
 
@@ -65,6 +65,7 @@ object Collector extends MetricsSupport {
       elasticSearchWriter.close()
       cassandraWriter.close()
       project.close()
+      LOGGER.info("Terminating the actor system..")
       system.terminate()
     }
 

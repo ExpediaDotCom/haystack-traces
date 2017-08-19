@@ -80,5 +80,8 @@ class CassandraWriter(config: CassandraConfiguration)(implicit val dispatcher: E
     }
   }
 
-  override def close(): Unit = Try(sessionFactory.close())
+  override def close(): Unit = {
+    LOGGER.info("Closing cassandra session now..")
+    Try(sessionFactory.close())
+  }
 }

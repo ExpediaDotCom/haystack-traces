@@ -112,7 +112,7 @@ abstract class BaseIntegrationTestSpec extends WordSpec with GivenWhenThen with 
     createAndUpdaeteIndexMappings()
 
     // wait for few seconds(5 sec is the schedule interval) to let app consume the new indexing config
-    Thread.sleep(6000)
+    Thread.sleep(10000)
   }
 
   override def afterAll(): Unit = {

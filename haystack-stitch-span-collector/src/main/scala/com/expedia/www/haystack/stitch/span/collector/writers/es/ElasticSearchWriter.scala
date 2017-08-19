@@ -23,7 +23,7 @@ import java.util.Date
 import com.expedia.open.tracing.stitch.StitchedSpan
 import com.expedia.www.haystack.stitch.span.collector.config.entities.{ElasticSearchConfiguration, IndexConfiguration}
 import com.expedia.www.haystack.stitch.span.collector.metrics.AppMetricNames
-import com.expedia.www.haystack.stitch.span.collector.writers.es.index.generator.IndexDocumentGenerator
+import com.expedia.www.haystack.stitch.span.collector.writers.es.index.document.IndexDocumentGenerator
 import com.expedia.www.haystack.stitch.span.collector.writers.{StitchedSpanDataElement, StitchedSpanWriter}
 import io.searchbox.action.BulkableAction
 import io.searchbox.client.config.HttpClientConfig
@@ -32,7 +32,6 @@ import io.searchbox.core._
 import io.searchbox.params.Parameters
 import org.slf4j.LoggerFactory
 
-import scala.collection.JavaConversions._
 import scala.concurrent.{Future, Promise}
 import scala.util.Try
 
@@ -94,10 +93,10 @@ class ElasticSearchWriter(esConfig: ElasticSearchConfiguration, indexConf: Index
 
   private def createIndexAction(stitchedSpan: StitchedSpan, indexName: String): Option[BulkableAction[DocumentResult]] = {
     // add all the spans as one document
-    spanIndexer.create(stitchedSpan.getTraceId, stitchedSpan.getChildSpansList) match {
-      case Some(document) =>
-        Some(new Index.Builder(document.indexJson)
-          .id(document.id)
+    spanIndexer.createIndexDocument(stitchedSpan) match {
+      case Some(doc) =>
+        Some(new Index.Builder(doc.stitchedSpanIndexJson)
+          .id(doc.id)
           .index(indexName)
           .`type`(esConfig.indexType)
           .setParameter(Parameters.CONSISTENCY, esConfig.consistencyLevel)

@@ -4,13 +4,15 @@ import java.text.SimpleDateFormat
 import java.util.{Date, Properties}
 
 import com.datastax.driver.core.{Cluster, Session, SimpleStatement}
-import com.expedia.open.tracing.Span
+import com.expedia.open.tracing.Tag.TagType
 import com.expedia.open.tracing.stitch.StitchedSpan
-import com.expedia.www.haystack.stitch.span.collector.config.entities.{IndexAttribute, IndexConfiguration}
+import com.expedia.open.tracing.{Span, Tag}
+import com.expedia.www.haystack.stitch.span.collector.config.entities.{IndexConfiguration, IndexField}
 import io.searchbox.client.config.HttpClientConfig
 import io.searchbox.client.{JestClient, JestClientFactory}
 import io.searchbox.core.{Index, Search}
-import io.searchbox.indices.DeleteIndex
+import io.searchbox.indices.mapping.PutMapping
+import io.searchbox.indices.{CreateIndex, DeleteIndex}
 import org.apache.kafka.clients.producer._
 import org.apache.kafka.common.serialization.ByteArraySerializer
 import org.json4s.DefaultFormats
@@ -19,9 +21,9 @@ import org.scalatest._
 
 import scala.collection.JavaConversions._
 
-case class CassandraRow(id: String, timestamp: java.util.Date, stitchedSpan: StitchedSpan)
-
 abstract class BaseIntegrationTestSpec extends WordSpec with GivenWhenThen with Matchers with BeforeAndAfterAll with BeforeAndAfterEach {
+
+  case class CassandraRow(id: String, timestamp: java.util.Date, stitchedSpan: StitchedSpan)
 
   implicit val formats = DefaultFormats
 
@@ -44,7 +46,7 @@ abstract class BaseIntegrationTestSpec extends WordSpec with GivenWhenThen with 
   private def createIndexConfigInES(): Unit = {
     val request = new Index.Builder(indexConfigInDatabase()).index("reload-configs").`type`("indexing-fields").build()
     val result = esClient.execute(request)
-    if(!result.isSucceeded) {
+    if (!result.isSucceeded) {
       fail(s"Fail to create the configuration in ES for 'indexing' fields with message '${result.getErrorMessage}'")
     }
   }
@@ -56,6 +58,27 @@ abstract class BaseIntegrationTestSpec extends WordSpec with GivenWhenThen with 
 
   private def deleteCassandraTableRows(): Unit = {
     cassandraSession.execute(new SimpleStatement("TRUNCATE stitchedspans"))
+  }
+
+  private def createAndUpdaeteIndexMappings(): Unit = {
+    val createIndexRequest = new CreateIndex.Builder(HAYSTACK_SPAN_INDEX).build()
+    esClient.execute(createIndexRequest)
+    val putMappingSource = """
+                                |{
+                                |    "spans": {
+                                |      "properties": {
+                                |        "spans": {
+                                |          "type": "nested"
+                                |        }
+                                |      }
+                                |   }
+                                |}
+                              """.stripMargin
+    val mappings = new PutMapping.Builder(HAYSTACK_SPAN_INDEX, SPANS_INDEX_TYPE, putMappingSource).build()
+    val res = esClient.execute(mappings)
+    if(!res.isSucceeded) {
+      fail("Fail to update the mappings for elastic search index")
+    }
   }
 
   override def beforeAll() {
@@ -80,15 +103,22 @@ abstract class BaseIntegrationTestSpec extends WordSpec with GivenWhenThen with 
     // drop the haystack-span index
     dropIndexes()
 
+    // add indexable tags as a config in ES
     createIndexConfigInES()
+
+    // createIndex
+
+    // setup the mappings for index that stores all the spans
+    createAndUpdaeteIndexMappings()
+
     // wait for few seconds(5 sec is the schedule interval) to let app consume the new indexing config
     Thread.sleep(6000)
   }
 
   override def afterAll(): Unit = {
-    if(producer != null) producer.close()
-    if(esClient != null) esClient.shutdownClient()
-    if(cassandraSession != null) cassandraSession.close()
+    if (producer != null) producer.close()
+    if (esClient != null) esClient.shutdownClient()
+    if (cassandraSession != null) cassandraSession.close()
   }
 
   protected def produceToKafka(stitchedSpans: Seq[StitchedSpan]): Unit = {
@@ -96,7 +126,7 @@ abstract class BaseIntegrationTestSpec extends WordSpec with GivenWhenThen with 
       val record = new ProducerRecord[Array[Byte], Array[Byte]](CONSUMER_TOPIC, st.getTraceId.getBytes, st.toByteArray)
       producer.send(record, new Callback() {
         override def onCompletion(metadata: RecordMetadata, exception: Exception): Unit = {
-          if(exception != null) {
+          if (exception != null) {
             fail("Fail to produce the stitched span to kafka with error", exception)
           }
         }
@@ -118,23 +148,25 @@ abstract class BaseIntegrationTestSpec extends WordSpec with GivenWhenThen with 
       .addType(SPANS_INDEX_TYPE)
       .build()
     val result = esClient.execute(searchQuery)
-    if(result.getSourceAsStringList == null) Nil else result.getSourceAsStringList.toList
+    if (result.getSourceAsStringList == null) Nil else result.getSourceAsStringList.toList
   }
 
   protected def createStitchedSpans(total: Int, spanCount: Int, duration: Long): Seq[StitchedSpan] = {
-    ( 0 until total ).toList map { traceId =>
+    (0 until total).toList map { traceId =>
       val stitchedSpanBuilder = StitchedSpan.newBuilder()
       stitchedSpanBuilder.setTraceId(traceId.toString)
 
       // add spans
-      ( 0 until spanCount ).toList foreach { spanId =>
-        val process = com.expedia.open.tracing.Process.newBuilder().setServiceName(s"service-$spanId")
+      (0 until spanCount).toList foreach { spanId =>
+        val process = com.expedia.open.tracing.Process.newBuilder().setServiceName(s"service$spanId")
         val span = Span.newBuilder()
           .setTraceId(traceId.toString)
           .setProcess(process)
-          .setOperationName(s"op-$spanId")
+          .setOperationName(s"op$spanId")
           .setDuration(duration)
           .setSpanId(s"${traceId.toString}_${spanId.toString}")
+          .addTags(Tag.newBuilder().setKey("errorcode").setType(TagType.LONG).setVLong(404))
+          .addTags(Tag.newBuilder().setKey("role").setType(TagType.STRING).setVStr("haystack"))
           .build()
         stitchedSpanBuilder.addChildSpans(span)
       }
@@ -144,8 +176,8 @@ abstract class BaseIntegrationTestSpec extends WordSpec with GivenWhenThen with 
 
   private def indexConfigInDatabase(): String = {
     val indexTagFields = List(
-      IndexAttribute(name = "role", `type` = "string", enabled = true),
-      IndexAttribute(name = "errorCode", `type` = "long", enabled = true))
+      IndexField(name = "role", `type` = "string", enabled = true),
+      IndexField(name = "errorcode", `type` = "long", enabled = true))
     Serialization.write(IndexConfiguration(indexTagFields))
   }
 }

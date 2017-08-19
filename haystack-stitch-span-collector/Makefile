@@ -1,4 +1,4 @@
-.PHONY: all prepare_integration_test_env integration_test release
+.PHONY: all integration_test release
 
 DOCKER_IMAGE_TAG := haystack-stitch-span-collector
 PWD := $(shell pwd)
@@ -15,7 +15,9 @@ docker_build:
 
 prepare_integration_test_env: docker_build
 	docker-compose -f build/integration-tests/docker-compose.yml -p sandbox up -d
-	sleep 15
+
+	# cassandra takes time to start
+	sleep 45
 
 	# run haystack-stitch-span-collector and join the same network of its dependent services
 	docker run \

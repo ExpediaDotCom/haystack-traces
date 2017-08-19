@@ -23,10 +23,10 @@ import org.json4s.DefaultFormats
 import org.json4s.jackson.Serialization
 import org.slf4j.LoggerFactory
 
-case class IndexAttribute(name: String, `type`: String, enabled: Boolean = true)
+case class IndexField(name: String, `type`: String, enabled: Boolean = true)
 
-case class IndexConfiguration(var tags: List[IndexAttribute] = Nil) extends Reloadable {
-  var keyedTags: Map[String, IndexAttribute] = groupTagsWithKey()
+case class IndexConfiguration(var indexableTags: List[IndexField] = Nil) extends Reloadable {
+  var indexableTagsByTagName: Map[String, IndexField] = groupTagsWithKey(indexableTags)
 
   private val LOGGER = LoggerFactory.getLogger(classOf[IndexConfiguration])
 
@@ -47,12 +47,14 @@ case class IndexConfiguration(var tags: List[IndexAttribute] = Nil) extends Relo
   }
 
   private def update(newConfig: IndexConfiguration): Unit = {
-     if (newConfig.tags != null) {
-       this.tags = newConfig.tags
-       this.keyedTags = groupTagsWithKey()
+     if (newConfig.indexableTags != null) {
+       this.indexableTags = newConfig.indexableTags
+       this.indexableTagsByTagName = groupTagsWithKey(this.indexableTags)
     }
   }
 
-  private def groupTagsWithKey(): Map[String, IndexAttribute] = this.tags.groupBy(_.name).mapValues(_.head)
+  private def groupTagsWithKey(indexableTags: List[IndexField]): Map[String, IndexField] = {
+    indexableTags.groupBy(_.name).mapValues(_.head)
+  }
   private def hasConfigChanged(newConfigStr: String): Boolean = newConfigStr.hashCode != currentVersion
 }

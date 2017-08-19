@@ -17,55 +17,59 @@
 
 package com.expedia.www.haystack.stitch.span.collector.unit
 
+import com.expedia.open.tracing.stitch.StitchedSpan
 import com.expedia.open.tracing.{Process, Span, Tag}
-import com.expedia.www.haystack.stitch.span.collector.config.entities.{IndexAttribute, IndexConfiguration}
-import com.expedia.www.haystack.stitch.span.collector.writers.es.index.generator.IndexDocumentGenerator
+import com.expedia.www.haystack.stitch.span.collector.config.entities.{IndexConfiguration, IndexField}
+import com.expedia.www.haystack.stitch.span.collector.writers.es.index.document.IndexDocumentGenerator
 import org.scalatest.{FunSpec, Matchers}
 
 class SpanIndexDocumentGeneratorSpec extends FunSpec with Matchers {
 
+  val TRACE_ID = "trace_id"
   describe("Span to IndexDocument Generator") {
     it ("should extract serviceName, operationName, duration and create json document for indexing") {
       val generator = new IndexDocumentGenerator(IndexConfiguration(Nil))
 
-      val span_1 = Span.newBuilder().setTraceId("traceId")
+      val span_1 = Span.newBuilder().setTraceId(TRACE_ID)
         .setProcess(Process.newBuilder().setServiceName("service1"))
         .setOperationName("op1")
         .setDuration(600L)
         .build()
-      val span_2 = Span.newBuilder().setTraceId("traceId")
+      val span_2 = Span.newBuilder().setTraceId(TRACE_ID)
         .setProcess(Process.newBuilder().setServiceName("service1"))
         .setOperationName("op1")
         .setDuration(500L)
         .build()
-      val span_3 = Span.newBuilder().setTraceId("traceId")
+      val span_3 = Span.newBuilder().setTraceId(TRACE_ID)
         .setProcess(Process.newBuilder().setServiceName("service2"))
         .setDuration(1000L)
         .setOperationName("op3").build()
 
-      val doc = generator.create("traceId", List(span_1, span_2, span_3)).get
-      doc.id should startWith("traceId_")
-      doc.indexJson shouldBe "{\"service2\":{\"_all\":{\"tags\":{},\"minduration\":1000,\"maxduration\":1000},\"op3\":{\"tags\":{},\"minduration\":1000,\"maxduration\":1000}},\"service1\":{\"_all\":{\"tags\":{},\"minduration\":500,\"maxduration\":600},\"op1\":{\"tags\":{},\"minduration\":500,\"maxduration\":600}}}"
+      val stitchedSpan = StitchedSpan.newBuilder().addChildSpans(span_1).addChildSpans(span_2).addChildSpans(span_3).setTraceId(TRACE_ID).build()
+      val doc = generator.createIndexDocument(stitchedSpan).get
+      doc.id should startWith(TRACE_ID)
+      doc.stitchedSpanIndexJson shouldBe "{\"duration\":0,\"spans\":[{\"service\":\"service1\",\"operation\":\"op1\",\"duration\":600,\"tags\":{}},{\"service\":\"service1\",\"operation\":\"op1\",\"duration\":500,\"tags\":{}},{\"service\":\"service2\",\"operation\":\"op3\",\"duration\":1000,\"tags\":{}}]}"
     }
 
     it ("should not create an index document if service name is absent") {
       val generator = new IndexDocumentGenerator(IndexConfiguration(Nil))
 
-      val span_1 = Span.newBuilder().setTraceId("traceId")
+      val span_1 = Span.newBuilder().setTraceId(TRACE_ID)
         .setOperationName("op1")
         .build()
-      val span_2 = Span.newBuilder().setTraceId("traceId")
+      val span_2 = Span.newBuilder().setTraceId(TRACE_ID)
         .setDuration(1000L)
         .setOperationName("op2").build()
 
-      val doc = generator.create("traceId", List(span_1, span_2))
+      val stitchedSpan = StitchedSpan.newBuilder().addChildSpans(span_1).addChildSpans(span_2).setTraceId(TRACE_ID).build()
+      val doc = generator.createIndexDocument(stitchedSpan)
       doc shouldBe None
     }
 
     it ("should extract tags along with serviceName, operationName and duration and create json document for indexing") {
       val indexableTags = List(
-        IndexAttribute(name = "role", `type` = "string", true),
-        IndexAttribute(name = "errorCode", `type` = "long", true))
+        IndexField(name = "role", `type` = "string", true),
+        IndexField(name = "errorCode", `type` = "long", true))
       val generator = new IndexDocumentGenerator(IndexConfiguration(indexableTags))
 
       val tag_1 = Tag.newBuilder().setKey("role").setType(Tag.TagType.STRING).setVStr("haystack").build()
@@ -82,6 +86,7 @@ class SpanIndexDocumentGeneratorSpec extends FunSpec with Matchers {
         .setOperationName("op2")
         .setDuration(200L)
         .addTags(tag_2)
+        .addTags(tag_1)
         .build()
       val span_3 = Span.newBuilder().setTraceId("traceId")
         .setProcess(Process.newBuilder().setServiceName("service2"))
@@ -89,15 +94,16 @@ class SpanIndexDocumentGeneratorSpec extends FunSpec with Matchers {
         .addTags(tag_2)
         .setOperationName("op3").build()
 
-      val doc = generator.create("traceId", List(span_1, span_2, span_3)).get
-      doc.id should startWith("traceId_")
-      doc.indexJson shouldBe "{\"service2\":{\"_all\":{\"tags\":{\"errorCode\":[3]},\"minduration\":1000,\"maxduration\":1000},\"op3\":{\"tags\":{\"errorCode\":[3]},\"minduration\":1000,\"maxduration\":1000}},\"service1\":{\"_all\":{\"tags\":{\"errorCode\":[3],\"role\":[\"haystack\"]},\"minduration\":100,\"maxduration\":200},\"op2\":{\"tags\":{\"errorCode\":[3]},\"minduration\":200,\"maxduration\":200},\"op1\":{\"tags\":{\"role\":[\"haystack\"]},\"minduration\":100,\"maxduration\":100}}}"
+      val stitchedSpan = StitchedSpan.newBuilder().addChildSpans(span_1).addChildSpans(span_2).addChildSpans(span_3).setTraceId(TRACE_ID).build()
+      val doc = generator.createIndexDocument(stitchedSpan).get
+      doc.id should startWith(TRACE_ID)
+      doc.stitchedSpanIndexJson shouldBe "{\"duration\":0,\"spans\":[{\"service\":\"service1\",\"operation\":\"op1\",\"duration\":100,\"tags\":{\"role\":\"haystack\"}},{\"service\":\"service1\",\"operation\":\"op2\",\"duration\":200,\"tags\":{\"role\":\"haystack\",\"errorCode\":3}},{\"service\":\"service2\",\"operation\":\"op3\",\"duration\":1000,\"tags\":{\"errorCode\":3}}]}"
     }
 
     it ("should respect enabled flag of tags create right json document for indexing") {
       val indexableTags = List(
-        IndexAttribute(name = "role", `type` = "string", false),
-        IndexAttribute(name = "errorCode", `type` = "long", true))
+        IndexField(name = "role", `type` = "string", false),
+        IndexField(name = "errorCode", `type` = "long", true))
       val generator = new IndexDocumentGenerator(IndexConfiguration(indexableTags))
 
       val tag_1 = Tag.newBuilder().setKey("role").setType(Tag.TagType.STRING).setVStr("haystack").build()
@@ -116,14 +122,15 @@ class SpanIndexDocumentGeneratorSpec extends FunSpec with Matchers {
         .addTags(tag_2)
         .build()
 
-      val doc = generator.create("traceId", List(span_1, span_2)).get
-      doc.id should startWith("traceId_")
-      doc.indexJson shouldBe "{\"service1\":{\"_all\":{\"tags\":{\"errorCode\":[3]},\"minduration\":100,\"maxduration\":200},\"op2\":{\"tags\":{\"errorCode\":[3]},\"minduration\":200,\"maxduration\":200},\"op1\":{\"tags\":{},\"minduration\":100,\"maxduration\":100}}}"
+      val stitchedSpan = StitchedSpan.newBuilder().addChildSpans(span_1).addChildSpans(span_2).setTraceId(TRACE_ID).build()
+      val doc = generator.createIndexDocument(stitchedSpan).get
+      doc.id should startWith(TRACE_ID)
+      doc.stitchedSpanIndexJson shouldBe "{\"duration\":0,\"spans\":[{\"service\":\"service1\",\"operation\":\"op1\",\"duration\":100,\"tags\":{}},{\"service\":\"service1\",\"operation\":\"op2\",\"duration\":200,\"tags\":{\"errorCode\":3}}]}"
     }
 
-    it ("should merge tag values with the same key and create right json document for indexing") {
+    it ("one more test to verify the tags are indexed") {
       val indexableTags = List(
-        IndexAttribute(name = "errorCode", `type` = "long", true))
+        IndexField(name = "errorCode", `type` = "long", true))
       val generator = new IndexDocumentGenerator(IndexConfiguration(indexableTags))
 
       val tag_1 = Tag.newBuilder().setKey("errorCode").setType(Tag.TagType.LONG).setVLong(5).build()
@@ -142,15 +149,16 @@ class SpanIndexDocumentGeneratorSpec extends FunSpec with Matchers {
         .addTags(tag_2)
         .build()
 
-      val doc = generator.create("traceId", List(span_1, span_2)).get
-      doc.id should startWith("traceId_")
-      doc.indexJson shouldBe "{\"service1\":{\"_all\":{\"tags\":{\"errorCode\":[5,3]},\"minduration\":100,\"maxduration\":200},\"op2\":{\"tags\":{\"errorCode\":[3]},\"minduration\":200,\"maxduration\":200},\"op1\":{\"tags\":{\"errorCode\":[5]},\"minduration\":100,\"maxduration\":100}}}"
+      val stitchedSpan = StitchedSpan.newBuilder().addChildSpans(span_1).addChildSpans(span_2).setTraceId(TRACE_ID).build()
+      val doc = generator.createIndexDocument(stitchedSpan).get
+      doc.id should startWith(TRACE_ID)
+      doc.stitchedSpanIndexJson shouldBe "{\"duration\":0,\"spans\":[{\"service\":\"service1\",\"operation\":\"op1\",\"duration\":100,\"tags\":{\"errorCode\":5}},{\"service\":\"service1\",\"operation\":\"op2\",\"duration\":200,\"tags\":{\"errorCode\":3}}]}"
     }
 
     it ("should extract unique tag values along with serviceName, operationName and duration and create json document for indexing") {
       val indexableTags = List(
-        IndexAttribute(name = "role", `type` = "string"),
-        IndexAttribute(name = "errorCode", `type` = "long"))
+        IndexField(name = "role", `type` = "string"),
+        IndexField(name = "errorCode", `type` = "long"))
       val generator = new IndexDocumentGenerator(IndexConfiguration(indexableTags))
 
       val tag_1 = Tag.newBuilder().setKey("role").setType(Tag.TagType.STRING).setVStr("haystack").build()
@@ -174,9 +182,10 @@ class SpanIndexDocumentGeneratorSpec extends FunSpec with Matchers {
         .addTags(tag_2)
         .setOperationName("op3").build()
 
-      val doc = generator.create("traceId", List(span_1, span_2, span_3)).get
-      doc.id should startWith("traceId_")
-      doc.indexJson shouldBe "{\"service2\":{\"_all\":{\"tags\":{},\"minduration\":1000,\"maxduration\":1000},\"op3\":{\"tags\":{},\"minduration\":1000,\"maxduration\":1000}},\"service1\":{\"_all\":{\"tags\":{\"role\":[\"haystack\"]},\"minduration\":100,\"maxduration\":200},\"op1\":{\"tags\":{\"role\":[\"haystack\"]},\"minduration\":100,\"maxduration\":200}}}"
+      val stitchedSpan = StitchedSpan.newBuilder().addChildSpans(span_1).addChildSpans(span_2).setTraceId(TRACE_ID).build()
+      val doc = generator.createIndexDocument(stitchedSpan).get
+      doc.id should startWith(TRACE_ID)
+      doc.stitchedSpanIndexJson shouldBe "{\"duration\":0,\"spans\":[{\"service\":\"service1\",\"operation\":\"op1\",\"duration\":100,\"tags\":{\"role\":\"haystack\"}},{\"service\":\"service1\",\"operation\":\"op1\",\"duration\":200,\"tags\":{\"role\":\"haystack\"}}]}"
     }
   }
 }

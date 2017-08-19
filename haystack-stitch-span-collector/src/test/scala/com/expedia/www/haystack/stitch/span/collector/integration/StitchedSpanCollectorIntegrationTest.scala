@@ -1,14 +1,14 @@
 package com.expedia.www.haystack.stitch.span.collector.integration
 
-import com.expedia.www.haystack.stitch.span.collector.writers.es.index.generator.Document.IndexDataModel
+import com.expedia.www.haystack.stitch.span.collector.writers.es.index.document.StitchedSpanIndex
 import org.json4s.jackson.Serialization
+
 import scala.collection.JavaConversions._
 
 class StitchedSpanCollectorIntegrationTest extends BaseIntegrationTestSpec {
   private val TOTAL_STITCHED_SPANS = 10
   private val TOTAL_SPANS_PER_STITCHED_SPAN = 3
   private val SPAN_DURATION = 1000
-  private val matchAllQuery = "{\"query\":{\"match_all\":{\"boost\":1.0}}}"
 
   "StitchedSpan collector" should {
     s"read stitched spans from kafka topic '$CONSUMER_TOPIC' and write to es/casandra" in {
@@ -25,31 +25,137 @@ class StitchedSpanCollectorIntegrationTest extends BaseIntegrationTestSpec {
 
   private def verifyCassandraWrites(): Unit = {
     val records = queryAllCassandra()
-    records should have size 10
+    records should have size TOTAL_STITCHED_SPANS
     records.foreach(rec => {
-      (0 until 10).toSet should contain(rec.id.toInt)
+      (0 until TOTAL_STITCHED_SPANS).toSet should contain(rec.id.toInt)
       rec.stitchedSpan should not be null
-      rec.stitchedSpan.getChildSpansCount shouldBe 3
+      rec.stitchedSpan.getChildSpansCount shouldBe TOTAL_SPANS_PER_STITCHED_SPAN
       rec.stitchedSpan.getChildSpansList.zipWithIndex foreach {
         case (sp, idx) =>
           sp.getSpanId shouldBe s"${rec.id}_$idx"
-          sp.getProcess.getServiceName shouldBe s"service-$idx"
-          sp.getOperationName shouldBe s"op-$idx"
+          sp.getProcess.getServiceName shouldBe s"service$idx"
+          sp.getOperationName shouldBe s"op$idx"
       }
     })
   }
 
   private def verifyElasticSearchWrites(): Unit = {
-    val docs = queryElasticSearch(matchAllQuery)
+    val matchAllQuery =
+     """{
+       |    "query": {
+       |        "match_all": {}
+       |    }
+       |}""".stripMargin
+
+    var docs = queryElasticSearch(matchAllQuery)
     docs.size shouldBe TOTAL_STITCHED_SPANS
     for (doc <- docs;
-         indexMap = Serialization.read[IndexDataModel](doc)) {
-      (0 until 3).toList foreach { idx =>
-        val serviceName = s"service-$idx"
-        indexMap should contain key serviceName
-        indexMap(serviceName) should contain key "_all"
-        indexMap(serviceName) should contain key s"op-$idx"
-      }
+         stitchedSpanIdx = Serialization.read[StitchedSpanIndex](doc)) {
+      stitchedSpanIdx.duration shouldBe 0
+      stitchedSpanIdx.spans should have size TOTAL_SPANS_PER_STITCHED_SPAN
     }
+
+    val spanSpecificQuery =
+      """
+        |{
+        |  "query": {
+        |    "bool": {
+        |      "must": [
+        |        {
+        |          "nested": {
+        |            "path": "spans",
+        |            "query": {
+        |              "bool": {
+        |                "must": [
+        |                  {
+        |                    "match": {
+        |                      "spans.service": "service0"
+        |                    }
+        |                  },
+        |                  {
+        |                    "match": {
+        |                      "spans.operation": "op0"
+        |                    }
+        |                  }
+        |                ]
+        |              }
+        |            }
+        |          }
+        |        }
+        |      ]
+        |}}}
+      """.stripMargin
+    docs = queryElasticSearch(matchAllQuery)
+    docs.size shouldBe TOTAL_STITCHED_SPANS
+
+    val emptyResponseQuery =
+      """
+        |{
+        |  "query": {
+        |    "bool": {
+        |      "must": [
+        |        {
+        |          "nested": {
+        |            "path": "spans",
+        |            "query": {
+        |              "bool": {
+        |                "must": [
+        |                  {
+        |                    "match": {
+        |                      "spans.service": "service0"
+        |                    }
+        |                  },
+        |                  {
+        |                    "match": {
+        |                      "spans.operation": "op1"
+        |                    }
+        |                  }
+        |                ]
+        |              }
+        |            }
+        |          }
+        |        }
+        |      ]
+        |}}}
+      """.stripMargin
+    docs = queryElasticSearch(emptyResponseQuery)
+    docs.size shouldBe 0
+
+    val tagQuery =  """
+                      |{
+                      |  "query": {
+                      |    "bool": {
+                      |      "must": [
+                      |        {
+                      |          "nested": {
+                      |            "path": "spans",
+                      |            "query": {
+                      |              "bool": {
+                      |                "must": [
+                      |                  {
+                      |                    "match": {
+                      |                      "spans.service": "service2"
+                      |                    }
+                      |                  },
+                      |                  {
+                      |                    "match": {
+                      |                      "spans.operation": "op2"
+                      |                    }
+                      |                  },
+                      |                  {
+                      |                    "match": {
+                      |                      "spans.tags.errorcode": "404"
+                      |                    }
+                      |                  }
+                      |                ]
+                      |              }
+                      |            }
+                      |          }
+                      |        }
+                      |      ]
+                      |}}}
+                    """.stripMargin
+    docs = queryElasticSearch(tagQuery)
+    docs.size shouldBe TOTAL_STITCHED_SPANS
   }
 }

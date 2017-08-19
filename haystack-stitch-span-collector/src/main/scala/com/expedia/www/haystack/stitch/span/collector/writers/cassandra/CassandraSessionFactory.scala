@@ -22,10 +22,14 @@ import com.datastax.driver.core._
 import com.expedia.www.haystack.stitch.span.collector.config.entities.CassandraConfiguration
 import com.expedia.www.haystack.stitch.span.collector.writers.AwsNodeDiscoverer
 
+import scala.util.Try
+
 class CassandraSessionFactory(config: CassandraConfiguration) {
 
+  var cluster: Cluster = _
+
   val session: Session = {
-    val  cluster = buildCluster()
+    cluster = buildCluster()
     val newSession = cluster.connect()
     Schema.ensureExists(config.keyspace, config.tableName, newSession, config.autoCreateKeyspace)
     newSession.execute("USE " + config.keyspace)
@@ -33,9 +37,8 @@ class CassandraSessionFactory(config: CassandraConfiguration) {
   }
 
   def close(): Unit = {
-    if(session != null) {
-      session.close()
-    }
+    Try(session.close())
+    Try(cluster.close())
   }
 
   private def discoverNodes(): Seq[String] = {

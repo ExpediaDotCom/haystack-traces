@@ -1,0 +1,10 @@
+version: '3'
+services:
+   elasticsearch:
+     image: elasticsearch:2.4.6-alpine
+     ports:
+       - "9200:9200"
+   cassandra:
+     image: cassandra:3.11.0
+     ports:
+       - "9042:9042"

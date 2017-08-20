@@ -136,6 +136,12 @@
             <version>4.12</version>
             <scope>test</scope>
         </dependency>
+        <!-- for grpc client -->
+        <dependency>
+            <groupId>io.netty</groupId>
+            <artifactId>netty-handler</artifactId>
+            <version>4.1.14.Final</version>
+        </dependency>
     </dependencies>
 
     <profiles>
@@ -285,7 +291,7 @@
                 <configuration>
                     <failOnViolation>true</failOnViolation>
                     <failOnWarning>false</failOnWarning>
-                    <configLocation>${basedir}/build/scalastyle_config.xml</configLocation>
+                    <configLocation>${basedir}/build/checkstyles/scalastyle_config.xml</configLocation>
                     <sourceDirectory>${basedir}/src/main/scala</sourceDirectory>
                     <testSourceDirectory>${basedir}/src/test/scala</testSourceDirectory>
                     <outputFile>${project.build.directory}/scalastyle-output.xml</outputFile>

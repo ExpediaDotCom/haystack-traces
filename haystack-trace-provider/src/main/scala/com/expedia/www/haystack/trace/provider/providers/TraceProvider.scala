@@ -18,27 +18,40 @@ package com.expedia.www.haystack.trace.provider.providers
 
 import com.expedia.open.tracing.internal._
 import com.expedia.www.haystack.trace.provider.config.entities.{CassandraConfiguration, ElasticSearchConfiguration}
-import io.grpc.Status
+import com.expedia.www.haystack.trace.provider.metrics.MetricsSupport
+import com.expedia.www.haystack.trace.provider.readers.cassandra.CassandraReader
 import io.grpc.stub.StreamObserver
+import org.slf4j.LoggerFactory
+import scala.concurrent.ExecutionContext.Implicits.global
 
-class TraceProvider(elasticSearchConfiguration: ElasticSearchConfiguration, cassandraConfiguration: CassandraConfiguration) extends TraceProviderGrpc.TraceProviderImplBase {
+class TraceProvider(elasticSearchConfiguration: ElasticSearchConfiguration, cassandraConfiguration: CassandraConfiguration)
+  extends TraceProviderGrpc.TraceProviderImplBase
+    with GrpcResponseHandler
+    with MetricsSupport {
+
+  val cassandraReader = new CassandraReader(cassandraConfiguration)
+
+  val handleSearchResponse = handle[TracesSearchResult](
+    LoggerFactory.getLogger(TraceProviderGrpc.METHOD_SEARCH_TRACES.getFullMethodName),
+    metricRegistry.timer(TraceProviderGrpc.METHOD_SEARCH_TRACES.getFullMethodName),
+    metricRegistry.meter(s"${TraceProviderGrpc.METHOD_SEARCH_TRACES.getFullMethodName}.failures")) _
+
+  val handleGetResponse = handle[Trace](
+    LoggerFactory.getLogger(TraceProviderGrpc.METHOD_GET_TRACE.getFullMethodName),
+    metricRegistry.timer(TraceProviderGrpc.METHOD_GET_TRACE.getFullMethodName),
+    metricRegistry.meter(s"${TraceProviderGrpc.METHOD_GET_TRACE.getFullMethodName}.failures")) _
+
   override def searchTraces(request: TracesSearchRequest, responseObserver: StreamObserver[TracesSearchResult]): Unit = {
-    try {
-      val searchResult = TracesSearchResult.newBuilder().build()
-
-      responseObserver.onNext(searchResult)
-      responseObserver.onCompleted()
-    } catch {
-      case th: Throwable => responseObserver.onError(Status.fromThrowable(th).asRuntimeException())
+    handleSearchResponse(responseObserver) {
+      // TODO search in elasticsearch and get further details from cassandra
+      null
     }
   }
 
   override def getTrace(request: TraceRequest, responseObserver: StreamObserver[Trace]): Unit = {
-    try {
-      responseObserver.onNext(null)
-      responseObserver.onCompleted()
-    } catch {
-      case th: Throwable => responseObserver.onError(Status.fromThrowable(th).asRuntimeException())
+    handleGetResponse(responseObserver) {
+      // TODO create a layer to construct query and fetch/process trace got from cassandra
+      cassandraReader.read(s"SELECT * FROM spans WHERE traceId=${request.getTraceId};")
     }
   }
 }

@@ -16,12 +16,13 @@
 
 package com.expedia.www.haystack.trace.provider.readers.cassandra
 
-import com.expedia.open.tracing.stitch.StitchedSpan
+import com.datastax.driver.core.ResultSet
+import com.expedia.open.tracing.internal.Trace
 import com.expedia.www.haystack.trace.provider.config.entities.CassandraConfiguration
 import com.expedia.www.haystack.trace.provider.metrics.MetricsSupport
 import org.slf4j.LoggerFactory
 
-import scala.concurrent.{ExecutionContextExecutor, Future}
+import scala.concurrent.{ExecutionContextExecutor, Future, Promise}
 import scala.util.Try
 
 class CassandraReader(config: CassandraConfiguration)(implicit val dispatcher: ExecutionContextExecutor) extends MetricsSupport with AutoCloseable {
@@ -30,7 +31,19 @@ class CassandraReader(config: CassandraConfiguration)(implicit val dispatcher: E
 
   private val sessionFactory = new CassandraSessionFactory(config)
 
-  def read(stitchedSpans: Seq[StitchedSpan]): Future[_] = {
+  def read(query: String): Future[Trace] = {
+    val promise = Promise[Trace]
+    val asyncResult = sessionFactory.session.executeAsync(query)
+
+    asyncResult.addListener(new Runnable {
+      override def run(): Unit = promise.success(createTrace(asyncResult.get()))
+    }, dispatcher)
+
+    promise.future
+  }
+
+  private def createTrace(set: ResultSet): Trace = {
+    // TODO parse result set and generate Trace
     null
   }
 

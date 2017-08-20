@@ -16,23 +16,52 @@
 
 package com.expedia.www.haystack.trace.provider.config
 
-import com.expedia.www.haystack.trace.provider.config.entities.{CassandraConfiguration, ElasticSearchConfiguration, ServiceConfiguration}
+import com.expedia.www.haystack.trace.provider.config.entities._
 import com.typesafe.config.Config
+
+import scala.collection.JavaConversions._
 
 object ProviderConfiguration {
   private val config: Config = ConfigurationLoader.loadAppConfig
 
-  def serviceConfig: ServiceConfiguration = {
+  lazy val serviceConfig: ServiceConfiguration = {
     val serviceConfig: Config = config.getConfig("service")
     ServiceConfiguration(serviceConfig.getInt("port"))
   }
 
-  def cassandraConfig: CassandraConfiguration = {
-    val cassandraConfig: Config = config.getConfig("cassandra")
-    CassandraConfiguration(cassandraConfig.getString("endpoint"))
+  lazy val cassandraConfig: CassandraConfiguration = {
+    val cs = config.getConfig("cassandra")
+
+    val awsConfig =
+      if (cs.hasPath("auto.discovery.aws")) {
+        val aws = cs.getConfig("auto.discovery.aws")
+        val tags = aws.getConfig("tags")
+          .entrySet()
+          .map(elem => elem.getKey -> elem.getValue.unwrapped().toString)
+          .toMap
+        Some(AwsNodeDiscoveryConfiguration(aws.getString("region"), tags))
+      } else {
+        None
+      }
+
+    val socketConfig = cs.getConfig("connections")
+
+    val socket = SocketConfiguration(
+      socketConfig.getInt("max.per.host"),
+      socketConfig.getBoolean("keep.alive"),
+      socketConfig.getInt("conn.timeout.ms"),
+      socketConfig.getInt("read.timeout.ms"))
+
+    CassandraConfiguration(
+      if (cs.hasPath("endpoints")) cs.getString("endpoints").split(",").toList else Nil,
+      cs.getBoolean("auto.discovery.enabled"),
+      awsConfig,
+      cs.getString("keyspace.name"),
+      cs.getString("keyspace.table.name"),
+      socket)
   }
 
-  def elasticSearchConfig: ElasticSearchConfiguration = {
+  lazy val elasticSearchConfig: ElasticSearchConfiguration = {
     val elasticSearchConfig: Config = config.getConfig("elasticsearch")
     ElasticSearchConfiguration(elasticSearchConfig.getString("endpoint"))
   }

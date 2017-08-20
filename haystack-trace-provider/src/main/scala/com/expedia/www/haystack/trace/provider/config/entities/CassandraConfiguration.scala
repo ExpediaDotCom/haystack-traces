@@ -16,7 +16,16 @@
  */
 package com.expedia.www.haystack.trace.provider.config.entities
 
-/**
-  * @param endpoint cassandra endpoint URI
-  */
-case class CassandraConfiguration(endpoint: String)
+case class AwsNodeDiscoveryConfiguration(region: String, tags: Map[String, String])
+
+case class SocketConfiguration(maxConnectionPerHost: Int,
+                               keepAlive: Boolean,
+                               connectionTimeoutMillis: Int,
+                               readTimeoutMills: Int)
+
+case class CassandraConfiguration(endpoints: List[String],
+                                  autoDiscoverEnabled: Boolean,
+                                  awsNodeDiscovery: Option[AwsNodeDiscoveryConfiguration],
+                                  keyspace: String,
+                                  tableName: String,
+                                  socket: SocketConfiguration)

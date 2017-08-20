@@ -33,5 +33,12 @@ class TraceProvider(elasticSearchConfiguration: ElasticSearchConfiguration, cass
     }
   }
 
-  override def getTrace(request: TraceRequest, responseObserver: StreamObserver[Trace]): Unit = super.getTrace(request, responseObserver)
+  override def getTrace(request: TraceRequest, responseObserver: StreamObserver[Trace]): Unit = {
+    try {
+      responseObserver.onNext(null)
+      responseObserver.onCompleted()
+    } catch {
+      case th: Throwable => responseObserver.onError(Status.fromThrowable(th).asRuntimeException())
+    }
+  }
 }

@@ -16,7 +16,7 @@
 
         <scala.major.version>2</scala.major.version>
         <scala.minor.version>11</scala.minor.version>
-        <scala.tiny.version>8</scala.tiny.version>
+        <scala.tiny.version>11</scala.tiny.version>
         <scala.major.minor.version>${scala.major.version}.${scala.minor.version}</scala.major.minor.version>
         <scala-library.version>${scala.major.version}.${scala.minor.version}.${scala.tiny.version}</scala-library.version>
 
@@ -26,6 +26,10 @@
 
         <protobuf.version>3.3.1</protobuf.version>
         <grpc.version>1.4.0</grpc.version>
+
+        <cassandra.driver.version>3.1.0</cassandra.driver.version>
+        <aws.sdk.version>1.11.20</aws.sdk.version>
+        <httpclient.version>4.5.3</httpclient.version>
 
         <mainClass>com.expedia.www.haystack.trace.provider.Provider</mainClass>
     </properties>
@@ -80,6 +84,11 @@
         </dependency>
         <dependency>
             <groupId>io.grpc</groupId>
+            <artifactId>grpc-netty</artifactId>
+            <version>${grpc.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.grpc</groupId>
             <artifactId>grpc-protobuf</artifactId>
             <version>${grpc.version}</version>
         </dependency>
@@ -89,7 +98,26 @@
             <version>${grpc.version}</version>
         </dependency>
 
-    <!-- Test Dependencies  -->
+        <!-- AWS EC2 SDK -->
+        <dependency>
+            <groupId>com.amazonaws</groupId>
+            <artifactId>aws-java-sdk-ec2</artifactId>
+            <version>${aws.sdk.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.httpcomponents</groupId>
+            <artifactId>httpclient</artifactId>
+            <version>${httpclient.version}</version>
+        </dependency>
+
+        <!-- cassandra client-->
+        <dependency>
+            <groupId>com.datastax.cassandra</groupId>
+            <artifactId>cassandra-driver-core</artifactId>
+            <version>${cassandra.driver.version}</version>
+        </dependency>
+
+        <!-- Test Dependencies  -->
         <dependency>
             <groupId>org.scalatest</groupId>
             <artifactId>scalatest_${scala.major.minor.version}</artifactId>

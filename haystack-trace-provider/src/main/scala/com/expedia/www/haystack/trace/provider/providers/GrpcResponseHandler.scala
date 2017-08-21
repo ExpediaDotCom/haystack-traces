@@ -16,36 +16,54 @@
 
 package com.expedia.www.haystack.trace.provider.providers
 
+import com.codahale.metrics.Timer.Context
 import com.codahale.metrics.{Meter, Timer}
+import com.expedia.www.haystack.trace.provider.metrics.MetricsSupport
 import io.grpc.Status
 import io.grpc.stub.StreamObserver
-import org.slf4j.Logger
+import org.slf4j.{Logger, LoggerFactory}
 
 import scala.concurrent.Future
 import scala.util.{Failure, Success}
 import scala.concurrent.ExecutionContext.Implicits.global
 
-trait GrpcResponseHandler {
+class GrpcResponseHandler[Rs](operationName: String) extends MetricsSupport {
+  val logger: Logger = LoggerFactory.getLogger(s"${classOf[GrpcResponseHandler[Rs]]}.$operationName")
 
-  def handle[Rs](logger: Logger, timer: Timer, failures: Meter)
-                (responseObserver: StreamObserver[Rs])
-                (op: => Future[Rs]) = {
+  val timer: Timer = metricRegistry.timer(operationName)
+  val failures: Meter = metricRegistry.meter(s"${operationName}.failures")
+
+  def handle(responseObserver: StreamObserver[Rs])
+            (op: => Future[Rs]) = {
     val time = timer.time()
+    var responseFutureOption = None: Option[Future[Rs]]
 
-    val responseFuture = op
+    try {
+      responseFutureOption = Some(op)
+    } catch {
+      case th: Throwable =>
+        responseObserver.onError(Status.fromThrowable(th).asRuntimeException())
+        failures.mark()
+        logger.error("service invocation failed", th)
+    } finally {
+      if (responseFutureOption.isDefined) {
+        handlerResponseFuture(responseFutureOption.get, responseObserver, time)
+      }
+      val duration = time.stop()
+      logger.info(s"service invocation completed, duration:$duration")
+    }
+  }
 
+  private def handlerResponseFuture[Rs](responseFuture: Future[Rs], responseObserver: StreamObserver[Rs], time: Context): Unit =
     responseFuture onComplete {
       case Success(response) =>
         responseObserver.onNext(response)
         responseObserver.onCompleted()
-        time.stop()
-        logger.info("")
+        logger.info("service invocation completed successfully")
 
       case Failure(th) =>
         responseObserver.onError(Status.fromThrowable(th).asRuntimeException())
         failures.mark()
-        time.stop()
-        logger.error("", th)
+        logger.error("service invocation failed", th)
     }
-  }
 }

@@ -14,14 +14,20 @@
  *       limitations under the License.
  */
 
-package com.expedia.www.haystack.trace.provider.providers
+package com.expedia.www.haystack.trace.provider.stores.readers.cassandra
 
-import com.expedia.open.tracing.internal._
-import com.expedia.www.haystack.trace.provider.stores.FieldStore
-import io.grpc.stub.StreamObserver
+import com.datastax.driver.core.Session
 
-class FieldProvider(fieldStore: FieldStore) extends FieldProviderGrpc.FieldProviderImplBase {
-  override def getFieldNames(request: Empty, responseObserver: StreamObserver[FieldNames]): Unit = ???
-  override def getFieldCardinality(request: FieldQuery, responseObserver: StreamObserver[FieldCardinality]): Unit = ???
-  override def getFieldValues(request: FieldQuery, responseObserver: StreamObserver[FieldValues]): Unit = ???
+object Schema {
+  val ID_COLUMN_NAME = "id"
+  val TIMESTAMP_COLUMN_NAME = "ts"
+  val STITCHED_SPANS_COLUMNE_NAME = "stitchedspans"
+
+  def ensureExists(keyspace: String, tableName: String, session: Session): Unit = {
+    val keyspaceMetadata = session.getCluster.getMetadata.getKeyspace(keyspace)
+    if (keyspaceMetadata == null || keyspaceMetadata.getTable(tableName) == null) {
+      throw new RuntimeException(s"Fail to find the keyspace=$keyspace and/or table=$tableName !!!!")
+    }
+  }
 }
+

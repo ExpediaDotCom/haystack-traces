@@ -14,16 +14,13 @@
  *       limitations under the License.
  */
 
-package com.expedia.www.haystack.trace.provider.readers.cassandra
+package com.expedia.www.haystack.trace.provider.stores
 
-import com.datastax.driver.core.Session
+import com.expedia.open.tracing.internal.{Trace, TraceRequest, TracesSearchRequest, TracesSearchResult}
 
-object Schema {
-  def ensureExists(keyspace: String, tableName: String, session: Session): Unit = {
-    val keyspaceMetadata = session.getCluster.getMetadata.getKeyspace(keyspace)
-    if (keyspaceMetadata == null || keyspaceMetadata.getTable(tableName) == null) {
-      throw new RuntimeException(s"Fail to find the keyspace=$keyspace and/or table=$tableName !!!!")
-    }
-  }
+import scala.concurrent.Future
+
+trait TraceStore {
+  def getTrace(request: TraceRequest): Future[Trace]
+  def searchTraces(request: TracesSearchRequest): Future[TracesSearchResult]
 }
-

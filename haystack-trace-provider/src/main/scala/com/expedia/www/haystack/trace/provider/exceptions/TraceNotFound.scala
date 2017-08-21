@@ -14,14 +14,6 @@
  *       limitations under the License.
  */
 
-package com.expedia.www.haystack.trace.provider.providers
+package com.expedia.www.haystack.trace.provider.exceptions
 
-import com.expedia.open.tracing.internal._
-import com.expedia.www.haystack.trace.provider.stores.FieldStore
-import io.grpc.stub.StreamObserver
-
-class FieldProvider(fieldStore: FieldStore) extends FieldProviderGrpc.FieldProviderImplBase {
-  override def getFieldNames(request: Empty, responseObserver: StreamObserver[FieldNames]): Unit = ???
-  override def getFieldCardinality(request: FieldQuery, responseObserver: StreamObserver[FieldCardinality]): Unit = ???
-  override def getFieldValues(request: FieldQuery, responseObserver: StreamObserver[FieldValues]): Unit = ???
-}
+class TraceNotFound extends RuntimeException("traceId not found in data store")

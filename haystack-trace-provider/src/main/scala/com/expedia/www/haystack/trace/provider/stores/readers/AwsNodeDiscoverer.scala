@@ -14,7 +14,7 @@
  *       limitations under the License.
  */
 
-package com.expedia.www.haystack.trace.provider.readers
+package com.expedia.www.haystack.trace.provider.stores.readers
 
 import java.util.Collections
 

@@ -14,12 +14,12 @@
  *       limitations under the License.
  */
 
-package com.expedia.www.haystack.trace.provider.readers.cassandra
+package com.expedia.www.haystack.trace.provider.stores.readers.cassandra
 
 import com.datastax.driver.core._
 import com.datastax.driver.core.policies._
 import com.expedia.www.haystack.trace.provider.config.entities.CassandraConfiguration
-import com.expedia.www.haystack.trace.provider.readers.AwsNodeDiscoverer
+import com.expedia.www.haystack.trace.provider.stores.readers.AwsNodeDiscoverer
 
 class CassandraSessionFactory(config: CassandraConfiguration) {
 

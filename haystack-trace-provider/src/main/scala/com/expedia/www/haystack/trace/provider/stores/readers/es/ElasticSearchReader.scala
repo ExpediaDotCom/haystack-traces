@@ -14,14 +14,10 @@
  *       limitations under the License.
  */
 
-package com.expedia.www.haystack.trace.provider.providers
+package com.expedia.www.haystack.trace.provider.stores.readers.es
 
-import com.expedia.open.tracing.internal._
-import com.expedia.www.haystack.trace.provider.stores.FieldStore
-import io.grpc.stub.StreamObserver
+import com.expedia.www.haystack.trace.provider.config.entities.ElasticSearchConfiguration
+import com.expedia.www.haystack.trace.provider.metrics.MetricsSupport
+import scala.concurrent.ExecutionContextExecutor
 
-class FieldProvider(fieldStore: FieldStore) extends FieldProviderGrpc.FieldProviderImplBase {
-  override def getFieldNames(request: Empty, responseObserver: StreamObserver[FieldNames]): Unit = ???
-  override def getFieldCardinality(request: FieldQuery, responseObserver: StreamObserver[FieldCardinality]): Unit = ???
-  override def getFieldValues(request: FieldQuery, responseObserver: StreamObserver[FieldValues]): Unit = ???
-}
+class ElasticSearchReader(config: ElasticSearchConfiguration)(implicit val dispatcher: ExecutionContextExecutor) extends MetricsSupport

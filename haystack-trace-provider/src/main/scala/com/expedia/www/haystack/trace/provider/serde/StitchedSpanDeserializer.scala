@@ -14,14 +14,24 @@
  *       limitations under the License.
  */
 
-package com.expedia.www.haystack.trace.provider.providers
+package com.expedia.www.haystack.trace.provider.serde
 
-import com.expedia.open.tracing.internal._
-import com.expedia.www.haystack.trace.provider.stores.FieldStore
-import io.grpc.stub.StreamObserver
+import com.codahale.metrics.Meter
+import com.expedia.open.tracing.stitch.StitchedSpan
+import com.expedia.www.haystack.trace.provider.metrics.MetricsSupport
 
-class FieldProvider(fieldStore: FieldStore) extends FieldProviderGrpc.FieldProviderImplBase {
-  override def getFieldNames(request: Empty, responseObserver: StreamObserver[FieldNames]): Unit = ???
-  override def getFieldCardinality(request: FieldQuery, responseObserver: StreamObserver[FieldCardinality]): Unit = ???
-  override def getFieldValues(request: FieldQuery, responseObserver: StreamObserver[FieldValues]): Unit = ???
+object StitchedSpanDeserializer extends MetricsSupport {
+  protected val deserFailure: Meter = metricRegistry.meter("stitched.span.deser.failure")
+}
+
+class StitchedSpanDeserializer  {
+  def deserialize(data: Array[Byte]): StitchedSpan = {
+    try {
+      if(data == null || data.length > 0) StitchedSpan.parseFrom(data) else null
+    } catch {
+      case _: Exception =>
+        StitchedSpanDeserializer.deserFailure.mark()
+        null
+    }
+  }
 }

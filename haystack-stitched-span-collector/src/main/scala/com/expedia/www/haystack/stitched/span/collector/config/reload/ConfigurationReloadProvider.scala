@@ -23,9 +23,9 @@ import com.expedia.www.haystack.stitched.span.collector.config.entities.ReloadCo
 
 abstract class ConfigurationReloadProvider(config: ReloadConfiguration) extends AutoCloseable {
 
-  protected val executor = Executors.newSingleThreadScheduledExecutor()
+  private val executor = Executors.newSingleThreadScheduledExecutor()
 
-  // schedule the reloading of configuration from the external store
+  // schedule the reload process from an external store
   if(config.reloadIntervalInMillis > -1) {
     executor.scheduleWithFixedDelay(new Runnable() {
       override def run(): Unit = load()

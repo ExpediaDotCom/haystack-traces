@@ -36,6 +36,9 @@ class ConfigurationReloadElasticSearchProvider(reloadConfig: ReloadConfiguration
     factory.getObject
   }
 
+  /**
+    * loads the configuration from external store
+    */
   override def load(): Unit = {
     reloadConfig.observers.foreach(observer => {
       val searchQuery = new Search.Builder(matchAllQuery)

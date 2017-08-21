@@ -18,6 +18,7 @@
 package com.expedia.www.haystack.stitched.span.collector.config.entities
 
 case class ElasticSearchConfiguration(endpoint: String,
+                                      indexTemplateJson: Option[String],
                                       consistencyLevel: String,
                                       indexNamePrefix: String,
                                       indexType: String,

@@ -37,6 +37,10 @@ class CassandraWriteResultListener(asyncResult: ResultSetFuture,
 
   import CassandraWriteResultListener._
 
+  /**
+    * this is invoked when the cassandra aysnc write completes.
+    * We measure the time write operation takes and records any warnings or errors
+    */
   override def run(): Unit = {
     try {
       timer.close()

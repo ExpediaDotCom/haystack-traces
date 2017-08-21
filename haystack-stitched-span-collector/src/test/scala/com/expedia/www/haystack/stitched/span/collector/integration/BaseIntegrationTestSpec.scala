@@ -25,11 +25,11 @@ import com.expedia.open.tracing.Tag.TagType
 import com.expedia.open.tracing.stitch.StitchedSpan
 import com.expedia.open.tracing.{Span, Tag}
 import com.expedia.www.haystack.stitched.span.collector.config.entities.{IndexConfiguration, IndexField}
+import com.google.gson.{JsonArray, JsonObject}
 import io.searchbox.client.config.HttpClientConfig
 import io.searchbox.client.{JestClient, JestClientFactory}
 import io.searchbox.core.{Index, Search}
-import io.searchbox.indices.mapping.PutMapping
-import io.searchbox.indices.{CreateIndex, DeleteIndex}
+import io.searchbox.indices.DeleteIndex
 import org.apache.kafka.clients.producer._
 import org.apache.kafka.common.serialization.ByteArraySerializer
 import org.json4s.DefaultFormats
@@ -51,9 +51,9 @@ abstract class BaseIntegrationTestSpec extends WordSpec with GivenWhenThen with 
 
   private val ELASTIC_SEARCH_ENDPOINT = "http://elasticsearch:9200"
   private val SPANS_INDEX_TYPE = "spans"
-  private val HAYSTACK_SPAN_INDEX = {
+  private val HAYSTACK_TRACES_INDEX = {
     val formatter = new SimpleDateFormat("yyyy-MM-dd")
-    s"haystack-span-${formatter.format(new Date())}"
+    s"haystack-traces-${formatter.format(new Date())}"
   }
 
   private var producer: KafkaProducer[Array[Byte], Array[Byte]] = _
@@ -69,33 +69,12 @@ abstract class BaseIntegrationTestSpec extends WordSpec with GivenWhenThen with 
   }
 
   private def dropIndexes(): Unit = {
-    esClient.execute(new DeleteIndex.Builder(HAYSTACK_SPAN_INDEX).build())
+    esClient.execute(new DeleteIndex.Builder(HAYSTACK_TRACES_INDEX).build())
     esClient.execute(new DeleteIndex.Builder("reload-configs").build())
   }
 
   private def deleteCassandraTableRows(): Unit = {
-    cassandraSession.execute(new SimpleStatement("TRUNCATE stitchedspans"))
-  }
-
-  private def createAndUpdaeteIndexMappings(): Unit = {
-    val createIndexRequest = new CreateIndex.Builder(HAYSTACK_SPAN_INDEX).build()
-    esClient.execute(createIndexRequest)
-    val putMappingSource = """
-                                |{
-                                |    "spans": {
-                                |      "properties": {
-                                |        "spans": {
-                                |          "type": "nested"
-                                |        }
-                                |      }
-                                |   }
-                                |}
-                              """.stripMargin
-    val mappings = new PutMapping.Builder(HAYSTACK_SPAN_INDEX, SPANS_INDEX_TYPE, putMappingSource).build()
-    val res = esClient.execute(mappings)
-    if(!res.isSucceeded) {
-      fail("Fail to update the mappings for elastic search index")
-    }
+    cassandraSession.execute(new SimpleStatement("TRUNCATE traces"))
   }
 
   override def beforeAll() {
@@ -123,11 +102,6 @@ abstract class BaseIntegrationTestSpec extends WordSpec with GivenWhenThen with 
     // add indexable tags as a config in ES
     createIndexConfigInES()
 
-    // createIndex
-
-    // setup the mappings for index that stores all the spans
-    createAndUpdaeteIndexMappings()
-
     // wait for few seconds(5 sec is the schedule interval) to let app consume the new indexing config
     Thread.sleep(10000)
   }
@@ -153,19 +127,20 @@ abstract class BaseIntegrationTestSpec extends WordSpec with GivenWhenThen with 
   }
 
   protected def queryAllCassandra(): Seq[CassandraRow] = {
-    val rows = cassandraSession.execute("SELECT id, ts, stitchedspans from stitchedspans")
+    val rows = cassandraSession.execute("SELECT id, ts, stitchedspans from traces")
     rows.map(row => {
       CassandraRow(row.getString("id"), row.getTimestamp("ts"), StitchedSpan.parseFrom(row.getBytes("stitchedspans")))
     }).toList
   }
 
-  protected def queryElasticSearch(query: String): List[String] = {
+  protected def queryElasticSearch(query: String): JsonArray = {
     val searchQuery = new Search.Builder(query)
-      .addIndex(HAYSTACK_SPAN_INDEX)
+      .addIndex(HAYSTACK_TRACES_INDEX)
       .addType(SPANS_INDEX_TYPE)
       .build()
     val result = esClient.execute(searchQuery)
-    if (result.getSourceAsStringList == null) Nil else result.getSourceAsStringList.toList
+    val obj = result.getJsonObject.get("hits").asInstanceOf[JsonObject]
+    obj.get("hits").asInstanceOf[JsonArray]
   }
 
   protected def createStitchedSpans(total: Int, spanCount: Int, duration: Long): Seq[StitchedSpan] = {

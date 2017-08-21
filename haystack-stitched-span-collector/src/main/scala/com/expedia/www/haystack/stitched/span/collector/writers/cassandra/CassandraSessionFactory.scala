@@ -28,14 +28,21 @@ class CassandraSessionFactory(config: CassandraConfiguration) {
 
   var cluster: Cluster = _
 
+  /**
+    * builds a session object to interact with cassandra cluster
+    * Also ensure that keyspace and table names exists in cassandra.
+    */
   val session: Session = {
     cluster = buildCluster()
     val newSession = cluster.connect()
-    Schema.ensureExists(config.keyspace, config.tableName, newSession, config.autoCreateKeyspace)
+    Schema.ensureExists(config.keyspace, config.tableName, config.cqlSchema, newSession)
     newSession.execute("USE " + config.keyspace)
     newSession
   }
 
+  /**
+    * close the session and client
+    */
   def close(): Unit = {
     Try(session.close())
     Try(cluster.close())

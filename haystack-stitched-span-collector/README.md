@@ -32,7 +32,15 @@ make all
 
 ####Integration Test
 
-If you are developing and just want to run integration tests
+####Prerequisite:
+1. Install docker using Docker Tools or native docker if on mac
+2. Verify if docker-compose is installed by running following command else install it.
+```
+docker-compose
+
+```
+
+Run the inegration tests with
 ```
 make integration_test
 

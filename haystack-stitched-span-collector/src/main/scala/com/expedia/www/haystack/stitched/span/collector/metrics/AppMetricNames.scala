@@ -27,4 +27,6 @@ object AppMetricNames {
   val ES_WRITE_FAILURE = "es.write.failure"
   val ES_WRITE_DUPLICATES = "es.writer.duplicates"
   val ES_WRITE_TIME = "es.writer.time"
+
+  val DESER_FAILURE = "deser.failure"
 }

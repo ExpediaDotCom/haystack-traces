@@ -29,6 +29,7 @@ import io.searchbox.action.BulkableAction
 import io.searchbox.client.config.HttpClientConfig
 import io.searchbox.client.{JestClient, JestClientFactory}
 import io.searchbox.core._
+import io.searchbox.indices.template.PutTemplate
 import io.searchbox.params.Parameters
 import org.slf4j.LoggerFactory
 
@@ -63,6 +64,8 @@ class ElasticSearchWriter(esConfig: ElasticSearchConfiguration, indexConf: Index
         .build())
     factory.getObject
   }
+
+  if(esConfig.indexTemplateJson.isDefined) applyTemplate(esConfig.indexTemplateJson.get)
 
   override def close(): Unit = {
     LOGGER.info("Closing the elastic search client now.")
@@ -122,6 +125,14 @@ class ElasticSearchWriter(esConfig: ElasticSearchConfiguration, indexConf: Index
       case _ =>
         LOGGER.info("Fail to convert the stitched span record to an index document!")
         None
+    }
+  }
+
+  private def applyTemplate(templateJson: String) {
+    val putTemplateRequest = new PutTemplate.Builder("haystack-template", templateJson).build()
+    val result = esClient.execute(putTemplateRequest)
+    if(!result.isSucceeded) {
+      throw new RuntimeException(s"Fail to apply the following template to elastic search with reason=${result.getErrorMessage}")
     }
   }
 

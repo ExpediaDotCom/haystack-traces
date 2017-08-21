@@ -29,7 +29,7 @@ case class CassandraConfiguration(endpoints: List[String],
                                   awsNodeDiscovery: Option[AwsNodeDiscoveryConfiguration],
                                   keyspace: String,
                                   tableName: String,
-                                  autoCreateKeyspace: Boolean,
+                                  cqlSchema: Option[String],
                                   consistencyLevel: ConsistencyLevel,
                                   recordTTLInSec: Int,
                                   socket: SocketConfiguration)

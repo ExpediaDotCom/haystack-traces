@@ -9,6 +9,10 @@ RUN mkdir -p ${APP_HOME}
 COPY target/${APP_NAME}.jar ${APP_HOME}/
 COPY build/docker/start-app.sh ${APP_HOME}/
 
+RUN mkdir -p /schemas/cassandra /schemas/elasticsearch
+COPY schemas/cassandra/docker.cql /schemas/cassandra/.
+COPY schemas/elasticsearch/template.json /schemas/elasticsearch/.
+
 RUN chmod +x ${APP_HOME}/start-app.sh
 
 WORKDIR ${APP_HOME}

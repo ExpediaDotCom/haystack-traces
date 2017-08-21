@@ -17,6 +17,13 @@
 
 package com.expedia.www.haystack.stitched.span.collector.config.reload
 
+/**
+  * An entity(for e.g. a configuration object) that extends reloadable trait allows it to reload the config object
+  * dynamically. The config reloader reads the new configuration periodically from an external store and
+  * calls 'onReload()' method.
+  * The 'name' provides the tableName where the configuration is stored for this entity.
+  * see [[com.expedia.www.haystack.stitched.span.collector.config.reload.ConfigurationReloadProvider]]
+  */
 trait Reloadable {
   def name: String
 

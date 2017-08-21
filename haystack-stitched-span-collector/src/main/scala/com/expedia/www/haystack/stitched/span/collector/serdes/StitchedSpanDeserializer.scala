@@ -19,10 +19,10 @@ package com.expedia.www.haystack.stitched.span.collector.serdes
 
 import com.codahale.metrics.Meter
 import com.expedia.open.tracing.stitch.StitchedSpan
-import com.expedia.www.haystack.stitched.span.collector.metrics.MetricsSupport
+import com.expedia.www.haystack.stitched.span.collector.metrics.{AppMetricNames, MetricsSupport}
 
 object StitchedSpanDeserializer extends MetricsSupport {
-  protected val deserFailure: Meter = metricRegistry.meter("stitched.span.deser.failure")
+  protected val deserFailure: Meter = metricRegistry.meter(AppMetricNames.DESER_FAILURE)
 }
 
 class StitchedSpanDeserializer  {
@@ -37,6 +37,7 @@ class StitchedSpanDeserializer  {
       if(data == null || data.length > 0) StitchedSpan.parseFrom(data) else null
     } catch {
       case _: Exception =>
+        // TODO: do we need to log or just have a meter to measure ?
         StitchedSpanDeserializer.deserFailure.mark()
         null
     }

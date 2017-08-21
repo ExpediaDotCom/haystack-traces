@@ -17,8 +17,7 @@
 
 package com.expedia.www.haystack.stitched.span.collector.integration
 
-import com.expedia.www.haystack.stitched.span.collector.writers.es.index.document.StitchedSpanIndex
-import org.json4s.jackson.Serialization
+import com.google.gson.JsonObject
 
 import scala.collection.JavaConversions._
 
@@ -66,10 +65,8 @@ class StitchedSpanCollectorIntegrationTest extends BaseIntegrationTestSpec {
 
     var docs = queryElasticSearch(matchAllQuery)
     docs.size shouldBe TOTAL_STITCHED_SPANS
-    for (doc <- docs;
-         stitchedSpanIdx = Serialization.read[StitchedSpanIndex](doc)) {
-      stitchedSpanIdx.duration shouldBe 0
-      stitchedSpanIdx.spans should have size TOTAL_SPANS_PER_STITCHED_SPAN
+    (0 until docs.size()).toList foreach { idx =>
+      docs.get(idx).asInstanceOf[JsonObject].get("_id").getAsString should startWith(idx.toString + "_")
     }
 
     val spanSpecificQuery =
@@ -102,8 +99,11 @@ class StitchedSpanCollectorIntegrationTest extends BaseIntegrationTestSpec {
         |      ]
         |}}}
       """.stripMargin
-    docs = queryElasticSearch(matchAllQuery)
+    docs = queryElasticSearch(spanSpecificQuery)
     docs.size shouldBe TOTAL_STITCHED_SPANS
+    (0 until docs.size()).toList foreach { idx =>
+      docs.get(idx).asInstanceOf[JsonObject].get("_id").getAsString should startWith(idx.toString + "_")
+    }
 
     val emptyResponseQuery =
       """

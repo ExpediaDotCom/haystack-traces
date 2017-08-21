@@ -52,21 +52,18 @@ class CassandraWriter(config: CassandraConfiguration)(implicit val dispatcher: E
         .using(ttl(config.recordTTLInSec)))
   }
 
-
-  private def prepareBatchStatement(traceId: String, stitchedSpanBytes: Array[Byte]): Statement = {
-    new BoundStatement(insertSpan)
-      .setString(ID_COLUMN_NAME, traceId)
-      .setTimestamp(TIMESTAMP_COLUMN_NAME, new Date())
-      .setBytes(STITCHED_SPANS_COLUMNE_NAME, ByteBuffer.wrap(stitchedSpanBytes))
-      .setConsistencyLevel(config.consistencyLevel)
-  }
-
-  override def write(elems: Seq[StitchedSpanDataRecord]): Future[_] = {
+  /**
+    * writes the stitched span records to cassandra. Use the current timestamp as the sort key for the writes to same
+    * TraceId
+    * @param records list of stitched span records
+    * @return
+    */
+  override def write(records: Seq[StitchedSpanDataRecord]): Future[_] = {
     try {
-      val futures: Seq[Future[Boolean]] = elems.map { el =>
+      val futures: Seq[Future[Boolean]] = records.map { rec =>
         val timer = writeTimer.time()
         val promise = Promise[Boolean]()
-        val batchStatement = prepareBatchStatement(el.stitchedSpan.getTraceId, el.stitchedSpanBytes)
+        val batchStatement = prepareBatchStatement(rec.stitchedSpan.getTraceId, rec.stitchedSpanBytes)
         val asyncResult = sessionFactory.session.executeAsync(batchStatement)
         asyncResult.addListener(new CassandraWriteResultListener(asyncResult, timer, promise), dispatcher)
         promise.future
@@ -78,6 +75,14 @@ class CassandraWriter(config: CassandraConfiguration)(implicit val dispatcher: E
         writeFailures.mark()
         Future.failed(ex)
     }
+  }
+
+  private def prepareBatchStatement(traceId: String, stitchedSpanBytes: Array[Byte]): Statement = {
+    new BoundStatement(insertSpan)
+      .setString(ID_COLUMN_NAME, traceId)
+      .setTimestamp(TIMESTAMP_COLUMN_NAME, new Date())
+      .setBytes(STITCHED_SPANS_COLUMNE_NAME, ByteBuffer.wrap(stitchedSpanBytes))
+      .setConsistencyLevel(config.consistencyLevel)
   }
 
   override def close(): Unit = {

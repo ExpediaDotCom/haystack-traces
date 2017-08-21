@@ -18,49 +18,47 @@
 package com.expedia.www.haystack.stitched.span.collector.writers.cassandra
 
 import com.datastax.driver.core.Session
-import com.google.common.io.CharStreams
 import org.slf4j.LoggerFactory
 
-import scala.io.Source
-
 object Schema {
+  private val LOGGER = LoggerFactory.getLogger(Schema.getClass)
+
   val ID_COLUMN_NAME = "id"
   val TIMESTAMP_COLUMN_NAME = "ts"
   val STITCHED_SPANS_COLUMNE_NAME = "stitchedspans"
 
-  private val LOGGER = LoggerFactory.getLogger(Schema.getClass)
-
-  def ensureExists(keyspace: String, tableName: String, session: Session, autoCreateKeySpace: Boolean): Unit = {
+  /**
+    * ensures the keyspace and table name exists in cassandra
+    * @param keyspace cassandra keyspace
+    * @param tableName table name in cassandra
+    * @param session cassandra client session
+    * @param cqlSchema if present, then apply the cql schema that should create the keyspace and cassandra table,
+    *                  else throw an exception if fail to find the keyspace and table
+    */
+  def ensureExists(keyspace: String, tableName: String, cqlSchema: Option[String], session: Session): Unit = {
     val keyspaceMetadata = session.getCluster.getMetadata.getKeyspace(keyspace)
     if (keyspaceMetadata == null || keyspaceMetadata.getTable(tableName) == null) {
-      if (autoCreateKeySpace) {
-        applyCqlFile(keyspace, tableName, session, schemaResourcePath)
-      }
-      else {
-        throw new RuntimeException(s"Fail to find the keyspace=$keyspace and/or table=$tableName !!!!")
+      cqlSchema match {
+        case Some(schema) => applyCqlSchema(session, schema)
+        case _ => throw new RuntimeException(s"Fail to find the keyspace=$keyspace and/or table=$tableName !!!!")
       }
     }
   }
 
-  private def applyCqlFile(keyspace: String, tableName: String, session: Session, cqlResourcePath: String): Unit = {
-    val reader = Source.fromInputStream(getClass.getResourceAsStream(cqlResourcePath)).bufferedReader
+  /**
+    * apply the cql schema
+    * @param session session object to interact with cassandra
+    * @param schema schema data
+    */
+  private def applyCqlSchema(session: Session, schema: String): Unit = {
     try {
-      for (cmd <- CharStreams.toString(reader).split(";")) {
-        val execCommand = cmd.trim().replace("{{keyspace}}", keyspace).replace("{{table}}", tableName)
-        if (execCommand.nonEmpty) {
-          session.execute(execCommand)
-        }
+      for (cmd <- schema.split(";")) {
+        if (cmd.nonEmpty) session.execute(cmd)
       }
     } catch {
       case ex: Exception =>
-        LOGGER.error(s"Failed to apply cql file $cqlResourcePath for keyspace=$keyspace and tableName=$tableName. Reason:", ex)
+        LOGGER.error(s"Failed to apply cql $schema with following reason:", ex)
         throw new RuntimeException(ex)
-    } finally {
-      if (reader != null) {
-        reader.close()
-      }
     }
   }
-
-  private def schemaResourcePath: String = s"/cassandra-schema/dev.cql"
 }

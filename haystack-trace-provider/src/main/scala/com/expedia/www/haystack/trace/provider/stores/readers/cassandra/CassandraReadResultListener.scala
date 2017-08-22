@@ -19,7 +19,7 @@ package com.expedia.www.haystack.trace.provider.stores.readers.cassandra
 import com.codahale.metrics.{Meter, Timer}
 import com.datastax.driver.core.ResultSetFuture
 import com.expedia.open.tracing.internal.Trace
-import com.expedia.www.haystack.trace.provider.exceptions.TraceNotFound
+import com.expedia.www.haystack.trace.provider.exceptions.TraceNotFoundException
 import com.expedia.www.haystack.trace.provider.metrics.MetricsSupport
 import com.expedia.www.haystack.trace.provider.serde.StitchedSpanDeserializer
 import org.slf4j.{Logger, LoggerFactory}
@@ -52,11 +52,12 @@ class CassandraReadResultListener(asyncResult: ResultSetFuture,
         LOGGER.warn(s"Warning received in cassandra read {}", asyncResult.get.getExecutionInfo.getWarnings.toList.mkString(","))
       }
 
-      if(asyncResult.get().one() == null) {
-        throw new TraceNotFound
+      val row = asyncResult.get().one()
+      if(row == null) {
+        throw new TraceNotFoundException
       }
 
-      val trace = extractTrace(asyncResult.get().one().getBytes(Schema.STITCHED_SPANS_COLUMNE_NAME).array())
+      val trace = extractTrace(row.getBytes(Schema.STITCHED_SPANS_COLUMNE_NAME).array())
       promise.success(trace)
     } catch {
       case ex: Exception =>
@@ -68,6 +69,9 @@ class CassandraReadResultListener(asyncResult: ResultSetFuture,
 
   private def extractTrace(rawStitchedSpans: Array[Byte]): Trace = {
     val stitchedSpans = deserializer.deserialize(rawStitchedSpans)
-    Trace.newBuilder().addAllChildSpans(stitchedSpans.getChildSpansList).build()
+    Trace.newBuilder()
+      .setTraceId(stitchedSpans.getTraceId)
+      .addAllChildSpans(stitchedSpans.getChildSpansList)
+      .build()
   }
 }

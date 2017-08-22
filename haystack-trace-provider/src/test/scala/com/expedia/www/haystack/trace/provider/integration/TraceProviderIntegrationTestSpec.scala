@@ -16,8 +16,10 @@
 
 package com.expedia.www.haystack.trace.provider.integration
 
+import java.util.UUID
+
 import com.expedia.open.tracing.internal.{TraceProviderGrpc, TraceRequest}
-import io.grpc.ManagedChannelBuilder
+import io.grpc.{ManagedChannelBuilder, Status, StatusRuntimeException}
 
 class TraceProviderIntegrationTestSpec extends BaseIntegrationTestSpec {
   val client = TraceProviderGrpc.newBlockingStub(ManagedChannelBuilder.forAddress("haystack-trace-provider", 8080)
@@ -27,13 +29,29 @@ class TraceProviderIntegrationTestSpec extends BaseIntegrationTestSpec {
   describe("TraceProvider") {
     it("should get trace for given traceID from cassandra") {
       Given("trace in cassandra")
-      //      addTraceToCassandra()
+      val traceId = UUID.randomUUID().toString
+      putTraceInCassandra(traceId)
 
       When("getTrace is invoked")
-      val trace = client.getTrace(TraceRequest.newBuilder().setTraceId("").build())
+      val trace = client.getTrace(TraceRequest.newBuilder().setTraceId(traceId).build())
 
       Then("should return the trace")
-      //      trace shouldBe not null
+      trace.getTraceId shouldBe traceId
+    }
+
+    it("should return TraceNotFound exception if traceID is not in cassandra") {
+      Given("trace in cassandra")
+      val traceId = UUID.randomUUID().toString
+      putTraceInCassandra(traceId)
+
+      When("getTrace is invoked")
+      val thrown = the [StatusRuntimeException] thrownBy {
+        client.getTrace(TraceRequest.newBuilder().setTraceId(UUID.randomUUID().toString).build())
+      }
+
+      Then("thrown StatusRuntimeException should have 'not found' error")
+      thrown.getStatus.getCode should be (Status.NOT_FOUND.getCode)
+      thrown.getStatus.getDescription should include ("traceId not found")
     }
   }
 }

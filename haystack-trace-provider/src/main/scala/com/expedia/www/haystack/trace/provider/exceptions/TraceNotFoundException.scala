@@ -16,4 +16,6 @@
 
 package com.expedia.www.haystack.trace.provider.exceptions
 
-class TraceNotFound extends RuntimeException("traceId not found in data store")
+import io.grpc.{Status, StatusException}
+
+class TraceNotFoundException extends StatusException(Status.NOT_FOUND.withDescription("traceId not found in data store"))

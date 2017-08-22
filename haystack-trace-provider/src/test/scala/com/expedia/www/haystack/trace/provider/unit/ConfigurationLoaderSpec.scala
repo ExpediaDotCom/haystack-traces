@@ -23,7 +23,7 @@ class ConfigurationLoaderSpec extends BaseUnitTestSpec {
   describe("ConfigurationLoader") {
     it("should load the service config from base.conf") {
       val serviceConfig: ServiceConfiguration = ProviderConfiguration.serviceConfig
-      serviceConfig.port shouldBe 80
+      serviceConfig.port shouldBe 8080
     }
   }
 }

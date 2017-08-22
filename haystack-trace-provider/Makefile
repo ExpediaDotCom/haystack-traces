@@ -18,13 +18,22 @@ docker_build:
 prepare_integration_test_env: docker_build
 	# prepare environment to run integration tests against
 	docker-compose -f build/integration-tests/docker-compose.yml -p sandbox up -d
-	sleep 10
+	sleep 60
+
+	# prepare cassandra table for haystack-trace-provider to run against
+	docker run \
+		-it \
+		--network=sandbox_default \
+		-v $(PWD)/build/integration-tests:/src \
+		-w /src \
+		node:alpine \
+		/bin/sh -c 'npm install && node create-cassandra-table.js'
 
 	# run haystack-trace-provider and join the same network of its dependent services
 	docker run \
 		-d \
 		-p 5005:5005 \
-		-p 80:80 \
+		-p 8080:8080 \
 		--network=sandbox_default \
 		--network-alias=haystack-trace-provider \
 		-v $(PWD)/build/integration-tests/docker-app.conf:/docker-app.conf \
@@ -40,7 +49,7 @@ integration_test: prepare_integration_test_env
 		-v $(PWD):/src \
 		-v ~/.m2:/root/.m2 \
 		-w /src \
-		maven:alpine \
+		maven:3.5.0-jdk-8 \
 		mvn test -P integration-tests
 
 	# stop all the containers

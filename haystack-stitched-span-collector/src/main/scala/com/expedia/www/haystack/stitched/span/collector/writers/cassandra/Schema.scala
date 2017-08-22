@@ -32,13 +32,13 @@ object Schema {
     * @param keyspace cassandra keyspace
     * @param tableName table name in cassandra
     * @param session cassandra client session
-    * @param cqlSchema if present, then apply the cql schema that should create the keyspace and cassandra table,
-    *                  else throw an exception if fail to find the keyspace and table
+    * @param autoCreateSchema if present, then apply the cql schema that should create the keyspace and cassandra table,
+    *                         else throw an exception if fail to find the keyspace and table
     */
-  def ensureExists(keyspace: String, tableName: String, cqlSchema: Option[String], session: Session): Unit = {
+  def ensureExists(keyspace: String, tableName: String, autoCreateSchema: Option[String], session: Session): Unit = {
     val keyspaceMetadata = session.getCluster.getMetadata.getKeyspace(keyspace)
     if (keyspaceMetadata == null || keyspaceMetadata.getTable(tableName) == null) {
-      cqlSchema match {
+      autoCreateSchema match {
         case Some(schema) => applyCqlSchema(session, schema)
         case _ => throw new RuntimeException(s"Fail to find the keyspace=$keyspace and/or table=$tableName !!!!")
       }

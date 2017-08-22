@@ -40,7 +40,7 @@ class ConfigurationLoaderSpec extends FunSpec with Matchers {
       cassandra.autoDiscoverEnabled shouldBe false
       // this will fail if run inside an editor, we override this config using env variable inside pom.xml
       cassandra.endpoints should contain allOf("cass1", "cass2")
-      cassandra.cqlSchema shouldBe empty
+      cassandra.autoCreateSchema shouldBe Some("cassandra_cql_schema")
       cassandra.awsNodeDiscovery shouldBe empty
       cassandra.socket.keepAlive shouldBe true
       cassandra.socket.maxConnectionPerHost shouldBe 100
@@ -52,7 +52,7 @@ class ConfigurationLoaderSpec extends FunSpec with Matchers {
     it("should load the elastic search config from base.conf and one property overridden from env variable") {
       val elastic = project.elasticSearchConfig
       elastic.endpoint shouldBe "http://elasticsearch:9200"
-      elastic.indexTemplateJson shouldBe empty
+      elastic.indexTemplateJson shouldBe Some("some_template_json")
       elastic.consistencyLevel shouldBe "one"
       elastic.readTimeoutMillis shouldBe 5000
       elastic.connectionTimeoutMillis shouldBe 10000

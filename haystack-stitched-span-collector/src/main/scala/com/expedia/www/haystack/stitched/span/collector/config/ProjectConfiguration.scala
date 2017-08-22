@@ -17,13 +17,11 @@
 
 package com.expedia.www.haystack.stitched.span.collector.config
 
-import java.io.File
-
 import com.datastax.driver.core.ConsistencyLevel
 import com.expedia.www.haystack.stitched.span.collector.config.entities._
 import com.expedia.www.haystack.stitched.span.collector.config.reload.{ConfigurationReloadElasticSearchProvider, Reloadable}
-import com.expedia.www.haystack.stitched.span.collector.writers.cassandra.Schema.getClass
 import com.typesafe.config.Config
+import org.apache.commons.lang3.StringUtils
 
 import scala.collection.JavaConversions._
 import scala.io.Source
@@ -75,8 +73,11 @@ class ProjectConfiguration extends AutoCloseable {
     val consistencyLevel = ConsistencyLevel.values().find(_.toString.equalsIgnoreCase(cs.getString("consistency.level"))).get
 
     val keyspaceConfig = cs.getConfig("keyspace")
-    val cqlSchema = if(keyspaceConfig.getBoolean("auto.create")) {
-      Some(Source.fromFile(keyspaceConfig.getString("schema.cql")).getLines().mkString("\n"))
+
+    val autoCreateSchemaField = "auto.create.schema"
+    val autoCreateSchema = if(keyspaceConfig.hasPath(autoCreateSchemaField)
+      && StringUtils.isNotEmpty(keyspaceConfig.getString(autoCreateSchemaField))) {
+      Some(keyspaceConfig.getString(autoCreateSchemaField))
     } else {
       None
     }
@@ -87,7 +88,7 @@ class ProjectConfiguration extends AutoCloseable {
       awsConfig,
       keyspaceConfig.getString("name"),
       keyspaceConfig.getString("table.name"),
-      cqlSchema,
+      autoCreateSchema,
       consistencyLevel,
       cs.getInt("ttl.sec"),
       socket)
@@ -99,10 +100,12 @@ class ProjectConfiguration extends AutoCloseable {
     */
   lazy val elasticSearchConfig: ElasticSearchConfiguration = {
     val es = config.getConfig("elasticsearch")
-
     val indexConfig = es.getConfig("index")
-    val indexTemplateJson = if(indexConfig.getBoolean("template.apply")) {
-      Some(Source.fromFile(indexConfig.getString("template.path")).getLines().mkString("\n"))
+
+    val templateJsonConfigField = "template.json"
+    val indexTemplateJson = if(indexConfig.hasPath(templateJsonConfigField)
+      && StringUtils.isNotEmpty(indexConfig.getString(templateJsonConfigField))) {
+      Some(indexConfig.getString(templateJsonConfigField))
     } else {
       None
     }

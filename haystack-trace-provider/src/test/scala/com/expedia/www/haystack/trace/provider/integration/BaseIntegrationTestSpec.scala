@@ -21,6 +21,7 @@ import java.util.Date
 
 import com.datastax.driver.core.querybuilder.QueryBuilder
 import com.datastax.driver.core.{Cluster, Session, SimpleStatement}
+import com.expedia.open.tracing.Span
 import com.expedia.open.tracing.stitch.StitchedSpan
 import com.expedia.www.haystack.trace.provider.stores.readers.cassandra.Schema._
 import org.scalatest._
@@ -41,8 +42,16 @@ trait BaseIntegrationTestSpec extends FunSpec with GivenWhenThen with Matchers w
     cassandraSession.execute(new SimpleStatement(s"TRUNCATE ${CASSANDRA_TABLE}"))
   }
 
-  protected def putTraceInCassandra(traceId: String) = {
-    val stitchedSpan = StitchedSpan.newBuilder().setTraceId(traceId).build()
+  protected def putTraceInCassandra(traceId: String, spanId: String = "") = {
+    val stitchedSpan = StitchedSpan
+      .newBuilder()
+      .addChildSpans(Span
+        .newBuilder()
+        .setTraceId(traceId)
+        .setSpanId(spanId)
+        .build())
+      .setTraceId(traceId)
+      .build()
 
     cassandraSession.execute(QueryBuilder
       .insertInto(CASSANDRA_TABLE)

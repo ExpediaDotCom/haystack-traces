@@ -16,20 +16,20 @@
 
 package com.expedia.www.haystack.trace.provider.stores
 
-import com.expedia.open.tracing.internal.{Trace, TraceRequest, TracesSearchRequest, TracesSearchResult}
+import com.expedia.open.tracing.internal._
 import com.expedia.www.haystack.trace.provider.config.entities.{CassandraConfiguration, ElasticSearchConfiguration}
 import com.expedia.www.haystack.trace.provider.stores.readers.cassandra.CassandraReader
 import com.expedia.www.haystack.trace.provider.stores.readers.es.ElasticSearchReader
-import scala.concurrent.ExecutionContext.Implicits.global
 
+import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
 class CassandraEsTraceStore(cassandraConfiguration: CassandraConfiguration, esConfiguration: ElasticSearchConfiguration) extends TraceStore {
   val cassandraReader: CassandraReader = new CassandraReader(cassandraConfiguration)
   val reader: ElasticSearchReader = new ElasticSearchReader(esConfiguration)
 
-  override def getTrace(request: TraceRequest): Future[Trace] = {
-    cassandraReader.readTrace(request.getTraceId)
+  override def getTrace(traceId: String): Future[Trace] = {
+    cassandraReader.readTrace(traceId)
   }
 
   override def searchTraces(request: TracesSearchRequest): Future[TracesSearchResult] = ???

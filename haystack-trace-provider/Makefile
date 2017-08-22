@@ -56,7 +56,7 @@ integration_test: prepare_integration_test_env
 	docker-compose -f build/integration-tests/docker-compose.yml -p sandbox stop
 
 # build jar, docker image and run integration tests
-all: build integration_test
+all: build docker_build integration_test
 
 # build all and release
 REPO := lib/haystack-trace-provider

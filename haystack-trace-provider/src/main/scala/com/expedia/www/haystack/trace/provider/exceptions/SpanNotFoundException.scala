@@ -14,13 +14,8 @@
  *       limitations under the License.
  */
 
-package com.expedia.www.haystack.trace.provider.stores
+package com.expedia.www.haystack.trace.provider.exceptions
 
-import com.expedia.open.tracing.internal._
+import io.grpc.{Status, StatusException}
 
-import scala.concurrent.Future
-
-trait TraceStore {
-  def getTrace(traceId: String): Future[Trace]
-  def searchTraces(request: TracesSearchRequest): Future[TracesSearchResult]
-}
+class SpanNotFoundException extends StatusException(Status.NOT_FOUND.withDescription("spanId not found in trace"))

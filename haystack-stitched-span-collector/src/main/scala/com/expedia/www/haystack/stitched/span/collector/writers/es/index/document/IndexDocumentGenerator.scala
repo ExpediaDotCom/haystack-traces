@@ -17,6 +17,8 @@
 
 package com.expedia.www.haystack.stitched.span.collector.writers.es.index.document
 
+import java.util.function.Supplier
+
 import com.expedia.open.tracing.stitch.StitchedSpan
 import com.expedia.open.tracing.{Span, Tag}
 import com.expedia.www.haystack.stitched.span.collector.config.entities.IndexConfiguration
@@ -24,12 +26,16 @@ import com.expedia.www.haystack.stitched.span.collector.writers.es.index.documen
 import org.apache.commons.lang3.StringUtils
 
 import scala.collection.JavaConversions._
+import scala.collection.immutable.Stream
 import scala.collection.mutable
 import scala.util.{Failure, Random, Success, Try}
 
 class IndexDocumentGenerator(config: IndexConfiguration) {
 
   private val ELASTIC_SEARCH_DOC_ID_SUFFIX_LENGTH = 4
+  private val randomCharStream = ThreadLocal.withInitial(new Supplier[Stream[Char]] {
+    override def get(): Stream[Char] = Random.alphanumeric
+  })
 
   /**
     * we append a random id of length 4 to every elasticSearch index document for a given stitched span.
@@ -42,7 +48,7 @@ class IndexDocumentGenerator(config: IndexConfiguration) {
 
   def createIndexDocument(stitchedSpan: StitchedSpan): Option[Document] = {
     val spanIndices = for(sp <- stitchedSpan.getChildSpansList; if isValidForIndex(sp)) yield transform(sp)
-    val docId = s"${stitchedSpan.getTraceId}_${Random.alphanumeric.take(ELASTIC_SEARCH_DOC_ID_SUFFIX_LENGTH).mkString}"
+    val docId = s"${stitchedSpan.getTraceId}_${randomCharStream.get().take(ELASTIC_SEARCH_DOC_ID_SUFFIX_LENGTH).mkString}"
     if (spanIndices.nonEmpty) Some(Document(docId, StitchedSpanIndex(duration(stitchedSpan), spanIndices))) else None
   }
 

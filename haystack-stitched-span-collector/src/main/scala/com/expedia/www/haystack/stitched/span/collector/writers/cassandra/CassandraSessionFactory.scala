@@ -35,7 +35,7 @@ class CassandraSessionFactory(config: CassandraConfiguration) {
   val session: Session = {
     cluster = buildCluster()
     val newSession = cluster.connect()
-    Schema.ensureExists(config.keyspace, config.tableName, config.cqlSchema, newSession)
+    Schema.ensureExists(config.keyspace, config.tableName, config.autoCreateSchema, newSession)
     newSession.execute("USE " + config.keyspace)
     newSession
   }

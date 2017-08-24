@@ -1,6 +1,13 @@
 # haystack-span-bufferer
-this haystack component buffers the spans for every unique traceId in a given time window(configurable). 
+This haystack component buffers the spans for every unique traceId for a given time window(configurable). 
 The time window for every unique traceId starts with the record timestamp of its first observed child span.
+
+This span buffering approach may provide following advantages: 
+
+* It provides a performance optimization to buffered-span collector that writes these as single document to external stores like Cassandra and ElasticSearch.
+We can potentially reduce the number of write operations to these external stores.
+
+* This can also by used by dependency graph component that uses the child spans to build the right call graph for all the services.
 
 ##Required Reading
  

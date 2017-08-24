@@ -25,9 +25,10 @@ import com.expedia.www.haystack.trace.provider.stores.TraceStore
 import io.grpc.stub.StreamObserver
 
 import scala.collection.JavaConversions._
-import scala.concurrent.ExecutionContext.Implicits.global
 
-class TraceProvider(traceStore: TraceStore) extends TraceProviderGrpc.TraceProviderImplBase {
+import scala.concurrent.ExecutionContextExecutor
+
+class TraceProvider(traceStore: TraceStore)(implicit val executor: ExecutionContextExecutor) extends TraceProviderGrpc.TraceProviderImplBase {
   private val handleGetTraceResponse = new GrpcResponseHandler[Trace](TraceProviderGrpc.METHOD_GET_TRACE.getFullMethodName)
   private val handleGetRawTraceResponse = new GrpcResponseHandler[Trace](TraceProviderGrpc.METHOD_GET_RAW_TRACE.getFullMethodName)
   private val handleGetRawSpanResponse = new GrpcResponseHandler[Span](TraceProviderGrpc.METHOD_GET_RAW_SPAN.getFullMethodName)

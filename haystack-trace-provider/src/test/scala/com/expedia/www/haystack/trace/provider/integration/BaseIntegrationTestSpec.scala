@@ -17,7 +17,7 @@
 package com.expedia.www.haystack.trace.provider.integration
 
 import java.nio.ByteBuffer
-import java.util.Date
+import java.util.{Date, UUID}
 
 import com.datastax.driver.core.querybuilder.QueryBuilder
 import com.datastax.driver.core.{Cluster, Session, SimpleStatement}
@@ -42,7 +42,7 @@ trait BaseIntegrationTestSpec extends FunSpec with GivenWhenThen with Matchers w
     cassandraSession.execute(new SimpleStatement(s"TRUNCATE ${CASSANDRA_TABLE}"))
   }
 
-  protected def putTraceInCassandra(traceId: String, spanId: String = "") = {
+  protected def putTraceInCassandra(traceId: String, spanId: String = UUID.randomUUID().toString) = {
     val stitchedSpan = StitchedSpan
       .newBuilder()
       .addChildSpans(Span

@@ -21,10 +21,9 @@ import com.expedia.www.haystack.trace.provider.config.entities.{CassandraConfigu
 import com.expedia.www.haystack.trace.provider.stores.readers.cassandra.CassandraReader
 import com.expedia.www.haystack.trace.provider.stores.readers.es.ElasticSearchReader
 
-import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContextExecutor, Future}
 
-class CassandraEsTraceStore(cassandraConfiguration: CassandraConfiguration, esConfiguration: ElasticSearchConfiguration) extends TraceStore {
+class CassandraEsTraceStore(cassandraConfiguration: CassandraConfiguration, esConfiguration: ElasticSearchConfiguration)(implicit val executor: ExecutionContextExecutor) extends TraceStore {
   val cassandraReader: CassandraReader = new CassandraReader(cassandraConfiguration)
   val reader: ElasticSearchReader = new ElasticSearchReader(esConfiguration)
 

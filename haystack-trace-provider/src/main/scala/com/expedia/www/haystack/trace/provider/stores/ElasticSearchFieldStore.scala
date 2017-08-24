@@ -18,8 +18,9 @@ package com.expedia.www.haystack.trace.provider.stores
 
 import com.expedia.www.haystack.trace.provider.config.entities.ElasticSearchConfiguration
 import com.expedia.www.haystack.trace.provider.stores.readers.es.ElasticSearchReader
-import scala.concurrent.ExecutionContext.Implicits.global
 
-class ElasticSearchFieldStore(config: ElasticSearchConfiguration) extends FieldStore {
+import scala.concurrent.ExecutionContextExecutor
+
+class ElasticSearchFieldStore(config: ElasticSearchConfiguration)(implicit val executor: ExecutionContextExecutor) extends FieldStore {
   val reader: ElasticSearchReader = new ElasticSearchReader(config)
 }

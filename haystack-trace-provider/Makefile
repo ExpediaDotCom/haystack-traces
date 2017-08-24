@@ -18,7 +18,7 @@ docker_build:
 prepare_integration_test_env: docker_build
 	# prepare environment to run integration tests against
 	docker-compose -f build/integration-tests/docker-compose.yml -p sandbox up -d
-	sleep 60
+	sleep 30
 
 	# prepare cassandra table for haystack-trace-provider to run against
 	docker run \

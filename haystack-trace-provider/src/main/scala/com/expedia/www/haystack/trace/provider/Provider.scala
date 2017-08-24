@@ -29,6 +29,9 @@ object Provider extends MetricsSupport {
   private val LOGGER: Logger = LoggerFactory.getLogger("TraceProvider")
   private var jmxReporter: JmxReporter = _
 
+  // primary executor for service's async tasks
+  implicit private val executor = scala.concurrent.ExecutionContext.Implicits.global
+
   def main(args: Array[String]): Unit = {
     try {
       startJmxReporter()

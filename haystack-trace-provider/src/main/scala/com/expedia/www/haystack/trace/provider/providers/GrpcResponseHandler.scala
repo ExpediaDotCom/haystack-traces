@@ -23,11 +23,10 @@ import io.grpc.Status
 import io.grpc.stub.StreamObserver
 import org.slf4j.{Logger, LoggerFactory}
 
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContextExecutor, Future}
 import scala.util.{Failure, Success}
-import scala.concurrent.ExecutionContext.Implicits.global
 
-class GrpcResponseHandler[Rs](operationName: String) extends MetricsSupport {
+class GrpcResponseHandler[Rs](operationName: String)(implicit val executor: ExecutionContextExecutor) extends MetricsSupport {
   val logger: Logger = LoggerFactory.getLogger(s"${classOf[GrpcResponseHandler[Rs]]}.$operationName")
 
   val timer: Timer = metricRegistry.timer(operationName)

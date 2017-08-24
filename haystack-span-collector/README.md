@@ -1,5 +1,5 @@
-# haystack-stitch-span-collector
-this haystack component collects the stitched spans(complete or partial) for every traceId and write it 
+# haystack-span-collector
+this haystack component collects the span buffers(complete or partial) for every traceId and write it 
 to cassandra(as main store for spans) and elastic search(for indexing).
 
 ##Required Reading

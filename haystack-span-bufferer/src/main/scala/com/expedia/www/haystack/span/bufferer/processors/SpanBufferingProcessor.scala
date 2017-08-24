@@ -1,0 +1,107 @@
+/*
+ *  Copyright 2017 Expedia, Inc.
+ *
+ *     Licensed under the Apache License, Version 2.0 (the "License");
+ *     you may not use this file except in compliance with the License.
+ *     You may obtain a copy of the License at
+ *
+ *         http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *     Unless required by applicable law or agreed to in writing, software
+ *     distributed under the License is distributed on an "AS IS" BASIS,
+ *     WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *     See the License for the specific language governing permissions and
+ *     limitations under the License.
+ *
+ */
+package com.expedia.www.haystack.span.bufferer.processors
+
+import com.expedia.open.tracing.Span
+import com.expedia.open.tracing.buffer.SpanBuffer
+import com.expedia.www.haystack.span.bufferer.StreamTopology
+import com.expedia.www.haystack.span.bufferer.config.entities.SpanBufferConfiguration
+import com.expedia.www.haystack.span.bufferer.store.data.model.BufferedSpanWithMetadata
+import com.expedia.www.haystack.span.bufferer.store.traits.{BufferedSpanKVStore, EldestBufferedSpanEvictionListener}
+import org.apache.kafka.streams.processor.{Processor, ProcessorContext}
+
+import scala.collection.JavaConversions._
+
+class SpanBufferingProcessor(config: SpanBufferConfiguration) extends Processor[String, Span]
+  with EldestBufferedSpanEvictionListener {
+
+  private var context: ProcessorContext = _
+  private var store: BufferedSpanKVStore = _
+
+  /**
+    * initializes the span buffering processor
+    *
+    * @param context processor context object
+    */
+  override def init(context: ProcessorContext): Unit = {
+    this.context = context
+    this.store = context.getStateStore(StreamTopology.STATE_STORE_NAME).asInstanceOf[BufferedSpanKVStore]
+
+    this.store.addEvictionListener(this)
+    this.context.schedule(config.pollIntervalMillis)
+  }
+
+  /**
+    *
+    * @param timestamp the stream's current timestamp.
+    */
+  override def punctuate(timestamp: Long): Unit = {
+    this.store.getAndRemoveSpansOlderThan(timestamp - config.bufferingWindowMillis) foreach {
+      case (key, value) =>
+        val spanBuffer = value.builder.build()
+        forward(key, spanBuffer)
+    }
+  }
+
+  /**
+    * finds the span-buffer object in state store using span's traceId. If not found,
+    * creates a new one, else adds to the child spans
+    *
+    * @param traceId  for spans, partition key always be its traceId
+    * @param span     span object
+    */
+  override def process(traceId: String, span: Span): Unit = {
+    if (span != null) {
+      val value = this.store.get(traceId)
+      if (value == null) {
+        val spanBufferBuilder = SpanBuffer.newBuilder().setTraceId(span.getTraceId).addChildSpans(span)
+        this.store.put(traceId, BufferedSpanWithMetadata(spanBufferBuilder, this.context.timestamp()))
+      } else {
+        // add this span as a child span to existing builder
+        value.builder.addChildSpans(span)
+
+        // put this back in the store to mark it as a state change
+        this.store.put(traceId, value)
+      }
+    }
+  }
+
+  /**
+    * close the processor
+    */
+  override def close(): Unit = ()
+
+  /**
+    * this is called when the store evicts the oldest record due to size constraints,
+    * we forward this record to next processor
+    *
+    * @param traceId   partition key of the spanBuffer ie traceId
+    * @param value     span-buffer protobuf builder
+    */
+  override def onEvict(traceId: String, value: BufferedSpanWithMetadata): Unit = {
+    forward(traceId, value.builder.build())
+  }
+
+  /**
+    * forwards the span buffer to next processor/sink
+    * @param traceId partition key of the spanBuffer ie traceId
+    * @param spanBuffer span buffer proto object
+    */
+  protected def forward(traceId: String, spanBuffer: SpanBuffer): Unit = {
+    this.context.forward(traceId, spanBuffer)
+  }
+}

@@ -1,19 +1,19 @@
-# haystack-span-bufferer
-this haystack component buffers the spans for every unique traceId in a given time window(configurable). 
-The time window for every unique traceId starts with the record timestamp of its first observed child span.
+# haystack-span-collector
+this haystack component collects the span buffers(complete or partial) for every traceId and write it 
+to cassandra(as main store for spans) and elastic search(for indexing).
 
 ##Required Reading
- 
-In order to understand the haystack, we recommend to read the details of [haystack](https://github.com/ExpediaDotCom/haystack) project. 
+
+In order to understand the haystack, we recommend to read the details of [haystack](https://github.com/ExpediaDotCom/haystack) project.
 Its written in kafka-streams(http://docs.confluent.io/current/streams/index.html) and hence some prior knowledge of kafka-streams would be useful.
- 
+
 
 ##Technical Details
 Fill this as we go along..
 
 ## Building
 
-####Prerequisite: 
+####Prerequisite:
 
 * Make sure you have Java 1.8
 * Make sure you have maven 3.3.9 or higher
@@ -32,7 +32,15 @@ make all
 
 ####Integration Test
 
-If you are developing and just want to run integration tests 
+####Prerequisite:
+1. Install docker using Docker Tools or native docker if on mac
+2. Verify if docker-compose is installed by running following command else install it.
+```
+docker-compose
+
+```
+
+Run the inegration tests with
 ```
 make integration_test
 

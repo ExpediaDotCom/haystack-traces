@@ -21,7 +21,7 @@ import com.datastax.driver.core.Session
 object Schema {
   val ID_COLUMN_NAME = "id"
   val TIMESTAMP_COLUMN_NAME = "ts"
-  val STITCHED_SPANS_COLUMNE_NAME = "stitchedspans"
+  val STITCHED_SPANS_COLUMNE_NAME = "spans"
 
   def ensureExists(keyspace: String, tableName: String, session: Session): Unit = {
     val keyspaceMetadata = session.getCluster.getMetadata.getKeyspace(keyspace)

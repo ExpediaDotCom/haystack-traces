@@ -1,0 +1,124 @@
+/*
+ *  Copyright 2017 Expedia, Inc.
+ *
+ *       Licensed under the Apache License, Version 2.0 (the "License");
+ *       you may not use this file except in compliance with the License.
+ *      You may obtain a copy of the License at
+ *
+ *           http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *       Unless required by applicable law or agreed to in writing, software
+ *       distributed under the License is distributed on an "AS IS" BASIS,
+ *       WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *       See the License for the specific language governing permissions and
+ *       limitations under the License.
+ */
+
+package com.expedia.www.haystack.trace.provider.unit.providers.transformers
+
+import com.expedia.open.tracing.Span
+import com.expedia.open.tracing.internal.Trace
+import com.expedia.www.haystack.trace.provider.exceptions.InvalidTraceException
+import com.expedia.www.haystack.trace.provider.providers.transformer.TraceValidator
+import com.expedia.www.haystack.trace.provider.unit.BaseUnitTestSpec
+
+class TraceValidatorSpec extends BaseUnitTestSpec {
+  val TRACE_ID = "traceId"
+
+  describe("TraceValidator") {
+    it("should throw exception for traces with empty traceId") {
+      Given("trace with empty traceId")
+      val trace = Trace.newBuilder().build()
+
+      When("on validate")
+      val thrown = the[InvalidTraceException] thrownBy {
+        TraceValidator.validate(trace)
+      }
+
+      Then("throw InvalidTraceException")
+      thrown.getStatus.getDescription should include("invalid traceId")
+    }
+
+    it("should throw exception for traces with spans having different traceId") {
+      Given("trace with span having different id")
+      val trace = Trace.newBuilder()
+        .setTraceId(TRACE_ID)
+        .addChildSpans(Span.newBuilder().setTraceId("dummy").setSpanId("spanId"))
+        .build()
+
+      When("on validate")
+      val thrown = the[InvalidTraceException] thrownBy {
+        TraceValidator.validate(trace)
+      }
+
+      Then("throw InvalidTraceException")
+      thrown.getStatus.getDescription should include("span with different traceId")
+    }
+
+    it("should throw exception for traces with spans having same id and parent id") {
+      Given("trace with span having same span and parent id")
+      val trace = Trace.newBuilder()
+        .setTraceId(TRACE_ID)
+        .addChildSpans(Span.newBuilder().setTraceId(TRACE_ID).setSpanId("rootSpanId"))
+        .addChildSpans(Span.newBuilder().setTraceId(TRACE_ID).setSpanId("spanId").setParentSpanId("spanId"))
+        .build()
+
+      When("on validate")
+      val thrown = the[InvalidTraceException] thrownBy {
+        TraceValidator.validate(trace)
+      }
+
+      Then("throw InvalidTraceException")
+      thrown.getStatus.getDescription should include("same parent and span id found for a span")
+    }
+
+    it("should throw exception for traces with multiple spans as root") {
+      Given("trace with empty traceId")
+      val trace = Trace.newBuilder()
+        .setTraceId("traceId")
+        .addChildSpans(Span.newBuilder().setTraceId(TRACE_ID).setSpanId("a"))
+        .addChildSpans(Span.newBuilder().setTraceId(TRACE_ID).setSpanId("b"))
+        .build()
+
+      When("on validate")
+      val thrown = the[InvalidTraceException] thrownBy {
+        TraceValidator.validate(trace)
+      }
+
+      Then("throw InvalidTraceException")
+      thrown.getStatus.getDescription should include("found 2 roots")
+    }
+
+    it("should throw exception for traces with spans without parents") {
+      Given("trace with empty traceId")
+      val trace = Trace.newBuilder()
+        .setTraceId(TRACE_ID)
+        .addChildSpans(Span.newBuilder().setTraceId(TRACE_ID).setSpanId("a"))
+        .addChildSpans(Span.newBuilder().setTraceId(TRACE_ID).setSpanId("b").setParentSpanId("x"))
+        .build()
+
+      When("on validate")
+      val thrown = the[InvalidTraceException] thrownBy {
+        TraceValidator.validate(trace)
+      }
+
+      Then("throw InvalidTraceException")
+      thrown.getStatus.getDescription should include("spans without parent found")
+    }
+
+    it("should accept valid traces") {
+      Given("trace with valid spans")
+      val trace = Trace.newBuilder()
+        .setTraceId(TRACE_ID)
+        .addChildSpans(Span.newBuilder().setTraceId(TRACE_ID).setSpanId("a"))
+        .addChildSpans(Span.newBuilder().setTraceId(TRACE_ID).setSpanId("b").setParentSpanId("a"))
+        .addChildSpans(Span.newBuilder().setTraceId(TRACE_ID).setSpanId("c").setParentSpanId("a"))
+        .build()
+
+      When("on validate")
+      TraceValidator.validate(trace)
+
+      Then("accept trace")
+    }
+  }
+}

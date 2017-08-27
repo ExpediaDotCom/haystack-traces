@@ -17,20 +17,20 @@
 package com.expedia.www.haystack.trace.provider.serde
 
 import com.codahale.metrics.Meter
-import com.expedia.open.tracing.stitch.StitchedSpan
+import com.expedia.open.tracing.buffer.SpanBuffer
 import com.expedia.www.haystack.trace.provider.metrics.MetricsSupport
 
-object StitchedSpanDeserializer extends MetricsSupport {
-  protected val deserFailure: Meter = metricRegistry.meter("stitched.span.deser.failure")
+object SpanBufferDeserializer extends MetricsSupport {
+  protected val deserFailure: Meter = metricRegistry.meter("span.buffer.deser.failure")
 }
 
-class StitchedSpanDeserializer  {
-  def deserialize(data: Array[Byte]): StitchedSpan = {
+class SpanBufferDeserializer  {
+  def deserialize(data: Array[Byte]): SpanBuffer = {
     try {
-      if(data == null || data.length > 0) StitchedSpan.parseFrom(data) else null
+      if(data == null || data.length > 0) SpanBuffer.parseFrom(data) else null
     } catch {
       case _: Exception =>
-        StitchedSpanDeserializer.deserFailure.mark()
+        SpanBufferDeserializer.deserFailure.mark()
         null
     }
   }

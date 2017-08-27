@@ -21,7 +21,7 @@ import com.datastax.driver.core.ResultSetFuture
 import com.expedia.open.tracing.internal.Trace
 import com.expedia.www.haystack.trace.provider.exceptions.TraceNotFoundException
 import com.expedia.www.haystack.trace.provider.metrics.MetricsSupport
-import com.expedia.www.haystack.trace.provider.serde.StitchedSpanDeserializer
+import com.expedia.www.haystack.trace.provider.serde.SpanBufferDeserializer
 import org.slf4j.{Logger, LoggerFactory}
 
 import scala.collection.JavaConversions._
@@ -39,7 +39,7 @@ class CassandraReadResultListener(asyncResult: ResultSetFuture,
                                   promise: Promise[Trace]) extends Runnable {
   import CassandraReadResultListener._
 
-  val deserializer = new StitchedSpanDeserializer
+  val deserializer = new SpanBufferDeserializer
 
   override def run(): Unit = {
     try {
@@ -67,11 +67,11 @@ class CassandraReadResultListener(asyncResult: ResultSetFuture,
     }
   }
 
-  private def extractTrace(rawStitchedSpans: Array[Byte]): Trace = {
-    val stitchedSpans = deserializer.deserialize(rawStitchedSpans)
+  private def extractTrace(rawSpans: Array[Byte]): Trace = {
+    val spans = deserializer.deserialize(rawSpans)
     Trace.newBuilder()
-      .setTraceId(stitchedSpans.getTraceId)
-      .addAllChildSpans(stitchedSpans.getChildSpansList)
+      .setTraceId(spans.getTraceId)
+      .addAllChildSpans(spans.getChildSpansList)
       .build()
   }
 }

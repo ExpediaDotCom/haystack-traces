@@ -14,26 +14,14 @@
  *       limitations under the License.
  */
 
-package com.expedia.www.haystack.trace.provider.providers.transformer
+package com.expedia.www.haystack.trace.provider.providers.transformers
 
 import com.expedia.open.tracing.Span
-import com.expedia.open.tracing.internal.Trace
+import com.expedia.www.haystack.trace.provider.providers.transformer.TraceTransformer
 
-import scala.collection.JavaConversions._
-
-class TraceTransformationHandler(transformers: Seq[TraceTransformer]) {
-  private val transformerChain = Function.chain(
-    transformers
-      .foldLeft(Seq[List[Span] => List[Span]]())((seq, t) => seq :+ t.transform _))
-
-  def transform(trace: Trace): Trace = {
-    TraceValidator.validate(trace)
-    val transformedSpans = transformerChain.apply(trace.getChildSpansList.toList)
-
-    Trace
-      .newBuilder()
-      .setTraceId(trace.getTraceId)
-      .addAllChildSpans(transformedSpans)
-      .build()
+class SortSpanTransformer extends TraceTransformer {
+  override def transform(spans: List[Span]): List[Span] = {
+    // root followed by other spans ordered by start time
+    spans.find(_.getParentSpanId.isEmpty).get :: spans.filterNot(_.getParentSpanId.isEmpty).sortBy(_.getStartTime)
   }
 }

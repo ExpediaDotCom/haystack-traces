@@ -20,12 +20,11 @@ import com.expedia.open.tracing.Span
 import com.expedia.open.tracing.internal._
 import com.expedia.www.haystack.trace.provider.exceptions.SpanNotFoundException
 import com.expedia.www.haystack.trace.provider.providers.transformer.{ClockSkewTransformer, PartialSpanTransformer, TraceTransformationHandler}
-import com.expedia.www.haystack.trace.provider.providers.transformers.EnrichSpanTransformer
+import com.expedia.www.haystack.trace.provider.providers.transformers.{EnrichSpanTransformer, SortSpanTransformer}
 import com.expedia.www.haystack.trace.provider.stores.TraceStore
 import io.grpc.stub.StreamObserver
 
 import scala.collection.JavaConversions._
-
 import scala.concurrent.ExecutionContextExecutor
 
 class TraceProvider(traceStore: TraceStore)(implicit val executor: ExecutionContextExecutor) extends TraceProviderGrpc.TraceProviderImplBase {
@@ -36,8 +35,9 @@ class TraceProvider(traceStore: TraceStore)(implicit val executor: ExecutionCont
 
   private val transformationHandler = new TraceTransformationHandler(Seq(
     new EnrichSpanTransformer(),
+    new ClockSkewTransformer(),
     new PartialSpanTransformer(),
-    new ClockSkewTransformer()))
+    new SortSpanTransformer))
 
   override def getTrace(request: TraceRequest, responseObserver: StreamObserver[Trace]): Unit = {
     handleGetTraceResponse.handle(responseObserver) {

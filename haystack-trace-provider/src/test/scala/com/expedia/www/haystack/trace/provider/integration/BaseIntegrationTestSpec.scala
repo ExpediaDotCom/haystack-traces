@@ -22,7 +22,7 @@ import java.util.{Date, UUID}
 import com.datastax.driver.core.querybuilder.QueryBuilder
 import com.datastax.driver.core.{Cluster, Session, SimpleStatement}
 import com.expedia.open.tracing.Span
-import com.expedia.open.tracing.stitch.StitchedSpan
+import com.expedia.open.tracing.buffer.SpanBuffer
 import com.expedia.www.haystack.trace.provider.stores.readers.cassandra.Schema._
 import org.scalatest._
 
@@ -43,7 +43,7 @@ trait BaseIntegrationTestSpec extends FunSpec with GivenWhenThen with Matchers w
   }
 
   protected def putTraceInCassandra(traceId: String, spanId: String = UUID.randomUUID().toString) = {
-    val stitchedSpan = StitchedSpan
+    val spanBuffer = SpanBuffer
       .newBuilder()
       .addChildSpans(Span
         .newBuilder()
@@ -57,6 +57,6 @@ trait BaseIntegrationTestSpec extends FunSpec with GivenWhenThen with Matchers w
       .insertInto(CASSANDRA_TABLE)
       .value(ID_COLUMN_NAME, traceId)
       .value(TIMESTAMP_COLUMN_NAME, new Date())
-      .value(STITCHED_SPANS_COLUMNE_NAME, ByteBuffer.wrap(stitchedSpan.toByteArray)))
+      .value(STITCHED_SPANS_COLUMNE_NAME, ByteBuffer.wrap(spanBuffer.toByteArray)))
   }
 }

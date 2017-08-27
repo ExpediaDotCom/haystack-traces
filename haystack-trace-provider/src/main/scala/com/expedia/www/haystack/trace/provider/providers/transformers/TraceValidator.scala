@@ -24,7 +24,7 @@ import scala.collection.JavaConversions._
 
 object TraceValidator {
   private def onlyOneSpanHasLoopback(spans: List[Span]): Unit = {
-    val rootCount = spans.count(span => span.getParentSpanId == null || span.getParentSpanId.isEmpty)
+    val rootCount = spans.count(_.getParentSpanId.isEmpty)
     if (rootCount != 1)
       throw new InvalidTraceException(s"found $rootCount roots")
   }
@@ -40,18 +40,18 @@ object TraceValidator {
   }
 
   private def noSpanHasSameParentAndSpanIds(spans: List[Span]): Unit =
-    if (spans.forall(span => !span.getSpanId.equals(span.getParentSpanId)))
-      throw new InvalidTraceException("invalid traceId")
+    if (!spans.forall(span => span.getSpanId != span.getParentSpanId))
+      throw new InvalidTraceException("same parent and span id found for a span")
 
   def validate(trace: Trace) = {
     // non-empty traceId
-    if (trace.getTraceId == null || trace.getTraceId.isEmpty)
+    if (trace.getTraceId.isEmpty)
       throw new InvalidTraceException("invalid traceId")
 
     // all spans must have the same traceId
     val spans = trace.getChildSpansList.toList
     if (!spans.forall(_.getTraceId.equals(trace.getTraceId)))
-      throw new InvalidTraceException("span with same spanId and traceId are not allowed")
+      throw new InvalidTraceException("span with different traceId are not allowed")
 
     noSpanHasSameParentAndSpanIds(spans)
 

@@ -20,7 +20,7 @@ const client = new cassandra.Client({contactPoints: ['cassandra']});
 
 client.execute("CREATE KEYSPACE IF NOT EXISTS haystack WITH REPLICATION = { 'class': 'SimpleStrategy', 'replication_factor' : 1} AND durable_writes = false")
     .then(() => client.execute("USE haystack"))
-    .then(() => client.execute("CREATE TABLE traces (id varchar, ts timestamp, stitchedspans blob, PRIMARY KEY ((id), ts)) WITH CLUSTERING ORDER BY (ts ASC)"))
+    .then(() => client.execute("CREATE TABLE traces (id varchar, ts timestamp, spans blob, PRIMARY KEY ((id), ts)) WITH CLUSTERING ORDER BY (ts ASC)"))
     .then(() => client.execute("ALTER TABLE traces WITH compaction = { 'class' :  'DateTieredCompactionStrategy'  }"))
     .then(() => {
         client.shutdown();

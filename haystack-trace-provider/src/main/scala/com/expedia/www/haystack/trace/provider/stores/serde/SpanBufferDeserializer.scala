@@ -14,7 +14,7 @@
  *       limitations under the License.
  */
 
-package com.expedia.www.haystack.trace.provider.serde
+package com.expedia.www.haystack.trace.provider.stores.serde
 
 import com.codahale.metrics.Meter
 import com.expedia.open.tracing.buffer.SpanBuffer

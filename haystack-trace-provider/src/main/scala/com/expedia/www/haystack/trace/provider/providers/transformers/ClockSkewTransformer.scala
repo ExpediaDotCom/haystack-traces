@@ -17,35 +17,40 @@
 package com.expedia.www.haystack.trace.provider.providers.transformer
 
 import com.expedia.open.tracing.Span
+import com.expedia.www.haystack.trace.provider.providers.transformers.PartialSpan
 
 class ClockSkewTransformer extends TraceTransformer {
+  // extracting direct child of give span
+  // in case of partial spans, pick the client span, server span is considered as child of client span
   private def filterDirectChildren(parentSpanId: String, descendants: List[Span]): List[Span] = {
     descendants
       .filter(span => span.getParentSpanId == parentSpanId || span.getSpanId == parentSpanId)
       .groupBy(_.getSpanId)
-      .mapValues((partialSpans) => partialSpans.sortBy(_.getStartTime).head)
+      .mapValues((partialSpans) =>
+        if(partialSpans.length > 1) new PartialSpan(partialSpans(0), partialSpans(1)).clientSpan
+        else partialSpans(0))
       .values.toList
   }
 
-  private def addSkewRec(parent: Span, spans: List[Span], skew: Long): scala.List[Span] = {
-    val descendants = spans.filterNot(parent == _)
-    val children = filterDirectChildren(parent.getSpanId, descendants)
+  private def addSkewInSubtree(root: Span, descendants: List[Span], skew: Long): scala.List[Span] = {
+    val children = filterDirectChildren(root.getSpanId, descendants)
 
-    val skewAdjustedParent = if (skew > 0)
-      Span.newBuilder(parent).setStartTime(parent.getStartTime + skew).build()
-    else
-      parent
+    val skewAdjustedRoot =
+      if (skew > 0) Span.newBuilder(root).setStartTime(root.getStartTime + skew).build()
+      else root
 
-    skewAdjustedParent ::
+    skewAdjustedRoot ::
       children.flatMap(
         child => {
-          val delta = if (parent.getStartTime - child.getStartTime > 0) parent.getStartTime - child.getStartTime else 0
-          addSkewRec(child, descendants, skew + delta)
+          val delta =
+            if (root.getStartTime > child.getStartTime) root.getStartTime - child.getStartTime
+            else 0
+          addSkewInSubtree(child, descendants.filterNot(child == _), skew + delta)
         })
   }
 
   override def transform(spans: List[Span]): List[Span] = {
     val root = spans.find(_.getParentSpanId.isEmpty).get
-    addSkewRec(root, spans, 0)
+    addSkewInSubtree(root, spans.filterNot(root == _), 0)
   }
 }

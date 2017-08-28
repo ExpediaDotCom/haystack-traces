@@ -22,10 +22,10 @@ import com.expedia.www.haystack.trace.provider.unit.BaseUnitTestSpec
 
 class PartialSpanTransformerSpec extends BaseUnitTestSpec {
 
-  def createSpansWithClientAndServer() = {
+  def createSpansWithClientAndServer(timestamp: Long) = {
     val traceId = "traceId"
     val partialSpanId = "partialSpanId"
-    val parentSpanId = "rootSpanId"
+    val parentSpanId = "parentSpanId"
     val tag = Tag.newBuilder().setKey("tag").setVBool(true).build()
     val log = Log.newBuilder().setTimestamp(System.currentTimeMillis).addFields(tag).build()
 
@@ -33,7 +33,7 @@ class PartialSpanTransformerSpec extends BaseUnitTestSpec {
       .setSpanId(partialSpanId)
       .setParentSpanId(parentSpanId)
       .setTraceId(traceId)
-      .setStartTime(System.currentTimeMillis)
+      .setStartTime(timestamp)
       .setDuration(1000)
       .addTags(tag)
       .addLogs(log)
@@ -43,7 +43,7 @@ class PartialSpanTransformerSpec extends BaseUnitTestSpec {
       .setSpanId(partialSpanId)
       .setParentSpanId(parentSpanId)
       .setTraceId(traceId)
-      .setStartTime(System.currentTimeMillis + 20)
+      .setStartTime(timestamp + 20)
       .setDuration(980)
       .addTags(tag)
       .addLogs(log)
@@ -55,13 +55,15 @@ class PartialSpanTransformerSpec extends BaseUnitTestSpec {
   describe("PartialSpanTransformer") {
     it("should merge partial spans") {
       Given("trace with partial spans")
-      val spans = createSpansWithClientAndServer()
+      val timestamp = 150000000000l
+      val spans = createSpansWithClientAndServer(timestamp)
 
       When("invoking transform")
       val mergedSpans = new PartialSpanTransformer().transform(spans)
 
       Then("return partial spans merged")
       mergedSpans.length should be(1)
+      mergedSpans(0).getStartTime should be(timestamp)
       mergedSpans(0).getTagsCount should be(2)
       mergedSpans(0).getLogsCount should be(2)
     }

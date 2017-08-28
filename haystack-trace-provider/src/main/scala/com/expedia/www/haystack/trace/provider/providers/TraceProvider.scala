@@ -20,7 +20,7 @@ import com.expedia.open.tracing.Span
 import com.expedia.open.tracing.internal._
 import com.expedia.www.haystack.trace.provider.exceptions.SpanNotFoundException
 import com.expedia.www.haystack.trace.provider.providers.transformer.{ClockSkewTransformer, PartialSpanTransformer, TraceTransformationHandler}
-import com.expedia.www.haystack.trace.provider.providers.transformers.{EnrichSpanTransformer, SortSpanTransformer}
+import com.expedia.www.haystack.trace.provider.providers.transformers.SortSpanTransformer
 import com.expedia.www.haystack.trace.provider.stores.TraceStore
 import io.grpc.stub.StreamObserver
 
@@ -34,7 +34,6 @@ class TraceProvider(traceStore: TraceStore)(implicit val executor: ExecutionCont
   private val handleSearchResponse = new GrpcResponseHandler[TracesSearchResult](TraceProviderGrpc.METHOD_SEARCH_TRACES.getFullMethodName)
 
   private val transformationHandler = new TraceTransformationHandler(Seq(
-    new EnrichSpanTransformer(),
     new ClockSkewTransformer(),
     new PartialSpanTransformer(),
     new SortSpanTransformer))

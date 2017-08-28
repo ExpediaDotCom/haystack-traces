@@ -21,7 +21,7 @@ import com.datastax.driver.core.ResultSetFuture
 import com.expedia.open.tracing.internal.Trace
 import com.expedia.www.haystack.trace.provider.exceptions.TraceNotFoundException
 import com.expedia.www.haystack.trace.provider.metrics.MetricsSupport
-import com.expedia.www.haystack.trace.provider.serde.SpanBufferDeserializer
+import com.expedia.www.haystack.trace.provider.stores.serde.SpanBufferDeserializer
 import org.slf4j.{Logger, LoggerFactory}
 
 import scala.collection.JavaConversions._

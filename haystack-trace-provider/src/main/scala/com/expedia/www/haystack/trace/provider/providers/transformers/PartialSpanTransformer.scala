@@ -17,27 +17,13 @@
 package com.expedia.www.haystack.trace.provider.providers.transformer
 
 import com.expedia.open.tracing.Span
-import com.expedia.www.haystack.trace.provider.exceptions.InvalidTraceException
-
-import scala.collection.JavaConversions._
+import com.expedia.www.haystack.trace.provider.providers.transformers.PartialSpan
 
 class PartialSpanTransformer extends TraceTransformer {
-  private def merge(clientSpan: Span, serverSpan: Span): Span = {
-    Span
-      .newBuilder(clientSpan)
-      .addAllTags(serverSpan.getTagsList)
-      .clearLogs().addAllLogs(clientSpan.getLogsList ++ serverSpan.getLogsList sortBy (_.getTimestamp))
-      .build()
-  }
-
   override def transform(spans: List[Span]): List[Span] = {
     spans.groupBy(_.getSpanId).map((pair) => pair._2 match {
       case List(span: Span) => span
-      case List(firstSpan: Span, secondSpan: Span) => {
-        val orderedSpans = Seq[Span](firstSpan, secondSpan).sortBy(_.getStartTime)
-        merge(orderedSpans(0), orderedSpans(1))
-      }
-      case _ => throw new InvalidTraceException("more then 2 spans have same spanIds")
+      case List(first: Span, second: Span) => new PartialSpan(first, second).mergedSpan
     }).toList
   }
 }

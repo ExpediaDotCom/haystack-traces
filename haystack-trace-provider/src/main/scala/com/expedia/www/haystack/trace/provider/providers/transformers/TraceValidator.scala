@@ -21,42 +21,50 @@ import com.expedia.open.tracing.internal.Trace
 import com.expedia.www.haystack.trace.provider.exceptions.InvalidTraceException
 
 import scala.collection.JavaConversions._
+import scala.util.Try
 
 object TraceValidator {
-  private def onlyOneSpanHasLoopback(spans: List[Span]): Unit = {
+
+  private def hasNonEmptyTraceId(traceId: String) = {
+    if (traceId.isEmpty)
+      throw new InvalidTraceException("invalid traceId")
+  }
+
+  private def allSpansHaveAValidParent(spans: List[Span]): Unit = {
+    val spanIdSet = spans.foldLeft(Set[String]())((set, span) => set + span.getSpanId)
+    if (!spans.forall(span => spanIdSet.contains(span.getParentSpanId) || span.getParentSpanId.isEmpty))
+      throw new InvalidTraceException("spans without parent found")
+  }
+
+  private def noSpanHasSameParentIdAndSpanId(spans: List[Span]): Unit = {
+    if (!spans.forall(span => span.getSpanId != span.getParentSpanId))
+      throw new InvalidTraceException("same parent and span id found for a span")
+  }
+
+  private def onlyOneSpanIsRoot(spans: List[Span]): Unit = {
     val rootCount = spans.count(_.getParentSpanId.isEmpty)
     if (rootCount != 1)
       throw new InvalidTraceException(s"found $rootCount roots")
   }
 
-  private def spansHaveAValidParent(spans: List[Span]): Unit = {
-    val spanIdSet = spans.foldLeft(Set[String]())((set, span) =>
-      if (span.getSpanId == null)
-        set
-      else
-        set + span.getSpanId)
-    if (spans.forall(span => span.getSpanId == null || spanIdSet.contains(span.getParentSpanId)))
-      throw new InvalidTraceException("spans without parent found")
+  private def allSpansHaveSameTraceId(spans: List[Span], traceId: String) = {
+    if (!spans.forall(_.getTraceId.equals(traceId)))
+      throw new InvalidTraceException("span with different traceId are not allowed")
   }
 
-  private def noSpanHasSameParentAndSpanIds(spans: List[Span]): Unit =
-    if (!spans.forall(span => span.getSpanId != span.getParentSpanId))
-      throw new InvalidTraceException("same parent and span id found for a span")
-
-  def validate(trace: Trace) = {
-    // non-empty traceId
-    if (trace.getTraceId.isEmpty)
-      throw new InvalidTraceException("invalid traceId")
-
-    // all spans must have the same traceId
+  def validate(trace: Trace): Try[Unit] = {
     val spans = trace.getChildSpansList.toList
-    if (!spans.forall(_.getTraceId.equals(trace.getTraceId)))
-      throw new InvalidTraceException("span with different traceId are not allowed")
 
-    noSpanHasSameParentAndSpanIds(spans)
+    Try {
+      hasNonEmptyTraceId(trace.getTraceId)
 
-    onlyOneSpanHasLoopback(spans)
+      allSpansHaveSameTraceId(spans, trace.getTraceId)
 
-    spansHaveAValidParent(spans)
+      noSpanHasSameParentIdAndSpanId(spans)
+
+      onlyOneSpanIsRoot(spans)
+
+      allSpansHaveAValidParent(spans)
+    }
   }
 }

@@ -26,13 +26,13 @@ import org.slf4j.{Logger, LoggerFactory}
 import scala.concurrent.{ExecutionContextExecutor, Future}
 import scala.util.{Failure, Success}
 
-class GrpcResponseHandler[Rs](operationName: String)(implicit val executor: ExecutionContextExecutor) extends MetricsSupport {
-  val logger: Logger = LoggerFactory.getLogger(s"${classOf[GrpcResponseHandler[Rs]]}.$operationName")
+class GrpcResponseHandler(operationName: String)(implicit val executor: ExecutionContextExecutor) extends MetricsSupport {
+  val logger: Logger = LoggerFactory.getLogger(s"${classOf[GrpcResponseHandler]}.$operationName")
 
   val timer: Timer = metricRegistry.timer(operationName)
   val failures: Meter = metricRegistry.meter(s"${operationName}.failures")
 
-  def handle(responseObserver: StreamObserver[Rs])
+  def handle[Rs](responseObserver: StreamObserver[Rs])
             (op: => Future[Rs]) = {
     val time = timer.time()
     var responseFutureOption = None: Option[Future[Rs]]
@@ -40,10 +40,10 @@ class GrpcResponseHandler[Rs](operationName: String)(implicit val executor: Exec
     try {
       responseFutureOption = Some(op)
     } catch {
-      case th: Throwable =>
-        responseObserver.onError(Status.fromThrowable(th).asRuntimeException())
+      case ex: Exception =>
+        responseObserver.onError(Status.fromThrowable(ex).asRuntimeException())
         failures.mark()
-        logger.error("service invocation failed", th)
+        logger.error("service invocation failed", ex)
     } finally {
       if (responseFutureOption.isDefined) {
         handlerResponseFuture(responseFutureOption.get, responseObserver, time)

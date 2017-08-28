@@ -31,7 +31,7 @@
         <aws.sdk.version>1.11.20</aws.sdk.version>
         <httpclient.version>4.5.3</httpclient.version>
 
-        <mainClass>com.expedia.www.haystack.trace.provider.Provider</mainClass>
+        <mainClass>com.expedia.www.haystack.trace.provider.Service</mainClass>
     </properties>
 
     <dependencies>

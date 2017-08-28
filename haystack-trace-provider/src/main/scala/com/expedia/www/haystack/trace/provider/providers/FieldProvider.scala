@@ -17,10 +17,10 @@
 package com.expedia.www.haystack.trace.provider.providers
 
 import com.expedia.open.tracing.internal._
-import com.expedia.www.haystack.trace.provider.stores.FieldStore
+import com.expedia.www.haystack.trace.provider.stores.TraceStore
 import io.grpc.stub.StreamObserver
 
-class FieldProvider(fieldStore: FieldStore) extends FieldProviderGrpc.FieldProviderImplBase {
+class FieldProvider(traceStore: TraceStore) extends FieldProviderGrpc.FieldProviderImplBase {
   override def getFieldNames(request: Empty, responseObserver: StreamObserver[FieldNames]): Unit = ???
   override def getFieldCardinality(request: FieldQuery, responseObserver: StreamObserver[FieldCardinality]): Unit = ???
   override def getFieldValues(request: FieldQuery, responseObserver: StreamObserver[FieldValues]): Unit = ???

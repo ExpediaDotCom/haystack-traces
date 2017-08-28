@@ -20,20 +20,24 @@ import com.expedia.open.tracing.Span
 import com.expedia.open.tracing.internal.Trace
 
 import scala.collection.JavaConversions._
+import scala.util.{Failure, Success, Try}
 
 class TraceTransformationHandler(transformers: Seq[TraceTransformer]) {
   private val transformerChain = Function.chain(
     transformers
       .foldLeft(Seq[List[Span] => List[Span]]())((seq, t) => seq :+ t.transform _))
 
-  def transform(trace: Trace): Trace = {
-    TraceValidator.validate(trace)
-    val transformedSpans = transformerChain.apply(trace.getChildSpansList.toList)
+  def transform(trace: Trace): Try[Trace] = {
+    TraceValidator.validate(trace) match {
+      case Success(_) =>
+        val transformedSpans = transformerChain.apply(trace.getChildSpansList.toList)
+        Success(Trace
+          .newBuilder()
+          .setTraceId(trace.getTraceId)
+          .addAllChildSpans(transformedSpans)
+          .build())
 
-    Trace
-      .newBuilder()
-      .setTraceId(trace.getTraceId)
-      .addAllChildSpans(transformedSpans)
-      .build()
+      case Failure(ex) => Failure(ex)
+    }
   }
 }

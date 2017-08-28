@@ -19,7 +19,7 @@ package com.expedia.www.haystack.trace.provider.providers
 import com.expedia.open.tracing.Span
 import com.expedia.open.tracing.internal._
 import com.expedia.www.haystack.trace.provider.exceptions.SpanNotFoundException
-import com.expedia.www.haystack.trace.provider.providers.transformer.{ClockSkewTransformer, PartialSpanTransformer, TraceTransformationHandler}
+import com.expedia.www.haystack.trace.provider.providers.transformer.{ClockSkewTransformer, PartialSpanTransformer, TraceTransformationHandler, TraceValidator}
 import com.expedia.www.haystack.trace.provider.providers.transformers.SortSpanTransformer
 import com.expedia.www.haystack.trace.provider.stores.TraceStore
 import io.grpc.stub.StreamObserver
@@ -28,21 +28,21 @@ import scala.collection.JavaConversions._
 import scala.concurrent.ExecutionContextExecutor
 
 class TraceProvider(traceStore: TraceStore)(implicit val executor: ExecutionContextExecutor) extends TraceProviderGrpc.TraceProviderImplBase {
-  private val handleGetTraceResponse = new GrpcResponseHandler[Trace](TraceProviderGrpc.METHOD_GET_TRACE.getFullMethodName)
-  private val handleGetRawTraceResponse = new GrpcResponseHandler[Trace](TraceProviderGrpc.METHOD_GET_RAW_TRACE.getFullMethodName)
-  private val handleGetRawSpanResponse = new GrpcResponseHandler[Span](TraceProviderGrpc.METHOD_GET_RAW_SPAN.getFullMethodName)
-  private val handleSearchResponse = new GrpcResponseHandler[TracesSearchResult](TraceProviderGrpc.METHOD_SEARCH_TRACES.getFullMethodName)
+  private val handleGetTraceResponse = new GrpcResponseHandler(TraceProviderGrpc.METHOD_GET_TRACE.getFullMethodName)
+  private val handleGetRawTraceResponse = new GrpcResponseHandler(TraceProviderGrpc.METHOD_GET_RAW_TRACE.getFullMethodName)
+  private val handleGetRawSpanResponse = new GrpcResponseHandler(TraceProviderGrpc.METHOD_GET_RAW_SPAN.getFullMethodName)
+  private val handleSearchResponse = new GrpcResponseHandler(TraceProviderGrpc.METHOD_SEARCH_TRACES.getFullMethodName)
 
   private val transformationHandler = new TraceTransformationHandler(Seq(
-    new ClockSkewTransformer(),
     new PartialSpanTransformer(),
+    new ClockSkewTransformer(),
     new SortSpanTransformer))
 
   override def getTrace(request: TraceRequest, responseObserver: StreamObserver[Trace]): Unit = {
     handleGetTraceResponse.handle(responseObserver) {
       traceStore
         .getTrace(request.getTraceId)
-        .map(transformationHandler.transform)
+        .map(transformationHandler.transform(_).get)
     }
   }
 

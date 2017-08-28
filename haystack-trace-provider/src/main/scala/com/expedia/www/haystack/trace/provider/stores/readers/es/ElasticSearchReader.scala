@@ -20,4 +20,6 @@ import com.expedia.www.haystack.trace.provider.config.entities.ElasticSearchConf
 import com.expedia.www.haystack.trace.provider.metrics.MetricsSupport
 import scala.concurrent.ExecutionContextExecutor
 
-class ElasticSearchReader(config: ElasticSearchConfiguration)(implicit val dispatcher: ExecutionContextExecutor) extends MetricsSupport
+class ElasticSearchReader(config: ElasticSearchConfiguration)(implicit val dispatcher: ExecutionContextExecutor) extends MetricsSupport with AutoCloseable {
+  override def close(): Unit = ???
+}

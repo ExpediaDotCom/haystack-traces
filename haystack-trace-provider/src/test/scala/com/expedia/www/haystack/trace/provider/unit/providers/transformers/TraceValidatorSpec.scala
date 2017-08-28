@@ -31,11 +31,10 @@ class TraceValidatorSpec extends BaseUnitTestSpec {
       val trace = Trace.newBuilder().build()
 
       When("on validate")
-      val thrown = the[InvalidTraceException] thrownBy {
-        TraceValidator.validate(trace)
-      }
+      val validationResult = TraceValidator.validate(trace)
 
       Then("throw InvalidTraceException")
+      val thrown = the[InvalidTraceException] thrownBy validationResult.get
       thrown.getStatus.getDescription should include("invalid traceId")
     }
 
@@ -47,11 +46,10 @@ class TraceValidatorSpec extends BaseUnitTestSpec {
         .build()
 
       When("on validate")
-      val thrown = the[InvalidTraceException] thrownBy {
-        TraceValidator.validate(trace)
-      }
+      val validationResult = TraceValidator.validate(trace)
 
       Then("throw InvalidTraceException")
+      val thrown = the[InvalidTraceException] thrownBy validationResult.get
       thrown.getStatus.getDescription should include("span with different traceId")
     }
 
@@ -64,11 +62,10 @@ class TraceValidatorSpec extends BaseUnitTestSpec {
         .build()
 
       When("on validate")
-      val thrown = the[InvalidTraceException] thrownBy {
-        TraceValidator.validate(trace)
-      }
+      val validationResult = TraceValidator.validate(trace)
 
       Then("throw InvalidTraceException")
+      val thrown = the[InvalidTraceException] thrownBy validationResult.get
       thrown.getStatus.getDescription should include("same parent and span id found for a span")
     }
 
@@ -81,11 +78,10 @@ class TraceValidatorSpec extends BaseUnitTestSpec {
         .build()
 
       When("on validate")
-      val thrown = the[InvalidTraceException] thrownBy {
-        TraceValidator.validate(trace)
-      }
+      val validationResult = TraceValidator.validate(trace)
 
       Then("throw InvalidTraceException")
+      val thrown = the[InvalidTraceException] thrownBy validationResult.get
       thrown.getStatus.getDescription should include("found 2 roots")
     }
 
@@ -98,11 +94,10 @@ class TraceValidatorSpec extends BaseUnitTestSpec {
         .build()
 
       When("on validate")
-      val thrown = the[InvalidTraceException] thrownBy {
-        TraceValidator.validate(trace)
-      }
+      val validationResult = TraceValidator.validate(trace)
 
       Then("throw InvalidTraceException")
+      val thrown = the[InvalidTraceException] thrownBy validationResult.get
       thrown.getStatus.getDescription should include("spans without parent found")
     }
 
@@ -116,9 +111,10 @@ class TraceValidatorSpec extends BaseUnitTestSpec {
         .build()
 
       When("on validate")
-      TraceValidator.validate(trace)
+      val validationResult = TraceValidator.validate(trace)
 
       Then("accept trace")
+      noException should be thrownBy(validationResult.get)
     }
   }
 }

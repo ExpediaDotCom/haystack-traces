@@ -25,11 +25,16 @@ import scala.concurrent.{ExecutionContextExecutor, Future}
 
 class CassandraEsTraceStore(cassandraConfiguration: CassandraConfiguration, esConfiguration: ElasticSearchConfiguration)(implicit val executor: ExecutionContextExecutor) extends TraceStore {
   val cassandraReader: CassandraReader = new CassandraReader(cassandraConfiguration)
-  val reader: ElasticSearchReader = new ElasticSearchReader(esConfiguration)
+  val esReader: ElasticSearchReader = new ElasticSearchReader(esConfiguration)
 
   override def getTrace(traceId: String): Future[Trace] = {
     cassandraReader.readTrace(traceId)
   }
 
   override def searchTraces(request: TracesSearchRequest): Future[TracesSearchResult] = ???
+
+  override def close(): Unit = {
+    cassandraReader.close()
+    esReader.close()
+  }
 }

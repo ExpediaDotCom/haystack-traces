@@ -48,13 +48,14 @@ class PartialSpan(first: Span, second: Span) {
       Seq[Span](first, second).min(Ordering.by((span: Span) => span.getStartTime)) == first
   }
 
-  val clientSpan: Span = if (isFirstClient) first else second
+  lazy val clientSpan: Span = if (isFirstClient) first else second
 
-  val serverSpan: Span = if (isFirstClient) second else first
+  lazy val serverSpan: Span = if (isFirstClient) second else first
 
   lazy val mergedSpan: Span = {
     Span
       .newBuilder(clientSpan)
+      .setStartTime(Seq(clientSpan.getStartTime, serverSpan.getStartTime).min)
       .addAllTags(serverSpan.getTagsList)
       .clearLogs().addAllLogs(clientSpan.getLogsList ++ serverSpan.getLogsList sortBy (_.getTimestamp))
       .build()

@@ -70,14 +70,6 @@ class ClockSkewTransformerSpec extends BaseUnitTestSpec {
       .setDuration(100)
       .build()
 
-    val spanEPrime = Span.newBuilder()
-      .setSpanId("e")
-      .setParentSpanId("b")
-      .setTraceId(traceId)
-      .setStartTime(spanE.getStartTime + 10)
-      .setDuration(100)
-      .build()
-
     val spanF = Span.newBuilder()
       .setSpanId("f")
       .setParentSpanId("b")
@@ -110,7 +102,7 @@ class ClockSkewTransformerSpec extends BaseUnitTestSpec {
       .setDuration(100)
       .build()
 
-    List(spanA, spanB, spanC, spanD, spanE, spanEPrime, spanF, spanG, spanH, spanI)
+    List(spanA, spanB, spanC, spanD, spanE, spanF, spanG, spanH, spanI)
   }
 
   describe("ClockSkewTransformer") {
@@ -123,19 +115,16 @@ class ClockSkewTransformerSpec extends BaseUnitTestSpec {
       val transformedSpans = new ClockSkewTransformer().transform(spans)
 
       Then("return spans basedlined wrt parent spans")
-      transformedSpans.length should be(10)
+      transformedSpans.length should be(9)
       transformedSpans.find(_.getSpanId == "a").get.getStartTime should be (timestamp)
       transformedSpans.find(_.getSpanId == "b").get.getStartTime should be (timestamp)
       transformedSpans.find(_.getSpanId == "c").get.getStartTime should be (timestamp + 500)
       transformedSpans.find(_.getSpanId == "d").get.getStartTime should be (timestamp)
+      transformedSpans.find(_.getSpanId == "e").get.getStartTime should be (timestamp)
       transformedSpans.find(_.getSpanId == "f").get.getStartTime should be (timestamp)
       transformedSpans.find(_.getSpanId == "g").get.getStartTime should be (timestamp + 700)
       transformedSpans.find(_.getSpanId == "h").get.getStartTime should be (timestamp)
       transformedSpans.find(_.getSpanId == "i").get.getStartTime should be (timestamp + 100)
-      // partial spans
-      val e = transformedSpans.filter(_.getSpanId == "e").sortBy(_.getStartTime)
-      e(0).getStartTime should be (timestamp)
-      e(1).getStartTime should be (timestamp + 10)
     }
   }
 }

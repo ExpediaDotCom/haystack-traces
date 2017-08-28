@@ -20,12 +20,12 @@ import com.codahale.metrics.JmxReporter
 import com.expedia.www.haystack.trace.provider.metrics.MetricsSupport
 import com.expedia.www.haystack.trace.provider.providers.{FieldProvider, TraceProvider}
 import com.expedia.www.haystack.trace.provider.config.ProviderConfiguration._
-import com.expedia.www.haystack.trace.provider.stores.{CassandraEsTraceStore, ElasticSearchFieldStore}
+import com.expedia.www.haystack.trace.provider.stores.CassandraEsTraceStore
 import io.grpc.netty.NettyServerBuilder
 import io.grpc.Server
 import org.slf4j.{Logger, LoggerFactory}
 
-object Provider extends MetricsSupport {
+object Service extends MetricsSupport {
   private val LOGGER: Logger = LoggerFactory.getLogger("TraceProvider")
   private var jmxReporter: JmxReporter = _
 
@@ -38,7 +38,9 @@ object Provider extends MetricsSupport {
       startService()
     }
     catch {
-      case th: Throwable => LOGGER.error("service failed with exception", th)
+      case ex: Exception =>
+        LOGGER.error("service failed with exception", ex)
+        throw ex
     }
   }
 
@@ -48,22 +50,24 @@ object Provider extends MetricsSupport {
   }
 
   private def startService(): Unit = {
+    val store = new CassandraEsTraceStore(cassandraConfig, elasticSearchConfig)
     val server: Server = NettyServerBuilder
       .forPort(serviceConfig.port)
-      .addService(new TraceProvider(new CassandraEsTraceStore(cassandraConfig, elasticSearchConfig)))
-      .addService(new FieldProvider(new ElasticSearchFieldStore(elasticSearchConfig)))
+      .addService(new TraceProvider(store))
+      .addService(new FieldProvider(store))
       .build
       .start
 
     LOGGER.info("server started, listening on 8080")
-    server.awaitTermination()
-
     Runtime.getRuntime.addShutdownHook(new Thread() {
       override def run(): Unit = {
         LOGGER.info("shutting down gRPC server since JVM is shutting down")
         server.shutdown()
+        store.close()
         LOGGER.info("server shut down")
       }
     })
+
+    server.awaitTermination()
   }
 }

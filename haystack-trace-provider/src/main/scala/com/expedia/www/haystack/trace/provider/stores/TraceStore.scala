@@ -20,7 +20,7 @@ import com.expedia.open.tracing.internal._
 
 import scala.concurrent.Future
 
-trait TraceStore {
+trait TraceStore extends AutoCloseable {
   def getTrace(traceId: String): Future[Trace]
   def searchTraces(request: TracesSearchRequest): Future[TracesSearchResult]
 }

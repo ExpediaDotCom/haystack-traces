@@ -17,40 +17,28 @@
 package com.expedia.www.haystack.trace.provider.providers.transformer
 
 import com.expedia.open.tracing.Span
-import com.expedia.www.haystack.trace.provider.providers.transformers.PartialSpan
 
 class ClockSkewTransformer extends TraceTransformer {
-  // extracting direct child of give span
-  // in case of partial spans, pick the client span, server span is considered as child of client span
-  private def filterDirectChildren(parentSpanId: String, descendants: List[Span]): List[Span] = {
-    descendants
-      .filter(span => span.getParentSpanId == parentSpanId || span.getSpanId == parentSpanId)
-      .groupBy(_.getSpanId)
-      .mapValues((partialSpans) =>
-        if(partialSpans.length > 1) new PartialSpan(partialSpans(0), partialSpans(1)).clientSpan
-        else partialSpans(0))
-      .values.toList
-  }
 
-  private def addSkewInSubtree(root: Span, descendants: List[Span], skew: Long): scala.List[Span] = {
-    val children = filterDirectChildren(root.getSpanId, descendants)
+  private def addSkewInSubtree(subtreeRoot: Span, spans: List[Span], skew: Long): scala.List[Span] = {
+    val children = spans.filter(_.getParentSpanId == subtreeRoot.getSpanId)
 
     val skewAdjustedRoot =
-      if (skew > 0) Span.newBuilder(root).setStartTime(root.getStartTime + skew).build()
-      else root
+      if (skew > 0) Span.newBuilder(subtreeRoot).setStartTime(subtreeRoot.getStartTime + skew).build()
+      else subtreeRoot
 
     skewAdjustedRoot ::
       children.flatMap(
         child => {
           val delta =
-            if (root.getStartTime > child.getStartTime) root.getStartTime - child.getStartTime
+            if (subtreeRoot.getStartTime > child.getStartTime) subtreeRoot.getStartTime - child.getStartTime
             else 0
-          addSkewInSubtree(child, descendants.filterNot(child == _), skew + delta)
+          addSkewInSubtree(child, spans, skew + delta)
         })
   }
 
   override def transform(spans: List[Span]): List[Span] = {
     val root = spans.find(_.getParentSpanId.isEmpty).get
-    addSkewInSubtree(root, spans.filterNot(root == _), 0)
+    addSkewInSubtree(root, spans, 0)
   }
 }

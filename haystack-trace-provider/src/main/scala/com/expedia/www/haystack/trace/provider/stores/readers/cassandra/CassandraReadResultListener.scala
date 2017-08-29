@@ -17,19 +17,19 @@
 package com.expedia.www.haystack.trace.provider.stores.readers.cassandra
 
 import com.codahale.metrics.{Meter, Timer}
-import com.datastax.driver.core.ResultSetFuture
+import com.datastax.driver.core.{ResultSet, ResultSetFuture, Row}
 import com.expedia.open.tracing.internal.Trace
 import com.expedia.www.haystack.trace.provider.exceptions.TraceNotFoundException
 import com.expedia.www.haystack.trace.provider.metrics.MetricsSupport
 import com.expedia.www.haystack.trace.provider.stores.serde.SpanBufferDeserializer
 import org.slf4j.{Logger, LoggerFactory}
 
-import scala.collection.JavaConversions._
 import scala.concurrent.Promise
+import scala.util.{Failure, Success, Try}
 
 object CassandraReadResultListener extends MetricsSupport {
   protected val LOGGER: Logger = LoggerFactory.getLogger(classOf[CassandraReadResultListener])
-  protected val writeFailures: Meter = metricRegistry.meter("cassandra.read.failure")
+  protected val readFailures: Meter = metricRegistry.meter("cassandra.read.failure")
   protected val readWarnings: Meter = metricRegistry.meter("cassandra.read.warnings")
 }
 
@@ -43,36 +43,39 @@ class CassandraReadResultListener(asyncResult: ResultSetFuture,
   val deserializer = new SpanBufferDeserializer
 
   override def run(): Unit = {
-    try {
-      timer.close()
+    timer.close()
 
-      if (asyncResult.get != null &&
-        asyncResult.get.getExecutionInfo != null &&
-        asyncResult.get.getExecutionInfo.getWarnings != null &&
-        asyncResult.get.getExecutionInfo.getWarnings.nonEmpty) {
-        LOGGER.warn(s"Warning received in cassandra read {}", asyncResult.get.getExecutionInfo.getWarnings.toList.mkString(","))
-      }
-
-      val row = asyncResult.get().one()
-      if (row == null) {
-        promise.failure(new TraceNotFoundException)
-      } else {
-        val trace = extractTrace(row.getBytes(Schema.STITCHED_SPANS_COLUMNE_NAME).array())
+    Try(asyncResult.get)
+      .flatMap(tryGetTraceRow)
+      .flatMap(tryDeserialize)
+    match {
+      case Success(trace) =>
         promise.success(trace)
-      }
-    } catch {
-      case ex: Exception =>
-        LOGGER.error("Fail to read the record from cassandra with exception", ex)
-        writeFailures.mark()
+      case Failure(ex) =>
+        LOGGER.error("Failed in reading the record from cassandra", ex)
+        readFailures.mark()
         promise.failure(ex)
     }
   }
 
-  private def extractTrace(rawSpans: Array[Byte]): Trace = {
-    val spans = deserializer.deserialize(rawSpans) // TODO promise failure
-    Trace.newBuilder()
-      .setTraceId(spans.getTraceId)
-      .addAllChildSpans(spans.getChildSpansList)
-      .build()
+  private def tryGetTraceRow(resultSet: ResultSet): Try[Row] = {
+    val row: Row = resultSet.one()
+    row match {
+      case null => Failure(new TraceNotFoundException)
+      case row => Success(row)
+    }
+  }
+
+  private def tryDeserialize(row: Row): Try[Trace] = {
+    val rawSpans = row.getBytes(Schema.STITCHED_SPANS_COLUMNE_NAME).array()
+    deserializer.deserialize(rawSpans) match {
+      case Success(spans) =>
+        Success(Trace.newBuilder()
+          .setTraceId(spans.getTraceId)
+          .addAllChildSpans(spans.getChildSpansList)
+          .build())
+      case Failure(ex) =>
+        Failure(ex)
+    }
   }
 }

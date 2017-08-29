@@ -16,22 +16,14 @@
 
 package com.expedia.www.haystack.trace.provider.stores.serde
 
-import com.codahale.metrics.Meter
 import com.expedia.open.tracing.buffer.SpanBuffer
-import com.expedia.www.haystack.trace.provider.metrics.MetricsSupport
 
-object SpanBufferDeserializer extends MetricsSupport {
-  protected val deserFailure: Meter = metricRegistry.meter("span.buffer.deser.failure")
-}
+import scala.util.Try
 
-class SpanBufferDeserializer  {
-  def deserialize(data: Array[Byte]): SpanBuffer = {
-    try {
-      if(data == null || data.length > 0) SpanBuffer.parseFrom(data) else null
-    } catch {
-      case _: Exception =>
-        SpanBufferDeserializer.deserFailure.mark()
-        null
+class SpanBufferDeserializer {
+  def deserialize(data: Array[Byte]): Try[SpanBuffer] = {
+    Try {
+      SpanBuffer.parseFrom(data)
     }
   }
 }

@@ -46,8 +46,8 @@ class TraceProvider(traceStore: TraceStore)(implicit val executor: ExecutionCont
   private def transformTraceIgnoringInvalidSpans(trace: Trace): Option[Trace] = {
     validate(trace) match {
       case Success(_) => Some(transform(trace))
-      case Failure(_) => {
-        LOGGER.warn(s"invalid trace rejected $trace")
+      case Failure(ex) => {
+        LOGGER.warn(s"invalid trace rejected", ex)
         traceRejectedCounter.mark()
         None
       }

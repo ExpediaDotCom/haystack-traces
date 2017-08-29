@@ -26,7 +26,7 @@ import com.expedia.www.haystack.trace.provider.stores.TraceStore
 import org.slf4j.{Logger, LoggerFactory}
 
 import scala.collection.JavaConversions._
-import scala.concurrent.{ExecutionContextExecutor, Future}
+import scala.concurrent.{ExecutionContextExecutor, Future, Promise}
 import scala.util.{Failure, Success, Try}
 
 class TraceProvider(traceStore: TraceStore)(implicit val executor: ExecutionContextExecutor)
@@ -57,7 +57,10 @@ class TraceProvider(traceStore: TraceStore)(implicit val executor: ExecutionCont
   def getTrace(request: TraceRequest): Future[Trace] = {
     traceStore
       .getTrace(request.getTraceId)
-      .map(transformTrace(_).get) // TODO handle try and return failure future
+      .flatMap(transformTrace(_) match {
+        case Success(span) => Future.successful(span)
+        case Failure(ex) => Future.failed(ex)
+      })
   }
 
   def getRawTrace(request: TraceRequest): Future[Trace] = {
@@ -65,15 +68,17 @@ class TraceProvider(traceStore: TraceStore)(implicit val executor: ExecutionCont
   }
 
   def getRawSpan(request: SpanRequest): Future[Span] = {
-    traceStore.getTrace(request.getTraceId).map(trace => {
-      val spanOption = trace.getChildSpansList
-        .find(span => span.getSpanId.equals(request.getSpanId))
+    traceStore
+      .getTrace(request.getTraceId)
+      .flatMap(trace => {
+        val spanOption = trace.getChildSpansList
+          .find(span => span.getSpanId.equals(request.getSpanId))
 
-      spanOption match {
-        case Some(span) => span
-        case None => throw new SpanNotFoundException // TODO failure future
-      }
-    })
+        spanOption match {
+          case Some(span) => Future.successful(span)
+          case None => Future.failed(new SpanNotFoundException)
+        }
+      })
   }
 
   def searchTraces(request: TracesSearchRequest): Future[TracesSearchResult] = {

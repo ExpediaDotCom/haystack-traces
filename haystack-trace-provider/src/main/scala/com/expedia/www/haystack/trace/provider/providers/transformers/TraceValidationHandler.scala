@@ -23,7 +23,7 @@ import com.expedia.www.haystack.trace.provider.exceptions.InvalidTraceException
 import scala.collection.JavaConversions._
 import scala.util.Try
 
-object TraceValidator {
+trait TraceValidationHandler {
 
   private def hasNonEmptyTraceId(traceId: String) = {
     if (traceId.isEmpty)

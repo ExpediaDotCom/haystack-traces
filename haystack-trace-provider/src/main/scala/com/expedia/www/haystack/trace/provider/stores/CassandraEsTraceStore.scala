@@ -31,7 +31,7 @@ class CassandraEsTraceStore(cassandraConfiguration: CassandraConfiguration, esCo
     cassandraReader.readTrace(traceId)
   }
 
-  override def searchTraces(request: TracesSearchRequest): Future[TracesSearchResult] = ???
+  override def searchTraces(request: TracesSearchRequest): Future[List[Trace]] = ???
 
   override def close(): Unit = {
     cassandraReader.close()

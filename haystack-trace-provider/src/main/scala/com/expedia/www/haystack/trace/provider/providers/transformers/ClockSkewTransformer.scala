@@ -18,7 +18,20 @@ package com.expedia.www.haystack.trace.provider.providers.transformer
 
 import com.expedia.open.tracing.Span
 
+/**
+  * Fixes clock skew between parent and child spans
+  * If any child spans reports a startTime earlier then parent span's startTime,
+  * corresponding delta will be added in the subtree with child span as root
+  *
+  * addSkewInSubtree looks into each child of given subtreeRoot, calculates delta,
+  * and recursively applies delta in its subtree
+  */
 class ClockSkewTransformer extends TraceTransformer {
+  private def calculateDelta(subtreeRoot: Span, childSpan: Span): Long =
+    if (subtreeRoot.getStartTime > childSpan.getStartTime)
+      subtreeRoot.getStartTime - childSpan.getStartTime
+    else
+      0
 
   private def addSkewInSubtree(subtreeRoot: Span, spans: List[Span], skew: Long): scala.List[Span] = {
     val children = spans.filter(_.getParentSpanId == subtreeRoot.getSpanId)
@@ -27,14 +40,14 @@ class ClockSkewTransformer extends TraceTransformer {
       if (skew > 0) Span.newBuilder(subtreeRoot).setStartTime(subtreeRoot.getStartTime + skew).build()
       else subtreeRoot
 
-    skewAdjustedRoot ::
-      children.flatMap(
-        child => {
-          val delta =
-            if (subtreeRoot.getStartTime > child.getStartTime) subtreeRoot.getStartTime - child.getStartTime
-            else 0
-          addSkewInSubtree(child, spans, skew + delta)
-        })
+    val skewAdjustedChildren: List[Span] =
+      for(childSpan <- children;
+          delta = calculateDelta(subtreeRoot, childSpan);
+          subtree = addSkewInSubtree(childSpan, spans, skew + delta);
+          skewAdjustedChild <- subtree)
+        yield skewAdjustedChild
+
+    skewAdjustedRoot :: skewAdjustedChildren
   }
 
   override def transform(spans: List[Span]): List[Span] = {

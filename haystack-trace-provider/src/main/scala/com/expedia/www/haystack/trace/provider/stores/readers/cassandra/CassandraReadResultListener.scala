@@ -37,6 +37,7 @@ class CassandraReadResultListener(asyncResult: ResultSetFuture,
                                   timer: Timer.Context,
                                   failure: Meter,
                                   promise: Promise[Trace]) extends Runnable {
+
   import CassandraReadResultListener._
 
   val deserializer = new SpanBufferDeserializer
@@ -53,12 +54,12 @@ class CassandraReadResultListener(asyncResult: ResultSetFuture,
       }
 
       val row = asyncResult.get().one()
-      if(row == null) {
-        throw new TraceNotFoundException
+      if (row == null) {
+        promise.failure(new TraceNotFoundException)
+      } else {
+        val trace = extractTrace(row.getBytes(Schema.STITCHED_SPANS_COLUMNE_NAME).array())
+        promise.success(trace)
       }
-
-      val trace = extractTrace(row.getBytes(Schema.STITCHED_SPANS_COLUMNE_NAME).array())
-      promise.success(trace)
     } catch {
       case ex: Exception =>
         LOGGER.error("Fail to read the record from cassandra with exception", ex)
@@ -68,7 +69,7 @@ class CassandraReadResultListener(asyncResult: ResultSetFuture,
   }
 
   private def extractTrace(rawSpans: Array[Byte]): Trace = {
-    val spans = deserializer.deserialize(rawSpans)
+    val spans = deserializer.deserialize(rawSpans) // TODO promise failure
     Trace.newBuilder()
       .setTraceId(spans.getTraceId)
       .addAllChildSpans(spans.getChildSpansList)

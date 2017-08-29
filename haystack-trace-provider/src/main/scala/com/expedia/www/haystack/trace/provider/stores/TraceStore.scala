@@ -22,5 +22,5 @@ import scala.concurrent.Future
 
 trait TraceStore extends AutoCloseable {
   def getTrace(traceId: String): Future[Trace]
-  def searchTraces(request: TracesSearchRequest): Future[TracesSearchResult]
+  def searchTraces(request: TracesSearchRequest): Future[List[Trace]]
 }

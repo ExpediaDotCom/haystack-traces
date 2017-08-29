@@ -42,17 +42,17 @@ class PartialSpan(first: Span, second: Span) {
 
   private def containsServerLogTag(span: Span) = containsLogTag(span, PartialSpan.SERVER_RECV_EVENT, PartialSpan.SERVER_SEND_EVENT)
 
-  private def isFirstClient(): Boolean = {
+  // sequence of checks to identify which one of the spans is
+  private val isFirstClient =
     containsClientLogTag(first) ||
       containsServerLogTag(second) ||
       Seq[Span](first, second).min(Ordering.by((span: Span) => span.getStartTime)) == first
-  }
 
-  lazy val clientSpan: Span = if (isFirstClient) first else second
+  val clientSpan: Span = if (isFirstClient) first else second
 
-  lazy val serverSpan: Span = if (isFirstClient) second else first
+  val serverSpan: Span = if (isFirstClient) second else first
 
-  lazy val mergedSpan: Span = {
+  val mergedSpan: Span = {
     Span
       .newBuilder(clientSpan)
       .setStartTime(Seq(clientSpan.getStartTime, serverSpan.getStartTime).min)

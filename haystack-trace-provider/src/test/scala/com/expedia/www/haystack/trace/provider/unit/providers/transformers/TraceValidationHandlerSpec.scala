@@ -19,19 +19,21 @@ package com.expedia.www.haystack.trace.provider.unit.providers.transformers
 import com.expedia.open.tracing.Span
 import com.expedia.open.tracing.internal.Trace
 import com.expedia.www.haystack.trace.provider.exceptions.InvalidTraceException
-import com.expedia.www.haystack.trace.provider.providers.transformer.TraceValidator
+import com.expedia.www.haystack.trace.provider.providers.transformer.TraceValidationHandler
 import com.expedia.www.haystack.trace.provider.unit.BaseUnitTestSpec
 
-class TraceValidatorSpec extends BaseUnitTestSpec {
+class TraceValidationHandlerSpec extends BaseUnitTestSpec {
   val TRACE_ID = "traceId"
 
   describe("TraceValidator") {
+    val traceValidationHandler = new TraceValidationHandler(){}
+
     it("should throw exception for traces with empty traceId") {
       Given("trace with empty traceId")
       val trace = Trace.newBuilder().build()
 
       When("on validate")
-      val validationResult = TraceValidator.validate(trace)
+      val validationResult = traceValidationHandler.validate(trace)
 
       Then("throw InvalidTraceException")
       val thrown = the[InvalidTraceException] thrownBy validationResult.get
@@ -46,7 +48,7 @@ class TraceValidatorSpec extends BaseUnitTestSpec {
         .build()
 
       When("on validate")
-      val validationResult = TraceValidator.validate(trace)
+      val validationResult = traceValidationHandler.validate(trace)
 
       Then("throw InvalidTraceException")
       val thrown = the[InvalidTraceException] thrownBy validationResult.get
@@ -62,7 +64,7 @@ class TraceValidatorSpec extends BaseUnitTestSpec {
         .build()
 
       When("on validate")
-      val validationResult = TraceValidator.validate(trace)
+      val validationResult = traceValidationHandler.validate(trace)
 
       Then("throw InvalidTraceException")
       val thrown = the[InvalidTraceException] thrownBy validationResult.get
@@ -78,7 +80,7 @@ class TraceValidatorSpec extends BaseUnitTestSpec {
         .build()
 
       When("on validate")
-      val validationResult = TraceValidator.validate(trace)
+      val validationResult = traceValidationHandler.validate(trace)
 
       Then("throw InvalidTraceException")
       val thrown = the[InvalidTraceException] thrownBy validationResult.get
@@ -94,7 +96,7 @@ class TraceValidatorSpec extends BaseUnitTestSpec {
         .build()
 
       When("on validate")
-      val validationResult = TraceValidator.validate(trace)
+      val validationResult = traceValidationHandler.validate(trace)
 
       Then("throw InvalidTraceException")
       val thrown = the[InvalidTraceException] thrownBy validationResult.get
@@ -111,7 +113,7 @@ class TraceValidatorSpec extends BaseUnitTestSpec {
         .build()
 
       When("on validate")
-      val validationResult = TraceValidator.validate(trace)
+      val validationResult = traceValidationHandler.validate(trace)
 
       Then("accept trace")
       noException should be thrownBy(validationResult.get)

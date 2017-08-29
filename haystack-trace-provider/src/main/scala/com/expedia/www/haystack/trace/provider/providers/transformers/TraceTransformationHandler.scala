@@ -20,24 +20,27 @@ import com.expedia.open.tracing.Span
 import com.expedia.open.tracing.internal.Trace
 
 import scala.collection.JavaConversions._
-import scala.util.{Failure, Success, Try}
 
-class TraceTransformationHandler(transformers: Seq[TraceTransformer]) {
-  private val transformerChain = Function.chain(
-    transformers
-      .foldLeft(Seq[List[Span] => List[Span]]())((seq, t) => seq :+ t.transform _))
+/**
+  * takes a sequence of [[TraceTransformer]] and apply transform functions on the chain
+  *
+  * transformer functions takes [[List]] of [[Span]]s and generates a [[List]] of [[Span]]s
+  * [[TraceTransformationHandler]] takes a [[Seq]] of [[TraceTransformer]] and applies chaining on them,
+  * providing response [[List]] of a transformer to the next one
+  *
+  * @param transformerSeq
+  */
+class TraceTransformationHandler(transformerSeq: Seq[TraceTransformer]) {
+  private val transformerChain =
+    Function.chain(transformerSeq.foldLeft(Seq[List[Span] => List[Span]]())((seq, transformer) => seq :+ transformer.transform _))
 
-  def transform(trace: Trace): Try[Trace] = {
-    TraceValidator.validate(trace) match {
-      case Success(_) =>
-        val transformedSpans = transformerChain.apply(trace.getChildSpansList.toList)
-        Success(Trace
-          .newBuilder()
-          .setTraceId(trace.getTraceId)
-          .addAllChildSpans(transformedSpans)
-          .build())
+  def transform(trace: Trace): Trace = {
+    val transformedSpans = transformerChain(trace.getChildSpansList.toList)
 
-      case Failure(ex) => Failure(ex)
-    }
+    Trace
+      .newBuilder()
+      .setTraceId(trace.getTraceId)
+      .addAllChildSpans(transformedSpans)
+      .build()
   }
 }

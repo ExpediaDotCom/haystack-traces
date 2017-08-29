@@ -17,11 +17,17 @@
 package com.expedia.www.haystack.trace.provider.providers.transformers
 
 import com.expedia.open.tracing.Span
-import com.expedia.www.haystack.trace.provider.providers.transformer.TraceTransformer
+import com.expedia.www.haystack.trace.provider.providers.transformer.{TraceTransformer, TraceValidationHandler}
 
+/**
+  *  Orders spans in natural ordering - root followed by other spans ordered by start time
+  *
+  *  Assumes there is only one root in give spans List,
+  *  corresponding validations are done in [[TraceValidationHandler]]
+  */
 class SortSpanTransformer extends TraceTransformer {
   override def transform(spans: List[Span]): List[Span] = {
-    // root followed by other spans ordered by start time
-    spans.find(_.getParentSpanId.isEmpty).get :: spans.filterNot(_.getParentSpanId.isEmpty).sortBy(_.getStartTime)
+    val (left, right) = spans.partition(_.getParentSpanId.isEmpty)
+    left.head :: right.sortBy(_.getStartTime)
   }
 }

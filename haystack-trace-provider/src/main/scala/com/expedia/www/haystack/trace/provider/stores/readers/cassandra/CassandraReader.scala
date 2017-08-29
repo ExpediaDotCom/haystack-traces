@@ -50,17 +50,10 @@ class CassandraReader(config: CassandraConfiguration)(implicit val dispatcher: E
     val timer = readTimer.time()
     val promise = Promise[Trace]
 
-    try {
-      val asyncResult = sessionFactory.session.executeAsync(constructSelectStatement(traceId))
-      asyncResult.addListener(new CassandraReadResultListener(asyncResult, timer, readFailures, promise), dispatcher)
-      promise.future
-    } catch {
-      case ex: Exception =>
-        LOGGER.error("Fail to read trace from cassandra", ex)
-        readFailures.mark()
-        timer.stop()
-        Future.failed(ex)
-    }
+    val asyncResult = sessionFactory.session.executeAsync(constructSelectStatement(traceId))
+    asyncResult.addListener(new CassandraReadResultListener(asyncResult, timer, readFailures, promise), dispatcher)
+
+    promise.future
   }
 
   override def close(): Unit = Try(sessionFactory.close())

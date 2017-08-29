@@ -19,56 +19,72 @@ package com.expedia.www.haystack.trace.provider.providers
 import com.expedia.open.tracing.Span
 import com.expedia.open.tracing.internal._
 import com.expedia.www.haystack.trace.provider.exceptions.SpanNotFoundException
-import com.expedia.www.haystack.trace.provider.providers.transformer.{ClockSkewTransformer, PartialSpanTransformer, TraceTransformationHandler, TraceValidator}
+import com.expedia.www.haystack.trace.provider.metrics.MetricsSupport
+import com.expedia.www.haystack.trace.provider.providers.transformer.{ClockSkewTransformer, PartialSpanTransformer, TraceTransformationHandler, TraceValidationHandler}
 import com.expedia.www.haystack.trace.provider.providers.transformers.SortSpanTransformer
 import com.expedia.www.haystack.trace.provider.stores.TraceStore
-import io.grpc.stub.StreamObserver
+import org.slf4j.{Logger, LoggerFactory}
 
 import scala.collection.JavaConversions._
-import scala.concurrent.ExecutionContextExecutor
+import scala.concurrent.{ExecutionContextExecutor, Future}
+import scala.util.{Failure, Success, Try}
 
-class TraceProvider(traceStore: TraceStore)(implicit val executor: ExecutionContextExecutor) extends TraceProviderGrpc.TraceProviderImplBase {
-  private val handleGetTraceResponse = new GrpcResponseHandler(TraceProviderGrpc.METHOD_GET_TRACE.getFullMethodName)
-  private val handleGetRawTraceResponse = new GrpcResponseHandler(TraceProviderGrpc.METHOD_GET_RAW_TRACE.getFullMethodName)
-  private val handleGetRawSpanResponse = new GrpcResponseHandler(TraceProviderGrpc.METHOD_GET_RAW_SPAN.getFullMethodName)
-  private val handleSearchResponse = new GrpcResponseHandler(TraceProviderGrpc.METHOD_SEARCH_TRACES.getFullMethodName)
+class TraceProvider(traceStore: TraceStore)(implicit val executor: ExecutionContextExecutor)
+  extends TraceTransformationHandler(Seq(new PartialSpanTransformer(), new ClockSkewTransformer(), new SortSpanTransformer()))
+    with TraceValidationHandler
+    with MetricsSupport {
+  private val LOGGER: Logger = LoggerFactory.getLogger(s"${classOf[TraceProvider]}.search.trace.rejection")
+  private val traceRejectedCounter = metricRegistry.meter("search.trace.rejection")
 
-  private val transformationHandler = new TraceTransformationHandler(Seq(
-    new PartialSpanTransformer(),
-    new ClockSkewTransformer(),
-    new SortSpanTransformer))
-
-  override def getTrace(request: TraceRequest, responseObserver: StreamObserver[Trace]): Unit = {
-    handleGetTraceResponse.handle(responseObserver) {
-      traceStore
-        .getTrace(request.getTraceId)
-        .map(transformationHandler.transform(_).get)
+  private def transformTrace(trace: Trace): Try[Trace] = {
+    validate(trace) match {
+      case Success(_) => Success(transform(trace))
+      case Failure(ex) => Failure(ex)
     }
   }
 
-  override def getRawTrace(request: TraceRequest, responseObserver: StreamObserver[Trace]): Unit = {
-    handleGetRawTraceResponse.handle(responseObserver) {
-      traceStore.getTrace(request.getTraceId)
+  private def transformTraceIgnoringInvalidSpans(trace: Trace): Option[Trace] = {
+    validate(trace) match {
+      case Success(_) => Some(transform(trace))
+      case Failure(_) => {
+        LOGGER.warn(s"invalid trace rejected $trace")
+        traceRejectedCounter.mark()
+        None
+      }
     }
   }
 
-  override def getRawSpan(request: SpanRequest, responseObserver: StreamObserver[Span]): Unit = {
-    handleGetRawSpanResponse.handle(responseObserver) {
-      traceStore.getTrace(request.getTraceId).map(trace => {
-        val spanOption = trace.getChildSpansList
-          .find(span => span.getSpanId.equals(request.getSpanId))
-
-        spanOption match {
-          case Some(span) => span
-          case None => throw new SpanNotFoundException
-        }
-      })
-    }
+  def getTrace(request: TraceRequest): Future[Trace] = {
+    traceStore
+      .getTrace(request.getTraceId)
+      .map(transformTrace(_).get) // TODO handle try and return failure future
   }
 
-  override def searchTraces(request: TracesSearchRequest, responseObserver: StreamObserver[TracesSearchResult]): Unit = {
-    handleSearchResponse.handle(responseObserver) {
-      traceStore.searchTraces(request)
-    }
+  def getRawTrace(request: TraceRequest): Future[Trace] = {
+    traceStore.getTrace(request.getTraceId)
+  }
+
+  def getRawSpan(request: SpanRequest): Future[Span] = {
+    traceStore.getTrace(request.getTraceId).map(trace => {
+      val spanOption = trace.getChildSpansList
+        .find(span => span.getSpanId.equals(request.getSpanId))
+
+      spanOption match {
+        case Some(span) => span
+        case None => throw new SpanNotFoundException // TODO failure future
+      }
+    })
+  }
+
+  def searchTraces(request: TracesSearchRequest): Future[TracesSearchResult] = {
+    traceStore
+      .searchTraces(request)
+      .map(
+        traces => {
+          TracesSearchResult
+            .newBuilder()
+            .addAllTraces(traces.flatMap(transformTraceIgnoringInvalidSpans))
+            .build()
+        })
   }
 }

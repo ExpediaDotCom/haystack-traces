@@ -21,7 +21,7 @@ import java.util.UUID
 import com.expedia.open.tracing.internal.{SpanRequest, TraceProviderGrpc, TraceRequest}
 import io.grpc.{ManagedChannelBuilder, Status, StatusRuntimeException}
 
-class TraceProviderIntegrationTestSpec extends BaseIntegrationTestSpec {
+class TraceServiceIntegrationTestSpec extends BaseIntegrationTestSpec {
   val client = TraceProviderGrpc.newBlockingStub(ManagedChannelBuilder.forAddress("haystack-trace-provider", 8080)
     .usePlaintext(true)
     .build())

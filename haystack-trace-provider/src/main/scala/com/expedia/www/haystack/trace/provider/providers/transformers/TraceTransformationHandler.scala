@@ -14,7 +14,7 @@
  *       limitations under the License.
  */
 
-package com.expedia.www.haystack.trace.provider.providers.transformer
+package com.expedia.www.haystack.trace.provider.providers.transformers
 
 import com.expedia.open.tracing.Span
 import com.expedia.open.tracing.internal.Trace

@@ -16,19 +16,19 @@
 
 package com.expedia.www.haystack.trace.provider.config
 
+import java.util
+
 import com.expedia.www.haystack.trace.provider.config.entities._
+import com.expedia.www.haystack.trace.provider.providers.transformers.TraceTransformer
 import com.typesafe.config.Config
 
 import scala.collection.JavaConversions._
 
 object ProviderConfiguration {
-  private val config: Config = ConfigurationLoader.loadAppConfig
-
   lazy val serviceConfig: ServiceConfiguration = {
     val serviceConfig: Config = config.getConfig("service")
     ServiceConfiguration(serviceConfig.getInt("port"))
   }
-
   lazy val cassandraConfig: CassandraConfiguration = {
     val cs = config.getConfig("cassandra")
 
@@ -60,9 +60,31 @@ object ProviderConfiguration {
       cs.getString("keyspace.table.name"),
       socket)
   }
-
   lazy val elasticSearchConfig: ElasticSearchConfiguration = {
     val elasticSearchConfig: Config = config.getConfig("elasticsearch")
     ElasticSearchConfiguration(elasticSearchConfig.getString("endpoint"))
+  }
+
+  lazy val traceTransformerConfig: TraceTransformersConfiguration = {
+    val transformerConfig: Config = config.getConfig("trace.transformers")
+    TraceTransformersConfiguration(toTransformerInstances(transformerConfig.getStringList("sequence.class")))
+  }
+
+  private val config: Config = ConfigurationLoader.loadAppConfig
+
+  private def toTransformerInstances(transformerClasses: util.List[String]): scala.Seq[TraceTransformer] = {
+    transformerClasses.map(className => {
+      val c = Class.forName(className)
+
+      if (c == null) {
+        throw new RuntimeException(s"No class found with name $className for record key extractor")
+      } else {
+        val o = c.newInstance()
+        val baseClass = classOf[TraceTransformer]
+
+        if (!baseClass.isInstance(o)) throw new RuntimeException(s"$c.getName is not an instance of$baseClass.getName")
+        o.asInstanceOf[TraceTransformer]
+      }
+    })
   }
 }

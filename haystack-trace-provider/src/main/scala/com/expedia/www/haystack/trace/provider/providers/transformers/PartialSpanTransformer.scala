@@ -14,10 +14,9 @@
  *       limitations under the License.
  */
 
-package com.expedia.www.haystack.trace.provider.providers.transformer
+package com.expedia.www.haystack.trace.provider.providers.transformers
 
 import com.expedia.open.tracing.Span
-import com.expedia.www.haystack.trace.provider.providers.transformers.PartialSpan
 
 /**
   * Merges partial spans and generates a single [[Span]] combining a client and corresponding server span

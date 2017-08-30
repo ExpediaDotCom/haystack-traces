@@ -20,25 +20,17 @@ import com.codahale.metrics.{Meter, Timer}
 import com.datastax.driver.core.{ResultSet, ResultSetFuture, Row}
 import com.expedia.open.tracing.internal.Trace
 import com.expedia.www.haystack.trace.provider.exceptions.TraceNotFoundException
-import com.expedia.www.haystack.trace.provider.metrics.MetricsSupport
 import com.expedia.www.haystack.trace.provider.stores.serde.SpanBufferDeserializer
 import org.slf4j.{Logger, LoggerFactory}
 
 import scala.concurrent.Promise
 import scala.util.{Failure, Success, Try}
 
-object CassandraReadResultListener extends MetricsSupport {
-  protected val LOGGER: Logger = LoggerFactory.getLogger(classOf[CassandraReadResultListener])
-  protected val readFailures: Meter = metricRegistry.meter("cassandra.read.failure")
-  protected val readWarnings: Meter = metricRegistry.meter("cassandra.read.warnings")
-}
-
 class CassandraReadResultListener(asyncResult: ResultSetFuture,
                                   timer: Timer.Context,
                                   failure: Meter,
                                   promise: Promise[Trace]) extends Runnable {
-
-  import CassandraReadResultListener._
+  private val LOGGER: Logger = LoggerFactory.getLogger(classOf[CassandraReadResultListener])
 
   val deserializer = new SpanBufferDeserializer
 
@@ -53,7 +45,7 @@ class CassandraReadResultListener(asyncResult: ResultSetFuture,
         promise.success(trace)
       case Failure(ex) =>
         LOGGER.error("Failed in reading the record from cassandra", ex)
-        readFailures.mark()
+        failure.mark()
         promise.failure(ex)
     }
   }
@@ -61,8 +53,8 @@ class CassandraReadResultListener(asyncResult: ResultSetFuture,
   private def tryGetTraceRow(resultSet: ResultSet): Try[Row] = {
     val row: Row = resultSet.one()
     row match {
+      case row: Row => Success(row)
       case null => Failure(new TraceNotFoundException)
-      case row => Success(row)
     }
   }
 

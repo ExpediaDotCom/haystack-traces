@@ -35,7 +35,7 @@ class CassandraReader(config: CassandraConfiguration)(implicit val dispatcher: E
   private val sessionFactory = new CassandraSessionFactory(config)
 
   private lazy val selectTrace: PreparedStatement = {
-    import QueryBuilder.{bindMarker}
+    import QueryBuilder.bindMarker
 
     sessionFactory.session.prepare(
       QueryBuilder
@@ -44,16 +44,24 @@ class CassandraReader(config: CassandraConfiguration)(implicit val dispatcher: E
         .where(QueryBuilder.eq(ID_COLUMN_NAME, bindMarker(ID_COLUMN_NAME))))
   }
 
-  def constructSelectStatement(id: String) = new BoundStatement(selectTrace).setString(ID_COLUMN_NAME, id)
+  private def constructSelectStatement(id: String) = new BoundStatement(selectTrace).setString(ID_COLUMN_NAME, id)
 
   def readTrace(traceId: String): Future[Trace] = {
     val timer = readTimer.time()
     val promise = Promise[Trace]
 
-    val asyncResult = sessionFactory.session.executeAsync(constructSelectStatement(traceId))
-    asyncResult.addListener(new CassandraReadResultListener(asyncResult, timer, readFailures, promise), dispatcher)
+    try {
+      val asyncResult = sessionFactory.session.executeAsync(constructSelectStatement(traceId))
+      asyncResult.addListener(new CassandraReadResultListener(asyncResult, timer, readFailures, promise), dispatcher)
 
-    promise.future
+      promise.future
+    } catch {
+      case ex: Exception =>
+        readFailures.mark()
+        timer.stop()
+        LOGGER.error("Failed to read trace with exception", ex)
+        Future.failed(ex)
+    }
   }
 
   override def close(): Unit = Try(sessionFactory.close())

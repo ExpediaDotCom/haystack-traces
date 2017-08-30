@@ -18,8 +18,49 @@ package com.expedia.www.haystack.trace.provider.stores.readers.es
 
 import com.expedia.www.haystack.trace.provider.config.entities.ElasticSearchConfiguration
 import com.expedia.www.haystack.trace.provider.metrics.MetricsSupport
-import scala.concurrent.ExecutionContextExecutor
+import io.searchbox.client.config.HttpClientConfig
+import io.searchbox.client.{JestClient, JestClientFactory, JestResult}
+import io.searchbox.core.Search
+import org.slf4j.LoggerFactory
+
+import scala.concurrent.{ExecutionContextExecutor, Future, Promise}
+import scala.util.Try
 
 class ElasticSearchReader(config: ElasticSearchConfiguration)(implicit val dispatcher: ExecutionContextExecutor) extends MetricsSupport with AutoCloseable {
-  override def close(): Unit = ???
+  private val LOGGER = LoggerFactory.getLogger(classOf[ElasticSearchReader])
+  private val readTimer = metricRegistry.timer("elasticsearch.read.time")
+  private val readFailures = metricRegistry.meter("elasticsearch.read.failures")
+
+  // initialize the elastic search client
+  private val esClient: JestClient = {
+    LOGGER.info("Initializing the http elastic search client with endpoint={}", config.endpoint)
+    val factory = new JestClientFactory()
+
+    factory.setHttpClientConfig(
+      new HttpClientConfig.Builder(config.endpoint)
+        .multiThreaded(true)
+        .connTimeout(config.connectionTimeoutMillis)
+        .readTimeout(config.readTimeoutMillis)
+        .build())
+
+    factory.getObject
+  }
+
+  def read(search: Search): Future[JestResult] = {
+    val promise = Promise[JestResult]()
+    val time = readTimer.time()
+
+    try {
+      esClient.executeAsync(search, new ElasticSearchReadResultListener(promise, time, readFailures))
+      promise.future
+    } catch {
+      case ex: Exception =>
+        readFailures.mark()
+        time.stop()
+        LOGGER.error("Failed to read from elasticsearch with exception", ex)
+        Future.failed(ex)
+    }
+  }
+
+  override def close(): Unit = Try(esClient.shutdownClient())
 }

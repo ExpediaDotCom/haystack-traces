@@ -82,7 +82,9 @@ object ProviderConfiguration {
         val o = c.newInstance()
         val baseClass = classOf[TraceTransformer]
 
-        if (!baseClass.isInstance(o)) throw new RuntimeException(s"$c.getName is not an instance of$baseClass.getName")
+        if (!baseClass.isInstance(o)) {
+          throw new RuntimeException(s"${c.getName} is not an instance of${baseClass.getName}")
+        }
         o.asInstanceOf[TraceTransformer]
       }
     })

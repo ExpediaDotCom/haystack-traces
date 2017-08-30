@@ -16,7 +16,8 @@
  */
 package com.expedia.www.haystack.trace.provider.config.entities
 
-/**
-  * @param endpoint ElasticSearch endpoint URI
-  */
-case class ElasticSearchConfiguration(endpoint: String)
+case class ElasticSearchConfiguration(endpoint: String,
+                                      indexNamePrefix: String,
+                                      indexType: String,
+                                      connectionTimeoutMillis: Int,
+                                      readTimeoutMillis: Int)

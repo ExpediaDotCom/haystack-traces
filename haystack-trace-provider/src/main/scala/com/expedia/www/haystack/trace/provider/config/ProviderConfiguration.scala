@@ -61,8 +61,15 @@ object ProviderConfiguration {
       socket)
   }
 
-  lazy val elasticSearchConfig: ElasticSearchConfiguration = {
-    val elasticSearchConfig: Config = config.getConfig("elasticsearch")
-    ElasticSearchConfiguration(elasticSearchConfig.getString("endpoint"))
+  lazy val elasticSearchConfig: ElasticSearchConfiguration =  {
+    val es = config.getConfig("elasticsearch")
+    val indexConfig = es.getConfig("index")
+
+    ElasticSearchConfiguration(
+      endpoint = es.getString("endpoint"),
+      indexNamePrefix = indexConfig.getString("name.prefix"),
+      indexType = indexConfig.getString("type"),
+      es.getInt("conn.timeout.ms"),
+      es.getInt("read.timeout.ms"))
   }
 }

@@ -67,7 +67,7 @@ object ProviderConfiguration {
 
   lazy val traceTransformerConfig: TraceTransformersConfiguration = {
     val transformerConfig: Config = config.getConfig("trace.transformers")
-    TraceTransformersConfiguration(toTransformerInstances(transformerConfig.getStringList("sequence.class")))
+    TraceTransformersConfiguration(toTransformerInstances(transformerConfig.getStringList("sequence")))
   }
 
   private val config: Config = ConfigurationLoader.loadAppConfig

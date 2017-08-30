@@ -18,17 +18,43 @@ package com.expedia.www.haystack.trace.provider.stores
 
 import com.expedia.open.tracing.internal.TracesSearchRequest
 import io.searchbox.core.Search
+import org.apache.lucene.search.join.ScoreMode
 import org.elasticsearch.index.query.BoolQueryBuilder
 import org.elasticsearch.index.query.QueryBuilders._
 import org.elasticsearch.search.builder.SearchSourceBuilder
 
+import scala.collection.JavaConversions._
+
 trait EsQueryBuilder {
+  private val NESTED_DOC_NAME = "spans"
+  private val SORT_BY = withBaseDoc("startTime") // TODO default to a random sorting algo instead
+
+  private def withBaseDoc(field: String) = {
+    s"$NESTED_DOC_NAME.$field"
+  }
+
+  private def buildTagMatchQuery(request: TracesSearchRequest) = {
+    request.getFieldsList
+      .foldLeft(boolQuery())((query, field) => query.must(matchQuery(field.getName, field.getVStr)))
+  }
+
+  // TODO further improve/optimize query
   private def buildQueryString(request: TracesSearchRequest) = {
     val queryBuilder: BoolQueryBuilder = boolQuery
-      .must(rangeQuery("startTime").from(request.getStartTime).to(request.getEndTime)) // TODO create full query
+      .must(
+        nestedQuery(NESTED_DOC_NAME,
+          buildTagMatchQuery(request)
+            .must(matchQuery(withBaseDoc("service"), request.getServiceName))
+            .must(matchQuery(withBaseDoc("operation"), request.getOperationName))
+            .must(rangeQuery(withBaseDoc("duration")).from(request.getMinDuration).to(request.getMaxDuration))
+            .must(rangeQuery(withBaseDoc("startTime")).from(request.getStartTime).to(request.getEndTime)),
+          ScoreMode.Avg))
 
     new SearchSourceBuilder()
       .query(queryBuilder)
+      .sort(SORT_BY)
+      .size(request.getLimit)
+      .fetchSource("_id", null) // only fetch document ids from es, dont need any other
       .toString
   }
 

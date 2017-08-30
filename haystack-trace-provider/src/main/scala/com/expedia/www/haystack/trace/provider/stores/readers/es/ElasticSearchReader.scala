@@ -19,8 +19,8 @@ package com.expedia.www.haystack.trace.provider.stores.readers.es
 import com.expedia.www.haystack.trace.provider.config.entities.ElasticSearchConfiguration
 import com.expedia.www.haystack.trace.provider.metrics.MetricsSupport
 import io.searchbox.client.config.HttpClientConfig
-import io.searchbox.client.{JestClient, JestClientFactory, JestResult}
-import io.searchbox.core.Search
+import io.searchbox.client.{JestClient, JestClientFactory}
+import io.searchbox.core.{Search, SearchResult}
 import org.slf4j.LoggerFactory
 
 import scala.concurrent.{ExecutionContextExecutor, Future, Promise}
@@ -46,12 +46,11 @@ class ElasticSearchReader(config: ElasticSearchConfiguration)(implicit val dispa
     factory.getObject
   }
 
-  def read(search: Search): Future[JestResult] = {
-    val promise = Promise[JestResult]()
+  def search(request: Search): Future[SearchResult] = {
+    val promise = Promise[SearchResult]()
     val time = readTimer.time()
-
     try {
-      esClient.executeAsync(search, new ElasticSearchReadResultListener(promise, time, readFailures))
+      esClient.executeAsync(request, new ElasticSearchReadResultListener(promise, time, readFailures))
       promise.future
     } catch {
       case ex: Exception =>

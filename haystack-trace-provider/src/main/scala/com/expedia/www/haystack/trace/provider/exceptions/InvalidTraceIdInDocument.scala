@@ -18,4 +18,4 @@ package com.expedia.www.haystack.trace.provider.exceptions
 
 import io.grpc.{Status, StatusException}
 
-case class ElasticSearchClientError(status: Int) extends StatusException(Status.INTERNAL.withDescription(s"es client returned status $status"))
+case class InvalidTraceIdInDocument(docId: String) extends StatusException(Status.INTERNAL.withDescription(s"invalid traceId in doc: $docId"))

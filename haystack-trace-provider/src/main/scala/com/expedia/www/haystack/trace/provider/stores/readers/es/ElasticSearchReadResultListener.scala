@@ -18,26 +18,27 @@ package com.expedia.www.haystack.trace.provider.stores.readers.es
 
 import com.codahale.metrics.{Meter, Timer}
 import com.expedia.www.haystack.trace.provider.exceptions.ElasticSearchClientError
-import io.searchbox.client.{JestResult, JestResultHandler}
+import io.searchbox.client.JestResultHandler
+import io.searchbox.core.SearchResult
 import org.slf4j.{Logger, LoggerFactory}
 
 import scala.concurrent.Promise
 
-class ElasticSearchReadResultListener(promise: Promise[JestResult],
+class ElasticSearchReadResultListener(promise: Promise[SearchResult],
                                       timer: Timer.Context,
-                                      failure: Meter) extends JestResultHandler[JestResult]  {
+                                      failure: Meter) extends JestResultHandler[SearchResult]  {
   private val LOGGER: Logger = LoggerFactory.getLogger(classOf[ElasticSearchReadResultListener])
 
-  override def completed(result: JestResult): Unit = {
+  override def completed(result: SearchResult): Unit = {
     if(result.getResponseCode >= 300) {
-      val ex = new ElasticSearchClientError(result.getResponseCode)
+      val ex = ElasticSearchClientError(result.getResponseCode)
       LOGGER.error(s"Failed in reading from elasticsearch", ex)
       timer.stop()
       failure.mark()
       promise.failure(ex)
     } else {
       timer.stop()
-      promise.success(JestResult)
+      promise.success(result)
     }
   }
 

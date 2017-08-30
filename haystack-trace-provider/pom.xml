@@ -29,6 +29,7 @@
 
         <cassandra.driver.version>3.1.0</cassandra.driver.version>
         <jest.version>5.3.2</jest.version>
+        <elasticsearch.version>5.5.2</elasticsearch.version>
         <aws.sdk.version>1.11.20</aws.sdk.version>
         <httpclient.version>4.5.3</httpclient.version>
 
@@ -123,6 +124,11 @@
             <groupId>io.searchbox</groupId>
             <artifactId>jest</artifactId>
             <version>${jest.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.elasticsearch</groupId>
+            <artifactId>elasticsearch</artifactId>
+            <version>${elasticsearch.version}</version>
         </dependency>
 
         <!-- Test Dependencies  -->

@@ -4,7 +4,7 @@
 
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.expedia.www</groupId>
-    <artifactId>haystack-trace-query</artifactId>
+    <artifactId>haystack-trace-provider</artifactId>
     <version>1.0-SNAPSHOT</version>
     <packaging>jar</packaging>
 
@@ -16,7 +16,7 @@
 
         <scala.major.version>2</scala.major.version>
         <scala.minor.version>11</scala.minor.version>
-        <scala.tiny.version>8</scala.tiny.version>
+        <scala.tiny.version>11</scala.tiny.version>
         <scala.major.minor.version>${scala.major.version}.${scala.minor.version}</scala.major.minor.version>
         <scala-library.version>${scala.major.version}.${scala.minor.version}.${scala.tiny.version}</scala-library.version>
 
@@ -24,7 +24,14 @@
         <pegdown.version>1.6.0</pegdown.version>
         <scalatest.version>3.0.3</scalatest.version>
 
-        <mainClass>com.expedia.www.haystack.trace.query.TraceQuery</mainClass>
+        <protobuf.version>3.3.1</protobuf.version>
+        <grpc.version>1.4.0</grpc.version>
+
+        <cassandra.driver.version>3.1.0</cassandra.driver.version>
+        <aws.sdk.version>1.11.20</aws.sdk.version>
+        <httpclient.version>4.5.3</httpclient.version>
+
+        <mainClass>com.expedia.www.haystack.trace.provider.Service</mainClass>
     </properties>
 
     <dependencies>
@@ -69,6 +76,47 @@
             <version>${slf4j-api.version}</version>
         </dependency>
 
+        <!-- grpc -->
+        <dependency>
+            <groupId>com.google.protobuf</groupId>
+            <artifactId>protobuf-java</artifactId>
+            <version>${protobuf.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.grpc</groupId>
+            <artifactId>grpc-netty</artifactId>
+            <version>${grpc.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.grpc</groupId>
+            <artifactId>grpc-protobuf</artifactId>
+            <version>${grpc.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.grpc</groupId>
+            <artifactId>grpc-stub</artifactId>
+            <version>${grpc.version}</version>
+        </dependency>
+
+        <!-- AWS EC2 SDK -->
+        <dependency>
+            <groupId>com.amazonaws</groupId>
+            <artifactId>aws-java-sdk-ec2</artifactId>
+            <version>${aws.sdk.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.httpcomponents</groupId>
+            <artifactId>httpclient</artifactId>
+            <version>${httpclient.version}</version>
+        </dependency>
+
+        <!-- cassandra client-->
+        <dependency>
+            <groupId>com.datastax.cassandra</groupId>
+            <artifactId>cassandra-driver-core</artifactId>
+            <version>${cassandra.driver.version}</version>
+        </dependency>
+
         <!-- Test Dependencies  -->
         <dependency>
             <groupId>org.scalatest</groupId>
@@ -88,6 +136,12 @@
             <version>4.12</version>
             <scope>test</scope>
         </dependency>
+        <!-- for grpc client -->
+        <dependency>
+            <groupId>io.netty</groupId>
+            <artifactId>netty-handler</artifactId>
+            <version>4.1.14.Final</version>
+        </dependency>
     </dependencies>
 
     <profiles>
@@ -102,7 +156,7 @@
                         <groupId>org.scalatest</groupId>
                         <artifactId>scalatest-maven-plugin</artifactId>
                         <configuration>
-                            <wildcardSuites>com.expedia.www.haystack.trace.query.integration</wildcardSuites>
+                            <wildcardSuites>com.expedia.www.haystack.trace.provider.integration</wildcardSuites>
                         </configuration>
                     </plugin>
                 </plugins>
@@ -111,7 +165,7 @@
     </profiles>
 
     <build>
-        <finalName>haystack-trace-query</finalName>
+        <finalName>haystack-trace-provider</finalName>
         <resources>
             <resource>
                 <directory>src/main/resources</directory>
@@ -123,7 +177,7 @@
                 <groupId>org.scalatest</groupId>
                 <artifactId>scalatest-maven-plugin</artifactId>
                 <configuration>
-                    <wildcardSuites>com.expedia.www.haystack.trace.query.unit</wildcardSuites>
+                    <wildcardSuites>com.expedia.www.haystack.trace.provider.unit</wildcardSuites>
                 </configuration>
                 <executions>
                     <execution>
@@ -146,13 +200,24 @@
                             <goal>run</goal>
                         </goals>
                         <configuration>
+                            <protocArtifact>com.google.protobuf:protoc:3.0.0</protocArtifact>
                             <includeDirectories>
-                                <include>haystack-idl/proto</include>
+                                <include>../haystack-idl/proto</include>
+                                <include>../haystack-idl/proto/internal</include>
                             </includeDirectories>
                             <inputDirectories>
-                                <include>haystack-idl/proto</include>
+                                <include>../haystack-idl/proto</include>
+                                <include>../haystack-idl/proto/internal</include>
                             </inputDirectories>
-                            <outputDirectory>target/generated-sources</outputDirectory>
+                            <outputTargets>
+                                <outputTarget>
+                                    <type>java</type>
+                                </outputTarget>
+                                <outputTarget>
+                                    <type>grpc-java</type>
+                                    <pluginArtifact>io.grpc:protoc-gen-grpc-java:1.0.1</pluginArtifact>
+                                </outputTarget>
+                            </outputTargets>
                         </configuration>
                     </execution>
                 </executions>
@@ -226,7 +291,7 @@
                 <configuration>
                     <failOnViolation>true</failOnViolation>
                     <failOnWarning>false</failOnWarning>
-                    <configLocation>${basedir}/build/scalastyle_config.xml</configLocation>
+                    <configLocation>${basedir}/build/checkstyles/scalastyle_config.xml</configLocation>
                     <sourceDirectory>${basedir}/src/main/scala</sourceDirectory>
                     <testSourceDirectory>${basedir}/src/test/scala</testSourceDirectory>
                     <outputFile>${project.build.directory}/scalastyle-output.xml</outputFile>

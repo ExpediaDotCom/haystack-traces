@@ -17,7 +17,6 @@
 package com.expedia.www.haystack.trace.provider.providers.transformers
 
 import com.expedia.open.tracing.Span
-import com.expedia.www.haystack.trace.provider.providers.transformer.{TraceTransformer, TraceValidationHandler}
 
 /**
   *  Orders spans in natural ordering - root followed by other spans ordered by start time

@@ -16,7 +16,7 @@
 package com.expedia.www.haystack.trace.provider.unit.config
 
 import com.expedia.www.haystack.trace.provider.config.ProviderConfiguration
-import com.expedia.www.haystack.trace.provider.config.entities.ServiceConfiguration
+import com.expedia.www.haystack.trace.provider.config.entities.{ServiceConfiguration, TraceTransformersConfiguration}
 import com.expedia.www.haystack.trace.provider.unit.BaseUnitTestSpec
 
 class ConfigurationLoaderSpec extends BaseUnitTestSpec {
@@ -24,6 +24,11 @@ class ConfigurationLoaderSpec extends BaseUnitTestSpec {
     it("should load the service config from base.conf") {
       val serviceConfig: ServiceConfiguration = ProviderConfiguration.serviceConfig
       serviceConfig.port shouldBe 8080
+    }
+
+    it("should load the trace transformers") {
+      val traceConfig: TraceTransformersConfiguration = ProviderConfiguration.traceTransformerConfig
+      traceConfig.transformers.length should be >= 1
     }
   }
 }

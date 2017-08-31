@@ -24,6 +24,7 @@ import com.expedia.www.haystack.trace.provider.exceptions.InvalidTraceIdInDocume
 import com.expedia.www.haystack.trace.provider.metrics.MetricsSupport
 import com.expedia.www.haystack.trace.provider.stores.readers.cassandra.CassandraReader
 import com.expedia.www.haystack.trace.provider.stores.readers.es.ElasticSearchReader
+import com.expedia.www.haystack.trace.provider.stores.readers.es.query.TraceSearchQueryGenerator
 import io.searchbox.client.JestResult
 import io.searchbox.core.SearchResult
 import org.slf4j.LoggerFactory
@@ -34,7 +35,6 @@ import scala.util.{Failure, Success, Try}
 
 class CassandraEsTraceStore(cassandraConfiguration: CassandraConfiguration, esConfiguration: ElasticSearchConfiguration)(implicit val executor: ExecutionContextExecutor)
   extends TraceStore
-    with EsQueryBuilder
     with MetricsSupport {
   private val LOGGER = LoggerFactory.getLogger(classOf[ElasticSearchReader])
   private val traceRejected = metricRegistry.meter("search.trace.rejected")
@@ -42,18 +42,29 @@ class CassandraEsTraceStore(cassandraConfiguration: CassandraConfiguration, esCo
   private val cassandraReader: CassandraReader = new CassandraReader(cassandraConfiguration)
   private val esReader: ElasticSearchReader = new ElasticSearchReader(esConfiguration)
 
+  private val traceSearchQueryGenerator = new TraceSearchQueryGenerator(esConfiguration.indexNamePrefix, esConfiguration.indexType)
+
   override def getTrace(traceId: String): Future[Trace] = {
     cassandraReader.readTrace(traceId)
   }
 
-  private def parseTraceId(sourceMap: util.Map[String, String]): Try[String] = {
-    val docId = sourceMap.get(JestResult.ES_METADATA_ID)
-    val idRegex = """([a-zA-z0-9-]*)_([a-zA-z0-9]*)""".r
+  override def searchTraces(request: TracesSearchRequest): Future[List[Trace]] = {
+    esReader
+      .search(traceSearchQueryGenerator.generate(request))
+      .flatMap(extractTraces)
+  }
 
-    docId match {
-      case idRegex(traceId, _) => Success(traceId)
-      case _ => Failure(InvalidTraceIdInDocument(docId))
-    }
+  private def extractTraces(result: SearchResult): Future[List[Trace]] = {
+    // go through each hit and fetch trace for
+    val traceFutures = result
+      .getHits(classOf[java.util.Map[String, String]])
+      .toList
+      .flatMap(hit => fetchTrace(hit.source))
+
+    // wait for all Futures to complete and then map them to Traces
+    Future
+      .sequence(liftToTry(traceFutures))
+      .map(_.flatMap(extractTrace))
   }
 
   private def fetchTrace(sourceMap: util.Map[String, String]): Option[Future[Trace]] = {
@@ -64,6 +75,16 @@ class CassandraEsTraceStore(cassandraConfiguration: CassandraConfiguration, esCo
         LOGGER.warn("Invalid traceId, rejected searched trace", ex)
         traceRejected.mark()
         None
+    }
+  }
+
+  private def parseTraceId(sourceMap: util.Map[String, String]): Try[String] = {
+    val docId = sourceMap.get(JestResult.ES_METADATA_ID)
+    val idRegex = """([a-zA-z0-9-]*)_([a-zA-z0-9]*)""".r
+
+    docId match {
+      case idRegex(traceId, _) => Success(traceId)
+      case _ => Failure(InvalidTraceIdInDocument(docId))
     }
   }
 
@@ -82,24 +103,6 @@ class CassandraEsTraceStore(cassandraConfiguration: CassandraConfiguration, esCo
   private def liftToTry(traceFutures: List[Future[Trace]]): List[Future[Try[Trace]]] = traceFutures.map(
     _.map(Success(_)).recover { case t => Failure(t) }
   )
-
-  private def extractTraces(result: SearchResult): Future[List[Trace]] = {
-    // go through each hit and fetch trace for
-    val traceFutures = result
-      .getHits(classOf[java.util.Map[String, String]])
-      .toList
-      .flatMap(hit => fetchTrace(hit.source))
-
-    // wait for all Futures to complete and then map them to Traces
-    Future
-      .sequence(liftToTry(traceFutures))
-      .map(_.flatMap(extractTrace))
-  }
-
-  override def searchTraces(request: TracesSearchRequest): Future[List[Trace]] = {
-    esReader.search(buildSelectQuery(request, esConfiguration.indexNamePrefix, esConfiguration.indexType))
-      .flatMap(extractTraces)
-  }
 
   override def close(): Unit = {
     cassandraReader.close()

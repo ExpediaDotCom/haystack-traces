@@ -13,20 +13,8 @@
  *       See the License for the specific language governing permissions and
  *       limitations under the License.
  */
+package com.expedia.www.haystack.trace.provider.config.entities
 
-package com.expedia.www.haystack.trace.provider.providers.transformers
+import com.expedia.www.haystack.trace.provider.providers.transformers.TraceTransformer
 
-import com.expedia.open.tracing.Span
-
-/**
-  *  Orders spans in natural ordering - root followed by other spans ordered by start time
-  *
-  *  Assumes there is only one root in give spans List,
-  *  corresponding validations are done in [[TraceValidationHandler]]
-  */
-class SortSpanTransformer extends TraceTransformer {
-  override def transform(spans: List[Span]): List[Span] = {
-    val (left, right) = spans.partition(_.getParentSpanId.isEmpty)
-    left.head :: right.sortBy(_.getStartTime)
-  }
-}
+case class TraceTransformersConfiguration(transformers: Seq[TraceTransformer])

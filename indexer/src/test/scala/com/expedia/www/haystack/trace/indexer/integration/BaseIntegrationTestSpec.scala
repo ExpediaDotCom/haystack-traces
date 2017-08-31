@@ -30,7 +30,6 @@ import org.apache.commons.lang3.StringUtils
 import org.apache.kafka.streams.KeyValue
 import org.apache.kafka.streams.integration.utils.IntegrationTestUtils
 import org.scalatest._
-import org.scalatest.easymock.EasyMockSugar
 
 import scala.collection.JavaConversions._
 import scala.collection.JavaConverters._
@@ -38,7 +37,7 @@ import scala.concurrent.duration.FiniteDuration
 
 case class TraceDescription(traceId: String, spanIdPrefix: String)
 
-abstract class BaseIntegrationTestSpec extends WordSpec with GivenWhenThen with Matchers with BeforeAndAfterAll with BeforeAndAfterEach with EasyMockSugar {
+abstract class BaseIntegrationTestSpec extends WordSpec with GivenWhenThen with Matchers with BeforeAndAfterAll with BeforeAndAfterEach {
   protected val MAX_WAIT_FOR_OUTPUT_MS = 12000
 
   protected val spanAccumulatorConfig = SpanAccumulatorConfiguration(

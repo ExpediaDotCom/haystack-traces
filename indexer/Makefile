@@ -31,7 +31,7 @@ integration_test: prepare_integration_test_env
 		mvn test -P integration-tests
 
 	# stop all the containers
-	# docker-compose -f build/integration-tests/docker-compose.yml -p sandbox stop
+	docker-compose -f build/integration-tests/docker-compose.yml -p sandbox stop
 
 all: build docker_build integration_test
 

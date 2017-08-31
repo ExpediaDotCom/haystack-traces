@@ -20,35 +20,41 @@ package com.expedia.www.haystack.trace.indexer
 import com.codahale.metrics.JmxReporter
 import com.expedia.www.haystack.trace.indexer.config.ProjectConfiguration
 import com.expedia.www.haystack.trace.indexer.metrics.MetricsSupport
+import org.slf4j.LoggerFactory
 
 object App extends MetricsSupport {
-
-  private var jmxReporter: JmxReporter = _
+  private val LOGGER = LoggerFactory.getLogger(App.getClass)
 
   def main(args: Array[String]): Unit = {
     startJmxReporter()
 
-    val appConfig = new ProjectConfiguration
+    try {
+      val appConfig = new ProjectConfiguration
 
-    val stream = new StreamTopology(
-      appConfig.kafkaConfig,
-      appConfig.spanAccumulateConfig,
-      appConfig.elasticSearchConfig,
-      appConfig.cassandraConfig,
-      appConfig.indexConfig)
+      val stream = new StreamTopology(
+        appConfig.kafkaConfig,
+        appConfig.spanAccumulateConfig,
+        appConfig.elasticSearchConfig,
+        appConfig.cassandraConfig,
+        appConfig.indexConfig)
 
-    Runtime.getRuntime.addShutdownHook(new Thread {
-      override def run(): Unit = {
-        stream.close()
-        appConfig.close()
-      }
-    })
+      Runtime.getRuntime.addShutdownHook(new Thread {
+        override def run(): Unit = {
+          stream.close()
+          appConfig.close()
+        }
+      })
 
-    stream.start()
+      stream.start()
+    } catch {
+      case ex: Exception =>
+        LOGGER.error("Observed fatal exception while running the app", ex)
+        System.exit(1)
+    }
   }
 
   private def startJmxReporter() = {
-    jmxReporter = JmxReporter.forRegistry(metricRegistry).build()
+    val jmxReporter = JmxReporter.forRegistry(metricRegistry).build()
     jmxReporter.start()
   }
 }

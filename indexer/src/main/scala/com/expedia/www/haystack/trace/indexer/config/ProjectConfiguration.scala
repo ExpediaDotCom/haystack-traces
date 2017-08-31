@@ -39,7 +39,7 @@ class ProjectConfiguration extends AutoCloseable {
     * span accumulation related configuration like max buffered records, buffer window, poll interval
     * @return a span config object
     */
-  lazy val spanAccumulateConfig: SpanAccumulatorConfiguration = {
+  val spanAccumulateConfig: SpanAccumulatorConfiguration = {
     val cfg = config.getConfig("span.accumulate")
     SpanAccumulatorConfiguration(
       cfg.getInt("store.min.traces.per.cache"),
@@ -67,7 +67,7 @@ class ProjectConfiguration extends AutoCloseable {
     *
     * @return streams configuration object
     */
-  lazy val kafkaConfig: KafkaConfiguration = {
+  val kafkaConfig: KafkaConfiguration = {
 
     // verify if the applicationId and bootstrap server config are non empty
     def verifyRequiredProps(props: Properties): Unit = {
@@ -121,7 +121,7 @@ class ProjectConfiguration extends AutoCloseable {
     *
     * cassandra configuration object
     */
-  lazy val cassandraConfig: CassandraConfiguration = {
+  val cassandraConfig: CassandraConfiguration = {
     val cs = config.getConfig("cassandra")
 
     val awsConfig =
@@ -172,7 +172,7 @@ class ProjectConfiguration extends AutoCloseable {
     *
     * elastic search configuration object
     */
-  lazy val elasticSearchConfig: ElasticSearchConfiguration = {
+  val elasticSearchConfig: ElasticSearchConfiguration = {
     val es = config.getConfig("elasticsearch")
     val indexConfig = es.getConfig("index")
 

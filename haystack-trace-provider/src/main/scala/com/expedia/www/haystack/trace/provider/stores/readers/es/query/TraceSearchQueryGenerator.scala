@@ -40,25 +40,17 @@ class TraceSearchQueryGenerator(indexNamePrefix: String, indexType: String) {
   private def buildQueryString(request: TracesSearchRequest) = {
     val subQueries: List[QueryBuilder] = List(
       buildMatchQuery("service", request.getServiceName),
-      buildMatchQuery("operation", request.getServiceName),
+      buildMatchQuery("operation", request.getOperationName),
       buildRangeQuery("duration", request.getMinDuration, request.getMaxDuration),
-      buildRangeQuery("startTime", request.getStartTime, request.getEndTime),
-      buildTagMatchQuery(request)
+      buildRangeQuery("startTime", request.getStartTime, request.getEndTime)
     ).flatten
 
     val nestedMatchQuery: BoolQueryBuilder = subQueries
       .foldLeft(boolQuery())((boolQuery, q) => boolQuery.must(q))
 
     new SearchSourceBuilder()
-      .query(boolQuery.must(nestedQuery(NESTED_DOC_NAME, nestedMatchQuery, ScoreMode.Avg)))
-      .sort(withBaseDoc("startTime"))  // TODO default to a random sorting algo instead
-      .size(request.getLimit)
+      .query(boolQuery.must(nestedQuery(NESTED_DOC_NAME, nestedMatchQuery, ScoreMode.Avg).ignoreUnmapped(false)))
       .toString
-  }
-
-  private def buildTagMatchQuery(request: TracesSearchRequest) = {
-    request.getFieldsList
-      .foldLeft(boolQuery())((query, field) => query.must(matchQuery(field.getName, field.getVStr)))
   }
 
   private def buildMatchQuery(key: String, value: String): Option[MatchQueryBuilder] = {

@@ -31,7 +31,7 @@ class ElasticSearchReadResultListener(promise: Promise[SearchResult],
 
   override def completed(result: SearchResult): Unit = {
     if(result.getResponseCode >= 300) {
-      val ex = ElasticSearchClientError(result.getResponseCode)
+      val ex = ElasticSearchClientError(result.getResponseCode, result.getJsonString)
       LOGGER.error(s"Failed in reading from elasticsearch", ex)
       timer.stop()
       failure.mark()

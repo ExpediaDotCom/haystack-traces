@@ -34,4 +34,5 @@ case class KafkaConfiguration(streamsConfig: StreamsConfig,
                               consumeTopic: String,
                               autoOffsetReset: AutoOffsetReset,
                               timestampExtractor: TimestampExtractor,
-                              changelogConfig: ChangelogConfiguration)
+                              changelogConfig: ChangelogConfiguration,
+                              streamsCloseTimeoutInMillis: Int)

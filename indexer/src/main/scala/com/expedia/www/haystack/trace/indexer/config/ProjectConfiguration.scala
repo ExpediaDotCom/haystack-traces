@@ -45,8 +45,7 @@ class ProjectConfiguration extends AutoCloseable {
       cfg.getInt("store.min.traces.per.cache"),
       cfg.getInt("store.all.max.entries"),
       cfg.getLong("poll.ms"),
-      cfg.getLong("window.ms"),
-      cfg.getLong("streams.close.timeout.ms"))
+      cfg.getLong("window.ms"))
   }
 
   private def changelogConfig: ChangelogConfiguration = {
@@ -114,7 +113,8 @@ class ProjectConfiguration extends AutoCloseable {
       consumeTopic = consumerConfig.getString("topic"),
       offsetReset,
       timestampExtractor.newInstance().asInstanceOf[TimestampExtractor],
-      changelogConfig)
+      changelogConfig,
+      kafka.getInt("close.stream.timeout.ms"))
   }
 
   /**

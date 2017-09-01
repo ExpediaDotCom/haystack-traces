@@ -40,7 +40,7 @@ class FailedTopologyRecoverySpec extends BaseIntegrationTestSpec {
       val esConfig = elastic.buildConfig
       val indexTagsConfig = elastic.indexingConfig
       val cassandraConfig = cassandra.buildConfig
-      val accumulatorConfig = spanAccumulatorConfig.copy(pollIntervalMillis = spanAccumulatorConfig.pollIntervalMillis * 2)
+      val accumulatorConfig = spanAccumulatorConfig.copy(pollIntervalMillis = spanAccumulatorConfig.pollIntervalMillis * 5)
       produceSpansAsync(
         MAX_CHILD_SPANS_PER_TRACE,
         produceInterval = 1.seconds,
@@ -51,7 +51,7 @@ class FailedTopologyRecoverySpec extends BaseIntegrationTestSpec {
       When(s"kafka-streams topology is started and then stopped forcefully after few sec")
       val topology = new StreamTopology(kafkaConfig, accumulatorConfig, esConfig, cassandraConfig, indexTagsConfig)
       topology.start()
-      Thread.sleep(6000)
+      Thread.sleep(7000)
       topology.closeStream() shouldBe true
 
       Then(s"on restart of the topology, we should be able to read span-buffer object created in previous run from the '${kafka.OUTPUT_TOPIC}' topic")
@@ -63,15 +63,16 @@ class FailedTopologyRecoverySpec extends BaseIntegrationTestSpec {
         produceInterval = 1.seconds,
         TRACE_DESCRIPTIONS,
         startRecordTimestamp = spanAccumulatorConfig.bufferingWindowMillis,
-        spanAccumulatorConfig.bufferingWindowMillis)
+        spanAccumulatorConfig.bufferingWindowMillis,
+        startSpanIdxFrom = MAX_CHILD_SPANS_PER_TRACE)
 
       val records: util.List[KeyValue[String, SpanBuffer]] =
         IntegrationTestUtils.waitUntilMinKeyValueRecordsReceived(kafka.RESULT_CONSUMER_CONFIG, kafka.OUTPUT_TOPIC, 1, MAX_WAIT_FOR_OUTPUT_MS)
 
       // wait for the elastic search writes to pass through, i guess refresh time has to be adjusted
-      Thread.sleep(6000)
+      Thread.sleep(5000)
       validateKafkaOutput(records, MAX_CHILD_SPANS_PER_TRACE)
-      verifyCassandraWrites(TRACE_DESCRIPTIONS, MAX_CHILD_SPANS_PER_TRACE - 1, MAX_CHILD_SPANS_PER_TRACE)
+      verifyCassandraWrites(TRACE_DESCRIPTIONS, MAX_CHILD_SPANS_PER_TRACE, MAX_CHILD_SPANS_PER_TRACE + 1) // 1 extra record for trigger
       verifyElasticSearchWrites(Seq(TRACE_ID_1))
 
       topology.close()
@@ -79,10 +80,10 @@ class FailedTopologyRecoverySpec extends BaseIntegrationTestSpec {
   }
 
   // validate the kafka output
-  private def validateKafkaOutput(records: util.List[KeyValue[String, SpanBuffer]], childSpanCount: Int) = {
+  private def validateKafkaOutput(records: util.List[KeyValue[String, SpanBuffer]], minChildSpanCount: Int) = {
     // expect only one span buffer
     records.size() shouldBe 1
     records.head.key shouldBe TRACE_ID_1
-    records.head.value.getChildSpansCount should be >=childSpanCount
+    records.head.value.getChildSpansCount should be >=minChildSpanCount
   }
 }

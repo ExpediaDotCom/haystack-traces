@@ -72,8 +72,15 @@ class StreamTopology(kafkaConfig: KafkaConfiguration,
   }
 
   private def topology(): TopologyBuilder = {
-    val builder = new TopologyBuilder()
+    val topologyBuilder = createKafkaSource()
+    addSpanBufferProcessorWithStateStore(topologyBuilder)
+    addTraceWriterProcessor(topologyBuilder)
+    addKafkaSink(topologyBuilder)
+    topologyBuilder
+  }
 
+  private def createKafkaSource(): TopologyBuilder = {
+    val builder = new TopologyBuilder()
     builder.addSource(
       kafkaConfig.autoOffsetReset,
       TOPOLOGY_SOURCE_NAME,
@@ -81,7 +88,9 @@ class StreamTopology(kafkaConfig: KafkaConfiguration,
       new StringDeserializer,
       new SpanSerde().deserializer,
       kafkaConfig.consumeTopic)
+  }
 
+  private def addSpanBufferProcessorWithStateStore(builder: TopologyBuilder): Unit = {
     builder.addProcessor(
       TOPOLOGY_BUFFERED_SPAN_PROCESSOR_NAME,
       new SpanAccumulateProcessSupplier(spanAccumulatorConfig),
@@ -96,20 +105,22 @@ class StreamTopology(kafkaConfig: KafkaConfiguration,
       kafkaConfig.changelogConfig.logConfig)
 
     builder.addStateStore(storeSupplier, TOPOLOGY_BUFFERED_SPAN_PROCESSOR_NAME)
+  }
 
+  private def addTraceWriterProcessor(builder: TopologyBuilder): Unit = {
     builder.addProcessor(
       TOPOLOGY_WRITE_TRACE_PROCESSOR_NAME,
       new TraceWriteProcessorSupplier(cassandraWriter, elasticSearchWriter),
       TOPOLOGY_BUFFERED_SPAN_PROCESSOR_NAME)
+  }
 
+  private def addKafkaSink(builder: TopologyBuilder): Unit = {
     builder.addSink(
       TOPOLOGY_SINK_NAME,
       kafkaConfig.produceTopic,
       new StringSerializer,
       new ByteArraySerializer,
       TOPOLOGY_WRITE_TRACE_PROCESSOR_NAME)
-
-    builder
   }
 
   /**
@@ -144,7 +155,7 @@ class StreamTopology(kafkaConfig: KafkaConfiguration,
     if(running.getAndSet(false)) {
       LOGGER.info("Closing the kafka streams.")
       try {
-        streams.close(spanAccumulatorConfig.streamsCloseTimeoutMillis, TimeUnit.MILLISECONDS)
+        streams.close(kafkaConfig.streamsCloseTimeoutInMillis, TimeUnit.MILLISECONDS)
       } catch {
         case ex: Exception => LOGGER.error("Fail to close the kafka streams with reason", ex)
       }

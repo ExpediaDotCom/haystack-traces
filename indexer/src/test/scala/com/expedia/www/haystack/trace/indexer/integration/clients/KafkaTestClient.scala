@@ -60,7 +60,8 @@ class KafkaTestClient {
     INPUT_TOPIC,
     AutoOffsetReset.EARLIEST,
     new FailOnInvalidTimestamp,
-    ChangelogConfiguration(enabled = false))
+    ChangelogConfiguration(enabled = true),
+    3000)
 
   def prepare(appId: String): Unit = {
     RESULT_CONSUMER_CONFIG.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, KAFKA_CLUSTER.bootstrapServers)

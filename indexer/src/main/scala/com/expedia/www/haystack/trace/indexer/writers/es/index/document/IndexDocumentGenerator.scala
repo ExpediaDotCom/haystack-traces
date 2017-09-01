@@ -22,6 +22,7 @@ import java.util.function.Supplier
 import com.expedia.open.tracing.buffer.SpanBuffer
 import com.expedia.open.tracing.{Span, Tag}
 import com.expedia.www.haystack.trace.indexer.config.entities.IndexConfiguration
+import com.expedia.www.haystack.trace.indexer.metrics.{AppMetricNames, MetricsSupport}
 import com.expedia.www.haystack.trace.indexer.writers.es.index.document.Document.{TagKey, TagValue}
 import org.apache.commons.lang3.StringUtils
 
@@ -30,7 +31,9 @@ import scala.collection.immutable.Stream
 import scala.collection.mutable
 import scala.util.{Failure, Random, Success, Try}
 
-class IndexDocumentGenerator(config: IndexConfiguration) {
+class IndexDocumentGenerator(config: IndexConfiguration) extends MetricsSupport {
+
+  private val skipTagIndexingMetric = metricRegistry.meter(AppMetricNames.SKIP_TAG_INDEXING)
 
   private val ELASTIC_SEARCH_DOC_ID_SUFFIX_LENGTH = 4
   private val randomCharStream = ThreadLocal.withInitial(new Supplier[Stream[Char]] {
@@ -94,10 +97,10 @@ class IndexDocumentGenerator(config: IndexConfiguration) {
 
 
   /**
-    * this method adjusts the tag's value to the indexing field type. Take an example of 'httpstatus' tag name
+    * this method adjusts the tag's value to the indexing field type. Take an example of 'httpstatus' tag
     * that we always want to index as a 'long' type in elastic search. Now services may send this tag value as string,
-    * so here we transform the value to the expected type ie long. In case we fail to adjust the type, we ignore the tag
-    * for indexing.
+    * hence in this method, we will transform the tag value to its expected type for e.g. long.
+    * In case we fail to adjust the type, we ignore the tag for indexing.
     * @param fieldType expected field type that is valid for indexing
     * @param value tag value
     * @return tag value with adjusted(expected) type
@@ -112,7 +115,8 @@ class IndexDocumentGenerator(config: IndexConfiguration) {
     }) match {
       case Success(result) => Some(result)
       case Failure(_) =>
-        //TODO: should log this? wondering if input is crazy, then we might end up logging too many errors
+        // TODO: should we also log the tag name etc? wondering if input is crazy, then we might end up logging too many errors
+        skipTagIndexingMetric.mark()
         None
     }
   }

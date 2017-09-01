@@ -17,13 +17,14 @@
 
 package com.expedia.www.haystack.trace.indexer.writers.cassandra
 
+import java.util.concurrent.Semaphore
+
 import com.codahale.metrics.{Meter, Timer}
 import com.datastax.driver.core.ResultSetFuture
 import com.expedia.www.haystack.trace.indexer.metrics.{AppMetricNames, MetricsSupport}
 import org.slf4j.{Logger, LoggerFactory}
 
 import scala.collection.JavaConversions._
-import scala.concurrent.Promise
 
 object CassandraWriteResultListener extends MetricsSupport {
   protected val LOGGER: Logger = LoggerFactory.getLogger(CassandraWriteResultListener.getClass)
@@ -33,7 +34,7 @@ object CassandraWriteResultListener extends MetricsSupport {
 
 class CassandraWriteResultListener(asyncResult: ResultSetFuture,
                                    timer: Timer.Context,
-                                   promise: Promise[Boolean]) extends Runnable {
+                                   inflightRequestsSemaphore: Semaphore) extends Runnable {
 
   import CassandraWriteResultListener._
 
@@ -42,6 +43,8 @@ class CassandraWriteResultListener(asyncResult: ResultSetFuture,
     * We measure the time write operation takes and records any warnings or errors
     */
   override def run(): Unit = {
+    inflightRequestsSemaphore.release()
+
     try {
       timer.close()
 
@@ -52,12 +55,10 @@ class CassandraWriteResultListener(asyncResult: ResultSetFuture,
         LOGGER.warn(s"Warning received in cassandra writes {}", asyncResult.get.getExecutionInfo.getWarnings.toList.mkString(","))
         writeWarnings.mark(asyncResult.get.getExecutionInfo.getWarnings.size())
       }
-      promise.success(true)
     } catch {
       case ex: Exception =>
         LOGGER.error("Fail to write the record to cassandra with exception", ex)
         writeFailures.mark()
-        promise.failure(ex)
     }
   }
 }

@@ -32,6 +32,7 @@ class PartialTraceIndexingTopologySpec extends BaseIntegrationTestSpec {
   private val TRACE_ID = "unique-trace-id"
   private val SPAN_ID_PREFIX = "span-id"
 
+
   "Trace Indexing Topology" should {
     s"consume spans from '${kafka.INPUT_TOPIC}' topic, buffer them together for every unique traceId and write to cassandra and elastic search" in {
       Given("a set of spans with all configurations")
@@ -39,8 +40,9 @@ class PartialTraceIndexingTopologySpec extends BaseIntegrationTestSpec {
       val esConfig = elastic.buildConfig
       val indexTagsConfig = elastic.indexingConfig
       val cassandraConfig = cassandra.buildConfig
-      When(s"spans are produced in '${kafka.INPUT_TOPIC}' topic async, and kafka-streams topology is started")
       val traceDescription = List(TraceDescription(TRACE_ID, SPAN_ID_PREFIX))
+
+      When(s"spans are produced in '${kafka.INPUT_TOPIC}' topic async, and kafka-streams topology is started")
       produceSpansAsync(
         MAX_CHILD_SPANS_PER_TRACE,
         1.second,
@@ -54,7 +56,7 @@ class PartialTraceIndexingTopologySpec extends BaseIntegrationTestSpec {
       Then(s"we should read one span buffer object from '${kafka.OUTPUT_TOPIC}' topic and the same should be searchable in cassandra and elastic")
       val result: util.List[KeyValue[String, SpanBuffer]] =
         IntegrationTestUtils.waitUntilMinKeyValueRecordsReceived(kafka.RESULT_CONSUMER_CONFIG, kafka.OUTPUT_TOPIC, 1, MAX_WAIT_FOR_OUTPUT_MS)
-      validate(result, MAX_CHILD_SPANS_PER_TRACE, SPAN_ID_PREFIX)
+      validateKafkaOutput(result, MAX_CHILD_SPANS_PER_TRACE, SPAN_ID_PREFIX)
 
       // give a sleep to let elastic search results become searchable
       Thread.sleep(6000)
@@ -69,12 +71,12 @@ class PartialTraceIndexingTopologySpec extends BaseIntegrationTestSpec {
   // this test is useful to check if we are not emitting the old spans if the same traceId reappears later
   private def repeatTestWithNewerSpanIds(): Unit = {
     Given(s"a set of new span ids and same traceId '$TRACE_ID'")
-    val SPAN_ID_2_PREFIX = "span-id-2"
+    val SPAN_ID_PREFIX = "span-id-2"
     When(s"these spans are produced in '${kafka.INPUT_TOPIC}' topic on the currently running topology")
     produceSpansAsync(
       MAX_CHILD_SPANS_PER_TRACE,
       1.seconds,
-      List(TraceDescription(TRACE_ID, SPAN_ID_2_PREFIX)),
+      List(TraceDescription(TRACE_ID, SPAN_ID_PREFIX)),
       spanAccumulatorConfig.bufferingWindowMillis + 100L,
       spanAccumulatorConfig.bufferingWindowMillis)
 
@@ -82,11 +84,11 @@ class PartialTraceIndexingTopologySpec extends BaseIntegrationTestSpec {
     val result: util.List[KeyValue[String, SpanBuffer]] =
       IntegrationTestUtils.waitUntilMinKeyValueRecordsReceived(kafka.RESULT_CONSUMER_CONFIG, kafka.OUTPUT_TOPIC, 1, MAX_WAIT_FOR_OUTPUT_MS)
 
-    validate(result, MAX_CHILD_SPANS_PER_TRACE, SPAN_ID_2_PREFIX)
+    validateKafkaOutput(result, MAX_CHILD_SPANS_PER_TRACE, SPAN_ID_PREFIX)
   }
 
-  // validate the span buffers
-  private def validate(records: util.List[KeyValue[String, SpanBuffer]],
+  // validate the kafka output
+  private def validateKafkaOutput(records: util.List[KeyValue[String, SpanBuffer]],
                        childSpanCount: Int,
                        spanIdPrefix: String): Unit = {
     // expect only one span buffer object

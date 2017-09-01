@@ -17,4 +17,9 @@
 
 package com.expedia.www.haystack.trace.indexer.config.entities
 
+/**
+  * defines the parameters required for aws discovery
+  * @param region aws region e.g. us-east-1, us-west-2
+  * @param tags: ec2 tags
+  */
 case class AwsNodeDiscoveryConfiguration(region: String, tags: Map[String, String])

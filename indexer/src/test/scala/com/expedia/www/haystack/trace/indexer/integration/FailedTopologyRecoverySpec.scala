@@ -28,7 +28,7 @@ import scala.collection.JavaConversions._
 import scala.concurrent.duration._
 
 class FailedTopologyRecoverySpec extends BaseIntegrationTestSpec {
-  private val MAX_CHILD_SPANS = 5
+  private val MAX_CHILD_SPANS_PER_TRACE = 5
   private val TRACE_ID_1 = "traceid-1"
   private val SPAN_ID_PREFIX = "span-id-"
   private val TRACE_DESCRIPTIONS = List(TraceDescription(TRACE_ID_1, SPAN_ID_PREFIX))
@@ -42,20 +42,19 @@ class FailedTopologyRecoverySpec extends BaseIntegrationTestSpec {
       val cassandraConfig = cassandra.buildConfig
       val accumulatorConfig = spanAccumulatorConfig.copy(pollIntervalMillis = spanAccumulatorConfig.pollIntervalMillis * 2)
       produceSpansAsync(
-        MAX_CHILD_SPANS,
+        MAX_CHILD_SPANS_PER_TRACE,
         produceInterval = 1.seconds,
         TRACE_DESCRIPTIONS,
         0,
         spanAccumulatorConfig.bufferingWindowMillis)
 
       When(s"kafka-streams topology is started and then stopped forcefully after few sec")
-      var topology = new StreamTopology(kafkaConfig, accumulatorConfig, esConfig, cassandraConfig, indexTagsConfig)
+      val topology = new StreamTopology(kafkaConfig, accumulatorConfig, esConfig, cassandraConfig, indexTagsConfig)
       topology.start()
       Thread.sleep(6000)
-      topology.close()
+      topology.closeStream() shouldBe true
 
       Then(s"on restart of the topology, we should be able to read span-buffer object created in previous run from the '${kafka.OUTPUT_TOPIC}' topic")
-      topology = new StreamTopology(kafkaConfig, accumulatorConfig, esConfig, cassandraConfig, indexTagsConfig)
       topology.start()
 
       // produce one more span record with same traceId to trigger punctuate
@@ -69,16 +68,18 @@ class FailedTopologyRecoverySpec extends BaseIntegrationTestSpec {
       val records: util.List[KeyValue[String, SpanBuffer]] =
         IntegrationTestUtils.waitUntilMinKeyValueRecordsReceived(kafka.RESULT_CONSUMER_CONFIG, kafka.OUTPUT_TOPIC, 1, MAX_WAIT_FOR_OUTPUT_MS)
 
-      validate(records, MAX_CHILD_SPANS)
-      verifyCassandraWrites(TRACE_DESCRIPTIONS, MAX_CHILD_SPANS - 1, MAX_CHILD_SPANS)
+      // wait for the elastic search writes to pass through, i guess refresh time has to be adjusted
+      Thread.sleep(6000)
+      validateKafkaOutput(records, MAX_CHILD_SPANS_PER_TRACE)
+      verifyCassandraWrites(TRACE_DESCRIPTIONS, MAX_CHILD_SPANS_PER_TRACE - 1, MAX_CHILD_SPANS_PER_TRACE)
       verifyElasticSearchWrites(Seq(TRACE_ID_1))
 
       topology.close()
     }
   }
 
-  // validate the received records
-  private def validate(records: util.List[KeyValue[String, SpanBuffer]], childSpanCount: Int) = {
+  // validate the kafka output
+  private def validateKafkaOutput(records: util.List[KeyValue[String, SpanBuffer]], childSpanCount: Int) = {
     // expect only one span buffer
     records.size() shouldBe 1
     records.head.key shouldBe TRACE_ID_1

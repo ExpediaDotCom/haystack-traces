@@ -137,10 +137,10 @@ class StreamTopology(kafkaConfig: KafkaConfiguration,
   }
 
   /**
-    * close the stream if it is not running
+    * close the stream if it is not running,
     * @return
     */
-  private def closeStream(): Boolean = {
+  private[haystack] def closeStream(): Boolean = {
     if(running.getAndSet(false)) {
       LOGGER.info("Closing the kafka streams.")
       try {

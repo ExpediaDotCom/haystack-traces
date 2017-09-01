@@ -11,6 +11,7 @@
     <properties>
         <project.jdk.version>1.8</project.jdk.version>
 
+        <protobuf.version>3.3.1</protobuf.version>
         <kafka-version>0.11.0.0</kafka-version>
 
         <logback.version>1.2.3</logback.version>
@@ -40,7 +41,7 @@
         <dependency>
             <groupId>com.google.protobuf</groupId>
             <artifactId>protobuf-java</artifactId>
-            <version>3.3.1</version>
+            <version>${protobuf.version}</version>
         </dependency>
 
         <!-- scala -->

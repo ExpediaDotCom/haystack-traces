@@ -38,13 +38,13 @@ class EvictedSpanBufferSpec extends BaseIntegrationTestSpec {
       val records: util.List[KeyValue[String, SpanBuffer]] =
         IntegrationTestUtils.waitUntilMinKeyValueRecordsReceived(kafka.RESULT_CONSUMER_CONFIG, kafka.OUTPUT_TOPIC, 10, MAX_WAIT_FOR_OUTPUT_MS)
 
-      validate(records)
+      validateKafkaOutput(records)
       topology.close()
     }
   }
 
-  // validate the received records
-  private def validate(records: util.List[KeyValue[String, SpanBuffer]]) = {
+  // validate the kafka output
+  private def validateKafkaOutput(records: util.List[KeyValue[String, SpanBuffer]]) = {
     records.map(_.key).toSet should contain allOf (TRACE_ID_1, TRACE_ID_2)
     records.foreach(rec => rec.value.getChildSpansCount shouldBe 1)
   }

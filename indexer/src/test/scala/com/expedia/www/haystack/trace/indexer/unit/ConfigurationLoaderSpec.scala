@@ -64,11 +64,13 @@ class ConfigurationLoaderSpec extends FunSpec with Matchers {
       cassandra.socket.readTimeoutMills shouldBe 5000
       cassandra.socket.connectionTimeoutMillis shouldBe 10000
       cassandra.recordTTLInSec shouldBe 86400
+      cassandra.maxInFlightRequests shouldBe 100
     }
 
     it("should load the elastic search config from base.conf and one property overridden from env variable") {
       val elastic = project.elasticSearchConfig
       elastic.endpoint shouldBe "http://elasticsearch:9200"
+      elastic.maxInFlightRequests shouldBe 50
       elastic.indexTemplateJson shouldBe Some("some_template_json")
       elastic.consistencyLevel shouldBe "one"
       elastic.readTimeoutMillis shouldBe 5000

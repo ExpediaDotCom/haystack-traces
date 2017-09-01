@@ -19,6 +19,7 @@ package com.expedia.www.haystack.trace.indexer.writers.cassandra
 
 import java.nio.ByteBuffer
 import java.util.Date
+import java.util.concurrent.Semaphore
 
 import com.datastax.driver.core._
 import com.datastax.driver.core.querybuilder.QueryBuilder
@@ -26,7 +27,7 @@ import com.expedia.www.haystack.trace.indexer.config.entities.CassandraConfigura
 import com.expedia.www.haystack.trace.indexer.metrics.{AppMetricNames, MetricsSupport}
 import org.slf4j.LoggerFactory
 
-import scala.concurrent.{ExecutionContextExecutor, Future, Promise}
+import scala.concurrent.ExecutionContextExecutor
 import scala.util.Try
 
 class CassandraWriter(config: CassandraConfiguration)(implicit val dispatcher: ExecutionContextExecutor)
@@ -37,6 +38,9 @@ class CassandraWriter(config: CassandraConfiguration)(implicit val dispatcher: E
   private val writeTimer = metricRegistry.timer(AppMetricNames.CASSANDRA_WRITE_TIME)
   private val writeFailures = metricRegistry.meter(AppMetricNames.CASSANDRA_WRITE_FAILURE)
   private val sessionFactory = new CassandraSessionFactory(config)
+
+  // this semaphore controls the parallel writes to cassandra
+  private val inflightRequestsSemaphore = new Semaphore(config.maxInFlightRequests, true)
 
   //insert into table(id, ts, span) values (?, ?, ?) using ttl ?
   private lazy val insertSpan: PreparedStatement = {
@@ -54,28 +58,34 @@ class CassandraWriter(config: CassandraConfiguration)(implicit val dispatcher: E
 
   /**
     * writes the traceId and its spans to cassandra. Use the current timestamp as the sort key for the writes to same
-    * TraceId
+    * TraceId. Also if the parallel writes exceed the max inflight requests, then we block and this puts backpressure on
+    * upstream
     * @param traceId: trace id
     * @param spanBufferBytes: list of spans belonging to this traceId
     * @return
     */
-  def write(traceId: String, spanBufferBytes: Array[Byte]): Future[_] = {
+  def write(traceId: String, spanBufferBytes: Array[Byte]): Unit = {
+    var isSemaphoreAcquired = false
+
     try {
+      inflightRequestsSemaphore.acquire()
+      isSemaphoreAcquired = true
+
       val timer = writeTimer.time()
-      val promise = Promise[Boolean]()
-      val batchStatement = prepareBatchStatement(traceId, spanBufferBytes)
-      val asyncResult = sessionFactory.session.executeAsync(batchStatement)
-      asyncResult.addListener(new CassandraWriteResultListener(asyncResult, timer, promise), dispatcher)
-      promise.future
+
+      // prepare the statement
+      val statement = prepareStatement(traceId, spanBufferBytes)
+      val asyncResult = sessionFactory.session.executeAsync(statement)
+      asyncResult.addListener(new CassandraWriteResultListener(asyncResult, timer, inflightRequestsSemaphore), dispatcher)
     } catch {
       case ex: Exception =>
-        LOGGER.error("Fail to write the spans to cassandra with reason", ex)
+        LOGGER.error("Fail to write the spans to cassandra with exception", ex)
         writeFailures.mark()
-        Future.failed(ex)
+        if(isSemaphoreAcquired) inflightRequestsSemaphore.release()
     }
   }
 
-  private def prepareBatchStatement(traceId: String, spansByte: Array[Byte]): Statement = {
+  private def prepareStatement(traceId: String, spansByte: Array[Byte]): Statement = {
     new BoundStatement(insertSpan)
       .setString(Schema.ID_COLUMN_NAME, traceId)
       .setTimestamp(Schema.TIMESTAMP_COLUMN_NAME, new Date())

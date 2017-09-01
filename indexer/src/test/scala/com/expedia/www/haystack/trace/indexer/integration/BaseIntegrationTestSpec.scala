@@ -137,8 +137,6 @@ abstract class BaseIntegrationTestSpec extends WordSpec with GivenWhenThen with 
     })
   }
 
-
-
   def verifyElasticSearchWrites(traceIds: Seq[String]): Unit = {
     def extractTraceIdFromDocId(docId: String): String = {
       StringUtils.substring(docId, 0, StringUtils.lastIndexOf(docId, "_"))

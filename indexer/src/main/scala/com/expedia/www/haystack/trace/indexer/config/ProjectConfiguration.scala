@@ -165,7 +165,8 @@ class ProjectConfiguration extends AutoCloseable {
       autoCreateSchema,
       consistencyLevel,
       cs.getInt("ttl.sec"),
-      socket)
+      socket,
+      cs.getInt("max.inflight.requests"))
   }
 
   /**
@@ -191,7 +192,8 @@ class ProjectConfiguration extends AutoCloseable {
       indexNamePrefix = indexConfig.getString("name.prefix"),
       indexType = indexConfig.getString("type"),
       es.getInt("conn.timeout.ms"),
-      es.getInt("read.timeout.ms"))
+      es.getInt("read.timeout.ms"),
+      es.getInt("max.inflight.requests"))
   }
 
   /**

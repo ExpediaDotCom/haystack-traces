@@ -58,7 +58,7 @@ class MultipleTraceIndexingTopologySpec extends BaseIntegrationTestSpec {
       val result: util.List[KeyValue[String, SpanBuffer]] =
         IntegrationTestUtils.waitUntilMinKeyValueRecordsReceived(kafka.RESULT_CONSUMER_CONFIG, kafka.OUTPUT_TOPIC, 2, MAX_WAIT_FOR_OUTPUT_MS)
 
-      validate(result, MAX_CHILD_SPANS_PER_TRACE)
+      validateKafkaOutput(result, MAX_CHILD_SPANS_PER_TRACE)
 
       Thread.sleep(6000)
       verifyCassandraWrites(traceDescriptions, MAX_CHILD_SPANS_PER_TRACE, MAX_CHILD_SPANS_PER_TRACE)
@@ -67,8 +67,8 @@ class MultipleTraceIndexingTopologySpec extends BaseIntegrationTestSpec {
     }
   }
 
-  // validate the received records
-  private def validate(records: util.List[KeyValue[String, SpanBuffer]], childSpanCount: Int) = {
+  // validate the kafka output
+  private def validateKafkaOutput(records: util.List[KeyValue[String, SpanBuffer]], childSpanCount: Int) = {
     records.size() shouldBe 2
 
     // both traceIds should be present as different span buffer objects

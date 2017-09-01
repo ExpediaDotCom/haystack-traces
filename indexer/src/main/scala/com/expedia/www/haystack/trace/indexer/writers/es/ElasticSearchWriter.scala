@@ -19,6 +19,7 @@ package com.expedia.www.haystack.trace.indexer.writers.es
 
 import java.text.SimpleDateFormat
 import java.util.Date
+import java.util.concurrent.Semaphore
 
 import com.expedia.open.tracing.buffer.SpanBuffer
 import com.expedia.www.haystack.trace.indexer.config.entities.{ElasticSearchConfiguration, IndexConfiguration}
@@ -32,7 +33,6 @@ import io.searchbox.indices.template.PutTemplate
 import io.searchbox.params.Parameters
 import org.slf4j.LoggerFactory
 
-import scala.concurrent.{Future, Promise}
 import scala.util.Try
 
 class ElasticSearchWriter(esConfig: ElasticSearchConfiguration, indexConf: IndexConfiguration)
@@ -48,6 +48,9 @@ class ElasticSearchWriter(esConfig: ElasticSearchConfiguration, indexConf: Index
 
   // converts a span into an indexable document
   private val documentGenerator = new IndexDocumentGenerator(indexConf)
+
+  // this semaphore controls the parallel writes to cassandra
+  private val inflightRequestsSemaphore = new Semaphore(esConfig.maxInFlightRequests, true)
 
   // initialize the elastic search client
   private val esClient: JestClient = {
@@ -71,27 +74,30 @@ class ElasticSearchWriter(esConfig: ElasticSearchConfiguration, indexConf: Index
   }
 
   /**
-    * converts the spans to an index document and writes to elastic search
+    * converts the spans to an index document and writes to elastic search. Also if the parallel writes
+    * exceed the max inflight requests, then we block and this puts backpressure on upstream
     * @param traceId trace id
     * @param spanBuffer list of spans belonging to this traceId
     * @return
     */
-  def write(traceId: String, spanBuffer: SpanBuffer): Future[_] = {
+  def write(traceId: String, spanBuffer: SpanBuffer): Unit = {
+    var isSemaphoreAcquired = false
+
     try {
       createIndexAction(traceId, spanBuffer, indexName()) match {
         case Some(indexRequest) =>
-          val promise = Promise[Boolean]()
-          esClient.executeAsync(indexRequest, new TraceIndexResultHandler(promise, esWriteTime.time()))
-          promise.future
-        case _ =>
-          // skip indexing this span buffer
-          Future.successful(true)
+          inflightRequestsSemaphore.acquire()
+          isSemaphoreAcquired = true
+
+          // execute the request async
+          esClient.executeAsync(indexRequest, new TraceIndexResultHandler(inflightRequestsSemaphore, esWriteTime.time()))
+        case _ => // skip indexing this span buffer
       }
     } catch {
       case ex: Exception =>
+        if(isSemaphoreAcquired) inflightRequestsSemaphore.release()
         esWriteFailureMeter.mark()
-        LOGGER.error("Failed to write spans with exception", ex)
-        Future.failed(ex)
+        LOGGER.error("Failed to write spans to elastic search with exception", ex)
     }
   }
 

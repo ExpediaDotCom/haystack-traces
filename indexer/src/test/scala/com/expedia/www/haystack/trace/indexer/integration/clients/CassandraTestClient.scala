@@ -53,7 +53,8 @@ class CassandraTestClient {
     None,
     ConsistencyLevel.ONE,
     recordTTLInSec = 150,
-    SocketConfiguration(5, keepAlive = true, 5000, 5000))
+    SocketConfiguration(5, keepAlive = true, 5000, 5000),
+    10)
 
   def queryAll(): Seq[CassandraRow] = {
     val rows = cassandraSession.execute(s"SELECT id, ts, spans from $KEYSPACE.$TABLE_NAME")

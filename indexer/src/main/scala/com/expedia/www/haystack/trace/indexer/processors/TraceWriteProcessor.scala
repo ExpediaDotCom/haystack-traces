@@ -22,15 +22,12 @@ import com.expedia.www.haystack.trace.indexer.writers.cassandra.CassandraWriter
 import com.expedia.www.haystack.trace.indexer.writers.es.ElasticSearchWriter
 import org.apache.kafka.streams.processor.{Processor, ProcessorContext}
 
-import scala.concurrent.duration._
-import scala.concurrent.{Await, ExecutionContextExecutor, Future}
+import scala.concurrent.ExecutionContextExecutor
 
 class TraceWriteProcessor(cassandraWriter: CassandraWriter,
                           elasticSearchWriter: ElasticSearchWriter)(implicit val dispatcher: ExecutionContextExecutor)
   extends Processor[String, SpanBuffer] {
 
-  // TODO: put this as config
-  private val MAX_WRITE_WAIT = 10.seconds
   private var context: ProcessorContext = _
 
   /**
@@ -50,12 +47,9 @@ class TraceWriteProcessor(cassandraWriter: CassandraWriter,
   override def process(traceId: String, spanBuffer: SpanBuffer): Unit = {
     val spanBufferBytes = spanBuffer.toByteArray
 
-    val writeFuture = Future.sequence(Seq(
-      cassandraWriter.write(traceId, spanBufferBytes),
-      elasticSearchWriter.write(traceId, spanBuffer)
-    ))
+    cassandraWriter.write(traceId, spanBufferBytes)
+    elasticSearchWriter.write(traceId, spanBuffer)
 
-    Await.ready(writeFuture, MAX_WRITE_WAIT)
     this.context.forward(traceId, spanBufferBytes)
   }
 

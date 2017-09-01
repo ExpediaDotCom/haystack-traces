@@ -55,7 +55,8 @@ class ElasticSearchTestClient {
     INDEX_NAME_PREFIX,
     INDEX_TYPE,
     3000,
-    3000)
+    3000,
+    10)
 
   def indexingConfig = IndexConfiguration(List(
     IndexField(name = "role", `type` = "string"),

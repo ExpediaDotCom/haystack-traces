@@ -17,6 +17,8 @@
 
 package com.expedia.www.haystack.trace.indexer.processors
 
+import java.util.Objects
+
 import com.expedia.open.tracing.Span
 import com.expedia.open.tracing.buffer.SpanBuffer
 import com.expedia.www.haystack.trace.indexer.StreamTopology
@@ -40,10 +42,11 @@ class SpanAccumulateProcessor(config: SpanAccumulatorConfiguration) extends Proc
     */
   override def init(context: ProcessorContext): Unit = {
     this.context = context
-    this.store = context.getStateStore(StreamTopology.STATE_STORE_NAME).asInstanceOf[SpanBufferKeyValueStore]
-
-    this.store.addEvictionListener(this)
     this.context.schedule(config.pollIntervalMillis)
+
+    this.store = context.getStateStore(StreamTopology.STATE_STORE_NAME).asInstanceOf[SpanBufferKeyValueStore]
+    require(this.store != null, "State store can't be null")
+    this.store.addEvictionListener(this)
   }
 
   /**

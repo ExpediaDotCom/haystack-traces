@@ -58,7 +58,7 @@ object AwsNodeDiscoverer {
     * @param tags a set of ec2 node tags
     * @return
     */
-  def discover(client: AmazonEC2Client, tags: Map[String, String]): Seq[String] = {
+  private[haystack] def discover(client: AmazonEC2Client, tags: Map[String, String]): Seq[String] = {
     val filters = tags.map { case (key, value) => new Filter("tag:" + key, Collections.singletonList(value)) }
     val request = new DescribeInstancesRequest().withFilters(filters)
 

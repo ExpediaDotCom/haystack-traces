@@ -44,8 +44,7 @@ abstract class BaseIntegrationTestSpec extends WordSpec with GivenWhenThen with 
     minTracesPerCache = 100,
     maxEntriesAllStores = 500,
     pollIntervalMillis = 2000L,
-    bufferingWindowMillis = 6000L,
-    streamsCloseTimeoutMillis = 3000)
+    bufferingWindowMillis = 6000L)
 
   protected var scheduler: ScheduledExecutorService = _
 
@@ -97,14 +96,15 @@ abstract class BaseIntegrationTestSpec extends WordSpec with GivenWhenThen with 
                                   produceInterval: FiniteDuration,
                                   traceDescription: List[TraceDescription],
                                   startRecordTimestamp: Long,
-                                  maxRecordTimestamp: Long): ScheduledFuture[_] = {
+                                  maxRecordTimestamp: Long,
+                                  startSpanIdxFrom: Int = 0): ScheduledFuture[_] = {
     var timestamp = startRecordTimestamp
-    var idx = 0L
+    var cnt = 0
     scheduler.scheduleWithFixedDelay(new Runnable {
       override def run(): Unit = {
-        if(idx < maxSpansPerTrace) {
+        if(cnt < maxSpansPerTrace) {
           val spans = traceDescription.map(sd => {
-            new KeyValue[String, Span](sd.traceId, randomSpan(sd.traceId, s"${sd.spanIdPrefix}-$idx", s"service$idx", s"op$idx"))
+            new KeyValue[String, Span](sd.traceId, randomSpan(sd.traceId, s"${sd.spanIdPrefix}-${startSpanIdxFrom + cnt}", s"service${startSpanIdxFrom + cnt}", s"op${startSpanIdxFrom + cnt}"))
           }).asJava
           IntegrationTestUtils.produceKeyValuesSynchronouslyWithTimestamp(
             kafka.INPUT_TOPIC,
@@ -113,7 +113,7 @@ abstract class BaseIntegrationTestSpec extends WordSpec with GivenWhenThen with 
             timestamp)
           timestamp = timestamp + (maxRecordTimestamp / (maxSpansPerTrace - 1))
         }
-        idx = idx + 1
+        cnt = cnt + 1
       }
     }, 0, produceInterval.toMillis, TimeUnit.MILLISECONDS)
   }
@@ -125,8 +125,8 @@ abstract class BaseIntegrationTestSpec extends WordSpec with GivenWhenThen with 
     rows.foreach(row => {
       val descr = traceDescriptions.find(_.traceId == row.id).get
       row.spanBuffer should not be null
-      row.spanBuffer.getChildSpansCount should be  >=minSpansPerTrace
-      row.spanBuffer.getChildSpansCount should be  <=maxSpansPerTrace
+      row.spanBuffer.getChildSpansCount should be >=minSpansPerTrace
+      row.spanBuffer.getChildSpansCount should be <=maxSpansPerTrace
 
       row.spanBuffer.getChildSpansList.zipWithIndex foreach {
         case (sp, idx) =>

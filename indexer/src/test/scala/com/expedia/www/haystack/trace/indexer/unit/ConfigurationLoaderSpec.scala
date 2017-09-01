@@ -32,7 +32,6 @@ class ConfigurationLoaderSpec extends FunSpec with Matchers {
     it("should load the span buffer config only from base.conf") {
       val config = project.spanAccumulateConfig
       config.pollIntervalMillis shouldBe 1000L
-      config.streamsCloseTimeoutMillis shouldBe 300L
       config.maxEntriesAllStores shouldBe 20000
       config.bufferingWindowMillis shouldBe 1000L
     }
@@ -49,6 +48,7 @@ class ConfigurationLoaderSpec extends FunSpec with Matchers {
       kafkaConfig.changelogConfig.enabled shouldBe true
       kafkaConfig.changelogConfig.logConfig.get("retention.bytes") shouldBe "104857600"
       kafkaConfig.changelogConfig.logConfig.get("retention.ms") shouldBe "86400"
+      kafkaConfig.streamsCloseTimeoutInMillis shouldBe 300
     }
 
     it("should load the cassandra config from base.conf and few properties overridden from env variable") {

@@ -21,10 +21,8 @@ import io.searchbox.core.Search
 import io.searchbox.strings.StringUtils
 import org.apache.lucene.search.join.ScoreMode
 import org.elasticsearch.index.query.QueryBuilders._
-import org.elasticsearch.index.query.{BoolQueryBuilder, MatchQueryBuilder, QueryBuilder, RangeQueryBuilder}
+import org.elasticsearch.index.query._
 import org.elasticsearch.search.builder.SearchSourceBuilder
-
-import scala.collection.JavaConversions._
 
 class TraceSearchQueryGenerator(indexNamePrefix: String, indexType: String) {
   private val NESTED_DOC_NAME = "spans"
@@ -36,7 +34,8 @@ class TraceSearchQueryGenerator(indexNamePrefix: String, indexType: String) {
       .build()
   }
 
-  // TODO further improve and optimize query
+  // TODO further improve query: add logs/tags, limit and sort order
+  // TODO optimize query
   private def buildQueryString(request: TracesSearchRequest) = {
     val subQueries: List[QueryBuilder] = List(
       buildMatchQuery("service", request.getServiceName),

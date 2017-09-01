@@ -1,7 +1,7 @@
 version: '3'
 services:
    elasticsearch:
-     image: elasticsearch:2.4.6-alpine
+     image: elasticsearch:5.5.2-alpine
      environment:
        ES_JAVA_OPTS: "-Xms256m -Xmx256m"
      ports:

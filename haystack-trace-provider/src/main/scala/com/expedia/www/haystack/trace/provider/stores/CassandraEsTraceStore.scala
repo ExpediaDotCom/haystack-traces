@@ -42,6 +42,8 @@ class CassandraEsTraceStore(cassandraConfiguration: CassandraConfiguration, esCo
   private val cassandraReader: CassandraReader = new CassandraReader(cassandraConfiguration)
   private val esReader: ElasticSearchReader = new ElasticSearchReader(esConfiguration)
 
+  private val idRegex = """([a-zA-z0-9-]*)_([a-zA-z0-9]*)""".r
+
   private val traceSearchQueryGenerator = new TraceSearchQueryGenerator(esConfiguration.indexNamePrefix, esConfiguration.indexType)
 
   override def getTrace(traceId: String): Future[Trace] = {
@@ -55,16 +57,14 @@ class CassandraEsTraceStore(cassandraConfiguration: CassandraConfiguration, esCo
   }
 
   private def extractTraces(result: SearchResult): Future[List[Trace]] = {
-    // go through each hit and fetch trace for
-    val traceFutures = result
-      .getHits(classOf[java.util.Map[String, String]])
-      .toList
+    // go through each hit and fetch trace for parsed traceId
+    val traceFutures = result.getHits(classOf[java.util.Map[String, String]]).toList
       .flatMap(hit => fetchTrace(hit.source))
 
     // wait for all Futures to complete and then map them to Traces
     Future
       .sequence(liftToTry(traceFutures))
-      .map(_.flatMap(extractTrace))
+      .map(_.flatMap(retrieveTriedTrace))
   }
 
   private def fetchTrace(sourceMap: util.Map[String, String]): Option[Future[Trace]] = {
@@ -80,7 +80,6 @@ class CassandraEsTraceStore(cassandraConfiguration: CassandraConfiguration, esCo
 
   private def parseTraceId(sourceMap: util.Map[String, String]): Try[String] = {
     val docId = sourceMap.get(JestResult.ES_METADATA_ID)
-    val idRegex = """([a-zA-z0-9-]*)_([a-zA-z0-9]*)""".r
 
     docId match {
       case idRegex(traceId, _) => Success(traceId)
@@ -88,7 +87,7 @@ class CassandraEsTraceStore(cassandraConfiguration: CassandraConfiguration, esCo
     }
   }
 
-  private def extractTrace(triedTrace: Try[Trace]): Option[Trace] = {
+  private def retrieveTriedTrace(triedTrace: Try[Trace]): Option[Trace] = {
     triedTrace match {
       case Success(trace) =>
         Some(trace)

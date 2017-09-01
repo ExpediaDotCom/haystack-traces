@@ -52,10 +52,9 @@ class CassandraReadResultListener(asyncResult: ResultSetFuture,
 
   private def tryGetTraceRow(resultSet: ResultSet): Try[Row] = {
     val row: Row = resultSet.one()
-    row match {
-      case row: Row => Success(row)
-      case null => Failure(new TraceNotFoundException)
-    }
+
+    if(row == null) Failure(new TraceNotFoundException)
+    else Success(row)
   }
 
   private def tryDeserialize(row: Row): Try[Trace] = {

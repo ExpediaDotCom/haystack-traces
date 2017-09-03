@@ -40,7 +40,7 @@ class SpanBufferLoggingEnabledBufferMemoryStore(val storeName: String, dynamicCa
   }
 
   override def put(key: String, value: SpanBufferWithMetadata): Unit = {
-    super.put(key, value)
+    _put(key, value)
     changeLogger.logChange(key, value.builder.build())
   }
 

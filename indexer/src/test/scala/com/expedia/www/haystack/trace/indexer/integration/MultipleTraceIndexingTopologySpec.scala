@@ -54,7 +54,7 @@ class MultipleTraceIndexingTopologySpec extends BaseIntegrationTestSpec {
       val topology = new StreamTopology(kafkaConfig, spanAccumulatorConfig, esConfig, cassandraConfig, indexTagsConfig)
       topology.start()
 
-      Then(s"we should read two span buffers with different traceIds from '${kafka.OUTPUT_TOPIC}' topic and same should be read from cassandra and elastic")
+      Then(s"we should read two span buffers with different traceIds from '${kafka.OUTPUT_TOPIC}' topic and same should be read from cassandra and elastic search")
       val result: util.List[KeyValue[String, SpanBuffer]] =
         IntegrationTestUtils.waitUntilMinKeyValueRecordsReceived(kafka.RESULT_CONSUMER_CONFIG, kafka.OUTPUT_TOPIC, 2, MAX_WAIT_FOR_OUTPUT_MS)
 

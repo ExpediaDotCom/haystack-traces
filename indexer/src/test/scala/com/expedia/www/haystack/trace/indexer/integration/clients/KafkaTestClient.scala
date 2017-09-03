@@ -21,6 +21,7 @@ import java.util.Properties
 
 import com.expedia.www.haystack.trace.indexer.config.entities.{ChangelogConfiguration, KafkaConfiguration}
 import com.expedia.www.haystack.trace.indexer.integration.serdes.{SpanBufferProtoDeserializer, SpanProtoSerializer}
+import kafka.log.LogConfig
 import org.apache.kafka.clients.consumer.ConsumerConfig
 import org.apache.kafka.clients.producer.ProducerConfig
 import org.apache.kafka.common.serialization.{StringDeserializer, StringSerializer}
@@ -28,6 +29,7 @@ import org.apache.kafka.streams.StreamsConfig
 import org.apache.kafka.streams.integration.utils.{EmbeddedKafkaCluster, IntegrationTestUtils}
 import org.apache.kafka.streams.processor.FailOnInvalidTimestamp
 import org.apache.kafka.streams.processor.TopologyBuilder.AutoOffsetReset
+import scala.collection.JavaConverters._
 
 object KafkaTestClient {
   val KAFKA_CLUSTER = new EmbeddedKafkaCluster(1)
@@ -60,7 +62,7 @@ class KafkaTestClient {
     INPUT_TOPIC,
     AutoOffsetReset.EARLIEST,
     new FailOnInvalidTimestamp,
-    ChangelogConfiguration(enabled = true),
+    ChangelogConfiguration(enabled = true, Map(LogConfig.CleanupPolicyProp -> "compact,delete").asJava),
     3000)
 
   def prepare(appId: String): Unit = {

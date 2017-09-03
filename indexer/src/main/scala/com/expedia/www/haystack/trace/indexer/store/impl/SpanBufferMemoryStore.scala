@@ -55,14 +55,13 @@ class SpanBufferMemoryStore(val name: String, cacheSizer: DynamicCacheSizer) ext
   // initialize the map
   protected val map = new util.LinkedHashMap[String, SpanBufferWithMetadata](cacheSizer.minTracesPerCache, 1.01f, false) {
     override protected def removeEldestEntry(eldest: util.Map.Entry[String, SpanBufferWithMetadata]): Boolean = {
-      if (totalSpansInMemStore >= maxEntries.get()) {
+      val evict = totalSpansInMemStore >= maxEntries.get()
+      if (evict) {
         SpanBufferMemoryStore.evictionMeter.mark()
         totalSpansInMemStore -= eldest.getValue.builder.getChildSpansCount
         listeners.foreach(listener => listener.onEvict(eldest.getKey, eldest.getValue))
-        true
-      } else {
-        false
       }
+      evict
     }
   }
 
@@ -90,8 +89,7 @@ class SpanBufferMemoryStore(val name: String, cacheSizer: DynamicCacheSizer) ext
           // this makes sure that all these restored buffers will be collected and emitted out in the first
           // punctuate call.
           val record = SpanBufferWithMetadata(serdes.valueFrom(value).toBuilder, Long.MinValue)
-          map.put(serdes.keyFrom(key), record)
-          totalSpansInMemStore += record.builder.getChildSpansCount
+          _put(serdes.keyFrom(key), record)
         }
       }
     })
@@ -129,23 +127,17 @@ class SpanBufferMemoryStore(val name: String, cacheSizer: DynamicCacheSizer) ext
   override def get(key: String): SpanBufferWithMetadata = this.map.get(key)
 
   override def put(key: String, value: SpanBufferWithMetadata): Unit = {
-    val existingValue = get(key)
-    if (existingValue == null) {
-      totalSpansInMemStore += value.builder.getChildSpansCount
-    } else {
-      totalSpansInMemStore += (value.builder.getChildSpansCount - existingValue.builder.getChildSpansCount)
-    }
-    this.map.put(key, value)
+    _put(key, value)
   }
 
   override def putIfAbsent(key: String, value: SpanBufferWithMetadata): SpanBufferWithMetadata = {
     val existingValue = this.map.get(key)
-    if(existingValue == null) put(key, value)
+    if(existingValue == null) _put(key, value)
     existingValue
   }
 
   override def putAll(entries: util.List[KeyValue[String, SpanBufferWithMetadata]]): Unit = {
-    for (entry <- entries) put(entry.key, entry.value)
+    for (entry <- entries) _put(entry.key, entry.value)
   }
 
   override def delete(key: String): SpanBufferWithMetadata = {
@@ -185,4 +177,14 @@ class SpanBufferMemoryStore(val name: String, cacheSizer: DynamicCacheSizer) ext
   }
 
   def onCacheSizeChange(maxEntries: Int): Unit = this.maxEntries.set(maxEntries)
+
+    protected def _put(key: String, value: SpanBufferWithMetadata): Unit = {
+    val existingValue = get(key)
+    if (existingValue == null) {
+      totalSpansInMemStore += value.builder.getChildSpansCount
+    } else {
+      totalSpansInMemStore += (value.builder.getChildSpansCount - existingValue.builder.getChildSpansCount)
+    }
+    this.map.put(key, value)
+  }
 }

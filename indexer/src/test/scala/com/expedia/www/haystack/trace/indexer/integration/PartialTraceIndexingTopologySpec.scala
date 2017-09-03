@@ -53,7 +53,7 @@ class PartialTraceIndexingTopologySpec extends BaseIntegrationTestSpec {
       val topology = new StreamTopology(kafkaConfig, spanAccumulatorConfig, esConfig, cassandraConfig, indexTagsConfig)
       topology.start()
 
-      Then(s"we should read one span buffer object from '${kafka.OUTPUT_TOPIC}' topic and the same should be searchable in cassandra and elastic")
+      Then(s"we should read one span buffer object from '${kafka.OUTPUT_TOPIC}' topic and the same should be searchable in cassandra and elastic search")
       val result: util.List[KeyValue[String, SpanBuffer]] =
         IntegrationTestUtils.waitUntilMinKeyValueRecordsReceived(kafka.RESULT_CONSUMER_CONFIG, kafka.OUTPUT_TOPIC, 1, MAX_WAIT_FOR_OUTPUT_MS)
       validateKafkaOutput(result, MAX_CHILD_SPANS_PER_TRACE, SPAN_ID_PREFIX)

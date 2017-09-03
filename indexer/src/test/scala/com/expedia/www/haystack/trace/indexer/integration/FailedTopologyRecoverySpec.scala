@@ -54,7 +54,7 @@ class FailedTopologyRecoverySpec extends BaseIntegrationTestSpec {
       Thread.sleep(7000)
       topology.closeStream() shouldBe true
 
-      Then(s"on restart of the topology, we should be able to read span-buffer object created in previous run from the '${kafka.OUTPUT_TOPIC}' topic")
+      Then(s"on restart of the topology, we should be able to read complete trace created in previous run from the '${kafka.OUTPUT_TOPIC}' topic in kafka, cassandra and elasticsearch")
       topology.start()
 
       // produce one more span record with same traceId to trigger punctuate

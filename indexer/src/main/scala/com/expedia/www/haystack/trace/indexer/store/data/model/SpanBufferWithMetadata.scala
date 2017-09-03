@@ -23,4 +23,3 @@ import com.expedia.open.tracing.buffer.SpanBuffer
   * @param firstSpanSeenAt timestamp when the first span of a given traceId is seen
   */
 case class SpanBufferWithMetadata(builder: SpanBuffer.Builder, firstSpanSeenAt: Long)
-

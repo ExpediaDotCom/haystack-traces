@@ -226,6 +226,7 @@
             <plugin>
                 <groupId>org.scalatest</groupId>
                 <artifactId>scalatest-maven-plugin</artifactId>
+                <version>1.0</version>
                 <configuration>
                     <environmentVariables>
                         <HAYSTACK_KAFKA_STREAMS_COMMIT_INTERVAL_MS>500</HAYSTACK_KAFKA_STREAMS_COMMIT_INTERVAL_MS>

@@ -35,7 +35,7 @@ object ConfigurationLoader {
   lazy val loadAppConfig: Config = {
     val baseConfig = ConfigFactory.load("config/base.conf")
 
-    sys.env.get("OVERRIDES_CONFIG_PATH") match {
+    sys.env.get("HAYSTACK_OVERRIDES_CONFIG_PATH") match {
       case Some(path) => ConfigFactory.parseFile(new File(path)).withFallback(baseConfig)
       case _ => loadFromEnvVars().withFallback(baseConfig)
     }

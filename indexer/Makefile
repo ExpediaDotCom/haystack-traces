@@ -17,7 +17,7 @@ prepare_integration_test_env: docker_build
 	docker-compose -f build/integration-tests/docker-compose.yml -p sandbox up -d
 
 	# cassandra takes time to start
-	sleep 45
+	sleep 30
 
 integration_test: prepare_integration_test_env
 	# run tests in a container so that we can join the docker-compose network and talk to kafka, elasticsearch and cassandra

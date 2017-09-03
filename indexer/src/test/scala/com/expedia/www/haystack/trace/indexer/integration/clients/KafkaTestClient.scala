@@ -17,6 +17,7 @@
 
 package com.expedia.www.haystack.trace.indexer.integration.clients
 
+import java.util
 import java.util.Properties
 
 import com.expedia.www.haystack.trace.indexer.config.entities.{ChangelogConfiguration, KafkaConfiguration}
@@ -29,7 +30,6 @@ import org.apache.kafka.streams.StreamsConfig
 import org.apache.kafka.streams.integration.utils.{EmbeddedKafkaCluster, IntegrationTestUtils}
 import org.apache.kafka.streams.processor.FailOnInvalidTimestamp
 import org.apache.kafka.streams.processor.TopologyBuilder.AutoOffsetReset
-import scala.collection.JavaConverters._
 
 object KafkaTestClient {
   val KAFKA_CLUSTER = new EmbeddedKafkaCluster(1)
@@ -39,11 +39,9 @@ object KafkaTestClient {
 class KafkaTestClient {
   import KafkaTestClient._
   private val STREAMS_CONFIG = new Properties()
-  private val CHANGELOG_CONSUMER_CONFIG = new Properties()
 
   val INPUT_TOPIC = "spans"
   val OUTPUT_TOPIC = "span-buffer"
-//  private val CHANGELOG_TOPIC = s"$APP_ID-${StreamTopology.STATE_STORE_NAME}-changelog"
 
   val PRODUCER_CONFIG: Properties = {
     val props = new Properties()
@@ -62,7 +60,7 @@ class KafkaTestClient {
     INPUT_TOPIC,
     AutoOffsetReset.EARLIEST,
     new FailOnInvalidTimestamp,
-    ChangelogConfiguration(enabled = true, Map(LogConfig.CleanupPolicyProp -> "compact,delete").asJava),
+    ChangelogConfiguration(enabled = true),
     3000)
 
   def prepare(appId: String): Unit = {
@@ -71,12 +69,6 @@ class KafkaTestClient {
     RESULT_CONSUMER_CONFIG.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest")
     RESULT_CONSUMER_CONFIG.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, classOf[StringDeserializer])
     RESULT_CONSUMER_CONFIG.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, classOf[SpanBufferProtoDeserializer])
-
-    CHANGELOG_CONSUMER_CONFIG.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, KAFKA_CLUSTER.bootstrapServers)
-    CHANGELOG_CONSUMER_CONFIG.put(ConsumerConfig.GROUP_ID_CONFIG, appId + "-changelog-consumer")
-    CHANGELOG_CONSUMER_CONFIG.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest")
-    CHANGELOG_CONSUMER_CONFIG.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, classOf[StringDeserializer])
-    CHANGELOG_CONSUMER_CONFIG.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, classOf[SpanBufferProtoDeserializer])
 
     STREAMS_CONFIG.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, KAFKA_CLUSTER.bootstrapServers)
     STREAMS_CONFIG.put(StreamsConfig.APPLICATION_ID_CONFIG, appId)

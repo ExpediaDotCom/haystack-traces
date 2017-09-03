@@ -19,6 +19,7 @@ package com.expedia.www.haystack.trace.indexer.store.impl
 
 import java.util
 
+import com.expedia.open.tracing.Span
 import com.expedia.open.tracing.buffer.SpanBuffer
 import com.expedia.www.haystack.trace.indexer.store.traits.EldestBufferedSpanEvictionListener
 import com.expedia.www.haystack.trace.indexer.store.data.model.SpanBufferWithMetadata
@@ -33,15 +34,15 @@ class SpanBufferLoggingEnabledBufferMemoryStore(val storeName: String, dynamicCa
 
   private var changeLogger: SpanBufferStoreChangeLogger[String, SpanBuffer] = _
 
-  override def delete(key: String): SpanBufferWithMetadata = {
-    val result = super.delete(key)
-    removed(key)
+  override def delete(traceId: String): SpanBufferWithMetadata = {
+    val result = super.delete(traceId)
+    removed(traceId)
     result
   }
 
-  override def put(key: String, value: SpanBufferWithMetadata): Unit = {
-    _put(key, value)
-    changeLogger.logChange(key, value.builder.build())
+  override def put(traceId: String, value: SpanBufferWithMetadata): Unit = {
+    _put(traceId, value)
+    changeLogger.logChange(traceId, value.builder.build())
   }
 
   override def putAll(entries: util.List[KeyValue[String, SpanBufferWithMetadata]]): Unit = {
@@ -51,9 +52,9 @@ class SpanBufferLoggingEnabledBufferMemoryStore(val storeName: String, dynamicCa
     }
   }
 
-  override def putIfAbsent(key: String, value: SpanBufferWithMetadata): SpanBufferWithMetadata = {
-    val originalValue = super.putIfAbsent(key, value)
-    if (originalValue == null) changeLogger.logChange(key, value.builder.build())
+  override def putIfAbsent(traceId: String, value: SpanBufferWithMetadata): SpanBufferWithMetadata = {
+    val originalValue = super.putIfAbsent(traceId, value)
+    if (originalValue == null) changeLogger.logChange(traceId, value.builder.build())
     originalValue
   }
 
@@ -63,13 +64,19 @@ class SpanBufferLoggingEnabledBufferMemoryStore(val storeName: String, dynamicCa
     result
   }
 
+  override def addOrUpdateSpanBuffer(traceId: String, span: Span, spanRecordTimestamp: Long): SpanBufferWithMetadata = {
+    val value = super.addOrUpdateSpanBuffer(traceId, span, spanRecordTimestamp)
+    changeLogger.logChange(traceId, value.builder.build())
+    value
+  }
+
   override def init(context: ProcessorContext, root: StateStore): Unit = {
     super.init(context, root)
 
     this.changeLogger = new SpanBufferStoreChangeLogger[String, SpanBuffer](name, context, serdes)
 
     super.addEvictionListener(new EldestBufferedSpanEvictionListener {
-      override def onEvict(key: String, value: SpanBufferWithMetadata): Unit = removed(key)
+      override def onEvict(traceId: String, value: SpanBufferWithMetadata): Unit = removed(traceId)
     })
 
     open = true
@@ -79,9 +86,9 @@ class SpanBufferLoggingEnabledBufferMemoryStore(val storeName: String, dynamicCa
     * Called when the store removes an entry in response to a call from this
     * store.
     *
-    * @param key the key for the entry that the inner store removed
+    * @param traceId the key for the entry that the inner store removed
     */
-  protected def removed(key: String): Unit = {
-    if (changeLogger != null) changeLogger.logChange(key, null)
+  protected def removed(traceId: String): Unit = {
+    if (changeLogger != null) changeLogger.logChange(traceId, null)
   }
 }

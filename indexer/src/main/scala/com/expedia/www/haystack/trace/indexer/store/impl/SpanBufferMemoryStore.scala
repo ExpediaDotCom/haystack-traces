@@ -20,6 +20,7 @@ import java.util
 import java.util.concurrent.atomic.AtomicInteger
 
 import com.codahale.metrics.Meter
+import com.expedia.open.tracing.Span
 import com.expedia.open.tracing.buffer.SpanBuffer
 import com.expedia.www.haystack.trace.indexer.metrics.AppMetricNames._
 import com.expedia.www.haystack.trace.indexer.metrics.MetricsSupport
@@ -49,7 +50,7 @@ class SpanBufferMemoryStore(val name: String, cacheSizer: DynamicCacheSizer) ext
   protected val maxEntries = new AtomicInteger(10000)
 
   private val listeners: mutable.ListBuffer[EldestBufferedSpanEvictionListener] = mutable.ListBuffer()
-
+  private var restoring = false
   private var totalSpansInMemStore: Int = 0
 
   // initialize the map
@@ -59,7 +60,9 @@ class SpanBufferMemoryStore(val name: String, cacheSizer: DynamicCacheSizer) ext
       if (evict) {
         SpanBufferMemoryStore.evictionMeter.mark()
         totalSpansInMemStore -= eldest.getValue.builder.getChildSpansCount
-        listeners.foreach(listener => listener.onEvict(eldest.getKey, eldest.getValue))
+
+        // dont apply changelog if in restore phase
+        if(!restoring) listeners.foreach(listener => listener.onEvict(eldest.getKey, eldest.getValue))
       }
       evict
     }
@@ -67,8 +70,9 @@ class SpanBufferMemoryStore(val name: String, cacheSizer: DynamicCacheSizer) ext
 
   /**
     * Initializes the state store
+    *
     * @param context processor context
-    * @param root root state store
+    * @param root    root state store
     */
   override def init(context: ProcessorContext, root: StateStore): Unit = {
     cacheSizer.addCacheObserver(this)
@@ -81,9 +85,10 @@ class SpanBufferMemoryStore(val name: String, cacheSizer: DynamicCacheSizer) ext
     // register the store
     context.register(root, true, new StateRestoreCallback() {
       override def restore(key: Array[Byte], value: Array[Byte]): Unit = {
+        restoring = true
         if (value == null) {
           val result = map.remove(serdes.keyFrom(key))
-          if(result != null) totalSpansInMemStore -= result.builder.getChildSpansCount
+          if (result != null) totalSpansInMemStore -= result.builder.getChildSpansCount
         } else {
           // restore the span-buffer object with Long.MinValue as the first recorded timestamp
           // this makes sure that all these restored buffers will be collected and emitted out in the first
@@ -91,6 +96,7 @@ class SpanBufferMemoryStore(val name: String, cacheSizer: DynamicCacheSizer) ext
           val record = SpanBufferWithMetadata(serdes.valueFrom(value).toBuilder, Long.MinValue)
           _put(serdes.keyFrom(key), record)
         }
+        restoring = false
       }
     })
 
@@ -99,6 +105,7 @@ class SpanBufferMemoryStore(val name: String, cacheSizer: DynamicCacheSizer) ext
 
   /**
     * removes and returns all the span buffers from the map that are recorded before the given timestamp
+    *
     * @param timestamp timestamp before which all buffered spans should be read and removed
     * @return
     */
@@ -124,15 +131,15 @@ class SpanBufferMemoryStore(val name: String, cacheSizer: DynamicCacheSizer) ext
     result
   }
 
-  override def get(key: String): SpanBufferWithMetadata = this.map.get(key)
+  override def get(traceId: String): SpanBufferWithMetadata = this.map.get(traceId)
 
-  override def put(key: String, value: SpanBufferWithMetadata): Unit = {
-    _put(key, value)
+  override def put(traceId: String, value: SpanBufferWithMetadata): Unit = {
+    _put(traceId, value)
   }
 
-  override def putIfAbsent(key: String, value: SpanBufferWithMetadata): SpanBufferWithMetadata = {
-    val existingValue = this.map.get(key)
-    if(existingValue == null) _put(key, value)
+  override def putIfAbsent(traceId: String, value: SpanBufferWithMetadata): SpanBufferWithMetadata = {
+    val existingValue = this.map.get(traceId)
+    if (existingValue == null) _put(traceId, value)
     existingValue
   }
 
@@ -140,9 +147,9 @@ class SpanBufferMemoryStore(val name: String, cacheSizer: DynamicCacheSizer) ext
     for (entry <- entries) _put(entry.key, entry.value)
   }
 
-  override def delete(key: String): SpanBufferWithMetadata = {
-    val value = this.map.remove(key)
-    if(value != null) totalSpansInMemStore -= value.builder.getChildSpansCount
+  override def delete(traceId: String): SpanBufferWithMetadata = {
+    val value = this.map.remove(traceId)
+    if (value != null) totalSpansInMemStore -= value.builder.getChildSpansCount
     value
   }
 
@@ -157,6 +164,7 @@ class SpanBufferMemoryStore(val name: String, cacheSizer: DynamicCacheSizer) ext
 
   /**
     * this is an in-memory store
+    *
     * @return false
     */
   override def persistent(): Boolean = false
@@ -169,22 +177,37 @@ class SpanBufferMemoryStore(val name: String, cacheSizer: DynamicCacheSizer) ext
   override def isOpen: Boolean = open
 
   override def range(from: String, to: String): KeyValueIterator[String, SpanBufferWithMetadata] = {
-    throw new UnsupportedOperationException("BufferedSpanMemStore does not support range() function.")
+    throw new UnsupportedOperationException("SpanBufferMemoryStore does not support range() function.")
   }
 
   override def all(): KeyValueIterator[String, SpanBufferWithMetadata] = {
-    throw new UnsupportedOperationException("BufferedSpanMemStore does not support all() function.")
+    throw new UnsupportedOperationException("SpanBufferMemoryStore does not support all() function.")
   }
 
   def onCacheSizeChange(maxEntries: Int): Unit = this.maxEntries.set(maxEntries)
 
-    protected def _put(key: String, value: SpanBufferWithMetadata): Unit = {
-    val existingValue = get(key)
+  protected def _put(traceId: String, value: SpanBufferWithMetadata): Unit = {
+    val existingValue = get(traceId)
     if (existingValue == null) {
       totalSpansInMemStore += value.builder.getChildSpansCount
     } else {
       totalSpansInMemStore += (value.builder.getChildSpansCount - existingValue.builder.getChildSpansCount)
     }
-    this.map.put(key, value)
+    this.map.put(traceId, value)
   }
+
+  override def addOrUpdateSpanBuffer(traceId: String, span: Span, spanRecordTimestamp: Long): SpanBufferWithMetadata = {
+    var value = get(traceId)
+    if (value == null) {
+      val spanBuffer = SpanBuffer.newBuilder().setTraceId(span.getTraceId).addChildSpans(span)
+      value = SpanBufferWithMetadata(spanBuffer, spanRecordTimestamp)
+      this.map.put(traceId, value)
+    } else {
+      value.builder.addChildSpans(span)
+    }
+    totalSpansInMemStore += 1
+    value
+  }
+
+  def totalSpans: Int = totalSpansInMemStore
 }

@@ -68,17 +68,7 @@ class SpanAccumulateProcessor(config: SpanAccumulatorConfiguration) extends Proc
     */
   override def process(traceId: String, span: Span): Unit = {
     if (span != null) {
-      val value = this.store.get(traceId)
-      if (value == null) {
-        val spanBufferBuilder = SpanBuffer.newBuilder().setTraceId(span.getTraceId).addChildSpans(span)
-        this.store.put(traceId, SpanBufferWithMetadata(spanBufferBuilder, this.context.timestamp()))
-      } else {
-        // add this span as a child span to existing builder
-        value.builder.addChildSpans(span)
-
-        // put this back in the store to mark it as a state change
-        this.store.put(traceId, value)
-      }
+     this.store.addOrUpdateSpanBuffer(traceId, span, this.context.timestamp())
     }
   }
 

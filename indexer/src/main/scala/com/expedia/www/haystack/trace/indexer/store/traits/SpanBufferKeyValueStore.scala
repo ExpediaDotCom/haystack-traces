@@ -19,6 +19,7 @@ package com.expedia.www.haystack.trace.indexer.store.traits
 
 import java.util
 
+import com.expedia.open.tracing.Span
 import com.expedia.www.haystack.trace.indexer.store.data.model.SpanBufferWithMetadata
 import org.apache.kafka.streams.state.KeyValueStore
 
@@ -40,4 +41,12 @@ trait SpanBufferKeyValueStore extends KeyValueStore[String, SpanBufferWithMetada
     * @param l listener object that is called by the store
     */
   def addEvictionListener(l: EldestBufferedSpanEvictionListener): Unit
+
+  /**
+    * addd the spanBuffer if absent or update the spans for the given traceId
+    * @param traceId traceId
+    * @param span span object
+    * @param spanRecordTimestamp timestamp of the span record
+    */
+  def addOrUpdateSpanBuffer(traceId: String, span: Span, spanRecordTimestamp: Long): SpanBufferWithMetadata
 }

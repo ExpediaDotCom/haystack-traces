@@ -20,7 +20,7 @@ package com.expedia.www.haystack.trace.indexer.integration
 import java.util
 
 import com.expedia.open.tracing.buffer.SpanBuffer
-import com.expedia.www.haystack.trace.indexer.StreamTopology
+import com.expedia.www.haystack.trace.indexer.StreamRunner
 import org.apache.kafka.streams.KeyValue
 import org.apache.kafka.streams.integration.utils.IntegrationTestUtils
 
@@ -41,18 +41,22 @@ class FailedTopologyRecoverySpec extends BaseIntegrationTestSpec {
       val indexTagsConfig = elastic.indexingConfig
       val cassandraConfig = cassandra.buildConfig
       val accumulatorConfig = spanAccumulatorConfig.copy(pollIntervalMillis = spanAccumulatorConfig.pollIntervalMillis * 5)
+      val startTimestamp = System.currentTimeMillis()
       produceSpansAsync(
         MAX_CHILD_SPANS_PER_TRACE,
         produceInterval = 1.seconds,
         TRACE_DESCRIPTIONS,
-        0,
+        startTimestamp,
         spanAccumulatorConfig.bufferingWindowMillis)
 
       When(s"kafka-streams topology is started and then stopped forcefully after few sec")
-      val topology = new StreamTopology(kafkaConfig, accumulatorConfig, esConfig, cassandraConfig, indexTagsConfig)
+      val topology = new StreamRunner(kafkaConfig, accumulatorConfig, esConfig, cassandraConfig, indexTagsConfig)
       topology.start()
       Thread.sleep(7000)
-      topology.closeStream() shouldBe true
+      topology.closeStreamThreads()
+
+      // wait for few sec to close the stream threads
+      Thread.sleep(6000)
 
       Then(s"on restart of the topology, we should be able to read complete trace created in previous run from the '${kafka.OUTPUT_TOPIC}' topic in kafka, cassandra and elasticsearch")
       topology.start()
@@ -62,20 +66,22 @@ class FailedTopologyRecoverySpec extends BaseIntegrationTestSpec {
         1,
         produceInterval = 1.seconds,
         TRACE_DESCRIPTIONS,
-        startRecordTimestamp = spanAccumulatorConfig.bufferingWindowMillis,
+        startTimestamp + spanAccumulatorConfig.bufferingWindowMillis,
         spanAccumulatorConfig.bufferingWindowMillis,
         startSpanIdxFrom = MAX_CHILD_SPANS_PER_TRACE)
 
-      val records: util.List[KeyValue[String, SpanBuffer]] =
-        IntegrationTestUtils.waitUntilMinKeyValueRecordsReceived(kafka.RESULT_CONSUMER_CONFIG, kafka.OUTPUT_TOPIC, 1, MAX_WAIT_FOR_OUTPUT_MS)
+      try {
+        val records: util.List[KeyValue[String, SpanBuffer]] =
+          IntegrationTestUtils.waitUntilMinKeyValueRecordsReceived(kafka.RESULT_CONSUMER_CONFIG, kafka.OUTPUT_TOPIC, 1, MAX_WAIT_FOR_OUTPUT_MS)
 
-      // wait for the elastic search writes to pass through, i guess refresh time has to be adjusted
-      Thread.sleep(5000)
-      validateKafkaOutput(records, MAX_CHILD_SPANS_PER_TRACE)
-      verifyCassandraWrites(TRACE_DESCRIPTIONS, MAX_CHILD_SPANS_PER_TRACE, MAX_CHILD_SPANS_PER_TRACE + 1) // 1 extra record for trigger
-      verifyElasticSearchWrites(Seq(TRACE_ID_1))
-
-      topology.close()
+        // wait for the elastic search writes to pass through, i guess refresh time has to be adjusted
+        Thread.sleep(5000)
+        validateKafkaOutput(records, MAX_CHILD_SPANS_PER_TRACE)
+        verifyCassandraWrites(TRACE_DESCRIPTIONS, MAX_CHILD_SPANS_PER_TRACE, MAX_CHILD_SPANS_PER_TRACE + 1) // 1 extra record for trigger
+        verifyElasticSearchWrites(Seq(TRACE_ID_1))
+      } finally {
+        topology.close()
+      }
     }
   }
 

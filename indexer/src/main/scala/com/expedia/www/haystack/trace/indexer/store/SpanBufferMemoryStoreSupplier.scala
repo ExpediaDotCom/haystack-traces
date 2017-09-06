@@ -17,18 +17,12 @@
 
 package com.expedia.www.haystack.trace.indexer.store
 
-import java.util
-
-import com.expedia.www.haystack.trace.indexer.store.impl.{SpanBufferLoggingEnabledBufferMemoryStore, SpanBufferMemoryStore}
+import com.expedia.www.haystack.trace.indexer.store.impl.SpanBufferMemoryStore
 import com.expedia.www.haystack.trace.indexer.store.traits.SpanBufferKeyValueStore
-import org.apache.kafka.streams.processor.StateStoreSupplier
 
 class SpanBufferMemoryStoreSupplier(minTracesPerCache: Int,
-                                    maxEntriesAcrossStores: Int,
-                                    val name: String,
-                                    val loggingEnabled: Boolean,
-                                    val logConfig: util.Map[String, String])
-  extends StateStoreSupplier[SpanBufferKeyValueStore] {
+                                    maxEntriesAcrossStores: Int)
+  extends StoreSupplier[SpanBufferKeyValueStore] {
 
   private val dynamicCacheSizer = new DynamicCacheSizer(minTracesPerCache, maxEntriesAcrossStores)
 
@@ -36,11 +30,5 @@ class SpanBufferMemoryStoreSupplier(minTracesPerCache: Int,
     * @return kv store for maintaining buffered-spans. If logging is enabled, we persist the changelog to kafka topic
     *         else it is purely in-memory
     */
-  override def get(): SpanBufferKeyValueStore = {
-    if(loggingEnabled) {
-      new SpanBufferLoggingEnabledBufferMemoryStore(name, dynamicCacheSizer)
-    } else {
-      new SpanBufferMemoryStore(name, dynamicCacheSizer)
-    }
-  }
+  override def get(): SpanBufferKeyValueStore = new SpanBufferMemoryStore(dynamicCacheSizer)
 }

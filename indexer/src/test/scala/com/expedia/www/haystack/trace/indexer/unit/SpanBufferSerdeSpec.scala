@@ -19,7 +19,7 @@ package com.expedia.www.haystack.trace.indexer.unit
 
 import com.expedia.open.tracing.buffer.SpanBuffer
 import com.expedia.open.tracing.{Span, Tag}
-import com.expedia.www.haystack.trace.indexer.serde.SpanBufferSerde
+import com.expedia.www.haystack.trace.indexer.serde.SpanBufferSerializer
 import org.scalatest.{FunSpec, Matchers}
 
 class SpanBufferSerdeSpec extends FunSpec with Matchers {
@@ -46,28 +46,14 @@ class SpanBufferSerdeSpec extends FunSpec with Matchers {
 
   describe("SpanBuffer Serde") {
     it("should serialize and deserialize a buffered span object") {
-      val ser = new SpanBufferSerde().serializer.serialize(TOPIC, newSpanBuffer)
-      val deser = new SpanBufferSerde().deserializer.deserialize(TOPIC, ser)
-      deser.getTraceId shouldEqual TRACE_ID
-      deser.getChildSpansCount shouldBe 1
-
-      val span = deser.getChildSpans(0)
-      span.getParentSpanId shouldEqual PARENT_SPAN_ID
-      span.getTraceId shouldEqual TRACE_ID
-      span.getSpanId shouldEqual SPAN_ID
-      span.getOperationName shouldEqual OP_NAME
-      span.getTagsCount shouldBe 1
-
-      val tag = span.getTags(0)
-      tag.getType shouldBe Tag.TagType.STRING
-      tag.getKey shouldBe TAG_KEY
-      tag.getVStr shouldBe TAG_VALUE
+      val serializedBytes = new SpanBufferSerializer().serialize(TOPIC, newSpanBuffer)
+      serializedBytes should not be null
+      serializedBytes.length should be >0
     }
 
     it("should return null on serializing invalid span buffer bytes") {
-      val data = "invalid buffered span serialized bytes".getBytes()
-      val deser = new SpanBufferSerde().deserializer.deserialize("topic", data)
-      deser shouldBe null
+      val serializedBytes = new SpanBufferSerializer().serialize(TOPIC, null)
+      serializedBytes shouldBe null
     }
   }
 }

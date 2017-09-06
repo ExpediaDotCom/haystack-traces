@@ -3,7 +3,7 @@ package com.expedia.www.haystack.trace.indexer.integration
 import java.util
 
 import com.expedia.open.tracing.buffer.SpanBuffer
-import com.expedia.www.haystack.trace.indexer.StreamTopology
+import com.expedia.www.haystack.trace.indexer.StreamRunner
 import org.apache.kafka.streams.KeyValue
 import org.apache.kafka.streams.integration.utils.IntegrationTestUtils
 
@@ -31,7 +31,7 @@ class EvictedSpanBufferSpec extends BaseIntegrationTestSpec {
         0L, accumulatorConfig.bufferingWindowMillis)
 
       When(s"kafka-streams topology is started")
-      val topology = new StreamTopology(kafkaConfig, accumulatorConfig, esConfig, cassandraConfig, indexTagsConfig)
+      val topology = new StreamRunner(kafkaConfig, accumulatorConfig, esConfig, cassandraConfig, indexTagsConfig)
       topology.start()
 
       Then(s"we should get multiple span-buffers bearing only 1 span due to early eviction from store")

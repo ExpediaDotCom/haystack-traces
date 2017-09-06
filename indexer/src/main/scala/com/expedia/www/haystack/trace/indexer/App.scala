@@ -31,7 +31,7 @@ object App extends MetricsSupport {
     try {
       val appConfig = new ProjectConfiguration
 
-      val stream = new StreamTopology(
+      val stream = new StreamRunner(
         appConfig.kafkaConfig,
         appConfig.spanAccumulateConfig,
         appConfig.elasticSearchConfig,

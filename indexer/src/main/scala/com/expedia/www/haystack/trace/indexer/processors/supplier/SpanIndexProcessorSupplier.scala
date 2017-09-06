@@ -14,17 +14,23 @@
  *     limitations under the License.
  *
  */
+
 package com.expedia.www.haystack.trace.indexer.processors.supplier
 
 import com.expedia.open.tracing.Span
 import com.expedia.www.haystack.trace.indexer.config.entities.SpanAccumulatorConfiguration
-import com.expedia.www.haystack.trace.indexer.processors.MeteredSpanAccumulateProcessor
-import org.apache.kafka.streams.processor.{Processor, ProcessorSupplier}
+import com.expedia.www.haystack.trace.indexer.processors.{SpanIndexProcessor, StreamProcessor}
+import com.expedia.www.haystack.trace.indexer.store.SpanBufferMemoryStoreSupplier
+import com.expedia.www.haystack.trace.indexer.writers.TraceWriter
 
-class SpanAccumulateProcessSupplier(config: SpanAccumulatorConfiguration) extends ProcessorSupplier[String, Span] {
+import scala.concurrent.ExecutionContextExecutor
 
-  /**
-    * @return processor that does the buffering of spans for each unique traceId and emits out the buffered object
-    */
-  override def get(): Processor[String, Span] = new MeteredSpanAccumulateProcessor(config)
+class SpanIndexProcessorSupplier(accumulatorConfig: SpanAccumulatorConfiguration,
+                                 storeSupplier: SpanBufferMemoryStoreSupplier,
+                                 writers: Seq[TraceWriter])(implicit val dispatcher: ExecutionContextExecutor)
+  extends StreamProcessorSupplier[String, Span] {
+
+  override def get(): StreamProcessor[String, Span] = {
+    new SpanIndexProcessor(accumulatorConfig, storeSupplier, writers)
+  }
 }

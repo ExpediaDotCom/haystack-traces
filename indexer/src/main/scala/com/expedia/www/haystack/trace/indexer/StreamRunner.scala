@@ -18,11 +18,12 @@
 package com.expedia.www.haystack.trace.indexer
 
 import java.util.concurrent.atomic.AtomicBoolean
-import java.util.concurrent.{ExecutorService, Executors, TimeUnit}
+import java.util.concurrent.{Executors, TimeUnit}
 
 import com.expedia.www.haystack.trace.indexer.config.entities._
+import com.expedia.www.haystack.trace.indexer.processors.StreamTaskState.StreamTaskState
 import com.expedia.www.haystack.trace.indexer.processors.supplier.SpanIndexProcessorSupplier
-import com.expedia.www.haystack.trace.indexer.processors.{StateListener, StreamTaskRunnable, ThreadState}
+import com.expedia.www.haystack.trace.indexer.processors.{StateListener, StreamTaskRunnable, StreamTaskState}
 import com.expedia.www.haystack.trace.indexer.store.SpanBufferMemoryStoreSupplier
 import com.expedia.www.haystack.trace.indexer.writers.TraceWriter
 import com.expedia.www.haystack.trace.indexer.writers.cassandra.CassandraWriter
@@ -75,46 +76,41 @@ class StreamRunner(kafkaConfig: KafkaConfiguration,
     }
   }
 
-  private def closeStreamTasks(): Unit = {
-    runnables foreach {
-      task => task.close()
-    }
-  }
-
-  private def closeWriters(): Unit = {
-    writers foreach {
-      writer => writer.close()
-    }
-  }
-
-  private def terminateTaskExecutorService(): Unit = {
-    LOGGER.info("Shutting down the stream executor service")
-    streamThreadExecutor.shutdown()
-    streamThreadExecutor.awaitTermination(kafkaConfig.consumerCloseTimeoutInMillis, TimeUnit.MILLISECONDS)
-
-    // bluntly shutdown the app, if requested for
-    if(kafkaConfig.exitJvmAfterClose) {
-      System.exit(1)
-    }
-  }
-
   override def close(): Unit = {
     if(!isClosing.getAndSet(true)) {
       val shutdownThread = new Thread() {
-        LOGGER.info("Closing the stream tasks, and cassandra, elastic search and kafka producer(if any) clients.")
         closeStreamTasks()
         closeWriters()
-        terminateTaskExecutorService()
+        waitAndTerminate()
       }
       shutdownThread.setDaemon(true)
       shutdownThread.run()
     }
   }
 
-  override def onChange(state: ThreadState.Value): Unit = {
-    if(state == ThreadState.FAILED) {
-      LOGGER.error("Thread state has changed to FAILED, so tearing down the app")
+  override def onChange(state: StreamTaskState): Unit = {
+    if(state == StreamTaskState.FAILED) {
+      LOGGER.error("Thread state has changed to 'FAILED', so tearing down the app")
       close()
     }
+  }
+
+  private def closeStreamTasks(): Unit = {
+    LOGGER.info("Closing all the stream tasks..")
+    runnables foreach { task => task.close() }
+  }
+
+  private def closeWriters(): Unit = {
+    LOGGER.info("Closing all the writers now..")
+    writers foreach { writer => writer.close() }
+  }
+
+  private def waitAndTerminate(): Unit = {
+    LOGGER.info("Shutting down the stream executor service")
+    streamThreadExecutor.shutdown()
+    streamThreadExecutor.awaitTermination(kafkaConfig.consumerCloseTimeoutInMillis, TimeUnit.MILLISECONDS)
+
+    // bluntly shutdown the app
+    if(kafkaConfig.exitJvmAfterClose) System.exit(1)
   }
 }

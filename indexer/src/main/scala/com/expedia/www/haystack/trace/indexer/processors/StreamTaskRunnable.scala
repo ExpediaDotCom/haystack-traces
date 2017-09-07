@@ -23,6 +23,7 @@ import java.util.concurrent.{ConcurrentHashMap, Executors, TimeUnit}
 
 import com.expedia.open.tracing.Span
 import com.expedia.www.haystack.trace.indexer.config.entities.KafkaConfiguration
+import com.expedia.www.haystack.trace.indexer.processors.StreamTaskState.StreamTaskState
 import com.expedia.www.haystack.trace.indexer.processors.supplier.StreamProcessorSupplier
 import org.apache.kafka.clients.consumer._
 import org.apache.kafka.common.TopicPartition
@@ -33,28 +34,14 @@ import scala.collection.JavaConversions._
 import scala.collection.mutable
 import scala.util.Try
 
-class StreamTaskRunnable(id: Int, kafkaConfig: KafkaConfiguration, processorSupplier: StreamProcessorSupplier[String, Span])
+class StreamTaskRunnable(taskId: Int, kafkaConfig: KafkaConfiguration, processorSupplier: StreamProcessorSupplier[String, Span])
   extends Runnable with AutoCloseable {
 
   private val LOGGER = LoggerFactory.getLogger(classOf[StreamTaskRunnable])
-  private val shutdownRequested = new AtomicBoolean(false)
-  private val wakeupScheduler = Executors.newScheduledThreadPool(1)
-  private var wakeups: Int = 0
-  private val listeners = mutable.ListBuffer[StateListener]()
-
-  @volatile
-  private var inRunningState = false
-
-  @volatile
-  private var rebalanceTriggered = false
-
-  private val streamProcessors = new ConcurrentHashMap[TopicPartition, StreamProcessor[String, Span]]()
 
   private class RebalanceListener extends ConsumerRebalanceListener {
     override def onPartitionsRevoked(revokedPartitions: util.Collection[TopicPartition]): Unit = {
-      LOGGER.info("Partitions {} revoked at the beginning of consumer rebalance", revokedPartitions)
-
-      rebalanceTriggered = true
+      LOGGER.info("Partitions {} revoked at the beginning of consumer rebalance for taskId={}", revokedPartitions, taskId)
 
       revokedPartitions.foreach(
         p => {
@@ -64,9 +51,7 @@ class StreamTaskRunnable(id: Int, kafkaConfig: KafkaConfiguration, processorSupp
     }
 
     override def onPartitionsAssigned(assignedPartitions: util.Collection[TopicPartition]): Unit = {
-      LOGGER.info("Partitions {} assigned at the beginning of consumer rebalance", assignedPartitions)
-
-      rebalanceTriggered = true
+      LOGGER.info("Partitions {} assigned at the beginning of consumer rebalance for taskId={}", assignedPartitions, taskId)
 
       assignedPartitions foreach {
         partition => {
@@ -78,6 +63,15 @@ class StreamTaskRunnable(id: Int, kafkaConfig: KafkaConfiguration, processorSupp
     }
   }
 
+  @volatile
+  private var state = StreamTaskState.NOT_RUNNING
+
+  private val shutdownRequested = new AtomicBoolean(false)
+  private val wakeupScheduler = Executors.newScheduledThreadPool(1)
+  private var wakeups: Int = 0
+  private val listeners = mutable.ListBuffer[StateListener]()
+
+  private val streamProcessors = new ConcurrentHashMap[TopicPartition, StreamProcessor[String, Span]]()
   private var consumer = new KafkaConsumer[String, Span](kafkaConfig.consumerProps)
   private val rebalanceListener = new RebalanceListener
 
@@ -89,24 +83,25 @@ class StreamTaskRunnable(id: Int, kafkaConfig: KafkaConfiguration, processorSupp
     * @throws Exception for any exceptions
     */
   override def run(): Unit = {
-    LOGGER.info("Starting stream processing thread with id={}", id)
+    LOGGER.info("Starting stream processing thread with id={}", taskId)
     try {
-      inRunningState = true
+      updateStateChangeAndNotify(StreamTaskState.RUNNING)
       runLoop()
     } catch {
+      case ie: InterruptedException =>
+        LOGGER.error(s"This stream task has been interrupted for taskId=$taskId", ie)
       case ex: Exception =>
-        notifyStateChange(ThreadState.FAILED)
+        if(!shutdownRequested.get()) updateStateChangeAndNotify(StreamTaskState.FAILED)
         // may be logging the exception again for kafka specific exceptions, but it is ok.
-        LOGGER.error("Stream application faced an exception during processing: ", ex)
+        LOGGER.error(s"Stream application faced an exception during processing for taskId=$taskId: ", ex)
     }
     finally {
       consumer.close(kafkaConfig.consumerCloseTimeoutInMillis, TimeUnit.MILLISECONDS)
-      inRunningState = false
+      updateStateChangeAndNotify(StreamTaskState.NOT_RUNNING)
     }
   }
 
   private def runLoop(): Unit = {
-    notifyStateChange(ThreadState.RUNNING)
 
     while(!shutdownRequested.get()) {
       poll() match {
@@ -134,6 +129,19 @@ class StreamTaskRunnable(id: Int, kafkaConfig: KafkaConfiguration, processorSupp
   }
 
   private def poll(): Option[ConsumerRecords[String, Span]] = {
+
+    def handleWakeup(we: WakeupException): Unit = {
+      if(!shutdownRequested.get()) {
+        wakeups = wakeups + 1
+        if (wakeups == kafkaConfig.maxWakeups) {
+          LOGGER.error(s"WakeupException limit exceeded, throwing up wakeup exception for taskId=$taskId.", we)
+          throw we
+        } else {
+          LOGGER.error(s"Consumer poll took more than ${kafkaConfig.wakeupTimeoutInMillis} ms for taskId=$taskId, wakeup attempt=$wakeups!. Will try poll again!")
+        }
+      } else throw we
+    }
+
     val wakeupCall = wakeupScheduler.schedule(new Runnable {
       override def run(): Unit = consumer.wakeup()
     }, kafkaConfig.wakeupTimeoutInMillis, TimeUnit.MILLISECONDS)
@@ -144,13 +152,7 @@ class StreamTaskRunnable(id: Int, kafkaConfig: KafkaConfiguration, processorSupp
       Some(records)
     } catch {
       case we: WakeupException =>
-        wakeups = wakeups + 1
-        if (wakeups == kafkaConfig.maxWakeups) {
-          LOGGER.error("WakeupException limit exceeded, throwing up wakeup exception.", we)
-          throw we
-        } else {
-          LOGGER.error(s"Consumer poll took more than ${kafkaConfig.wakeupTimeoutInMillis} ms, so wakeup triggered!. Will try poll again!")
-        }
+        handleWakeup(we)
         None
     } finally {
       Try(wakeupCall.cancel(true))
@@ -170,24 +172,23 @@ class StreamTaskRunnable(id: Int, kafkaConfig: KafkaConfiguration, processorSupp
     }
   }
 
-  private def notifyStateChange(state: ThreadState.Value) = {
-    listeners foreach {
-      listener =>
-        listener.onChange(state)
+  private def updateStateChangeAndNotify(newState: StreamTaskState) = {
+    if(state != newState) {
+      state = newState
+      listeners foreach (listener => listener.onChange(state))
     }
   }
 
   override def close(): Unit = {
     Try {
+      LOGGER.info(s"Close has been requested for taskId=$taskId")
       shutdownRequested.set(true)
-      if (inRunningState) consumer.wakeup()
+      if (isStillRunning) consumer.wakeup()
       wakeupScheduler.shutdown()
     }
   }
 
-  def isStillRunning: Boolean = inRunningState
+  def isStillRunning: Boolean = state == StreamTaskState.RUNNING
 
-  def setStateListener(listener: StateListener): Unit = {
-    listeners += listener
-  }
+  def setStateListener(listener: StateListener): Unit = listeners += listener
 }

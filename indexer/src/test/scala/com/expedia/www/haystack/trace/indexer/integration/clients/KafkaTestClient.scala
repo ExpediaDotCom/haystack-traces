@@ -68,9 +68,9 @@ class KafkaTestClient {
     pollTimeoutMs = 100,
     APP_CONSUMER_CONFIG, APP_PRODUCER_CONFIG, OUTPUT_TOPIC, INPUT_TOPIC,
     consumerCloseTimeoutInMillis = 3000,
-    waitRebalanceTimeInMillis = 2500,
     commitOffsetRetries = 3,
-    commitBackoffInMillis = 250)
+    commitBackoffInMillis = 250,
+    maxWakeups = 5, wakeupTimeoutInMillis = 3000, false)
 
   def prepare(appId: String): Unit = {
     APP_CONSUMER_CONFIG.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, KAFKA_CLUSTER.bootstrapServers)

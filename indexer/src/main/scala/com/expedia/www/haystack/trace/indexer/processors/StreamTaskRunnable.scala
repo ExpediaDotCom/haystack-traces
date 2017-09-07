@@ -19,7 +19,7 @@ package com.expedia.www.haystack.trace.indexer.processors
 
 import java.util
 import java.util.concurrent.atomic.AtomicBoolean
-import java.util.concurrent.{ConcurrentHashMap, TimeUnit}
+import java.util.concurrent.{ConcurrentHashMap, Executors, TimeUnit}
 
 import com.expedia.open.tracing.Span
 import com.expedia.www.haystack.trace.indexer.config.entities.KafkaConfiguration
@@ -30,12 +30,17 @@ import org.apache.kafka.common.errors.WakeupException
 import org.slf4j.LoggerFactory
 
 import scala.collection.JavaConversions._
+import scala.collection.mutable
+import scala.util.Try
 
-class StreamThread(id: Int, kafkaConfig: KafkaConfiguration, processorSupplier: StreamProcessorSupplier[String, Span])
-  extends Thread with AutoCloseable {
+class StreamTaskRunnable(id: Int, kafkaConfig: KafkaConfiguration, processorSupplier: StreamProcessorSupplier[String, Span])
+  extends Runnable with AutoCloseable {
 
-  private val LOGGER = LoggerFactory.getLogger(classOf[StreamThread])
+  private val LOGGER = LoggerFactory.getLogger(classOf[StreamTaskRunnable])
   private val shutdownRequested = new AtomicBoolean(false)
+  private val wakeupScheduler = Executors.newScheduledThreadPool(1)
+  private var wakeups: Int = 0
+  private val listeners = mutable.ListBuffer[StateListener]()
 
   @volatile
   private var inRunningState = false
@@ -89,13 +94,10 @@ class StreamThread(id: Int, kafkaConfig: KafkaConfiguration, processorSupplier: 
       inRunningState = true
       runLoop()
     } catch {
-      case we: WakeupException =>
-        // Ignore exception if shutdown has been requested
-        if (!shutdownRequested.get()) throw we
-      case e: Exception =>
+      case ex: Exception =>
+        notifyStateChange(ThreadState.FAILED)
         // may be logging the exception again for kafka specific exceptions, but it is ok.
-        LOGGER.error("Stream application faced an exception during processing: ", e)
-        throw e
+        LOGGER.error("Stream application faced an exception during processing: ", ex)
     }
     finally {
       consumer.close(kafkaConfig.consumerCloseTimeoutInMillis, TimeUnit.MILLISECONDS)
@@ -103,10 +105,55 @@ class StreamThread(id: Int, kafkaConfig: KafkaConfiguration, processorSupplier: 
     }
   }
 
-  private def waitForRebalanceToStabilize(): Unit = {
-    while(rebalanceTriggered) {
-      if(kafkaConfig.waitRebalanceTimeInMillis > 0) Thread.sleep(kafkaConfig.waitRebalanceTimeInMillis)
-      rebalanceTriggered = false
+  private def runLoop(): Unit = {
+    notifyStateChange(ThreadState.RUNNING)
+
+    while(!shutdownRequested.get()) {
+      poll() match {
+        case Some(records) if records != null && !records.isEmpty && streamProcessors.nonEmpty =>
+          val committableOffsets = new util.HashMap[TopicPartition, OffsetAndMetadata]()
+          val groupedByPartition = records.groupBy(_.partition())
+
+          groupedByPartition foreach {
+            case (partition, partitionRecords) =>
+              val topicPartition = new TopicPartition(kafkaConfig.consumeTopic, partition)
+              val processor = streamProcessors.get(topicPartition)
+
+              if (processor != null) {
+                processor.process(partitionRecords) match {
+                  case Some(offsetMetadata) => committableOffsets.put(topicPartition, offsetMetadata)
+                  case _ => /* the processor has nothing to commit for now */
+                }
+              }
+          }
+          commit(committableOffsets)
+        // if no records are returned in poll, then do nothing
+        case _ =>
+      }
+    }
+  }
+
+  private def poll(): Option[ConsumerRecords[String, Span]] = {
+    val wakeupCall = wakeupScheduler.schedule(new Runnable {
+      override def run(): Unit = consumer.wakeup()
+    }, kafkaConfig.wakeupTimeoutInMillis, TimeUnit.MILLISECONDS)
+
+    try {
+      val records: ConsumerRecords[String, Span] = consumer.poll(kafkaConfig.pollTimeoutMs)
+      wakeups = 0
+      Some(records)
+    } catch {
+      case we: WakeupException =>
+        wakeups = wakeups + 1
+        if (wakeups == kafkaConfig.maxWakeups) {
+          LOGGER.error("WakeupException limit exceeded, throwing up wakeup exception.", we)
+          throw we
+        } else {
+          LOGGER.error(s"Consumer poll took more than ${kafkaConfig.wakeupTimeoutInMillis} ms, so wakeup triggered!. Will try poll again!")
+        }
+        None
+    } finally {
+      Try(wakeupCall.cancel(true))
     }
   }
 
@@ -123,38 +170,24 @@ class StreamThread(id: Int, kafkaConfig: KafkaConfiguration, processorSupplier: 
     }
   }
 
-  private def runLoop(): Unit = {
-    while(!shutdownRequested.get()) {
-      waitForRebalanceToStabilize()
-
-      val records: ConsumerRecords[String, Span] = consumer.poll(kafkaConfig.pollTimeoutMs)
-      if (records != null && !records.isEmpty && streamProcessors.nonEmpty) {
-
-        val committableOffsets = new util.HashMap[TopicPartition, OffsetAndMetadata]()
-        val groupedByPartition = records.groupBy(_.partition())
-
-        groupedByPartition foreach {
-          case (partition, partitionRecords) =>
-            val topicPartition = new TopicPartition(kafkaConfig.consumeTopic, partition)
-            val processor = streamProcessors.get(topicPartition)
-
-            if(processor != null) {
-              processor.process(partitionRecords) match {
-                case Some(offsetMetadata) => committableOffsets.put(topicPartition, offsetMetadata)
-                case _ => /* the processor has nothing to commit for now */
-              }
-            }
-        }
-
-        commit(committableOffsets)
-      }
+  private def notifyStateChange(state: ThreadState.Value) = {
+    listeners foreach {
+      listener =>
+        listener.onChange(state)
     }
   }
 
   override def close(): Unit = {
-    shutdownRequested.set(true)
-    consumer.wakeup()
+    Try {
+      shutdownRequested.set(true)
+      if (inRunningState) consumer.wakeup()
+      wakeupScheduler.shutdown()
+    }
   }
 
   def isStillRunning: Boolean = inRunningState
+
+  def setStateListener(listener: StateListener): Unit = {
+    listeners += listener
+  }
 }

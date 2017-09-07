@@ -28,6 +28,8 @@ import java.util.Properties
   * @param consumerCloseTimeoutInMillis kafka consumer close timeout
   * @param commitOffsetRetries retries of commit offset failed
   * @param commitBackoffInMillis if commit operation fails, retry with backoff
+  * @param maxWakeups maximum wakeups allowed
+  * @param wakeupTimeoutInMillis wait timeout for consumer.poll() to return zero or more records
   */
 case class KafkaConfiguration(numStreamThreads: Int,
                               pollTimeoutMs: Long,
@@ -36,6 +38,8 @@ case class KafkaConfiguration(numStreamThreads: Int,
                               produceTopic: String,
                               consumeTopic: String,
                               consumerCloseTimeoutInMillis: Int,
-                              waitRebalanceTimeInMillis: Long,
                               commitOffsetRetries: Int,
-                              commitBackoffInMillis: Long)
+                              commitBackoffInMillis: Long,
+                              maxWakeups: Int,
+                              wakeupTimeoutInMillis: Int,
+                              exitJvmAfterClose: Boolean)

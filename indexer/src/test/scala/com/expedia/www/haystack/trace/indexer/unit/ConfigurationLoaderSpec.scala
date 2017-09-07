@@ -39,9 +39,11 @@ class ConfigurationLoaderSpec extends FunSpec with Matchers {
       kafkaConfig.produceTopic shouldBe "span-buffer"
       kafkaConfig.consumeTopic shouldBe "spans"
       kafkaConfig.numStreamThreads shouldBe 2
-      kafkaConfig.waitRebalanceTimeInMillis shouldBe 3000
       kafkaConfig.commitOffsetRetries shouldBe 3
       kafkaConfig.commitBackoffInMillis shouldBe 200
+
+      kafkaConfig.maxWakeups shouldBe 5
+      kafkaConfig.wakeupTimeoutInMillis shouldBe 5000
 
       kafkaConfig.consumerProps.getProperty(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG) shouldBe "kafkasvc:9092"
       kafkaConfig.consumerProps.getProperty(ConsumerConfig.GROUP_ID_CONFIG) shouldBe "haystack-trace-indexer"

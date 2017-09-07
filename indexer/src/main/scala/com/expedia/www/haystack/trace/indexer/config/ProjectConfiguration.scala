@@ -102,9 +102,11 @@ class ProjectConfiguration extends AutoCloseable {
       produceTopic = if (kafka.hasPath("topic.produce")) kafka.getString("topic.produce") else "",
       consumeTopic = kafka.getString("topic.consume"),
       consumerCloseTimeoutInMillis = kafka.getInt("close.stream.timeout.ms"),
-      waitRebalanceTimeInMillis = kafka.getLong("wait.rebalance.time.ms"),
       commitOffsetRetries = kafka.getInt("commit.offset.retries"),
-      commitBackoffInMillis = kafka.getLong("commit.offset.backoff.ms"))
+      commitBackoffInMillis = kafka.getLong("commit.offset.backoff.ms"),
+      maxWakeups = kafka.getInt("max.wakeups"),
+      wakeupTimeoutInMillis = kafka.getInt("wakeup.timeout.ms"),
+      exitJvmAfterClose = true)
   }
 
   /**

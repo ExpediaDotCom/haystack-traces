@@ -40,6 +40,7 @@ object App extends MetricsSupport {
 
       Runtime.getRuntime.addShutdownHook(new Thread {
         override def run(): Unit = {
+          LOGGER.info("Shutdown hook is invoked, tearing down the application.")
           stream.close()
           appConfig.close()
         }

@@ -50,15 +50,16 @@ class FailedTopologyRecoverySpec extends BaseIntegrationTestSpec {
         spanAccumulatorConfig.bufferingWindowMillis)
 
       When(s"kafka-streams topology is started and then stopped forcefully after few sec")
-      val topology = new StreamRunner(kafkaConfig, accumulatorConfig, esConfig, cassandraConfig, indexTagsConfig)
+      var topology = new StreamRunner(kafkaConfig, accumulatorConfig, esConfig, cassandraConfig, indexTagsConfig)
       topology.start()
       Thread.sleep(7000)
-      topology.closeStreamThreads()
+      topology.close()
 
       // wait for few sec to close the stream threads
       Thread.sleep(6000)
 
       Then(s"on restart of the topology, we should be able to read complete trace created in previous run from the '${kafka.OUTPUT_TOPIC}' topic in kafka, cassandra and elasticsearch")
+      topology = new StreamRunner(kafkaConfig, accumulatorConfig, esConfig, cassandraConfig, indexTagsConfig)
       topology.start()
 
       // produce one more span record with same traceId to trigger punctuate

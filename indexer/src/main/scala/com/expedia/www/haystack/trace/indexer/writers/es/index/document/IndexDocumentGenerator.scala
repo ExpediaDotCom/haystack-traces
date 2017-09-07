@@ -63,7 +63,7 @@ class IndexDocumentGenerator(config: IndexConfiguration) extends MetricsSupport 
 
   // finds the amount of time it takes for one trace(span buffer) to complete.
   // span buffer contains all the spans for a given TraceId
-  // TODO: need to revisit how we can find the root span in a list of child spans of a span buffer record
+  // TODO: need to revisit the logic of deriving the duration correctly??
   private def duration(spanBuffer: SpanBuffer): Long = {
     spanBuffer.getChildSpansList
       .find(sp => sp.getParentSpanId == null)

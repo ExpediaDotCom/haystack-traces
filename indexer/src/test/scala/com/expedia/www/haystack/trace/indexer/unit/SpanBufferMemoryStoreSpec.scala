@@ -1,13 +1,30 @@
+/*
+ *  Copyright 2017 Expedia, Inc.
+ *
+ *     Licensed under the Apache License, Version 2.0 (the "License");
+ *     you may not use this file except in compliance with the License.
+ *     You may obtain a copy of the License at
+ *
+ *         http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *     Unless required by applicable law or agreed to in writing, software
+ *     distributed under the License is distributed on an "AS IS" BASIS,
+ *     WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *     See the License for the specific language governing permissions and
+ *     limitations under the License.
+ *
+ */
+
 package com.expedia.www.haystack.trace.indexer.unit
 
 import com.expedia.open.tracing.Span
 import com.expedia.www.haystack.trace.indexer.store.DynamicCacheSizer
 import com.expedia.www.haystack.trace.indexer.store.impl.SpanBufferMemoryStore
-import org.apache.kafka.streams.processor.{ProcessorContext, StateRestoreCallback, StateStore}
-import org.easymock.EasyMock
+import org.apache.kafka.streams.processor.internals.{ProcessorContextImpl, RecordCollector}
+import org.apache.kafka.streams.processor.{StateRestoreCallback, StateStore, TaskId}
+import org.easymock.EasyMock._
 import org.scalatest.easymock.EasyMockSugar
 import org.scalatest.{FunSpec, Matchers}
-import scala.collection.JavaConversions._
 
 class SpanBufferMemoryStoreSpec extends FunSpec with Matchers with EasyMockSugar {
 
@@ -16,22 +33,24 @@ class SpanBufferMemoryStoreSpec extends FunSpec with Matchers with EasyMockSugar
 
   describe("SpanBuffer Memory Store") {
     it("should create spanBuffer, add child spans and allow retrieving old spanBuffers from the store") {
-      val (context, rootStateStore, spanBufferStore) = createSpanBufferStore
-      whenExecuting(context, rootStateStore) {
-        spanBufferStore.init(context, rootStateStore)
+      val (context, rootStateStore, recordCollector, spanBufferStore) = createSpanBufferStore
+
+      whenExecuting(context, recordCollector, rootStateStore) {
+
         val span1 = Span.newBuilder().setTraceId(TRACE_ID_1).setSpanId("SPAN_ID_1").build()
         val span2 = Span.newBuilder().setTraceId(TRACE_ID_1).setSpanId("SPAN_ID_2").build()
 
-        spanBufferStore.addOrUpdateSpanBuffer(TRACE_ID_1, span1, 11000L)
-        spanBufferStore.addOrUpdateSpanBuffer(TRACE_ID_1, span2, 12000L)
+        spanBufferStore.addOrUpdateSpanBuffer(TRACE_ID_1, span1, 11000L, 10)
+        spanBufferStore.addOrUpdateSpanBuffer(TRACE_ID_1, span2, 12000L, 11)
 
         spanBufferStore.totalSpans shouldBe 2
 
         val result = spanBufferStore.getAndRemoveSpanBuffersOlderThan(13000L)
-        result.size() shouldBe 1
+
+        result.size shouldBe 1
         result.foreach {
-          case (traceId, spanBufferWithMetadata) =>
-            traceId shouldBe TRACE_ID_1
+          spanBufferWithMetadata =>
+            spanBufferWithMetadata.builder.getTraceId shouldBe TRACE_ID_1
             spanBufferWithMetadata.builder.getChildSpansCount shouldBe 2
             spanBufferWithMetadata.builder.getChildSpans(0).getSpanId shouldBe "SPAN_ID_1"
             spanBufferWithMetadata.builder.getChildSpans(1).getSpanId shouldBe "SPAN_ID_2"
@@ -41,35 +60,43 @@ class SpanBufferMemoryStoreSpec extends FunSpec with Matchers with EasyMockSugar
     }
 
     it("should create two spanBuffers for different traceIds, allow retrieving old spanBuffers from the store") {
-      val (context, rootStateStore, spanBufferStore) = createSpanBufferStore
-      whenExecuting(context, rootStateStore) {
-        spanBufferStore.init(context, rootStateStore)
+      val (context, rootStateStore, recordCollector, spanBufferStore) = createSpanBufferStore
+
+      whenExecuting(context, recordCollector, rootStateStore) {
         val span1 = Span.newBuilder().setTraceId(TRACE_ID_1).setSpanId("SPAN_ID_1").build()
         val span2 = Span.newBuilder().setTraceId(TRACE_ID_2).setSpanId("SPAN_ID_2").build()
+        val span3 = Span.newBuilder().setTraceId(TRACE_ID_2).setSpanId("SPAN_ID_3").build()
 
-        spanBufferStore.addOrUpdateSpanBuffer(TRACE_ID_1, span1, 11000L)
-        spanBufferStore.addOrUpdateSpanBuffer(TRACE_ID_2, span2, 12000L)
+        spanBufferStore.addOrUpdateSpanBuffer(TRACE_ID_1, span1, 11000L, 10)
+        spanBufferStore.addOrUpdateSpanBuffer(TRACE_ID_2, span2, 12000L, 11)
+        spanBufferStore.addOrUpdateSpanBuffer(TRACE_ID_2, span3, 12500L, 12)
 
-        spanBufferStore.totalSpans shouldBe 2
+        spanBufferStore.totalSpans shouldBe 3
 
         var result = spanBufferStore.getAndRemoveSpanBuffersOlderThan(11500L)
-        result.size() shouldBe 1
+
+        result.size shouldBe 1
         result.foreach {
-          case (traceId, spanBufferWithMetadata) =>
-            traceId shouldBe TRACE_ID_1
+          spanBufferWithMetadata =>
+            spanBufferWithMetadata.builder.getTraceId shouldBe TRACE_ID_1
             spanBufferWithMetadata.builder.getChildSpansCount shouldBe 1
             spanBufferWithMetadata.builder.getChildSpans(0).getSpanId shouldBe "SPAN_ID_1"
         }
 
-        spanBufferStore.totalSpans shouldBe 1
+        spanBufferStore.totalSpans shouldBe 2
 
-        result = spanBufferStore.getAndRemoveSpanBuffersOlderThan(12500L)
-        result.size() shouldBe 1
+        result = spanBufferStore.getAndRemoveSpanBuffersOlderThan(11500L)
+        result.size shouldBe 0
+
+        result = spanBufferStore.getAndRemoveSpanBuffersOlderThan(13000L)
+
+        result.size shouldBe 1
         result.foreach {
-          case (traceId, spanBufferWithMetadata) =>
-            traceId shouldBe TRACE_ID_2
-            spanBufferWithMetadata.builder.getChildSpansCount shouldBe 1
+          spanBufferWithMetadata =>
+            spanBufferWithMetadata.builder.getTraceId shouldBe TRACE_ID_2
+            spanBufferWithMetadata.builder.getChildSpansCount shouldBe 2
             spanBufferWithMetadata.builder.getChildSpans(0).getSpanId shouldBe "SPAN_ID_2"
+            spanBufferWithMetadata.builder.getChildSpans(1).getSpanId shouldBe "SPAN_ID_3"
         }
 
         spanBufferStore.totalSpans shouldBe 0
@@ -79,14 +106,19 @@ class SpanBufferMemoryStoreSpec extends FunSpec with Matchers with EasyMockSugar
 
   private def createSpanBufferStore = {
     val cacheSizer = new DynamicCacheSizer(10, 1000)
-    val spanBufferStore = new SpanBufferMemoryStore("spanBuffer", cacheSizer)
-    val context = mock[ProcessorContext]
+    val spanBufferStore = new SpanBufferMemoryStore(cacheSizer)
+    spanBufferStore.init()
+
+    val context = mock[ProcessorContextImpl]
     val rootStateStore = mock[StateStore]
+    val recordCollector: RecordCollector = mock[RecordCollector]
 
     expecting {
       context.applicationId().andReturn("appId").anyTimes()
-      context.register(EasyMock.anyObject(classOf[StateStore]), EasyMock.anyBoolean(), EasyMock.anyObject(classOf[StateRestoreCallback])).anyTimes()
+      context.taskId().andReturn(new TaskId(1, 0)).anyTimes()
+      context.recordCollector().andReturn(recordCollector).anyTimes()
+      context.register(anyObject(classOf[StateStore]), anyBoolean(), anyObject(classOf[StateRestoreCallback])).anyTimes()
     }
-    (context, rootStateStore, spanBufferStore)
+    (context, rootStateStore, recordCollector, spanBufferStore)
   }
 }

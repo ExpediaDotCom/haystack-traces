@@ -17,19 +17,26 @@
 
 package com.expedia.www.haystack.trace.indexer.serde
 
+import java.util
+
 import com.expedia.open.tracing.Span
 import com.expedia.www.haystack.trace.indexer.metrics.{AppMetricNames, MetricsSupport}
+import org.apache.kafka.common.serialization.Deserializer
 
-class SpanSerde extends AbstractSerde[Span] with MetricsSupport {
+class SpanDeserializer extends Deserializer[Span] with MetricsSupport {
 
   private val spanDeserMeter = metricRegistry.meter(AppMetricNames.SPAN_PROTO_DESER_FAILURE)
+
+  override def configure(configs: util.Map[String, _], isKey: Boolean): Unit = ()
+
+  override def close(): Unit = ()
 
   /**
     * converts the binary protobuf bytes into Span object
     * @param data serialized bytes of Span
     * @return
     */
-  override def performDeserialize(data: Array[Byte]): Span = {
+  override def deserialize(topic: String, data: Array[Byte]): Span = {
     try {
       if(data == null || data.length == 0) null else Span.parseFrom(data)
     } catch {

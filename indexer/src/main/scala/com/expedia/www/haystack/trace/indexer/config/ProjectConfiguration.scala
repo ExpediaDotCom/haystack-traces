@@ -20,14 +20,14 @@ package com.expedia.www.haystack.trace.indexer.config
 import java.util.Properties
 
 import com.datastax.driver.core.ConsistencyLevel
-import com.expedia.www.haystack.trace.indexer.config.reload.{ConfigurationReloadElasticSearchProvider, Reloadable}
 import com.expedia.www.haystack.trace.indexer.config.entities._
-import com.expedia.www.haystack.trace.indexer.config.reload.ConfigurationReloadElasticSearchProvider
+import com.expedia.www.haystack.trace.indexer.config.reload.{ConfigurationReloadElasticSearchProvider, Reloadable}
+import com.expedia.www.haystack.trace.indexer.serde.SpanDeserializer
 import com.typesafe.config.Config
 import org.apache.commons.lang3.StringUtils
-import org.apache.kafka.streams.StreamsConfig
-import org.apache.kafka.streams.processor.TimestampExtractor
-import org.apache.kafka.streams.processor.TopologyBuilder.AutoOffsetReset
+import org.apache.kafka.clients.consumer.ConsumerConfig
+import org.apache.kafka.clients.producer.ProducerConfig
+import org.apache.kafka.common.serialization.{ByteArraySerializer, StringDeserializer, StringSerializer}
 
 import scala.collection.JavaConversions._
 import scala.util.Try
@@ -48,73 +48,63 @@ class ProjectConfiguration extends AutoCloseable {
       cfg.getLong("window.ms"))
   }
 
-  private def changelogConfig: ChangelogConfiguration = {
-    val cfg = config.getConfig("kafka.changelog")
-    val enabled = cfg.getBoolean("enabled")
-    val logConfigMap = new java.util.HashMap[String, String]()
-
-    if(enabled && cfg.hasPath("logConfig")) {
-      for(entry <- cfg.getConfig("logConfig").entrySet()) {
-        logConfigMap.put(entry.getKey, entry.getValue.unwrapped().toString)
-      }
-    }
-
-    ChangelogConfiguration(enabled, logConfigMap)
-  }
-
   /**
     *
     * @return streams configuration object
     */
   val kafkaConfig: KafkaConfiguration = {
-
     // verify if the applicationId and bootstrap server config are non empty
-    def verifyRequiredProps(props: Properties): Unit = {
-      require(props.getProperty(StreamsConfig.APPLICATION_ID_CONFIG).nonEmpty)
-      require(props.getProperty(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG).nonEmpty)
+    def verifyAndUpdateConsumerProps(props: Properties): Unit = {
+      require(props.getProperty(ConsumerConfig.GROUP_ID_CONFIG).nonEmpty)
+      require(props.getProperty(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG).nonEmpty)
+      props.setProperty(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, classOf[StringDeserializer].getCanonicalName)
+      props.setProperty(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, new SpanDeserializer().getClass.getCanonicalName)
     }
 
-    def addProps(config: Config, props: Properties, prefix: (String) => String = identity): Unit = {
-      config.entrySet().foreach(kv => {
-        val propKeyName = prefix(kv.getKey)
-        props.setProperty(propKeyName, kv.getValue.unwrapped().toString)
-      })
+    def verifyAndUpdateProducerProps(props: Properties): Unit = {
+      require(props.getProperty(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG).nonEmpty)
+      props.setProperty(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, classOf[StringSerializer].getCanonicalName)
+      props.setProperty(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, classOf[ByteArraySerializer].getCanonicalName)
+    }
+
+    def addProps(config: Config, props: Properties): Unit = {
+      if(config != null ) {
+        config.entrySet() foreach {
+          kv => {
+            props.setProperty(kv.getKey, kv.getValue.unwrapped().toString)
+          }
+        }
+      }
     }
 
     val kafka = config.getConfig("kafka")
-    val producerConfig = kafka.getConfig("producer")
+    val producerConfig = if(kafka.hasPath("producer")) kafka.getConfig("producer") else null
     val consumerConfig = kafka.getConfig("consumer")
-    val streamsConfig = kafka.getConfig("streams")
 
-    val props = new Properties
-
-    // add stream specific properties
-    addProps(streamsConfig, props)
+    val consumerProps = new Properties
+    val producerProps = new Properties
 
     // producer specific properties
-    addProps(producerConfig, props, (k) => StreamsConfig.producerPrefix(k))
+    addProps(producerConfig, producerProps)
 
     // consumer specific properties
-    addProps(consumerConfig, props, (k) => StreamsConfig.consumerPrefix(k))
+    addProps(consumerConfig, consumerProps)
 
-    // validate props
-    verifyRequiredProps(props)
+    // validate consumer props
+    verifyAndUpdateConsumerProps(consumerProps)
+    verifyAndUpdateProducerProps(producerProps)
 
-    val offsetReset = if(streamsConfig.hasPath("auto.offset.reset")) {
-      AutoOffsetReset.valueOf(streamsConfig.getString("auto.offset.reset").toUpperCase)
-    } else {
-      AutoOffsetReset.LATEST
-    }
-
-    val timestampExtractor = Class.forName(props.getProperty("timestamp.extractor"))
-
-    KafkaConfiguration(new StreamsConfig(props),
-      produceTopic = producerConfig.getString("topic"),
-      consumeTopic = consumerConfig.getString("topic"),
-      offsetReset,
-      timestampExtractor.newInstance().asInstanceOf[TimestampExtractor],
-      changelogConfig,
-      kafka.getInt("close.stream.timeout.ms"))
+    KafkaConfiguration(
+      numStreamThreads = kafka.getInt("num.stream.threads"),
+      pollTimeoutMs = kafka.getLong("poll.timeout.ms"),
+      consumerProps = consumerProps,
+      producerProps = producerProps,
+      produceTopic = if (kafka.hasPath("topic.produce")) kafka.getString("topic.produce") else "",
+      consumeTopic = kafka.getString("topic.consume"),
+      consumerCloseTimeoutInMillis = kafka.getInt("close.stream.timeout.ms"),
+      waitRebalanceTimeInMillis = kafka.getLong("wait.rebalance.time.ms"),
+      commitOffsetRetries = kafka.getInt("commit.offset.retries"),
+      commitBackoffInMillis = kafka.getLong("commit.offset.backoff.ms"))
   }
 
   /**
@@ -191,9 +181,11 @@ class ProjectConfiguration extends AutoCloseable {
       consistencyLevel = es.getString("consistency.level"),
       indexNamePrefix = indexConfig.getString("name.prefix"),
       indexType = indexConfig.getString("type"),
-      es.getInt("conn.timeout.ms"),
-      es.getInt("read.timeout.ms"),
-      es.getInt("max.inflight.requests"))
+      connectionTimeoutMillis = es.getInt("conn.timeout.ms"),
+      readTimeoutMillis = es.getInt("read.timeout.ms"),
+      maxInFlightBulkRequests = es.getInt("bulk.max.inflight"),
+      maxDocsInBulk = es.getInt("bulk.max.docs.count"),
+      maxBulkDocSizeInKb = es.getInt("bulk.max.docs.size.kb"))
   }
 
   /**

@@ -17,23 +17,28 @@
 
 package com.expedia.www.haystack.trace.indexer.serde
 
+import java.util
+
 import com.expedia.open.tracing.buffer.SpanBuffer
-import com.expedia.www.haystack.trace.indexer.metrics.MetricsSupport
 import com.expedia.www.haystack.trace.indexer.metrics.AppMetricNames._
+import com.expedia.www.haystack.trace.indexer.metrics.MetricsSupport
+import org.apache.kafka.common.serialization.Serializer
 
 
-class SpanBufferSerde extends AbstractSerde[SpanBuffer] with MetricsSupport {
+class SpanBufferSerializer extends Serializer[SpanBuffer] with MetricsSupport {
 
   private val deserFailure = metricRegistry.meter(SPAN_BUFFER_PROTO_DESER_FAILURE)
 
+  override def configure(configs: util.Map[String, _], isKey: Boolean): Unit = ()
+
   /**
-    * converts the binary protobuf bytes into SpanBuffer object
-    * @param data serialized bytes of SpanBuffer
+    * converts the SpanBuffer object to serialized bytes
+    * @param data SpanBuffer
     * @return
     */
-  override def performDeserialize(data: Array[Byte]): SpanBuffer = {
+  override def serialize(topic: String, data: SpanBuffer): Array[Byte] = {
     try {
-      if(data == null || data.length == 0) null else SpanBuffer.parseFrom(data)
+      data.toByteArray
     } catch {
       case _: Exception =>
         /* may be log and add metric */
@@ -41,4 +46,6 @@ class SpanBufferSerde extends AbstractSerde[SpanBuffer] with MetricsSupport {
         null
     }
   }
+
+  override def close(): Unit = ()
 }

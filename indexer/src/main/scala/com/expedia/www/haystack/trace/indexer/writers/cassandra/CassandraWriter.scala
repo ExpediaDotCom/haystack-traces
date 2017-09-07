@@ -23,15 +23,17 @@ import java.util.concurrent.Semaphore
 
 import com.datastax.driver.core._
 import com.datastax.driver.core.querybuilder.QueryBuilder
+import com.expedia.open.tracing.buffer.SpanBuffer
 import com.expedia.www.haystack.trace.indexer.config.entities.CassandraConfiguration
 import com.expedia.www.haystack.trace.indexer.metrics.{AppMetricNames, MetricsSupport}
+import com.expedia.www.haystack.trace.indexer.writers.TraceWriter
 import org.slf4j.LoggerFactory
 
 import scala.concurrent.ExecutionContextExecutor
 import scala.util.Try
 
 class CassandraWriter(config: CassandraConfiguration)(implicit val dispatcher: ExecutionContextExecutor)
-  extends MetricsSupport with AutoCloseable {
+  extends TraceWriter with MetricsSupport {
 
   private val LOGGER = LoggerFactory.getLogger(classOf[CassandraWriter])
 
@@ -61,10 +63,12 @@ class CassandraWriter(config: CassandraConfiguration)(implicit val dispatcher: E
     * TraceId. Also if the parallel writes exceed the max inflight requests, then we block and this puts backpressure on
     * upstream
     * @param traceId: trace id
-    * @param spanBufferBytes: list of spans belonging to this traceId
+    * @param spanBuffer: list of spans belonging to this traceId - span buffer
+    * @param spanBufferBytes: list of spans belonging to this traceId - serialized bytes of span buffer
+    * @param isLastSpanBuffer tells if this is the last record, so the writer can flush
     * @return
     */
-  def write(traceId: String, spanBufferBytes: Array[Byte]): Unit = {
+  override def writeAsync(traceId: String, spanBuffer: SpanBuffer, spanBufferBytes: Array[Byte], isLastSpanBuffer: Boolean): Unit = {
     var isSemaphoreAcquired = false
 
     try {

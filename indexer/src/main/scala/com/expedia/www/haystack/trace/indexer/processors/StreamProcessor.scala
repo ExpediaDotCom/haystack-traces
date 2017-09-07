@@ -9,17 +9,20 @@
  *
  *     Unless required by applicable law or agreed to in writing, software
  *     distributed under the License is distributed on an "AS IS" BASIS,
- *     WITHOUT WARRANTIES OR CONDITIONS OF ASpanGroupWithTimestampNY KIND, either express or implied.
+ *     WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  *     See the License for the specific language governing permissions and
  *     limitations under the License.
  *
  */
-package com.expedia.www.haystack.trace.indexer.store.data.model
 
-import com.expedia.open.tracing.buffer.SpanBuffer
+package com.expedia.www.haystack.trace.indexer.processors
 
-/**
-  * @param builder protobuf builder for building span buffer.
-  * @param firstSpanSeenAt timestamp when the first span of a given traceId is seen
-  */
-case class SpanBufferWithMetadata(builder: SpanBuffer.Builder, firstSpanSeenAt: Long, firstSeenSpanKafkaOffset: Long)
+import org.apache.kafka.clients.consumer.{ConsumerRecord, OffsetAndMetadata}
+
+trait StreamProcessor[K, V] {
+  def process(record: Iterable[ConsumerRecord[K, V]]): Option[OffsetAndMetadata]
+
+  def close(): Unit
+
+  def init(): Unit
+}

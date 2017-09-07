@@ -18,7 +18,7 @@
 package com.expedia.www.haystack.trace.indexer.unit
 
 import com.expedia.open.tracing.{Span, Tag}
-import com.expedia.www.haystack.trace.indexer.serde.SpanSerde
+import com.expedia.www.haystack.trace.indexer.serde.SpanDeserializer
 import org.scalatest.{FunSpec, Matchers}
 
 class SpanSerdeSpec extends FunSpec with Matchers {
@@ -44,8 +44,7 @@ class SpanSerdeSpec extends FunSpec with Matchers {
 
   describe("Span Serde") {
     it("should serialize and deserialize a span object") {
-      val ser = new SpanSerde().serializer.serialize(TOPIC, testSpan)
-      val deser = new SpanSerde().deserializer.deserialize(TOPIC, ser)
+      val deser = new SpanDeserializer().deserialize(TOPIC, testSpan.toByteArray)
       deser.getTraceId shouldEqual TRACE_ID
 
       deser.getParentSpanId shouldEqual PARENT_SPAN_ID
@@ -62,7 +61,7 @@ class SpanSerdeSpec extends FunSpec with Matchers {
 
     it("should return null on serializing invalid  span bytes") {
       val data = "invalid span serialized bytes".getBytes()
-      val deser = new SpanSerde().deserializer.deserialize("topic", data)
+      val deser = new SpanDeserializer().deserialize(TOPIC, data)
       deser shouldBe null
     }
   }

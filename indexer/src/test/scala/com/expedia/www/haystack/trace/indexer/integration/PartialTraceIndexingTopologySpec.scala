@@ -20,7 +20,7 @@ package com.expedia.www.haystack.trace.indexer.integration
 import java.util
 
 import com.expedia.open.tracing.buffer.SpanBuffer
-import com.expedia.www.haystack.trace.indexer.StreamTopology
+import com.expedia.www.haystack.trace.indexer.StreamRunner
 import org.apache.kafka.streams.KeyValue
 import org.apache.kafka.streams.integration.utils.IntegrationTestUtils
 
@@ -30,12 +30,11 @@ import scala.concurrent.duration._
 class PartialTraceIndexingTopologySpec extends BaseIntegrationTestSpec {
   private val MAX_CHILD_SPANS_PER_TRACE = 5
   private val TRACE_ID = "unique-trace-id"
-  private val SPAN_ID_PREFIX = "span-id"
-
 
   "Trace Indexing Topology" should {
     s"consume spans from '${kafka.INPUT_TOPIC}' topic, buffer them together for every unique traceId and write to cassandra and elastic search" in {
       Given("a set of spans with all configurations")
+      val SPAN_ID_PREFIX = "span-id"
       val kafkaConfig = kafka.buildConfig
       val esConfig = elastic.buildConfig
       val indexTagsConfig = elastic.indexingConfig
@@ -50,33 +49,36 @@ class PartialTraceIndexingTopologySpec extends BaseIntegrationTestSpec {
         0L,
         spanAccumulatorConfig.bufferingWindowMillis)
 
-      val topology = new StreamTopology(kafkaConfig, spanAccumulatorConfig, esConfig, cassandraConfig, indexTagsConfig)
+      val topology = new StreamRunner(kafkaConfig, spanAccumulatorConfig, esConfig, cassandraConfig, indexTagsConfig)
       topology.start()
 
       Then(s"we should read one span buffer object from '${kafka.OUTPUT_TOPIC}' topic and the same should be searchable in cassandra and elastic search")
-      val result: util.List[KeyValue[String, SpanBuffer]] =
-        IntegrationTestUtils.waitUntilMinKeyValueRecordsReceived(kafka.RESULT_CONSUMER_CONFIG, kafka.OUTPUT_TOPIC, 1, MAX_WAIT_FOR_OUTPUT_MS)
-      validateKafkaOutput(result, MAX_CHILD_SPANS_PER_TRACE, SPAN_ID_PREFIX)
+      try {
+        val result: util.List[KeyValue[String, SpanBuffer]] =
+          IntegrationTestUtils.waitUntilMinKeyValueRecordsReceived(kafka.RESULT_CONSUMER_CONFIG, kafka.OUTPUT_TOPIC, 1, MAX_WAIT_FOR_OUTPUT_MS)
+        validateKafkaOutput(result, MAX_CHILD_SPANS_PER_TRACE, SPAN_ID_PREFIX)
 
-      // give a sleep to let elastic search results become searchable
-      Thread.sleep(6000)
-      verifyCassandraWrites(traceDescription, MAX_CHILD_SPANS_PER_TRACE, MAX_CHILD_SPANS_PER_TRACE)
-      verifyElasticSearchWrites(Seq(TRACE_ID))
+        // give a sleep to let elastic search results become searchable
+        Thread.sleep(6000)
+        verifyCassandraWrites(traceDescription, MAX_CHILD_SPANS_PER_TRACE, MAX_CHILD_SPANS_PER_TRACE)
+        verifyElasticSearchWrites(Seq(TRACE_ID))
 
-      repeatTestWithNewerSpanIds()
-      topology.close()
+        repeatTestWithNewerSpanIds()
+      } finally {
+        topology.close()
+      }
     }
   }
 
   // this test is useful to check if we are not emitting the old spans if the same traceId reappears later
   private def repeatTestWithNewerSpanIds(): Unit = {
     Given(s"a set of new span ids and same traceId '$TRACE_ID'")
-    val SPAN_ID_PREFIX = "span-id-2"
+    val SPAN_ID_2_PREFIX = "span-id-2"
     When(s"these spans are produced in '${kafka.INPUT_TOPIC}' topic on the currently running topology")
     produceSpansAsync(
       MAX_CHILD_SPANS_PER_TRACE,
       1.seconds,
-      List(TraceDescription(TRACE_ID, SPAN_ID_PREFIX)),
+      List(TraceDescription(TRACE_ID, SPAN_ID_2_PREFIX)),
       spanAccumulatorConfig.bufferingWindowMillis + 100L,
       spanAccumulatorConfig.bufferingWindowMillis)
 
@@ -84,7 +86,7 @@ class PartialTraceIndexingTopologySpec extends BaseIntegrationTestSpec {
     val result: util.List[KeyValue[String, SpanBuffer]] =
       IntegrationTestUtils.waitUntilMinKeyValueRecordsReceived(kafka.RESULT_CONSUMER_CONFIG, kafka.OUTPUT_TOPIC, 1, MAX_WAIT_FOR_OUTPUT_MS)
 
-    validateKafkaOutput(result, MAX_CHILD_SPANS_PER_TRACE, SPAN_ID_PREFIX)
+    validateKafkaOutput(result, MAX_CHILD_SPANS_PER_TRACE, SPAN_ID_2_PREFIX)
   }
 
   // validate the kafka output

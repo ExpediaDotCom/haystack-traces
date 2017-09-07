@@ -19,11 +19,9 @@ package com.expedia.www.haystack.trace.indexer.unit
 
 import com.datastax.driver.core.ConsistencyLevel
 import com.expedia.www.haystack.trace.indexer.config.ProjectConfiguration
-import org.apache.kafka.streams.StreamsConfig
-import org.apache.kafka.streams.processor.TopologyBuilder.AutoOffsetReset
+import org.apache.kafka.clients.consumer.ConsumerConfig
+import org.apache.kafka.clients.producer.ProducerConfig
 import org.scalatest.{FunSpec, Matchers}
-
-import scala.collection.JavaConversions._
 
 class ConfigurationLoaderSpec extends FunSpec with Matchers {
 
@@ -31,24 +29,32 @@ class ConfigurationLoaderSpec extends FunSpec with Matchers {
   describe("Configuration loader") {
     it("should load the span buffer config only from base.conf") {
       val config = project.spanAccumulateConfig
-      config.pollIntervalMillis shouldBe 1000L
+      config.pollIntervalMillis shouldBe 2000L
       config.maxEntriesAllStores shouldBe 20000
-      config.bufferingWindowMillis shouldBe 1000L
+      config.bufferingWindowMillis shouldBe 10000L
     }
 
     it("should load the kafka config from base.conf and one stream property from env variable") {
       val kafkaConfig = project.kafkaConfig
-      kafkaConfig.autoOffsetReset shouldBe AutoOffsetReset.LATEST
       kafkaConfig.produceTopic shouldBe "span-buffer"
       kafkaConfig.consumeTopic shouldBe "spans"
-      kafkaConfig.streamsConfig.getList(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG).head shouldBe "kafka-svc:9092"
-      kafkaConfig.streamsConfig.getString(StreamsConfig.APPLICATION_ID_CONFIG) shouldBe "haystack-trace-indexer"
-      kafkaConfig.streamsConfig.getInt(StreamsConfig.NUM_STREAM_THREADS_CONFIG) shouldBe 4
-      kafkaConfig.streamsConfig.getLong(StreamsConfig.COMMIT_INTERVAL_MS_CONFIG) shouldBe 500L
-      kafkaConfig.changelogConfig.enabled shouldBe true
-      kafkaConfig.changelogConfig.logConfig.get("retention.bytes") shouldBe "104857600"
-      kafkaConfig.changelogConfig.logConfig.get("retention.ms") shouldBe "86400"
-      kafkaConfig.streamsCloseTimeoutInMillis shouldBe 300
+      kafkaConfig.numStreamThreads shouldBe 2
+      kafkaConfig.waitRebalanceTimeInMillis shouldBe 3000
+      kafkaConfig.commitOffsetRetries shouldBe 3
+      kafkaConfig.commitBackoffInMillis shouldBe 200
+
+      kafkaConfig.consumerProps.getProperty(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG) shouldBe "kafkasvc:9092"
+      kafkaConfig.consumerProps.getProperty(ConsumerConfig.GROUP_ID_CONFIG) shouldBe "haystack-trace-indexer"
+      kafkaConfig.consumerProps.getProperty(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG) shouldBe "earliest"
+      kafkaConfig.consumerProps.getProperty(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG) shouldBe "false"
+      kafkaConfig.consumerProps.getProperty(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG) shouldBe "org.apache.kafka.common.serialization.StringDeserializer"
+      kafkaConfig.consumerProps.getProperty(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG) shouldBe "com.expedia.www.haystack.trace.indexer.serde.SpanDeserializer"
+
+      kafkaConfig.consumerCloseTimeoutInMillis shouldBe 30000
+
+      kafkaConfig.producerProps.getProperty(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG) shouldBe "kafkasvc:9092"
+      kafkaConfig.producerProps.getProperty(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG) shouldBe "org.apache.kafka.common.serialization.ByteArraySerializer"
+      kafkaConfig.producerProps.getProperty(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG) shouldBe "org.apache.kafka.common.serialization.StringSerializer"
     }
 
     it("should load the cassandra config from base.conf and few properties overridden from env variable") {
@@ -70,7 +76,9 @@ class ConfigurationLoaderSpec extends FunSpec with Matchers {
     it("should load the elastic search config from base.conf and one property overridden from env variable") {
       val elastic = project.elasticSearchConfig
       elastic.endpoint shouldBe "http://elasticsearch:9200"
-      elastic.maxInFlightRequests shouldBe 50
+      elastic.maxInFlightBulkRequests shouldBe 10
+      elastic.maxDocsInBulk shouldBe 100
+      elastic.maxBulkDocSizeInKb shouldBe 1000
       elastic.indexTemplateJson shouldBe Some("some_template_json")
       elastic.consistencyLevel shouldBe "one"
       elastic.readTimeoutMillis shouldBe 5000

@@ -109,7 +109,7 @@ abstract class BaseIntegrationTestSpec extends WordSpec with GivenWhenThen with 
           IntegrationTestUtils.produceKeyValuesSynchronouslyWithTimestamp(
             kafka.INPUT_TOPIC,
             spans,
-            kafka.PRODUCER_CONFIG,
+            kafka.TEST_PRODUCER_CONFIG,
             timestamp)
           timestamp = timestamp + (maxRecordTimestamp / (maxSpansPerTrace - 1))
         }

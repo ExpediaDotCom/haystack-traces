@@ -17,22 +17,25 @@
 
 package com.expedia.www.haystack.trace.indexer.config.entities
 
-import org.apache.kafka.streams.StreamsConfig
-import org.apache.kafka.streams.processor.TimestampExtractor
-import org.apache.kafka.streams.processor.TopologyBuilder.AutoOffsetReset
+import java.util.Properties
 
-/**
-  * @param streamsConfig config object to be used for initializing KafkaStreams
+/** @param numStreamThreads num of stream threads
+  * @param pollTimeoutMs kafka consumer poll timeout
+  * @param consumerProps consumer config object
+  * @param producerProps producer config object
   * @param produceTopic producer topic
   * @param consumeTopic consumer topic
-  * @param autoOffsetReset auto offset reset policy
-  * @param timestampExtractor timestamp extractor
-  * @param changelogConfig changelog configuration
+  * @param consumerCloseTimeoutInMillis kafka consumer close timeout
+  * @param commitOffsetRetries retries of commit offset failed
+  * @param commitBackoffInMillis if commit operation fails, retry with backoff
   */
-case class KafkaConfiguration(streamsConfig: StreamsConfig,
+case class KafkaConfiguration(numStreamThreads: Int,
+                              pollTimeoutMs: Long,
+                              consumerProps: Properties,
+                              producerProps: Properties,
                               produceTopic: String,
                               consumeTopic: String,
-                              autoOffsetReset: AutoOffsetReset,
-                              timestampExtractor: TimestampExtractor,
-                              changelogConfig: ChangelogConfiguration,
-                              streamsCloseTimeoutInMillis: Int)
+                              consumerCloseTimeoutInMillis: Int,
+                              waitRebalanceTimeInMillis: Long,
+                              commitOffsetRetries: Int,
+                              commitBackoffInMillis: Long)

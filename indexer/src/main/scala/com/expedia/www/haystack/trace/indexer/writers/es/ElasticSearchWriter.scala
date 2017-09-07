@@ -24,8 +24,9 @@ import java.util.concurrent.Semaphore
 import com.expedia.open.tracing.buffer.SpanBuffer
 import com.expedia.www.haystack.trace.indexer.config.entities.{ElasticSearchConfiguration, IndexConfiguration}
 import com.expedia.www.haystack.trace.indexer.metrics.{AppMetricNames, MetricsSupport}
+import com.expedia.www.haystack.trace.indexer.writers.TraceWriter
 import com.expedia.www.haystack.trace.indexer.writers.es.index.document.IndexDocumentGenerator
-import io.searchbox.action.Action
+import io.searchbox.action.BulkableAction
 import io.searchbox.client.config.HttpClientConfig
 import io.searchbox.client.{JestClient, JestClientFactory}
 import io.searchbox.core._
@@ -36,7 +37,7 @@ import org.slf4j.LoggerFactory
 import scala.util.Try
 
 class ElasticSearchWriter(esConfig: ElasticSearchConfiguration, indexConf: IndexConfiguration)
-  extends MetricsSupport with AutoCloseable {
+  extends TraceWriter with MetricsSupport {
 
   private val LOGGER = LoggerFactory.getLogger(classOf[ElasticSearchWriter])
 
@@ -50,7 +51,7 @@ class ElasticSearchWriter(esConfig: ElasticSearchConfiguration, indexConf: Index
   private val documentGenerator = new IndexDocumentGenerator(indexConf)
 
   // this semaphore controls the parallel writes to cassandra
-  private val inflightRequestsSemaphore = new Semaphore(esConfig.maxInFlightRequests, true)
+  private val inflightRequestsSemaphore = new Semaphore(esConfig.maxInFlightBulkRequests, true)
 
   // initialize the elastic search client
   private val esClient: JestClient = {
@@ -66,6 +67,8 @@ class ElasticSearchWriter(esConfig: ElasticSearchConfiguration, indexConf: Index
     factory.getObject
   }
 
+  private val bulkActions = new BulkActionBuilder()
+
   if(esConfig.indexTemplateJson.isDefined) applyTemplate(esConfig.indexTemplateJson.get)
 
   override def close(): Unit = {
@@ -77,21 +80,23 @@ class ElasticSearchWriter(esConfig: ElasticSearchConfiguration, indexConf: Index
     * converts the spans to an index document and writes to elastic search. Also if the parallel writes
     * exceed the max inflight requests, then we block and this puts backpressure on upstream
     * @param traceId trace id
-    * @param spanBuffer list of spans belonging to this traceId
+    * @param spanBuffer list of spans belonging to this traceId - span buffer
+    * @param spanBufferBytes list of spans belonging to this traceId - serialized bytes of span buffer
+    * @param isLastSpanBuffer tells if this is the last record, so the writer can flush
     * @return
     */
-  def write(traceId: String, spanBuffer: SpanBuffer): Unit = {
+  override def writeAsync(traceId: String, spanBuffer: SpanBuffer, spanBufferBytes: Array[Byte], isLastSpanBuffer: Boolean): Unit = {
     var isSemaphoreAcquired = false
 
     try {
-      createIndexAction(traceId, spanBuffer, indexName()) match {
-        case Some(indexRequest) =>
-          inflightRequestsSemaphore.acquire()
-          isSemaphoreAcquired = true
+      addIndexOperation(traceId, spanBuffer, indexName())
 
-          // execute the request async
-          esClient.executeAsync(indexRequest, new TraceIndexResultHandler(inflightRequestsSemaphore, esWriteTime.time()))
-        case _ => // skip indexing this span buffer
+      if(isLastSpanBuffer || bulkActions.isReadyForDispatch) {
+        inflightRequestsSemaphore.acquire()
+        isSemaphoreAcquired = true
+
+        // execute the request async
+        esClient.executeAsync(bulkActions.buildAndReset(), new TraceIndexResultHandler(inflightRequestsSemaphore, esWriteTime.time()))
       }
     } catch {
       case ex: Exception =>
@@ -101,22 +106,22 @@ class ElasticSearchWriter(esConfig: ElasticSearchConfiguration, indexConf: Index
     }
   }
 
-  private def createIndexAction(traceId: String, spanBuffer: SpanBuffer, indexName: String): Option[Action[DocumentResult]] = {
+  private def addIndexOperation(traceId: String, spanBuffer: SpanBuffer, indexName: String): Unit = {
     // add all the spans as one document
     val idxDocument = documentGenerator.createIndexDocument(traceId, spanBuffer)
 
     idxDocument match {
       case Some(doc) =>
-        Some(new Index.Builder(doc.json)
+        val action: Index = new Index.Builder(doc.json)
           .id(doc.id)
           .index(indexName)
           .`type`(esConfig.indexType)
           .setParameter(Parameters.CONSISTENCY, esConfig.consistencyLevel)
           .setParameter(Parameters.OP_TYPE, "create")
-          .build())
+          .build()
+        bulkActions.addAction(action, doc.json.getBytes("utf-8").length)
       case _ =>
         LOGGER.warn("Skipping the span buffer record for index operation!")
-        None
     }
   }
 
@@ -134,5 +139,29 @@ class ElasticSearchWriter(esConfig: ElasticSearchConfiguration, indexConf: Index
   private def indexName(): String = {
     val formatter = new SimpleDateFormat("yyyy-MM-dd")
     s"${esConfig.indexNamePrefix}-${formatter.format(new Date())}"
+  }
+
+  private sealed class BulkActionBuilder {
+    private var bulk = new Bulk.Builder()
+    private var docsCount = 0
+    private var docsSizeInBytes = 0
+
+    def buildAndReset(): Bulk = {
+      val result = bulk.build()
+      bulk = new Bulk.Builder
+      docsCount = 0
+      docsSizeInBytes = 0
+      result
+    }
+
+    def addAction(action: BulkableAction[DocumentResult], sizeInBytes: Int): Unit = {
+      bulk.addAction(action)
+      this.docsSizeInBytes += sizeInBytes
+      this.docsCount += 1
+    }
+
+    def isReadyForDispatch: Boolean = {
+      docsCount >= esConfig.maxDocsInBulk || docsSizeInBytes >= esConfig.maxBulkDocSizeInKb * 1000
+    }
   }
 }

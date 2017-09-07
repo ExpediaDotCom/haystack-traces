@@ -17,23 +17,22 @@
 
 package com.expedia.www.haystack.trace.indexer.store.traits
 
-import java.util
-
 import com.expedia.open.tracing.Span
 import com.expedia.www.haystack.trace.indexer.store.data.model.SpanBufferWithMetadata
-import org.apache.kafka.streams.state.KeyValueStore
+
+import scala.collection.mutable
 
 /**
   * this interface extends KeyValueStore to provide span buffering operations
   */
-trait SpanBufferKeyValueStore extends KeyValueStore[String, SpanBufferWithMetadata] {
+trait SpanBufferKeyValueStore {
 
   /**
     * get all buffered span objects that are recorded before the given timestamp
     * @param timestamp timestamp in millis
     * @return
     */
-  def getAndRemoveSpanBuffersOlderThan(timestamp: Long): util.Map[String, SpanBufferWithMetadata]
+  def getAndRemoveSpanBuffersOlderThan(timestamp: Long): mutable.ListBuffer[SpanBufferWithMetadata]
 
   /**
     * add a listener to the store, that gets called when the eldest spanBuffer is evicted
@@ -43,10 +42,21 @@ trait SpanBufferKeyValueStore extends KeyValueStore[String, SpanBufferWithMetada
   def addEvictionListener(l: EldestBufferedSpanEvictionListener): Unit
 
   /**
-    * addd the spanBuffer if absent or update the spans for the given traceId
+    * adds new spanBuffer for the traceId(if absent)in the store else add the spans
     * @param traceId traceId
     * @param span span object
     * @param spanRecordTimestamp timestamp of the span record
+    * @param offset kafka offset of this span record
     */
-  def addOrUpdateSpanBuffer(traceId: String, span: Span, spanRecordTimestamp: Long): SpanBufferWithMetadata
+  def addOrUpdateSpanBuffer(traceId: String, span: Span, spanRecordTimestamp: Long, offset: Long): SpanBufferWithMetadata
+
+  /**
+    * close the store
+    */
+  def close()
+
+  /**
+    * init the store
+    */
+  def init()
 }

@@ -22,8 +22,10 @@ import java.util.concurrent.Semaphore
 import com.codahale.metrics.{Meter, Timer}
 import com.expedia.www.haystack.trace.indexer.metrics.{AppMetricNames, MetricsSupport}
 import io.searchbox.client.JestResultHandler
-import io.searchbox.core.DocumentResult
+import io.searchbox.core.BulkResult
 import org.slf4j.{Logger, LoggerFactory}
+
+import scala.collection.JavaConversions._
 
 object TraceIndexResultHandler extends MetricsSupport {
   protected val LOGGER: Logger = LoggerFactory.getLogger(TraceIndexResultHandler.getClass)
@@ -31,7 +33,7 @@ object TraceIndexResultHandler extends MetricsSupport {
 }
 
 class TraceIndexResultHandler(inflightRequestsSemaphore: Semaphore, timer: Timer.Context)
-  extends JestResultHandler[DocumentResult] {
+  extends JestResultHandler[BulkResult] {
 
   import TraceIndexResultHandler._
 
@@ -40,14 +42,16 @@ class TraceIndexResultHandler(inflightRequestsSemaphore: Semaphore, timer: Timer
     *
     * @param result bulk result
     */
-  def completed(result: DocumentResult): Unit = {
+  def completed(result: BulkResult): Unit = {
     inflightRequestsSemaphore.release()
     timer.stop()
 
-    if (result.getErrorMessage != null) {
-      esWriteFailureMeter.mark()
-      LOGGER.error(s"Index operation has failed with id=${result.getId} status=${result.getResponseCode} " +
-        s"and error=${result.getErrorMessage}")
+    // group the failed items as per status and log once for such a failed item
+    result.getFailedItems.groupBy(_.status) foreach {
+      case (statusCode, failedItems) =>
+        esWriteFailureMeter.mark(failedItems.size)
+        LOGGER.error(s"Index operation has failed with status=$statusCode, totalFailedItems=${failedItems.size}, " +
+          s"errorReason=${failedItems.head.errorReason}, errorType=${failedItems.head.errorType}")
     }
   }
 

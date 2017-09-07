@@ -94,10 +94,9 @@
         </dependency>
         <dependency>
             <groupId>org.apache.kafka</groupId>
-            <artifactId>kafka-streams</artifactId>
+            <artifactId>kafka-clients</artifactId>
             <version>${kafka-version}</version>
         </dependency>
-
 
         <!-- elastic search -->
         <dependency>
@@ -139,12 +138,19 @@
         </dependency>
 
         <!-- Test Dependencies  -->
+
         <dependency>
             <groupId>org.apache.kafka</groupId>
             <artifactId>kafka-streams</artifactId>
             <version>${kafka-version}</version>
             <classifier>test</classifier>
             <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.apache.kafka</groupId>
+            <artifactId>kafka-streams</artifactId>
+            <version>${kafka-version}</version>
         </dependency>
 
         <dependency>
@@ -229,7 +235,7 @@
                 <version>1.0</version>
                 <configuration>
                     <environmentVariables>
-                        <HAYSTACK_KAFKA_STREAMS_COMMIT_INTERVAL_MS>500</HAYSTACK_KAFKA_STREAMS_COMMIT_INTERVAL_MS>
+                        <HAYSTACK_KAFKA_CONSUMER_AUTO_OFFSET_RESET>earliest</HAYSTACK_KAFKA_CONSUMER_AUTO_OFFSET_RESET>
                         <HAYSTACK_CASSANDRA_CONNECTIONS_MAX_PER_HOST>100</HAYSTACK_CASSANDRA_CONNECTIONS_MAX_PER_HOST>
                         <HAYSTACK_CASSANDRA_ENDPOINTS>cass1,cass2</HAYSTACK_CASSANDRA_ENDPOINTS>
                         <HAYSTACK_ELASTICSEARCH_INDEX_NAME_PREFIX>haystack-test</HAYSTACK_ELASTICSEARCH_INDEX_NAME_PREFIX>

@@ -30,6 +30,7 @@ import org.apache.kafka.common.TopicPartition
 import org.apache.kafka.common.errors.WakeupException
 import org.slf4j.LoggerFactory
 
+import scala.annotation.tailrec
 import scala.collection.JavaConversions._
 import scala.collection.mutable
 import scala.util.Try
@@ -97,12 +98,25 @@ class StreamTaskRunnable(taskId: Int, kafkaConfig: KafkaConfiguration, processor
     }
     finally {
       consumer.close(kafkaConfig.consumerCloseTimeoutInMillis, TimeUnit.MILLISECONDS)
-      updateStateChangeAndNotify(StreamTaskState.NOT_RUNNING)
+      updateStateChangeAndNotify(StreamTaskState.CLOSED)
+    }
+  }
+
+  private def invokeProcessor(partition: Int,
+                              partitionRecords: Iterable[ConsumerRecord[String, Span]],
+                              committableOffsets: util.HashMap[TopicPartition, OffsetAndMetadata]): Unit = {
+    val topicPartition = new TopicPartition(kafkaConfig.consumeTopic, partition)
+    val processor = streamProcessors.get(topicPartition)
+
+    if (processor != null) {
+      processor.process(partitionRecords) match {
+        case Some(offsetMetadata) => committableOffsets.put(topicPartition, offsetMetadata)
+        case _ => /* the processor has nothing to commit for now */
+      }
     }
   }
 
   private def runLoop(): Unit = {
-
     while(!shutdownRequested.get()) {
       poll() match {
         case Some(records) if records != null && !records.isEmpty && streamProcessors.nonEmpty =>
@@ -110,17 +124,10 @@ class StreamTaskRunnable(taskId: Int, kafkaConfig: KafkaConfiguration, processor
           val groupedByPartition = records.groupBy(_.partition())
 
           groupedByPartition foreach {
-            case (partition, partitionRecords) =>
-              val topicPartition = new TopicPartition(kafkaConfig.consumeTopic, partition)
-              val processor = streamProcessors.get(topicPartition)
-
-              if (processor != null) {
-                processor.process(partitionRecords) match {
-                  case Some(offsetMetadata) => committableOffsets.put(topicPartition, offsetMetadata)
-                  case _ => /* the processor has nothing to commit for now */
-                }
-              }
+            case (partition, partitionRecords) => invokeProcessor(partition, partitionRecords, committableOffsets)
           }
+
+          // commit offsets
           commit(committableOffsets)
         // if no records are returned in poll, then do nothing
         case _ =>
@@ -130,21 +137,24 @@ class StreamTaskRunnable(taskId: Int, kafkaConfig: KafkaConfiguration, processor
 
   private def poll(): Option[ConsumerRecords[String, Span]] = {
 
-    def handleWakeup(we: WakeupException): Unit = {
-      if(!shutdownRequested.get()) {
-        wakeups = wakeups + 1
-        if (wakeups == kafkaConfig.maxWakeups) {
-          LOGGER.error(s"WakeupException limit exceeded, throwing up wakeup exception for taskId=$taskId.", we)
-          throw we
-        } else {
-          LOGGER.error(s"Consumer poll took more than ${kafkaConfig.wakeupTimeoutInMillis} ms for taskId=$taskId, wakeup attempt=$wakeups!. Will try poll again!")
-        }
-      } else throw we
-    }
-
-    val wakeupCall = wakeupScheduler.schedule(new Runnable {
+    def scheduleWakeup = wakeupScheduler.schedule(new Runnable {
       override def run(): Unit = consumer.wakeup()
     }, kafkaConfig.wakeupTimeoutInMillis, TimeUnit.MILLISECONDS)
+
+    def handleWakeup(we: WakeupException): Unit = {
+      // if in shutdown phase, then throw exception
+      if (shutdownRequested.get()) throw we
+
+      wakeups = wakeups + 1
+      if (wakeups == kafkaConfig.maxWakeups) {
+        LOGGER.error(s"WakeupException limit exceeded, throwing up wakeup exception for taskId=$taskId.", we)
+        throw we
+      } else {
+        LOGGER.error(s"Consumer poll took more than ${kafkaConfig.wakeupTimeoutInMillis} ms for taskId=$taskId, wakeup attempt=$wakeups!. Will try poll again!")
+      }
+    }
+
+    val wakeupCall = scheduleWakeup
 
     try {
       val records: ConsumerRecords[String, Span] = consumer.poll(kafkaConfig.pollTimeoutMs)
@@ -159,6 +169,7 @@ class StreamTaskRunnable(taskId: Int, kafkaConfig: KafkaConfiguration, processor
     }
   }
 
+  @tailrec
   private def commit(offsets: util.HashMap[TopicPartition, OffsetAndMetadata], retryCount: Int = 0): Unit = {
     try {
       if(offsets.nonEmpty && retryCount <= kafkaConfig.commitOffsetRetries) consumer.commitSync(offsets)

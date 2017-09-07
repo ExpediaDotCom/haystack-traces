@@ -21,7 +21,7 @@ import com.expedia.www.haystack.trace.indexer.processors.StreamTaskState.StreamT
 
 object StreamTaskState extends Enumeration {
   type StreamTaskState = Value
-  val NOT_RUNNING, RUNNING, FAILED = Value
+  val NOT_RUNNING, RUNNING, FAILED, CLOSED = Value
 }
 
 trait StateListener {

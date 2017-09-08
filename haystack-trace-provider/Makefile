@@ -14,7 +14,7 @@ build: clean
 
 docker_build:
 	# build docker image using existing app jar
-	docker build -t $(DOCKER_IMAGE_TAG) -f build/docker/Dockerfile .
+	docker build -t $(DOCKER_IMAGE_NAME) -f build/docker/Dockerfile .
 
 prepare_integration_test_env: docker_build
 	# prepare environment to run integration tests against
@@ -40,7 +40,7 @@ prepare_integration_test_env: docker_build
 		-v $(PWD)/build/integration-tests/docker-app.conf:/docker-app.conf \
 		-e SERVICE_DEBUG_ON=$(SERVICE_DEBUG_ON) \
 		-e OVERRIDES_CONFIG_PATH=/docker-app.conf \
-		$(DOCKER_IMAGE_TAG)
+		$(DOCKER_IMAGE_NAME)
 
 integration_test: prepare_integration_test_env
 	# run tests in a separate container and join the docker-compose network

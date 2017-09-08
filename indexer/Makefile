@@ -12,7 +12,7 @@ build:  clean
 	mvn package
 
 docker_build:
-	docker build -t $(DOCKER_IMAGE_TAG) -f build/docker/Dockerfile .
+	docker build -t $(DOCKER_IMAGE_NAME) -f build/docker/Dockerfile .
 
 prepare_integration_test_env: docker_build
 	docker-compose -f build/integration-tests/docker-compose.yml -p sandbox up -d

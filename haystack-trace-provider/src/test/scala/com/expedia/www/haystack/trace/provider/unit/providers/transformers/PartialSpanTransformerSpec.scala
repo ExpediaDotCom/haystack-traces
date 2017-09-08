@@ -17,7 +17,7 @@
 package com.expedia.www.haystack.trace.provider.unit.providers.transformers
 
 import com.expedia.open.tracing.{Log, Span, Tag}
-import com.expedia.www.haystack.trace.provider.providers.transformer.PartialSpanTransformer
+import com.expedia.www.haystack.trace.provider.providers.transformers.PartialSpanTransformer
 import com.expedia.www.haystack.trace.provider.unit.BaseUnitTestSpec
 
 class PartialSpanTransformerSpec extends BaseUnitTestSpec {

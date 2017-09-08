@@ -17,7 +17,7 @@
 package com.expedia.www.haystack.trace.provider.unit.providers.transformers
 
 import com.expedia.open.tracing.Span
-import com.expedia.www.haystack.trace.provider.providers.transformer.ClockSkewTransformer
+import com.expedia.www.haystack.trace.provider.providers.transformers.ClockSkewTransformer
 import com.expedia.www.haystack.trace.provider.unit.BaseUnitTestSpec
 
 class ClockSkewTransformerSpec extends BaseUnitTestSpec {

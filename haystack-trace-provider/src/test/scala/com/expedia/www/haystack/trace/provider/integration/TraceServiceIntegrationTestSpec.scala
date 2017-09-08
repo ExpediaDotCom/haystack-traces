@@ -18,7 +18,7 @@ package com.expedia.www.haystack.trace.provider.integration
 
 import java.util.UUID
 
-import com.expedia.open.tracing.internal.{SpanRequest, TraceProviderGrpc, TraceRequest}
+import com.expedia.open.tracing.internal.{SpanRequest, TraceProviderGrpc, TraceRequest, TracesSearchRequest}
 import io.grpc.{ManagedChannelBuilder, Status, StatusRuntimeException}
 
 class TraceServiceIntegrationTestSpec extends BaseIntegrationTestSpec {
@@ -136,6 +136,30 @@ class TraceServiceIntegrationTestSpec extends BaseIntegrationTestSpec {
       Then("thrown StatusRuntimeException should have 'spanId not found' error")
       thrown.getStatus.getCode should be(Status.NOT_FOUND.getCode)
       thrown.getStatus.getDescription should include("spanId not found")
+    }
+  }
+
+  describe("TraceProvider.searchTraces") {
+    it("should search traces for given operation") {
+      Given("trace in cassandra and elasticsearch")
+      val traceId = UUID.randomUUID().toString
+      val spanId = UUID.randomUUID().toString
+      val serviceName = "svcName"
+      val operationName = "opName"
+      putTraceInCassandraAndEs(traceId, spanId, serviceName, operationName)
+
+      When("searching traces")
+      val traces = client.searchTraces(TracesSearchRequest
+        .newBuilder()
+        .setServiceName(serviceName)
+        .setOperationName(operationName)
+        .build())
+
+      Then("should return traces for the service")
+      traces.getTracesList.size() should be > 0
+      traces.getTraces(0).getTraceId shouldBe traceId
+      traces.getTraces(0).getChildSpans(0).getProcess.getServiceName shouldBe serviceName
+      traces.getTraces(0).getChildSpans(0).getOperationName shouldBe operationName
     }
   }
 }

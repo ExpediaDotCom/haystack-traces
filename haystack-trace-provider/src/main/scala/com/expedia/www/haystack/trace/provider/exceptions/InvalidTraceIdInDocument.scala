@@ -14,19 +14,8 @@
  *       limitations under the License.
  */
 
-package com.expedia.www.haystack.trace.provider.providers.transformers
+package com.expedia.www.haystack.trace.provider.exceptions
 
-import com.expedia.open.tracing.Span
+import io.grpc.{Status, StatusException}
 
-/**
-  *  Orders spans in natural ordering - root followed by other spans ordered by start time
-  *
-  *  Assumes there is only one root in give spans List,
-  *  corresponding validations are done in [[TraceValidationHandler]]
-  */
-class SortSpanTransformer extends TraceTransformer {
-  override def transform(spans: List[Span]): List[Span] = {
-    val (left, right) = spans.partition(_.getParentSpanId.isEmpty)
-    left.head :: right.sortBy(_.getStartTime)
-  }
-}
+case class InvalidTraceIdInDocument(docId: String) extends StatusException(Status.INTERNAL.withDescription(s"invalid traceId in doc: $docId"))

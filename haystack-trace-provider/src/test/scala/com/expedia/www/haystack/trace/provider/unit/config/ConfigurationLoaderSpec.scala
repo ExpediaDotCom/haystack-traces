@@ -24,6 +24,9 @@ class ConfigurationLoaderSpec extends BaseUnitTestSpec {
     it("should load the service config from base.conf") {
       val serviceConfig: ServiceConfiguration = ProviderConfiguration.serviceConfig
       serviceConfig.port shouldBe 8080
+      serviceConfig.ssl.enabled shouldBe true
+      serviceConfig.ssl.certChainFilePath shouldBe "/ssl/cert"
+      serviceConfig.ssl.privateKeyPath shouldBe "/ssl/private-key"
     }
 
     it("should load the trace transformers") {

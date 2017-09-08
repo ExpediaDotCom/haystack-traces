@@ -134,7 +134,7 @@ trait BaseIntegrationTestSpec extends FunSpec with GivenWhenThen with Matchers w
       .insertInto(CASSANDRA_TABLE)
       .value(ID_COLUMN_NAME, traceId)
       .value(TIMESTAMP_COLUMN_NAME, new Date())
-      .value(STITCHED_SPANS_COLUMNE_NAME, ByteBuffer.wrap(spanBuffer.toByteArray)))
+      .value(SPANS_COLUMNE_NAME, ByteBuffer.wrap(spanBuffer.toByteArray)))
   }
 
   private def createSpanBufferWithSingleSpan(traceId: String,

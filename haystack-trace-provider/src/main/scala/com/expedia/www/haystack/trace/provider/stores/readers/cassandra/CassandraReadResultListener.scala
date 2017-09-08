@@ -23,22 +23,28 @@ import com.expedia.www.haystack.trace.provider.exceptions.TraceNotFoundException
 import com.expedia.www.haystack.trace.provider.stores.serde.SpanBufferDeserializer
 import org.slf4j.{Logger, LoggerFactory}
 
+import scala.collection.JavaConversions._
+import scala.collection.mutable
 import scala.concurrent.Promise
 import scala.util.{Failure, Success, Try}
+
+object CassandraReadResultListener {
+  protected val deserializer = new SpanBufferDeserializer
+}
 
 class CassandraReadResultListener(asyncResult: ResultSetFuture,
                                   timer: Timer.Context,
                                   failure: Meter,
                                   promise: Promise[Trace]) extends Runnable {
-  private val LOGGER: Logger = LoggerFactory.getLogger(classOf[CassandraReadResultListener])
+  import CassandraReadResultListener._
 
-  val deserializer = new SpanBufferDeserializer
+  private val LOGGER: Logger = LoggerFactory.getLogger(classOf[CassandraReadResultListener])
 
   override def run(): Unit = {
     timer.close()
 
     Try(asyncResult.get)
-      .flatMap(tryGetTraceRow)
+      .flatMap(tryGetTraceRows)
       .flatMap(tryDeserialize)
     match {
       case Success(trace) =>
@@ -50,23 +56,25 @@ class CassandraReadResultListener(asyncResult: ResultSetFuture,
     }
   }
 
-  private def tryGetTraceRow(resultSet: ResultSet): Try[Row] = {
-    val row: Row = resultSet.one()
-
-    if(row == null) Failure(new TraceNotFoundException)
-    else Success(row)
+  private def tryGetTraceRows(resultSet: ResultSet): Try[Seq[Row]] = {
+    val rows = mutable.ListBuffer[Row]()
+    while(resultSet.nonEmpty && !resultSet.isExhausted) rows += resultSet.one()
+    if(rows.isEmpty) Failure(new TraceNotFoundException) else Success(rows)
   }
 
-  private def tryDeserialize(row: Row): Try[Trace] = {
-    val rawSpans = row.getBytes(Schema.STITCHED_SPANS_COLUMNE_NAME).array()
-    deserializer.deserialize(rawSpans) match {
-      case Success(spans) =>
-        Success(Trace.newBuilder()
-          .setTraceId(spans.getTraceId)
-          .addAllChildSpans(spans.getChildSpansList)
-          .build())
-      case Failure(ex) =>
-        Failure(ex)
+  private def tryDeserialize(rows: Seq[Row]): Try[Trace] = {
+    val trace = Trace.newBuilder()
+    var deserFailed: Failure[Trace] = null
+
+    for(row <- rows;
+        rawSpans = row.getBytes(Schema.SPANS_COLUMNE_NAME).array();
+        mayBeDeserialized = deserializer.deserialize(rawSpans)) {
+      mayBeDeserialized match {
+        case Success(spans) => trace.setTraceId(spans.getTraceId).addAllChildSpans(spans.getChildSpansList)
+        case Failure(cause) => deserFailed = Failure(cause)
+      }
     }
+
+    if(deserFailed == null) deserFailed else Success(trace.build())
   }
 }

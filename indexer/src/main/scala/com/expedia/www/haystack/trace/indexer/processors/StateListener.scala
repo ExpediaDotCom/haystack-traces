@@ -17,11 +17,13 @@
 
 package com.expedia.www.haystack.trace.indexer.processors
 
-object ThreadState extends Enumeration {
-  type StateListener = Value
-  val RUNNING, FAILED = Value
+import com.expedia.www.haystack.trace.indexer.processors.StreamTaskState.StreamTaskState
+
+object StreamTaskState extends Enumeration {
+  type StreamTaskState = Value
+  val NOT_RUNNING, RUNNING, FAILED, CLOSED = Value
 }
 
 trait StateListener {
-  def onChange(state: ThreadState.Value)
+  def onTaskStateChange(state: StreamTaskState)
 }

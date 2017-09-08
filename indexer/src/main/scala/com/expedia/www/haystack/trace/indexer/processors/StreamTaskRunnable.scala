@@ -23,62 +23,67 @@ import java.util.concurrent.{ConcurrentHashMap, Executors, TimeUnit}
 
 import com.expedia.open.tracing.Span
 import com.expedia.www.haystack.trace.indexer.config.entities.KafkaConfiguration
+import com.expedia.www.haystack.trace.indexer.processors.StreamTaskState.StreamTaskState
 import com.expedia.www.haystack.trace.indexer.processors.supplier.StreamProcessorSupplier
 import org.apache.kafka.clients.consumer._
 import org.apache.kafka.common.TopicPartition
 import org.apache.kafka.common.errors.WakeupException
 import org.slf4j.LoggerFactory
 
+import scala.annotation.tailrec
 import scala.collection.JavaConversions._
 import scala.collection.mutable
 import scala.util.Try
 
-class StreamTaskRunnable(id: Int, kafkaConfig: KafkaConfiguration, processorSupplier: StreamProcessorSupplier[String, Span])
+class StreamTaskRunnable(taskId: Int, kafkaConfig: KafkaConfiguration, processorSupplier: StreamProcessorSupplier[String, Span])
   extends Runnable with AutoCloseable {
 
   private val LOGGER = LoggerFactory.getLogger(classOf[StreamTaskRunnable])
-  private val shutdownRequested = new AtomicBoolean(false)
-  private val wakeupScheduler = Executors.newScheduledThreadPool(1)
-  private var wakeups: Int = 0
-  private val listeners = mutable.ListBuffer[StateListener]()
 
-  @volatile
-  private var inRunningState = false
-
-  @volatile
-  private var rebalanceTriggered = false
-
-  private val streamProcessors = new ConcurrentHashMap[TopicPartition, StreamProcessor[String, Span]]()
-
+  /**
+    * consumer rebalance listener
+    */
   private class RebalanceListener extends ConsumerRebalanceListener {
-    override def onPartitionsRevoked(revokedPartitions: util.Collection[TopicPartition]): Unit = {
-      LOGGER.info("Partitions {} revoked at the beginning of consumer rebalance", revokedPartitions)
 
-      rebalanceTriggered = true
+    /**
+      * close the running processors for the revoked partitions
+      * @param revokedPartitions revoked partitions
+      */
+    override def onPartitionsRevoked(revokedPartitions: util.Collection[TopicPartition]): Unit = {
+      LOGGER.info("Partitions {} revoked at the beginning of consumer rebalance for taskId={}", revokedPartitions, taskId)
 
       revokedPartitions.foreach(
         p => {
-          val processor = streamProcessors.remove(p)
+          val processor = processors.remove(p)
           if (processor != null) processor.close()
         })
     }
 
+    /**
+      * create processors for newly assigned partitions
+      * @param assignedPartitions newly assigned partitions
+      */
     override def onPartitionsAssigned(assignedPartitions: util.Collection[TopicPartition]): Unit = {
-      LOGGER.info("Partitions {} assigned at the beginning of consumer rebalance", assignedPartitions)
-
-      rebalanceTriggered = true
+      LOGGER.info("Partitions {} assigned at the beginning of consumer rebalance for taskId={}", assignedPartitions, taskId)
 
       assignedPartitions foreach {
         partition => {
           val processor = processorSupplier.get()
-          processor.init()
-          streamProcessors.putIfAbsent(partition, processor)
+          val previousProcessor = processors.putIfAbsent(partition, processor)
+          if(previousProcessor == null) processor.init()
         }
       }
     }
   }
 
-  private var consumer = new KafkaConsumer[String, Span](kafkaConfig.consumerProps)
+  private var state = StreamTaskState.NOT_RUNNING
+  private var wakeups: Int = 0
+
+  private val shutdownRequested = new AtomicBoolean(false)
+  private val wakeupScheduler = Executors.newScheduledThreadPool(1)
+  private val listeners = mutable.ListBuffer[StateListener]()
+  private val processors = new ConcurrentHashMap[TopicPartition, StreamProcessor[String, Span]]()
+  private val consumer = new KafkaConsumer[String, Span](kafkaConfig.consumerProps)
   private val rebalanceListener = new RebalanceListener
 
   consumer.subscribe(util.Arrays.asList(kafkaConfig.consumeTopic), rebalanceListener)
@@ -89,43 +94,60 @@ class StreamTaskRunnable(id: Int, kafkaConfig: KafkaConfiguration, processorSupp
     * @throws Exception for any exceptions
     */
   override def run(): Unit = {
-    LOGGER.info("Starting stream processing thread with id={}", id)
+    LOGGER.info("Starting stream processing thread with id={}", taskId)
     try {
-      inRunningState = true
+      updateStateAndNotify(StreamTaskState.RUNNING)
       runLoop()
     } catch {
+      case ie: InterruptedException =>
+        LOGGER.error(s"This stream task with taskId=$taskId has been interrupted", ie)
       case ex: Exception =>
-        notifyStateChange(ThreadState.FAILED)
+        if(!shutdownRequested.get()) updateStateAndNotify(StreamTaskState.FAILED)
         // may be logging the exception again for kafka specific exceptions, but it is ok.
-        LOGGER.error("Stream application faced an exception during processing: ", ex)
+        LOGGER.error(s"Stream application faced an exception during processing for taskId=$taskId: ", ex)
     }
     finally {
       consumer.close(kafkaConfig.consumerCloseTimeoutInMillis, TimeUnit.MILLISECONDS)
-      inRunningState = false
+      updateStateAndNotify(StreamTaskState.CLOSED)
     }
   }
 
-  private def runLoop(): Unit = {
-    notifyStateChange(ThreadState.RUNNING)
+  /**
+    * invoke the processor per partition for the records that are read from kafka.
+    * Update the offsets (if any) that need to be committed in the committableOffsets map
+    * @param partition kafka partition
+    * @param partitionRecords records of the given kafka partition
+    * @param committableOffsets offsets that need to be committed for the given topic partition
+    */
+  private def invokeProcessor(partition: Int,
+                              partitionRecords: Iterable[ConsumerRecord[String, Span]],
+                              committableOffsets: util.HashMap[TopicPartition, OffsetAndMetadata]): Unit = {
+    val topicPartition = new TopicPartition(kafkaConfig.consumeTopic, partition)
+    val processor = processors.get(topicPartition)
 
+    if (processor != null) {
+      processor.process(partitionRecords) match {
+        case Some(offsetMetadata) => committableOffsets.put(topicPartition, offsetMetadata)
+        case _ => /* the processor has nothing to commit for now */
+      }
+    }
+  }
+
+  /**
+    * run the consumer loop till the shutdown is requested or any exception is thrown
+    */
+  private def runLoop(): Unit = {
     while(!shutdownRequested.get()) {
       poll() match {
-        case Some(records) if records != null && !records.isEmpty && streamProcessors.nonEmpty =>
+        case Some(records) if records != null && !records.isEmpty && processors.nonEmpty =>
           val committableOffsets = new util.HashMap[TopicPartition, OffsetAndMetadata]()
           val groupedByPartition = records.groupBy(_.partition())
 
           groupedByPartition foreach {
-            case (partition, partitionRecords) =>
-              val topicPartition = new TopicPartition(kafkaConfig.consumeTopic, partition)
-              val processor = streamProcessors.get(topicPartition)
-
-              if (processor != null) {
-                processor.process(partitionRecords) match {
-                  case Some(offsetMetadata) => committableOffsets.put(topicPartition, offsetMetadata)
-                  case _ => /* the processor has nothing to commit for now */
-                }
-              }
+            case (partition, partitionRecords) => invokeProcessor(partition, partitionRecords, committableOffsets)
           }
+
+          // commit offsets
           commit(committableOffsets)
         // if no records are returned in poll, then do nothing
         case _ =>
@@ -133,10 +155,32 @@ class StreamTaskRunnable(id: Int, kafkaConfig: KafkaConfiguration, processorSupp
     }
   }
 
+  /**
+    * before requesting consumer.poll(), schedule a wakeup call as poll() may hang due to network errors in kafka
+    * if the poll() doesnt return after a timeout, then wakeup the consumer.
+    *
+    * @return consumer records from kafka
+    */
   private def poll(): Option[ConsumerRecords[String, Span]] = {
-    val wakeupCall = wakeupScheduler.schedule(new Runnable {
+
+    def scheduleWakeup() = wakeupScheduler.schedule(new Runnable {
       override def run(): Unit = consumer.wakeup()
     }, kafkaConfig.wakeupTimeoutInMillis, TimeUnit.MILLISECONDS)
+
+    def handleWakeup(we: WakeupException): Unit = {
+      // if in shutdown phase, then do not swallow the exception, throw it to upstream
+      if (shutdownRequested.get()) throw we
+
+      wakeups = wakeups + 1
+      if (wakeups == kafkaConfig.maxWakeups) {
+        LOGGER.error(s"WakeupException limit exceeded, throwing up wakeup exception for taskId=$taskId.", we)
+        throw we
+      } else {
+        LOGGER.error(s"Consumer poll took more than ${kafkaConfig.wakeupTimeoutInMillis} ms for taskId=$taskId, wakeup attempt=$wakeups!. Will try poll again!")
+      }
+    }
+
+    val wakeupCall = scheduleWakeup()
 
     try {
       val records: ConsumerRecords[String, Span] = consumer.poll(kafkaConfig.pollTimeoutMs)
@@ -144,50 +188,64 @@ class StreamTaskRunnable(id: Int, kafkaConfig: KafkaConfiguration, processorSupp
       Some(records)
     } catch {
       case we: WakeupException =>
-        wakeups = wakeups + 1
-        if (wakeups == kafkaConfig.maxWakeups) {
-          LOGGER.error("WakeupException limit exceeded, throwing up wakeup exception.", we)
-          throw we
-        } else {
-          LOGGER.error(s"Consumer poll took more than ${kafkaConfig.wakeupTimeoutInMillis} ms, so wakeup triggered!. Will try poll again!")
-        }
+        handleWakeup(we)
         None
     } finally {
       Try(wakeupCall.cancel(true))
     }
   }
 
-  private def commit(offsets: util.HashMap[TopicPartition, OffsetAndMetadata], retryCount: Int = 0): Unit = {
+  /**
+    * commit the offset to kafka with a retry logic
+    * @param offsets map of offsets for each topic partition
+    * @param retryAttempt current retry attempt
+    */
+  @tailrec
+  private def commit(offsets: util.HashMap[TopicPartition, OffsetAndMetadata], retryAttempt: Int = 0): Unit = {
     try {
-      if(offsets.nonEmpty && retryCount <= kafkaConfig.commitOffsetRetries) consumer.commitSync(offsets)
+      if(offsets.nonEmpty && retryAttempt <= kafkaConfig.commitOffsetRetries) {
+        consumer.commitSync(offsets)
+      }
     } catch {
       case _: CommitFailedException =>
         Thread.sleep(kafkaConfig.commitBackoffInMillis)
         // retry offset again
-        commit(offsets, retryCount + 1)
+        commit(offsets, retryAttempt + 1)
       case ex: Exception =>
         LOGGER.error("Fail to commit the offsets with exception", ex)
     }
   }
 
-  private def notifyStateChange(state: ThreadState.Value) = {
-    listeners foreach {
-      listener =>
-        listener.onChange(state)
+  private def updateStateAndNotify(newState: StreamTaskState) = {
+    if(state != newState) {
+      state = newState
+
+      // invoke listeners for any state change
+      listeners foreach (listener => listener.onTaskStateChange(state))
     }
   }
 
+  /**
+    * close the runnable. If still in running state, then wakeup the consumer
+    */
   override def close(): Unit = {
     Try {
+      LOGGER.info(s"Close has been requested for taskId=$taskId")
       shutdownRequested.set(true)
-      if (inRunningState) consumer.wakeup()
+      if (isStillRunning) consumer.wakeup()
       wakeupScheduler.shutdown()
     }
   }
 
-  def isStillRunning: Boolean = inRunningState
+  /**
+    * if consumer is still in running state
+    * @return
+    */
+  def isStillRunning: Boolean = state == StreamTaskState.RUNNING
 
-  def setStateListener(listener: StateListener): Unit = {
-    listeners += listener
-  }
+  /**
+    * set the state change listener
+    * @param listener state change listener
+    */
+  def setStateListener(listener: StateListener): Unit = listeners += listener
 }

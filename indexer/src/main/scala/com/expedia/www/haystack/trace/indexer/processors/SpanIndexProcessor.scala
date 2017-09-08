@@ -25,7 +25,7 @@ import com.expedia.www.haystack.trace.indexer.metrics.AppMetricNames.{BUFFERED_S
 import com.expedia.www.haystack.trace.indexer.metrics.MetricsSupport
 import com.expedia.www.haystack.trace.indexer.store.SpanBufferMemoryStoreSupplier
 import com.expedia.www.haystack.trace.indexer.store.data.model.SpanBufferWithMetadata
-import com.expedia.www.haystack.trace.indexer.store.traits.EldestBufferedSpanEvictionListener
+import com.expedia.www.haystack.trace.indexer.store.traits.{EldestBufferedSpanEvictionListener, SpanBufferKeyValueStore}
 import com.expedia.www.haystack.trace.indexer.writers.TraceWriter
 import org.apache.kafka.clients.consumer.{ConsumerRecord, OffsetAndMetadata}
 import org.slf4j.{Logger, LoggerFactory}
@@ -46,15 +46,14 @@ class SpanIndexProcessor(accumulatorConfig: SpanAccumulatorConfiguration,
 
   import com.expedia.www.haystack.trace.indexer.processors.SpanIndexProcessor._
 
-  private val spanBufferMemStore = {
-    val store = storeSupplier.get()
-    store.init()
-    store
-  }
+  private var spanBufferMemStore: SpanBufferKeyValueStore = _
 
-  private var lastEmissionTimestamp: Long = 0L
+  // defines the last time we look into the store for emitting the traces
+  private var lastEmitTimestamp: Long = 0L
 
   override def init(): Unit = {
+    spanBufferMemStore = storeSupplier.get()
+    spanBufferMemStore.init()
     spanBufferMemStore.addEvictionListener(this)
     LOGGER.info("Span Index Processor has been initialized successfully!")
   }
@@ -95,7 +94,7 @@ class SpanIndexProcessor(accumulatorConfig: SpanAccumulatorConfiguration,
   }
 
   private def mayBeEmit(currentTimestamp: Long): Option[OffsetAndMetadata]  = {
-    if ((currentTimestamp - accumulatorConfig.pollIntervalMillis) > lastEmissionTimestamp) {
+    if ((currentTimestamp - accumulatorConfig.pollIntervalMillis) > lastEmitTimestamp) {
 
       var committableOffset = -1L
 
@@ -108,7 +107,7 @@ class SpanIndexProcessor(accumulatorConfig: SpanAccumulatorConfiguration,
           if (committableOffset < sb.firstSeenSpanKafkaOffset) committableOffset = sb.firstSeenSpanKafkaOffset
       }
 
-      lastEmissionTimestamp = currentTimestamp
+      lastEmitTimestamp = currentTimestamp
 
       if (committableOffset >= 0) Some(new OffsetAndMetadata(committableOffset)) else None
     } else {

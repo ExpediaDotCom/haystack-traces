@@ -69,9 +69,8 @@ class StreamTaskRunnable(taskId: Int, kafkaConfig: KafkaConfiguration, processor
       assignedPartitions foreach {
         partition => {
           val processor = processorSupplier.get()
-          processor.init()
           val previousProcessor = processors.putIfAbsent(partition, processor)
-          if(previousProcessor != null) processor.close()
+          if(previousProcessor == null) processor.init()
         }
       }
     }

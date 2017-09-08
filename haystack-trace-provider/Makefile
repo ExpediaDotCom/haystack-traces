@@ -1,6 +1,7 @@
 .PHONY: all clean build prepare_integration_test_env integration_test release
 
-DOCKER_IMAGE_TAG := haystack-trace-provider
+export DOCKER_ORG := expediadotcom
+export DOCKER_IMAGE_NAME := haystack-trace-indexer
 PWD := $(shell pwd)
 SERVICE_DEBUG_ON ?= false
 
@@ -59,12 +60,5 @@ integration_test: prepare_integration_test_env
 all: build docker_build integration_test
 
 # build all and release
-REPO := lib/haystack-trace-provider
-BRANCH := $(shell git rev-parse --abbrev-ref HEAD)
-ifeq ($(BRANCH), master)
 release: all
-	docker tag $(DOCKER_IMAGE_TAG) $(REPO):latest
-	docker push $(REPO)
-else
-release: all
-endif
+	./build/docker/publish-to-docker-hub.sh

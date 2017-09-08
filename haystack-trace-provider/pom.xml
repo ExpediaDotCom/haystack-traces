@@ -95,6 +95,12 @@
             <artifactId>grpc-stub</artifactId>
             <version>${grpc.version}</version>
         </dependency>
+        <!-- for grpc client -->
+        <dependency>
+            <groupId>io.netty</groupId>
+            <artifactId>netty-handler</artifactId>
+            <version>4.1.14.Final</version>
+        </dependency>
 
         <!-- AWS EC2 SDK -->
         <dependency>
@@ -146,11 +152,11 @@
             <version>4.12</version>
             <scope>test</scope>
         </dependency>
-        <!-- for grpc client -->
         <dependency>
-            <groupId>io.netty</groupId>
-            <artifactId>netty-handler</artifactId>
-            <version>4.1.14.Final</version>
+            <groupId>org.easymock</groupId>
+            <artifactId>easymock</artifactId>
+            <version>3.4</version>
+            <scope>test</scope>
         </dependency>
     </dependencies>
 

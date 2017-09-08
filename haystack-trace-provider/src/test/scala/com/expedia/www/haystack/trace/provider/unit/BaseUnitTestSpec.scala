@@ -16,6 +16,7 @@
 
 package com.expedia.www.haystack.trace.provider.unit
 
+import org.scalatest.easymock.EasyMockSugar
 import org.scalatest.{FunSpec, GivenWhenThen, Matchers}
 
-trait BaseUnitTestSpec extends FunSpec with GivenWhenThen with Matchers
+trait BaseUnitTestSpec extends FunSpec with GivenWhenThen with Matchers with EasyMockSugar

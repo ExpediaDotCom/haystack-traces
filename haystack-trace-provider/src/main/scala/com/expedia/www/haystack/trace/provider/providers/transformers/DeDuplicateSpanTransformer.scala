@@ -14,20 +14,24 @@
  *       limitations under the License.
  */
 
-package com.expedia.www.haystack.trace.provider.stores.readers.cassandra
+package com.expedia.www.haystack.trace.provider.providers.transformers
 
-import com.datastax.driver.core.Session
+import com.expedia.open.tracing.Span
 
-object Schema {
-  val ID_COLUMN_NAME = "id"
-  val TIMESTAMP_COLUMN_NAME = "ts"
-  val SPANS_COLUMNE_NAME = "spans"
+import scala.collection.mutable
 
-  def ensureExists(keyspace: String, tableName: String, session: Session): Unit = {
-    val keyspaceMetadata = session.getCluster.getMetadata.getKeyspace(keyspace)
-    if (keyspaceMetadata == null || keyspaceMetadata.getTable(tableName) == null) {
-      throw new RuntimeException(s"Fail to find the keyspace=$keyspace and/or table=$tableName !!!!")
+/**
+  * dedup the spans with the same span id
+  */
+class DeDuplicateSpanTransformer extends TraceTransformer {
+
+  override def transform(spans: List[Span]): List[Span] = {
+    val seen = mutable.HashSet[String]()
+    spans.filter {
+      span =>
+        val alreadySeen = seen.contains(span.getSpanId)
+        seen.add(span.getSpanId)
+        !alreadySeen
     }
   }
 }
-

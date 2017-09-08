@@ -24,7 +24,6 @@ import com.expedia.www.haystack.trace.provider.stores.serde.SpanBufferDeserializ
 import org.slf4j.{Logger, LoggerFactory}
 
 import scala.collection.JavaConversions._
-import scala.collection.mutable
 import scala.concurrent.Promise
 import scala.util.{Failure, Success, Try}
 
@@ -57,8 +56,7 @@ class CassandraReadResultListener(asyncResult: ResultSetFuture,
   }
 
   private def tryGetTraceRows(resultSet: ResultSet): Try[Seq[Row]] = {
-    val rows = mutable.ListBuffer[Row]()
-    while(resultSet.nonEmpty && !resultSet.isExhausted) rows += resultSet.one()
+    val rows = resultSet.all()
     if(rows.isEmpty) Failure(new TraceNotFoundException) else Success(rows)
   }
 
@@ -75,6 +73,6 @@ class CassandraReadResultListener(asyncResult: ResultSetFuture,
       }
     }
 
-    if(deserFailed == null) deserFailed else Success(trace.build())
+    if(deserFailed == null) Success(trace.build()) else deserFailed
   }
 }

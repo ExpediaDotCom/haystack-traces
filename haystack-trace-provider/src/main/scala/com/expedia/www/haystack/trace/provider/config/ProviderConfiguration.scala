@@ -26,9 +26,14 @@ import scala.collection.JavaConversions._
 
 object ProviderConfiguration {
   lazy val serviceConfig: ServiceConfiguration = {
-    val serviceConfig: Config = config.getConfig("service")
-    ServiceConfiguration(serviceConfig.getInt("port"))
+    val serviceConfig = config.getConfig("service")
+
+    val ssl = serviceConfig.getConfig("ssl")
+    val sslConfig = SslConfiguration(ssl.getBoolean("enabled"), ssl.getString("cert.path"), ssl.getString("private.key.path"))
+
+    ServiceConfiguration(serviceConfig.getInt("port"), sslConfig)
   }
+
   lazy val cassandraConfig: CassandraConfiguration = {
     val cs = config.getConfig("cassandra")
 

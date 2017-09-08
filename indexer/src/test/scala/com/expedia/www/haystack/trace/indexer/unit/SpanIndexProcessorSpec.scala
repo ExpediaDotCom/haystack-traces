@@ -82,7 +82,7 @@ class SpanIndexProcessorSpec extends FunSpec with Matchers with EasyMockSugar {
       }
     }
 
-    it("should process the records for a partition, and if store does not emit any 'old' spanBuffers, then not writers will be invoked and not offsets to commit") {
+    it("should process the records for a partition, and if store does not emit any 'old' spanBuffers, then writers will not be called and no offsets will be committted") {
       // mock entities
       val mockStore = mock[SpanBufferKeyValueStore]
       val storeSupplier = new SpanBufferMemoryStoreSupplier(10, 100) {

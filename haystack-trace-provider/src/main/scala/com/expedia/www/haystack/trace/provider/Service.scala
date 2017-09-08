@@ -16,13 +16,14 @@
  */
 package com.expedia.www.haystack.trace.provider
 
+import java.io.File
+
 import com.codahale.metrics.JmxReporter
-import com.expedia.www.haystack.trace.provider.metrics.MetricsSupport
 import com.expedia.www.haystack.trace.provider.config.ProviderConfiguration._
+import com.expedia.www.haystack.trace.provider.metrics.MetricsSupport
 import com.expedia.www.haystack.trace.provider.services.{FieldService, TraceService}
 import com.expedia.www.haystack.trace.provider.stores.CassandraEsTraceStore
 import io.grpc.netty.NettyServerBuilder
-import io.grpc.Server
 import org.slf4j.{Logger, LoggerFactory}
 
 object Service extends MetricsSupport {
@@ -45,14 +46,21 @@ object Service extends MetricsSupport {
 
   private def startService(): Unit = {
     val store = new CassandraEsTraceStore(cassandraConfig, elasticSearchConfig)(executor)
-    val server: Server = NettyServerBuilder
+
+    val serverBuilder = NettyServerBuilder
       .forPort(serviceConfig.port)
       .addService(new TraceService(store)(executor))
       .addService(new FieldService(store)(executor))
-      .build
-      .start
 
-    LOGGER.info("server started, listening on 8080")
+    // enable ssl if enabled
+    if(serviceConfig.ssl.enabled) {
+      serverBuilder.useTransportSecurity(new File(serviceConfig.ssl.certChainFilePath), new File(serviceConfig.ssl.privateKeyPath))
+    }
+
+    val server = serverBuilder.build().start()
+
+    LOGGER.info(s"server started, listening on ${serviceConfig.port}")
+
     Runtime.getRuntime.addShutdownHook(new Thread() {
       override def run(): Unit = {
         LOGGER.info("shutting down gRPC server since JVM is shutting down")

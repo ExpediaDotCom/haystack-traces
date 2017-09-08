@@ -1,7 +1,7 @@
 .PHONY: all clean build prepare_integration_test_env integration_test release
 
 export DOCKER_ORG := expediadotcom
-export DOCKER_IMAGE_NAME := haystack-trace-indexer
+export DOCKER_IMAGE_NAME := haystack-trace-provider
 PWD := $(shell pwd)
 SERVICE_DEBUG_ON ?= false
 

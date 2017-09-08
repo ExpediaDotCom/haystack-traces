@@ -57,6 +57,11 @@ class ProjectConfiguration extends AutoCloseable {
     def verifyAndUpdateConsumerProps(props: Properties): Unit = {
       require(props.getProperty(ConsumerConfig.GROUP_ID_CONFIG).nonEmpty)
       require(props.getProperty(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG).nonEmpty)
+
+      // make sure auto commit is false
+      require(props.getProperty(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG) == "false")
+
+      // set the deserializers explicitly
       props.setProperty(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, classOf[StringDeserializer].getCanonicalName)
       props.setProperty(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, new SpanDeserializer().getClass.getCanonicalName)
     }

@@ -25,5 +25,5 @@ object StreamTaskState extends Enumeration {
 }
 
 trait StateListener {
-  def onChange(state: StreamTaskState)
+  def onTaskStateChange(state: StreamTaskState)
 }

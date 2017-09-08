@@ -43,9 +43,10 @@ class StreamRunner(kafkaConfig: KafkaConfiguration,
   implicit private val executor = scala.concurrent.ExecutionContext.Implicits.global
 
   private val LOGGER = LoggerFactory.getLogger(classOf[StreamRunner])
+
   private val isClosing = new AtomicBoolean(false)
   private val streamThreadExecutor = Executors.newFixedThreadPool(kafkaConfig.numStreamThreads)
-  private var runnables: mutable.ListBuffer[StreamTaskRunnable] = _
+  private val taskRunnables = mutable.ListBuffer[StreamTaskRunnable]()
 
   private val writers: Seq[TraceWriter] = {
     val writers = mutable.ListBuffer[TraceWriter]()
@@ -61,18 +62,14 @@ class StreamRunner(kafkaConfig: KafkaConfiguration,
   def start(): Unit = {
     LOGGER.info("Starting the span indexing stream..")
 
-    runnables = mutable.ListBuffer[StreamTaskRunnable]()
-
     val storeSupplier = new SpanBufferMemoryStoreSupplier(accumulatorConfig.minTracesPerCache, accumulatorConfig.maxEntriesAllStores)
     val streamProcessSupplier = new SpanIndexProcessorSupplier(accumulatorConfig, storeSupplier, writers)
 
-    (0 until kafkaConfig.numStreamThreads).toList foreach {
-      streamId => {
-        val runnable = new StreamTaskRunnable(streamId, kafkaConfig, streamProcessSupplier)
-        runnable.setStateListener(this)
-        runnables += runnable
-        streamThreadExecutor.execute(runnable)
-      }
+    for(streamId <- 0 until kafkaConfig.numStreamThreads) {
+      val task = new StreamTaskRunnable(streamId, kafkaConfig, streamProcessSupplier)
+      task.setStateListener(this)
+      taskRunnables += task
+      streamThreadExecutor.execute(task)
     }
   }
 
@@ -88,7 +85,7 @@ class StreamRunner(kafkaConfig: KafkaConfiguration,
     }
   }
 
-  override def onChange(state: StreamTaskState): Unit = {
+  override def onTaskStateChange(state: StreamTaskState): Unit = {
     if(state == StreamTaskState.FAILED) {
       LOGGER.error("Thread state has changed to 'FAILED', so tearing down the app")
       close()
@@ -97,12 +94,12 @@ class StreamRunner(kafkaConfig: KafkaConfiguration,
 
   private def closeStreamTasks(): Unit = {
     LOGGER.info("Closing all the stream tasks..")
-    runnables foreach { task => task.close() }
+    taskRunnables foreach { _.close }
   }
 
   private def closeWriters(): Unit = {
     LOGGER.info("Closing all the writers now..")
-    writers foreach { writer => writer.close() }
+    writers foreach { _.close }
   }
 
   private def waitAndTerminate(): Unit = {

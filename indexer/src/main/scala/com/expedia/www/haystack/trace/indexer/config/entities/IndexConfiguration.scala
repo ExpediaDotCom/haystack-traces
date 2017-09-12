@@ -26,26 +26,38 @@ import org.slf4j.LoggerFactory
 case class IndexField(name: String, `type`: String, enabled: Boolean = true)
 
 case class IndexConfiguration(var indexableTags: List[IndexField] = Nil) extends Reloadable {
+  private val LOGGER = LoggerFactory.getLogger(classOf[IndexConfiguration])
+  private var currentVersion: Int = 0
+  implicit val formats = DefaultFormats
+
+  @volatile
   var indexableTagsByTagName: Map[String, IndexField] = groupTagsWithKey(indexableTags)
 
-  private val LOGGER = LoggerFactory.getLogger(classOf[IndexConfiguration])
+  var reloadConfigTableName: Option[String] = None
 
-  implicit val formats = DefaultFormats
-  private var currentVersion: Int = 0
-  var reloadConfigTableName: String = ""
-
+  // fail fast 
   override def name: String = reloadConfigTableName
+    .getOrElse(throw new RuntimeException("fail to find the reload config table name!"))
 
-  override def onReload(newConfigStr: String): Unit = {
-    if(StringUtils.isNotEmpty(newConfigStr) && hasConfigChanged(newConfigStr)) {
-      LOGGER.info("new indexing configuration has arrived: " + newConfigStr)
-      val newConfig = Serialization.read[IndexConfiguration](newConfigStr)
+  /**
+    * this is called whenever the configuration reloader system reads the configuration object from external store
+    * we check if the config data has changed using the string's hashCode
+    * @param configData config object that is loaded at regular intervals from external store
+    */
+  override def onReload(configData: String): Unit = {
+    if(StringUtils.isNotEmpty(configData) && hasConfigChanged(configData)) {
+      LOGGER.info("new indexing configuration has arrived: " + configData)
+      val newConfig = Serialization.read[IndexConfiguration](configData)
       update(newConfig)
       // set the current version to newer one
-      currentVersion = newConfigStr.hashCode
+      currentVersion = configData.hashCode
     }
   }
 
+  /**
+    * update the new index configuration
+    * @param newConfig new config object
+    */
   private def update(newConfig: IndexConfiguration): Unit = {
      if (newConfig.indexableTags != null) {
        this.indexableTags = newConfig.indexableTags
@@ -53,8 +65,19 @@ case class IndexConfiguration(var indexableTags: List[IndexField] = Nil) extends
     }
   }
 
+  /**
+    * convert the list of tags as key value pair, key being the indexField name and value is indexField itself
+    * @param indexableTags whitelist of tags that are indexable
+    * @return
+    */
   private def groupTagsWithKey(indexableTags: List[IndexField]): Map[String, IndexField] = {
     indexableTags.groupBy(_.name).mapValues(_.head)
   }
-  private def hasConfigChanged(newConfigStr: String): Boolean = newConfigStr.hashCode != currentVersion
+
+  /**
+    * detect if configuration has changed using the hashCode as version
+    * @param newConfigData new configuration data
+    * @return
+    */
+  private def hasConfigChanged(newConfigData: String): Boolean = newConfigData.hashCode != currentVersion
 }

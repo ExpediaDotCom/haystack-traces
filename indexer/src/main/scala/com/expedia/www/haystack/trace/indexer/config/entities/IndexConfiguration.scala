@@ -17,6 +17,8 @@
 
 package com.expedia.www.haystack.trace.indexer.config.entities
 
+import java.util.concurrent.atomic.AtomicReference
+
 import com.expedia.www.haystack.trace.indexer.config.reload.Reloadable
 import org.apache.commons.lang3.StringUtils
 import org.json4s.DefaultFormats
@@ -26,35 +28,58 @@ import org.slf4j.LoggerFactory
 case class IndexField(name: String, `type`: String, enabled: Boolean = true)
 
 case class IndexConfiguration(var indexableTags: List[IndexField] = Nil) extends Reloadable {
-  var indexableTagsByTagName: Map[String, IndexField] = groupTagsWithKey(indexableTags)
-
   private val LOGGER = LoggerFactory.getLogger(classOf[IndexConfiguration])
-
-  implicit val formats = DefaultFormats
   private var currentVersion: Int = 0
-  var reloadConfigTableName: String = ""
+  implicit val formats = DefaultFormats
 
+  val indexableTagsByTagName: AtomicReference[Map[String, IndexField]] = new AtomicReference[Map[String, IndexField]]()
+
+  groupTagsWithKey()
+
+  var reloadConfigTableName: Option[String] = None
+
+  // fail fast
   override def name: String = reloadConfigTableName
+    .getOrElse(throw new RuntimeException("fail to find the reload config table name!"))
 
-  override def onReload(newConfigStr: String): Unit = {
-    if(StringUtils.isNotEmpty(newConfigStr) && hasConfigChanged(newConfigStr)) {
-      LOGGER.info("new indexing configuration has arrived: " + newConfigStr)
-      val newConfig = Serialization.read[IndexConfiguration](newConfigStr)
+  /**
+    * this is called whenever the configuration reloader system reads the configuration object from external store
+    * we check if the config data has changed using the string's hashCode
+    * @param configData config object that is loaded at regular intervals from external store
+    */
+  override def onReload(configData: String): Unit = {
+    if(StringUtils.isNotEmpty(configData) && hasConfigChanged(configData)) {
+      LOGGER.info("new indexing configuration has arrived: " + configData)
+      val newConfig = Serialization.read[IndexConfiguration](configData)
       update(newConfig)
       // set the current version to newer one
-      currentVersion = newConfigStr.hashCode
+      currentVersion = configData.hashCode
     }
   }
 
+  /**
+    * update the new index configuration
+    * @param newConfig new config object
+    */
   private def update(newConfig: IndexConfiguration): Unit = {
      if (newConfig.indexableTags != null) {
        this.indexableTags = newConfig.indexableTags
-       this.indexableTagsByTagName = groupTagsWithKey(this.indexableTags)
+       groupTagsWithKey()
     }
   }
 
-  private def groupTagsWithKey(indexableTags: List[IndexField]): Map[String, IndexField] = {
-    indexableTags.groupBy(_.name).mapValues(_.head)
+  /**
+    * convert the list of tags as key value pair, key being the indexField name and value is indexField itself
+    * @return
+    */
+  private def groupTagsWithKey(): Unit = {
+    indexableTagsByTagName.set(indexableTags.groupBy(_.name).mapValues(_.head))
   }
-  private def hasConfigChanged(newConfigStr: String): Boolean = newConfigStr.hashCode != currentVersion
+
+  /**
+    * detect if configuration has changed using the hashCode as version
+    * @param newConfigData new configuration data
+    * @return
+    */
+  private def hasConfigChanged(newConfigData: String): Boolean = newConfigData.hashCode != currentVersion
 }

@@ -84,7 +84,7 @@ class IndexDocumentGenerator(config: IndexConfiguration) extends MetricsSupport 
     // in an external database (outside this app boundary). However, the app periodically reads this whitelist config
     // and applies it to the new spans that are read.
     for (tag <- span.getTagsList;
-         indexField = config.indexableTagsByTagName.get(tag.getKey)
+         indexField = config.indexableTagsByTagName.get().get(tag.getKey)
          if indexField.isDefined && indexField.get.enabled;
          (k, v) = transformTagToKVPair(tag);
          convertedToIndexFieldType = adjustTagValueToIndexFieldType(indexField.get.`type`, v)

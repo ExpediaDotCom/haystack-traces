@@ -17,6 +17,8 @@
 
 package com.expedia.www.haystack.trace.indexer.config.entities
 
+import java.util.concurrent.atomic.AtomicReference
+
 import com.expedia.www.haystack.trace.indexer.config.reload.Reloadable
 import org.apache.commons.lang3.StringUtils
 import org.json4s.DefaultFormats
@@ -30,12 +32,13 @@ case class IndexConfiguration(var indexableTags: List[IndexField] = Nil) extends
   private var currentVersion: Int = 0
   implicit val formats = DefaultFormats
 
-  @volatile
-  var indexableTagsByTagName: Map[String, IndexField] = groupTagsWithKey(indexableTags)
+  val indexableTagsByTagName: AtomicReference[Map[String, IndexField]] = new AtomicReference[Map[String, IndexField]]()
+
+  groupTagsWithKey()
 
   var reloadConfigTableName: Option[String] = None
 
-  // fail fast 
+  // fail fast
   override def name: String = reloadConfigTableName
     .getOrElse(throw new RuntimeException("fail to find the reload config table name!"))
 
@@ -61,17 +64,16 @@ case class IndexConfiguration(var indexableTags: List[IndexField] = Nil) extends
   private def update(newConfig: IndexConfiguration): Unit = {
      if (newConfig.indexableTags != null) {
        this.indexableTags = newConfig.indexableTags
-       this.indexableTagsByTagName = groupTagsWithKey(this.indexableTags)
+       groupTagsWithKey()
     }
   }
 
   /**
     * convert the list of tags as key value pair, key being the indexField name and value is indexField itself
-    * @param indexableTags whitelist of tags that are indexable
     * @return
     */
-  private def groupTagsWithKey(indexableTags: List[IndexField]): Map[String, IndexField] = {
-    indexableTags.groupBy(_.name).mapValues(_.head)
+  private def groupTagsWithKey(): Unit = {
+    indexableTagsByTagName.set(indexableTags.groupBy(_.name).mapValues(_.head))
   }
 
   /**

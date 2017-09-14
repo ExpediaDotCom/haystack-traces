@@ -219,11 +219,11 @@
                             <protocArtifact>com.google.protobuf:protoc:3.0.0</protocArtifact>
                             <includeDirectories>
                                 <include>../haystack-idl/proto</include>
-                                <include>../haystack-idl/proto/internal</include>
+                                <include>../haystack-idl/proto/api</include>
                             </includeDirectories>
                             <inputDirectories>
                                 <include>../haystack-idl/proto</include>
-                                <include>../haystack-idl/proto/internal</include>
+                                <include>../haystack-idl/proto/api</include>
                             </inputDirectories>
                             <outputTargets>
                                 <outputTarget>

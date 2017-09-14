@@ -18,7 +18,7 @@ package com.expedia.www.haystack.trace.provider.integration
 
 import java.util.UUID
 
-import com.expedia.open.tracing.internal.{SpanRequest, TraceProviderGrpc, TraceRequest, TracesSearchRequest}
+import com.expedia.open.tracing.api.{SpanRequest, TraceProviderGrpc, TraceRequest, TracesSearchRequest}
 import io.grpc.{ManagedChannelBuilder, Status, StatusRuntimeException}
 
 class TraceServiceIntegrationTestSpec extends BaseIntegrationTestSpec {

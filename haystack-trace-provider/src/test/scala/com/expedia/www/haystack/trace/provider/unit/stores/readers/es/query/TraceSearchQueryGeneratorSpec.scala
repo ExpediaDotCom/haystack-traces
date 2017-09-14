@@ -15,7 +15,7 @@
  */
 package com.expedia.www.haystack.trace.provider.unit.stores.readers.es.query
 
-import com.expedia.open.tracing.internal.TracesSearchRequest
+import com.expedia.open.tracing.api.TracesSearchRequest
 import com.expedia.www.haystack.trace.provider.stores.readers.es.query.TraceSearchQueryGenerator
 import com.expedia.www.haystack.trace.provider.unit.BaseUnitTestSpec
 

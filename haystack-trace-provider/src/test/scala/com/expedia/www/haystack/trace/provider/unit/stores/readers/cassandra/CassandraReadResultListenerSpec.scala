@@ -22,7 +22,7 @@ import com.codahale.metrics.{Meter, Timer}
 import com.datastax.driver.core.{ResultSet, ResultSetFuture, Row}
 import com.expedia.open.tracing.Span
 import com.expedia.open.tracing.buffer.SpanBuffer
-import com.expedia.open.tracing.internal.Trace
+import com.expedia.open.tracing.api.Trace
 import com.expedia.www.haystack.trace.provider.stores.readers.cassandra.{CassandraReadResultListener, Schema}
 import com.expedia.www.haystack.trace.provider.unit.BaseUnitTestSpec
 import io.grpc.{Status, StatusException}

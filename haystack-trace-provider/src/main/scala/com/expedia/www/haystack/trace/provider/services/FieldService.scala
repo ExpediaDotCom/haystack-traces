@@ -16,7 +16,7 @@
 
 package com.expedia.www.haystack.trace.provider.services
 
-import com.expedia.open.tracing.internal._
+import com.expedia.open.tracing.api._
 import com.expedia.www.haystack.trace.provider.stores.TraceStore
 import io.grpc.stub.StreamObserver
 

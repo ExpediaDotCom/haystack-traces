@@ -18,7 +18,7 @@ package com.expedia.www.haystack.trace.provider.stores.readers.cassandra
 
 import com.datastax.driver.core.{BoundStatement, PreparedStatement}
 import com.datastax.driver.core.querybuilder.QueryBuilder
-import com.expedia.open.tracing.internal.Trace
+import com.expedia.open.tracing.api.Trace
 import com.expedia.www.haystack.trace.provider.config.entities.CassandraConfiguration
 import com.expedia.www.haystack.trace.provider.metrics.MetricsSupport
 import com.expedia.www.haystack.trace.provider.stores.readers.cassandra.Schema._

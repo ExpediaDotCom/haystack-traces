@@ -16,7 +16,7 @@
 
 package com.expedia.www.haystack.trace.provider.stores.readers.es.query
 
-import com.expedia.open.tracing.internal.TracesSearchRequest
+import com.expedia.open.tracing.api.TracesSearchRequest
 import io.searchbox.core.Search
 import io.searchbox.strings.StringUtils
 import org.apache.lucene.search.join.ScoreMode

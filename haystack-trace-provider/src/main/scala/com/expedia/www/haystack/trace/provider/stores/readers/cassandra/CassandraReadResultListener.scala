@@ -18,7 +18,7 @@ package com.expedia.www.haystack.trace.provider.stores.readers.cassandra
 
 import com.codahale.metrics.{Meter, Timer}
 import com.datastax.driver.core.{ResultSet, ResultSetFuture, Row}
-import com.expedia.open.tracing.internal.Trace
+import com.expedia.open.tracing.api.Trace
 import com.expedia.www.haystack.trace.provider.exceptions.TraceNotFoundException
 import com.expedia.www.haystack.trace.provider.stores.serde.SpanBufferDeserializer
 import org.slf4j.{Logger, LoggerFactory}

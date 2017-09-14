@@ -17,7 +17,7 @@
 package com.expedia.www.haystack.trace.provider.providers.transformers
 
 import com.expedia.open.tracing.Span
-import com.expedia.open.tracing.internal.Trace
+import com.expedia.open.tracing.api.Trace
 
 import scala.collection.JavaConversions._
 

@@ -18,7 +18,7 @@ package com.expedia.www.haystack.trace.provider.stores
 
 import java.util
 
-import com.expedia.open.tracing.internal._
+import com.expedia.open.tracing.api._
 import com.expedia.www.haystack.trace.provider.config.entities.{CassandraConfiguration, ElasticSearchConfiguration}
 import com.expedia.www.haystack.trace.provider.exceptions.InvalidTraceIdInDocument
 import com.expedia.www.haystack.trace.provider.metrics.MetricsSupport

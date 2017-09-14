@@ -10,7 +10,7 @@ env:
     - SHA=${TRAVIS_COMMIT}
   matrix:
     - SUB_PROJECT=indexer
-    - SUB_PROJECT=haystack-trace-provider
+    - SUB_PROJECT=reader
 
 script:
   # build, create docker image

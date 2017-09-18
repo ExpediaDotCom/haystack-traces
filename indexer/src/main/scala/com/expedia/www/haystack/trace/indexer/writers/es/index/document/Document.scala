@@ -28,9 +28,14 @@ object Document {
   type TagValue = Any
 }
 
-case class SpanIndexDoc(service: String, operation: String, duration: Long, tags: mutable.Map[String, Any])
-case class SpanArrayIndexDoc(duration: Long, spans: Seq[SpanIndexDoc])
+//case class SpanIndexDoc(spanId: String,
+//                        service: String,
+//                        operation: String,
+//                        duration: Long,
+//                        tags: mutable.Map[String, mutable.ListBuffer[Any]])
 
-case class Document(id: String, doc: SpanArrayIndexDoc) {
+case class TraceIndexDoc(rootDuration: Long, spans: Seq[mutable.Map[String, Any]])
+
+case class Document(id: String, doc: TraceIndexDoc) {
   val json: String = Serialization.write(doc)(Document.formats)
 }

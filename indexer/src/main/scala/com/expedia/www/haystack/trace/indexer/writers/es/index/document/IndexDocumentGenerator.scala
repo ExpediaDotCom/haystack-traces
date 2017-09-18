@@ -21,7 +21,7 @@ import java.util.function.Supplier
 
 import com.expedia.open.tracing.buffer.SpanBuffer
 import com.expedia.open.tracing.{Span, Tag}
-import com.expedia.www.haystack.trace.indexer.config.entities.IndexConfiguration
+import com.expedia.www.haystack.trace.indexer.config.entities.{IndexConfiguration, IndexField}
 import com.expedia.www.haystack.trace.indexer.metrics.{AppMetricNames, MetricsSupport}
 import com.expedia.www.haystack.trace.indexer.writers.es.index.document.Document.{TagKey, TagValue}
 import org.apache.commons.lang3.StringUtils
@@ -50,15 +50,18 @@ class IndexDocumentGenerator(config: IndexConfiguration) extends MetricsSupport 
     */
 
   def createIndexDocument(traceId: String, spanBuffer: SpanBuffer): Option[Document] = {
-    val spanIndices = for(sp <- spanBuffer.getChildSpansList; if isValidForIndex(sp)) yield transform(sp)
+    // We maintain a white list of tags that are to be indexed. The whitelist is maintained as a confguration
+    // in an external database (outside this app boundary). However, the app periodically reads this whitelist config
+    // and applies it to the new spans that are read.
+    val whitelistTagKeys = config.indexableTagsByTagName.get()
+
+    val spanIndices = for(sp <- spanBuffer.getChildSpansList; if isValidForIndex(sp)) yield transform(sp, whitelistTagKeys)
     val docId = s"${traceId}_${randomCharStream.get().take(ELASTIC_SEARCH_DOC_ID_SUFFIX_LENGTH).mkString}"
     if (spanIndices.nonEmpty) Some(Document(docId, TraceIndexDoc(duration(spanBuffer), spanIndices))) else None
   }
 
   private def isValidForIndex(span: Span): Boolean = {
-    span.getProcess != null &&
-      StringUtils.isNotEmpty(span.getProcess.getServiceName) &&
-      StringUtils.isNotEmpty(span.getOperationName)
+    StringUtils.isNotEmpty(span.getServiceName) && StringUtils.isNotEmpty(span.getOperationName)
   }
 
   // finds the amount of time it takes for one trace(span buffer) to complete.
@@ -77,13 +80,8 @@ class IndexDocumentGenerator(config: IndexConfiguration) extends MetricsSupport 
     * @param span a span object
     * @return span index document as a map
     */
-  private def transform(span: Span): mutable.Map[String, Any] = {
+  private def transform(span: Span, whitelistTagKeys: Map[String, IndexField]): mutable.Map[String, Any] = {
     val spanIndexDoc = mutable.Map[String, Any]()
-
-    // We maintain a white list of tags that are to be indexed. The whitelist is maintained as a confguration
-    // in an external database (outside this app boundary). However, the app periodically reads this whitelist config
-    // and applies it to the new spans that are read.
-    val whitelistTagKeys = config.indexableTagsByTagName.get()
 
     def addTagKeys(tags: java.util.List[Tag]): Unit = {
       for (tag <- tags;
@@ -101,7 +99,7 @@ class IndexDocumentGenerator(config: IndexConfiguration) extends MetricsSupport 
     span.getLogsList.foreach(logEntry => addTagKeys(logEntry.getFieldsList))
 
     spanIndexDoc.put("spanid", span.getSpanId)
-    spanIndexDoc.put("service", span.getProcess.getServiceName)
+    spanIndexDoc.put("service", span.getServiceName)
     spanIndexDoc.put("operation", span.getOperationName)
     spanIndexDoc.put("duration", span.getDuration)
 

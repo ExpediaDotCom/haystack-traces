@@ -21,6 +21,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.{Executors, TimeUnit}
 
 import com.expedia.www.haystack.trace.indexer.config.entities._
+import com.expedia.www.haystack.trace.indexer.health.HealthController
 import com.expedia.www.haystack.trace.indexer.processors.StreamTaskState.StreamTaskState
 import com.expedia.www.haystack.trace.indexer.processors.supplier.SpanIndexProcessorSupplier
 import com.expedia.www.haystack.trace.indexer.processors.{StateListener, StreamTaskRunnable, StreamTaskState}
@@ -88,7 +89,7 @@ class StreamRunner(kafkaConfig: KafkaConfiguration,
   override def onTaskStateChange(state: StreamTaskState): Unit = {
     if(state == StreamTaskState.FAILED) {
       LOGGER.error("Thread state has changed to 'FAILED', so tearing down the app")
-      close()
+      HealthController.setUnhealthy()
     }
   }
 

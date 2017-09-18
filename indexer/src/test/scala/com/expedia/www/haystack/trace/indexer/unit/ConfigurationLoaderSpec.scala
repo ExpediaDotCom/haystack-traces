@@ -27,6 +27,11 @@ class ConfigurationLoaderSpec extends FunSpec with Matchers {
 
   val project = new ProjectConfiguration()
   describe("Configuration loader") {
+
+    it("should load the health status config from base.conf") {
+      project.healthStatusFilePath shouldEqual "/app/isHealthy"
+    }
+
     it("should load the span buffer config only from base.conf") {
       val config = project.spanAccumulateConfig
       config.pollIntervalMillis shouldBe 2000L

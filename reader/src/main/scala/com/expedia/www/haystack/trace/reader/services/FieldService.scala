@@ -22,8 +22,7 @@ import io.grpc.stub.StreamObserver
 
 import scala.concurrent.ExecutionContextExecutor
 
-class FieldService(traceStore: TraceStore)(implicit val executor: ExecutionContextExecutor) extends FieldProviderGrpc.FieldProviderImplBase {
+class FieldService(traceStore: TraceStore)(implicit val executor: ExecutionContextExecutor) extends TraceReaderGrpc.TraceReaderImplBase {
   override def getFieldNames(request: Empty, responseObserver: StreamObserver[FieldNames]): Unit = ???
-  override def getFieldCardinality(request: FieldQuery, responseObserver: StreamObserver[FieldCardinality]): Unit = ???
-  override def getFieldValues(request: FieldQuery, responseObserver: StreamObserver[FieldValues]): Unit = ???
+  override def getFieldValues(request: FieldValuesRequest, responseObserver: StreamObserver[FieldValues]): Unit = ???
 }

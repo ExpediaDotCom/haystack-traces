@@ -1,0 +1,14 @@
+<jmxtrans-agent>
+    <queries>
+        <!-- kafka producer mbeans -->
+        <query objectName="kafka.producer:type=producer-metrics,client-id=*"
+               attribute="buffer-exhausted-rate,response-rate,record-send-rate,produce-throttle-time-max,record-queue-time-avg"
+               resultAlias="kafka.producer.#attribute#"/>
+    </queries>
+    <outputWriter class="org.jmxtrans.agent.GraphitePlainTextTcpOutputWriter">
+        <host>monitoring-influxdb-graphite.kube-system.svc</host>
+        <port>2003</port>
+        <namePrefix>haystack.traces.indexer.#hostname#.</namePrefix>
+    </outputWriter>
+    <collectIntervalInSeconds>30</collectIntervalInSeconds>
+</jmxtrans-agent>

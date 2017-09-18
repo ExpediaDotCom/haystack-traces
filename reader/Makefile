@@ -47,9 +47,9 @@ integration_test: prepare_integration_test_env
 	docker run \
 		-it \
 		--network=sandbox_default \
-		-v $(PWD):/src \
+		-v $(PWD)/..:/src \
 		-v ~/.m2:/root/.m2 \
-		-w /src \
+		-w /src/reader \
 		maven:3.5.0-jdk-8 \
 		mvn test -P integration-tests
 

@@ -18,11 +18,11 @@ package com.expedia.www.haystack.trace.reader.integration
 
 import java.util.UUID
 
-import com.expedia.open.tracing.api.{SpanRequest, TraceProviderGrpc, TraceRequest, TracesSearchRequest}
+import com.expedia.open.tracing.api._
 import io.grpc.{ManagedChannelBuilder, Status, StatusRuntimeException}
 
 class TraceServiceIntegrationTestSpec extends BaseIntegrationTestSpec {
-  val client = TraceProviderGrpc.newBlockingStub(ManagedChannelBuilder.forAddress("haystack-trace-reader", 8080)
+  private val client = TraceReaderGrpc.newBlockingStub(ManagedChannelBuilder.forAddress("haystack-trace-reader", 8080)
     .usePlaintext(true)
     .build())
 
@@ -151,14 +151,14 @@ class TraceServiceIntegrationTestSpec extends BaseIntegrationTestSpec {
       When("searching traces")
       val traces = client.searchTraces(TracesSearchRequest
         .newBuilder()
-        .setServiceName(serviceName)
-        .setOperationName(operationName)
+        .addFields(Field.newBuilder().setName("service").setValue(serviceName).build())
+        .addFields(Field.newBuilder().setName("operation").setValue(operationName).build())
         .build())
 
       Then("should return traces for the service")
       traces.getTracesList.size() should be > 0
       traces.getTraces(0).getTraceId shouldBe traceId
-      traces.getTraces(0).getChildSpans(0).getProcess.getServiceName shouldBe serviceName
+      traces.getTraces(0).getChildSpans(0).getServiceName shouldBe serviceName
       traces.getTraces(0).getChildSpans(0).getOperationName shouldBe operationName
     }
   }

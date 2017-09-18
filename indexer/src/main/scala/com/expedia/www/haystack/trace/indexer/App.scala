@@ -19,6 +19,7 @@ package com.expedia.www.haystack.trace.indexer
 
 import com.codahale.metrics.JmxReporter
 import com.expedia.www.haystack.trace.indexer.config.ProjectConfiguration
+import com.expedia.www.haystack.trace.indexer.health.{HealthController, UpdateHealthStatusFile}
 import com.expedia.www.haystack.trace.indexer.metrics.MetricsSupport
 import org.slf4j.LoggerFactory
 
@@ -30,6 +31,8 @@ object App extends MetricsSupport {
 
     try {
       val appConfig = new ProjectConfiguration
+
+      HealthController.addListener(new UpdateHealthStatusFile(appConfig.healthStatusFilePath))
 
       val stream = new StreamRunner(
         appConfig.kafkaConfig,
@@ -47,6 +50,8 @@ object App extends MetricsSupport {
       })
 
       stream.start()
+
+      HealthController.setHealthy()
     } catch {
       case ex: Exception =>
         LOGGER.error("Observed fatal exception while running the app", ex)

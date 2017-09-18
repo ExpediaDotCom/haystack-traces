@@ -22,7 +22,7 @@ import java.util.concurrent.{Executors, ScheduledExecutorService, ScheduledFutur
 
 import com.expedia.open.tracing.Tag.TagType
 import com.expedia.open.tracing.buffer.SpanBuffer
-import com.expedia.open.tracing.{Log, Process, Span, Tag}
+import com.expedia.open.tracing.{Log, Span, Tag}
 import com.expedia.www.haystack.trace.indexer.config.entities.SpanAccumulatorConfiguration
 import com.expedia.www.haystack.trace.indexer.integration.clients.{CassandraTestClient, ElasticSearchTestClient, KafkaTestClient}
 import com.google.gson.JsonObject
@@ -72,19 +72,18 @@ abstract class BaseIntegrationTestSpec extends WordSpec with GivenWhenThen with 
     (0 until spanBuffer.getChildSpansCount).toList foreach { idx =>
       spanBuffer.getChildSpans(idx).getSpanId shouldBe s"$spanIdPrefix-$idx"
       spanBuffer.getChildSpans(idx).getTraceId shouldBe spanBuffer.getTraceId
-      spanBuffer.getChildSpans(idx).getProcess.getServiceName shouldBe s"service$idx"
+      spanBuffer.getChildSpans(idx).getServiceName shouldBe s"service$idx"
       spanBuffer.getChildSpans(idx).getParentSpanId should not be null
       spanBuffer.getChildSpans(idx).getOperationName shouldBe s"op$idx"
     }
   }
 
   private def randomSpan(traceId: String, spanId: String, serviceName: String, operationName: String): Span = {
-    val process = Process.newBuilder().setServiceName(serviceName)
     Span.newBuilder()
       .setTraceId(traceId)
       .setParentSpanId(UUID.randomUUID().toString)
       .setSpanId(spanId)
-      .setProcess(process)
+      .setServiceName(serviceName)
       .setOperationName(operationName)
       .setStartTime(System.currentTimeMillis())
       .addTags(Tag.newBuilder().setKey("errorcode").setType(TagType.LONG).setVLong(404))
@@ -132,7 +131,7 @@ abstract class BaseIntegrationTestSpec extends WordSpec with GivenWhenThen with 
       row.spanBuffer.getChildSpansList.zipWithIndex foreach {
         case (sp, idx) =>
           sp.getSpanId shouldBe s"${descr.spanIdPrefix}-$idx"
-          sp.getProcess.getServiceName shouldBe s"service$idx"
+          sp.getServiceName shouldBe s"service$idx"
           sp.getOperationName shouldBe s"op$idx"
       }
     })

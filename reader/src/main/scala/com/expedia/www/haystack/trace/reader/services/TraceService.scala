@@ -24,11 +24,11 @@ import io.grpc.stub.StreamObserver
 
 import scala.concurrent.ExecutionContextExecutor
 
-class TraceService(traceStore: TraceStore)(implicit val executor: ExecutionContextExecutor) extends TraceProviderGrpc.TraceProviderImplBase {
-  private val handleGetTraceResponse = new GrpcHandler(TraceProviderGrpc.METHOD_GET_TRACE.getFullMethodName)
-  private val handleGetRawTraceResponse = new GrpcHandler(TraceProviderGrpc.METHOD_GET_RAW_TRACE.getFullMethodName)
-  private val handleGetRawSpanResponse = new GrpcHandler(TraceProviderGrpc.METHOD_GET_RAW_SPAN.getFullMethodName)
-  private val handleSearchResponse = new GrpcHandler(TraceProviderGrpc.METHOD_SEARCH_TRACES.getFullMethodName)
+class TraceService(traceStore: TraceStore)(implicit val executor: ExecutionContextExecutor) extends TraceReaderGrpc.TraceReaderImplBase {
+  private val handleGetTraceResponse = new GrpcHandler(TraceReaderGrpc.METHOD_GET_TRACE.getFullMethodName)
+  private val handleGetRawTraceResponse = new GrpcHandler(TraceReaderGrpc.METHOD_GET_RAW_TRACE.getFullMethodName)
+  private val handleGetRawSpanResponse = new GrpcHandler(TraceReaderGrpc.METHOD_GET_RAW_SPAN.getFullMethodName)
+  private val handleSearchResponse = new GrpcHandler(TraceReaderGrpc.METHOD_SEARCH_TRACES.getFullMethodName)
 
   private val traceProvider: TraceReader = new TraceReader(traceStore)
 

@@ -24,6 +24,8 @@ import org.elasticsearch.index.query.QueryBuilders._
 import org.elasticsearch.index.query._
 import org.elasticsearch.search.builder.SearchSourceBuilder
 
+import scala.collection.JavaConversions._
+
 class TraceSearchQueryGenerator(indexNamePrefix: String, indexType: String) {
   private val NESTED_DOC_NAME = "spans"
 
@@ -37,12 +39,9 @@ class TraceSearchQueryGenerator(indexNamePrefix: String, indexType: String) {
   // TODO further improve query: add logs/tags, limit and sort order
   // TODO optimize query
   private def buildQueryString(request: TracesSearchRequest) = {
-    val subQueries: List[QueryBuilder] = List(
-      buildMatchQuery("service", request.getServiceName),
-      buildMatchQuery("operation", request.getOperationName),
-      buildRangeQuery("duration", request.getMinDuration, request.getMaxDuration),
-      buildRangeQuery("startTime", request.getStartTime, request.getEndTime)
-    ).flatten
+    val subQueries: Seq[QueryBuilder]  =
+      for(field <- request.getFieldsList;
+      matchQuery = buildMatchQuery(field.getName, field.getValue); if matchQuery.isDefined) yield matchQuery.get
 
     val nestedMatchQuery: BoolQueryBuilder = subQueries
       .foldLeft(boolQuery())((boolQuery, q) => boolQuery.must(q))
@@ -53,13 +52,12 @@ class TraceSearchQueryGenerator(indexNamePrefix: String, indexType: String) {
   }
 
   private def buildMatchQuery(key: String, value: String): Option[MatchQueryBuilder] = {
-    if (StringUtils.isBlank(value)) None
-    else Some(matchQuery(withBaseDoc(key), value))
-  }
-
-  private def buildRangeQuery(key: String, min: Long, max: Long): Option[RangeQueryBuilder] = {
-    if (max > 0) Some(rangeQuery(withBaseDoc(key)).from(min).to(max))
-    else None
+    if (StringUtils.isBlank(value)) {
+      None
+    }
+    else {
+      Some(matchQuery(withBaseDoc(key), value))
+    }
   }
 
   private def withBaseDoc(field: String) = {

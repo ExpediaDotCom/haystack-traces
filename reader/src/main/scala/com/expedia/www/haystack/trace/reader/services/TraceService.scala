@@ -82,4 +82,8 @@ class TraceService(traceStore: TraceStore)(implicit val executor: ExecutionConte
       traceProvider.searchTraces(request)
     }
   }
+
+  override def getFieldNames(request: Empty, responseObserver: StreamObserver[FieldNames]): Unit = ???
+
+  override def getFieldValues(request: FieldValuesRequest, responseObserver: StreamObserver[FieldValues]): Unit = ???
 }

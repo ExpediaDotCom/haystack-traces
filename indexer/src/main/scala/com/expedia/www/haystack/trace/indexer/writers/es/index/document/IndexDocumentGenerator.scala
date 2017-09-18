@@ -52,7 +52,7 @@ class IndexDocumentGenerator(config: IndexConfiguration) extends MetricsSupport 
   def createIndexDocument(traceId: String, spanBuffer: SpanBuffer): Option[Document] = {
     val spanIndices = for(sp <- spanBuffer.getChildSpansList; if isValidForIndex(sp)) yield transform(sp)
     val docId = s"${traceId}_${randomCharStream.get().take(ELASTIC_SEARCH_DOC_ID_SUFFIX_LENGTH).mkString}"
-    if (spanIndices.nonEmpty) Some(Document(docId, SpanArrayIndexDoc(duration(spanBuffer), spanIndices))) else None
+    if (spanIndices.nonEmpty) Some(Document(docId, TraceIndexDoc(duration(spanBuffer), spanIndices))) else None
   }
 
   private def isValidForIndex(span: Span): Boolean = {
@@ -75,24 +75,37 @@ class IndexDocumentGenerator(config: IndexConfiguration) extends MetricsSupport 
     * transforms a span object into a index document. serviceName, operationName, duration and tags(depending upon the
     * configuration) are used to create an index document.
     * @param span a span object
-    * @return span index document
+    * @return span index document as a map
     */
-  private def transform(span: Span): SpanIndexDoc = {
-    val indexedTags = mutable.Map[TagKey, TagValue]()
+  private def transform(span: Span): mutable.Map[String, Any] = {
+    val spanIndexDoc = mutable.Map[String, Any]()
 
     // We maintain a white list of tags that are to be indexed. The whitelist is maintained as a confguration
     // in an external database (outside this app boundary). However, the app periodically reads this whitelist config
     // and applies it to the new spans that are read.
-    for (tag <- span.getTagsList;
-         indexField = config.indexableTagsByTagName.get().get(tag.getKey)
-         if indexField.isDefined && indexField.get.enabled;
-         (k, v) = transformTagToKVPair(tag);
-         convertedToIndexFieldType = adjustTagValueToIndexFieldType(indexField.get.`type`, v)
-         if convertedToIndexFieldType.isDefined) {
-      indexedTags.put(k, convertedToIndexFieldType.get)
+    val whitelistTagKeys = config.indexableTagsByTagName.get()
+
+    def addTagKeys(tags: java.util.List[Tag]): Unit = {
+      for (tag <- tags;
+           indexField = whitelistTagKeys.get(tag.getKey)
+           if indexField.isDefined && indexField.get.enabled;
+           (k, v) = transformTagToKVPair(tag);
+           convertedToIndexFieldType = adjustTagValueToIndexFieldType(indexField.get.`type`, v)
+           if convertedToIndexFieldType.isDefined) {
+        val tagValues = spanIndexDoc.getOrElseUpdate(k, mutable.ListBuffer[TagValue]()).asInstanceOf[mutable.ListBuffer[TagValue]]
+        tagValues += convertedToIndexFieldType.get
+      }
     }
 
-    SpanIndexDoc(span.getProcess.getServiceName, span.getOperationName, span.getDuration, indexedTags)
+    addTagKeys(span.getTagsList)
+    span.getLogsList.foreach(logEntry => addTagKeys(logEntry.getFieldsList))
+
+    spanIndexDoc.put("spanid", span.getSpanId)
+    spanIndexDoc.put("service", span.getProcess.getServiceName)
+    spanIndexDoc.put("operation", span.getOperationName)
+    spanIndexDoc.put("duration", span.getDuration)
+
+    spanIndexDoc
   }
 
 

@@ -22,7 +22,7 @@ import java.util.concurrent.{Executors, ScheduledExecutorService, ScheduledFutur
 
 import com.expedia.open.tracing.Tag.TagType
 import com.expedia.open.tracing.buffer.SpanBuffer
-import com.expedia.open.tracing.{Process, Span, Tag}
+import com.expedia.open.tracing.{Log, Process, Span, Tag}
 import com.expedia.www.haystack.trace.indexer.config.entities.SpanAccumulatorConfiguration
 import com.expedia.www.haystack.trace.indexer.integration.clients.{CassandraTestClient, ElasticSearchTestClient, KafkaTestClient}
 import com.google.gson.JsonObject
@@ -89,6 +89,7 @@ abstract class BaseIntegrationTestSpec extends WordSpec with GivenWhenThen with 
       .setStartTime(System.currentTimeMillis())
       .addTags(Tag.newBuilder().setKey("errorcode").setType(TagType.LONG).setVLong(404))
       .addTags(Tag.newBuilder().setKey("role").setType(TagType.STRING).setVStr("haystack"))
+      .addLogs(Log.newBuilder().addFields(Tag.newBuilder().setKey("exceptionType").setType(TagType.STRING).setVStr("external").build()).build())
       .build()
   }
 
@@ -246,7 +247,7 @@ abstract class BaseIntegrationTestSpec extends WordSpec with GivenWhenThen with 
                       |                  },
                       |                  {
                       |                    "match": {
-                      |                      "spans.tags.errorcode": "404"
+                      |                      "spans.errorcode": "404"
                       |                    }
                       |                  }
                       |                ]

@@ -26,7 +26,7 @@ class TraceServiceIntegrationTestSpec extends BaseIntegrationTestSpec {
     .usePlaintext(true)
     .build())
 
-  describe("TraceProvider.getTrace") {
+  describe("TraceReader.getTrace") {
     it("should get trace for given traceID from cassandra") {
       Given("trace in cassandra")
       val traceId = UUID.randomUUID().toString
@@ -54,7 +54,7 @@ class TraceServiceIntegrationTestSpec extends BaseIntegrationTestSpec {
     }
   }
 
-  describe("TraceProvider.getRawTrace") {
+  describe("TraceReader.getRawTrace") {
     it("should get trace for given traceID from cassandra") {
       Given("trace in cassandra")
       val traceId = UUID.randomUUID().toString
@@ -82,7 +82,7 @@ class TraceServiceIntegrationTestSpec extends BaseIntegrationTestSpec {
     }
   }
 
-  describe("TraceProvider.getRawSpan") {
+  describe("TraceReader.getRawSpan") {
     it("should get spanId for given traceID-spanId from cassandra") {
       Given("trace in cassandra")
       val traceId = UUID.randomUUID().toString
@@ -139,7 +139,7 @@ class TraceServiceIntegrationTestSpec extends BaseIntegrationTestSpec {
     }
   }
 
-  describe("TraceProvider.searchTraces") {
+  describe("TraceReader.searchTraces") {
     it("should search traces for given operation") {
       Given("trace in cassandra and elasticsearch")
       val traceId = UUID.randomUUID().toString

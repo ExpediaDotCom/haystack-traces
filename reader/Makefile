@@ -35,6 +35,7 @@ prepare_integration_test_env: docker_build
 		-d \
 		-p 5005:5005 \
 		-p 8080:8080 \
+		--name trace-reader \
 		--network=sandbox_default \
 		--network-alias=haystack-trace-reader \
 		-v $(PWD)/build/integration-tests/docker-app.conf:/docker-app.conf \
@@ -55,6 +56,8 @@ integration_test: prepare_integration_test_env
 
 	# stop all the containers
 	docker-compose -f build/integration-tests/docker-compose.yml -p sandbox stop
+	docker stop trace-reader
+	docker rm trace-reader
 
 # build jar, docker image and run integration tests
 all: build docker_build integration_test

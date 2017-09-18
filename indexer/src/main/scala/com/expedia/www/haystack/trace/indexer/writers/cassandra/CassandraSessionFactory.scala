@@ -62,6 +62,7 @@ class CassandraSessionFactory(config: CassandraConfiguration) {
     val tokenAwarePolicy = new TokenAwarePolicy(new LatencyAwarePolicy.Builder(new RoundRobinPolicy()).build())
 
     Cluster.builder()
+      .withClusterName("cassandra-cluster")
       .addContactPoints(contactPoints:_*)
       .withRetryPolicy(DefaultRetryPolicy.INSTANCE)
       .withSocketOptions(new SocketOptions()

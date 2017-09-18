@@ -35,8 +35,7 @@ class ClockSkewTransformer extends TraceTransformer {
     val children = spans.filter(_.getParentSpanId == subtreeRoot.getSpanId)
 
     val skewAdjustedRoot =
-      if (skew > 0) Span.newBuilder(subtreeRoot).setStartTime(subtreeRoot.getStartTime + skew).build()
-      else subtreeRoot
+      if (skew > 0) Span.newBuilder(subtreeRoot).setStartTime(subtreeRoot.getStartTime + skew).build() else subtreeRoot
 
     val skewAdjustedChildren: List[Span] =
       for(childSpan <- children;

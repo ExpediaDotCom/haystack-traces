@@ -1,9 +1,33 @@
 <jmxtrans-agent>
     <queries>
-        <!-- kafka producer mbeans -->
-        <query objectName="kafka.producer:type=producer-metrics,client-id=*"
-               attribute="buffer-exhausted-rate,response-rate,record-send-rate,produce-throttle-time-max,record-queue-time-avg"
-               resultAlias="kafka.producer.#attribute#"/>
+        <!-- kafka producer metrics -->
+        <query objectName="kafka.producer:type=producer-metrics,client-id=*" attribute="record-send-rate" resultAlias="kafka-producer.record-send.rate"/>
+        <query objectName="kafka.producer:type=producer-metrics,client-id=*" attribute="buffer-exhausted-rate" resultAlias="kafka-producer.buffer-exhausted.rate"/>
+        <query objectName="kafka.producer:type=producer-metrics,client-id=*" attribute="record-retry-rate" resultAlias="kafka-producer.record-retry.rate"/>
+        <query objectName="kafka.producer:type=producer-metrics,client-id=*" attribute="produce-throttle-time-avg" resultAlias="kafka-producer.produce-throttle-time.avg"/>
+        <query objectName="kafka.producer:type=producer-metrics,client-id=*" attribute="request-latency-avg" resultAlias="kafka-producer.request-latency.avg"/>
+        <query objectName="kafka.producer:type=producer-metrics,client-id=*" attribute="buffer-available-bytes" resultAlias="kafka-producer.buffer-bytes.available"/>
+        <query objectName="kafka.producer:type=producer-metrics,client-id=*" attribute="buffer-total-bytes" resultAlias="kafka-producer.buffer-bytes.total"/>
+        <query objectName="kafka.producer:type=producer-metrics,client-id=*" attribute="request-size-max" resultAlias="kafka-producer.request-size.max"/>
+        <query objectName="kafka.producer:type=producer-metrics,client-id=*" attribute="request-rate" resultAlias="kafka-producer.request.rate"/>
+        <query objectName="kafka.producer:type=producer-metrics,client-id=*" attribute="response-rate" resultAlias="kafka-producer.response.rate"/>
+        <query objectName="kafka.producer:type=producer-metrics,client-id=*" attribute="record-error-rate" resultAlias="kafka-producer.record-error.rate"/>
+        <query objectName="kafka.producer:type=producer-metrics,client-id=*" attribute="requests-in-flight" resultAlias="kafka-producer.request-in-flight.count"/>
+        <query objectName="kafka.producer:type=producer-metrics,client-id=*" attribute="batch-size-avg" resultAlias="kafka-producer.batch-size.avg"/>
+
+        <!-- kafka consumer metrics -->
+        <query objectName="kafka.consumer:type=consumer-metrics,client-id=*" attribute="request-rate" resultAlias="kafka-consumer.request.rate"/>
+        <query objectName="kafka.consumer:type=consumer-metrics,client-id=*" attribute="response-rate" resultAlias="kafka-consumer.response.rate"/>
+        <query objectName="kafka.consumer:type=consumer-metrics,client-id=*" attribute="incoming-byte-rate" resultAlias="kafka-consumer.incoming-byte.rate"/>
+
+        <!-- cassandra metrics -->
+        <query objectName="cassandra-cluster-metrics:name=connection-errors" attribute="Count" resultAlias="cassandra-client.errors.count"/>
+        <query objectName="cassandra-cluster-metrics:name=read-timeouts" attribute="Count" resultAlias="cassandra-client.read-timeouts.count"/>
+        <query objectName="cassandra-cluster-metrics:name=client-timeouts" attribute="Count" resultAlias="cassandra-client.client-timeouts.count"/>
+        <query objectName="cassandra-cluster-metrics:name=requests" attribute="OneMinuteRate" resultAlias="cassandra-client.requests.rate"/>
+        <query objectName="cassandra-cluster-metrics:name=requests" attribute="99thPercentile" resultAlias="cassandra-client.requests.99thPercentile"/>
+        <query objectName="cassandra-cluster-metrics:name=write-timeouts" attribute="Count" resultAlias="cassandra-client.write-timeouts.count"/>
+        <query objectName="cassandra-cluster-metrics:name=other-errors" attribute="Count" resultAlias="cassandra-client.other-errors.count"/>
     </queries>
     <outputWriter class="org.jmxtrans.agent.GraphitePlainTextTcpOutputWriter">
         <host>monitoring-influxdb-graphite.kube-system.svc</host>

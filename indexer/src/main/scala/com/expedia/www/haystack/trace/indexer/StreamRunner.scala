@@ -95,7 +95,7 @@ class StreamRunner(kafkaConfig: KafkaConfiguration,
 
   private def closeStreamTasks(): Unit = {
     LOGGER.info("Closing all the stream tasks..")
-    taskRunnables foreach { _.close }
+    taskRunnables foreach { _.close() }
   }
 
   private def closeWriters(): Unit = {

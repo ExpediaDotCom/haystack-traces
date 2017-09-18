@@ -18,4 +18,5 @@ package com.expedia.www.haystack.trace.reader.exceptions
 
 import io.grpc.{Status, StatusException}
 
-class InvalidTraceException(message: String) extends StatusException(Status.FAILED_PRECONDITION.withDescription(s"Invalid Trace: $message"))
+class InvalidTraceException(message: String)
+  extends StatusException(Status.FAILED_PRECONDITION.withDescription(s"Invalid Trace: $message"))

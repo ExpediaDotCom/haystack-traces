@@ -18,4 +18,5 @@ package com.expedia.www.haystack.trace.reader.exceptions
 
 import io.grpc.{Status, StatusException}
 
-case class InvalidTraceIdInDocument(docId: String) extends StatusException(Status.INTERNAL.withDescription(s"invalid traceId in doc: $docId"))
+case class InvalidTraceIdInDocument(docId: String)
+  extends StatusException(Status.INTERNAL.withDescription(s"invalid traceId in doc: $docId"))

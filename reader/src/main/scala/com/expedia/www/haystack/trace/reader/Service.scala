@@ -21,7 +21,7 @@ import java.io.File
 import com.codahale.metrics.JmxReporter
 import com.expedia.www.haystack.trace.reader.config.ProviderConfiguration._
 import com.expedia.www.haystack.trace.reader.metrics.MetricsSupport
-import com.expedia.www.haystack.trace.reader.services.{FieldService, TraceService}
+import com.expedia.www.haystack.trace.reader.services.TraceService
 import com.expedia.www.haystack.trace.reader.stores.CassandraEsTraceStore
 import io.grpc.netty.NettyServerBuilder
 import org.slf4j.{Logger, LoggerFactory}
@@ -50,7 +50,6 @@ object Service extends MetricsSupport {
     val serverBuilder = NettyServerBuilder
       .forPort(serviceConfig.port)
       .addService(new TraceService(store)(executor))
-      .addService(new FieldService(store)(executor))
 
     // enable ssl if enabled
     if(serviceConfig.ssl.enabled) {

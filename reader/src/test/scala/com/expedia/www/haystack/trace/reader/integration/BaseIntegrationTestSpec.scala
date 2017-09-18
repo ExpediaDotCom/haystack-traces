@@ -22,8 +22,8 @@ import java.util.{Date, UUID}
 
 import com.datastax.driver.core.querybuilder.QueryBuilder
 import com.datastax.driver.core.{Cluster, Session, SimpleStatement}
+import com.expedia.open.tracing.Span
 import com.expedia.open.tracing.buffer.SpanBuffer
-import com.expedia.open.tracing.{Process, Span}
 import com.expedia.www.haystack.trace.reader.stores.readers.cassandra.Schema._
 import io.searchbox.client.config.HttpClientConfig
 import io.searchbox.client.{JestClient, JestClientFactory}
@@ -149,7 +149,7 @@ trait BaseIntegrationTestSpec extends FunSpec with GivenWhenThen with Matchers w
         .setTraceId(traceId)
         .setSpanId(spanId)
         .setOperationName(operationName)
-        .setProcess(Process.newBuilder().setServiceName(serviceName))
+        .setServiceName(serviceName)
         .build())
       .build()
   }

@@ -27,11 +27,9 @@ import com.expedia.open.tracing.Span
   * and recursively applies delta in its subtree
   */
 class ClockSkewTransformer extends TraceTransformer {
-  private def calculateDelta(subtreeRoot: Span, childSpan: Span): Long =
-    if (subtreeRoot.getStartTime > childSpan.getStartTime)
-      subtreeRoot.getStartTime - childSpan.getStartTime
-    else
-      0
+  private def calculateDelta(subtreeRoot: Span, childSpan: Span): Long = {
+    if (subtreeRoot.getStartTime > childSpan.getStartTime) subtreeRoot.getStartTime - childSpan.getStartTime else 0
+  }
 
   private def addSkewInSubtree(subtreeRoot: Span, spans: List[Span], skew: Long): scala.List[Span] = {
     val children = spans.filter(_.getParentSpanId == subtreeRoot.getSpanId)

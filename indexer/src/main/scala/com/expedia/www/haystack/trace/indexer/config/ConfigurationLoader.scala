@@ -25,7 +25,7 @@ import scala.collection.JavaConversions._
 
 object ConfigurationLoader {
 
-  private val ENV_NAME_PREFIX = "HAYSTACK_"
+  private val ENV_NAME_PREFIX = "HAYSTACK_PROP_"
 
   /**
     * Load and return the configuration

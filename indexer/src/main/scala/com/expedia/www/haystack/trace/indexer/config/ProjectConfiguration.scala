@@ -35,6 +35,8 @@ import scala.util.Try
 class ProjectConfiguration extends AutoCloseable {
   private val config = ConfigurationLoader.loadAppConfig
 
+  val healthStatusFilePath: String = config.getString("health.status.path")
+
   /**
     * span accumulation related configuration like max buffered records, buffer window, poll interval
     * @return a span config object

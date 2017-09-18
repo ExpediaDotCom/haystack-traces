@@ -15,7 +15,7 @@
  */
 package com.expedia.www.haystack.trace.reader.unit.stores.readers.es.query
 
-import com.expedia.open.tracing.api.TracesSearchRequest
+import com.expedia.open.tracing.api.{Field, TracesSearchRequest}
 import com.expedia.www.haystack.trace.reader.stores.readers.es.query.TraceSearchQueryGenerator
 import com.expedia.www.haystack.trace.reader.unit.BaseUnitTestSpec
 
@@ -26,8 +26,8 @@ class TraceSearchQueryGeneratorSpec extends BaseUnitTestSpec {
       val `type` = "spans"
       val request = TracesSearchRequest
         .newBuilder()
-        .setServiceName("svcName")
-        .setOperationName("opName")
+        .addFields(Field.newBuilder().setName("service").setValue("svcName").build())
+        .addFields(Field.newBuilder().setName("operation").setValue("opName").build())
         .build()
       val queryGenerator = new TraceSearchQueryGenerator("haystack", `type`)
 

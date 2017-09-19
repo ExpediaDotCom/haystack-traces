@@ -20,8 +20,8 @@ package com.expedia.www.haystack.trace.indexer
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.{Executors, TimeUnit}
 
+import com.expedia.www.haystack.trace.commons.health.HealthController
 import com.expedia.www.haystack.trace.indexer.config.entities._
-import com.expedia.www.haystack.trace.indexer.health.HealthController
 import com.expedia.www.haystack.trace.indexer.processors.StreamTaskState.StreamTaskState
 import com.expedia.www.haystack.trace.indexer.processors.supplier.SpanIndexProcessorSupplier
 import com.expedia.www.haystack.trace.indexer.processors.{StateListener, StreamTaskRunnable, StreamTaskState}
@@ -38,7 +38,7 @@ import scala.collection.mutable
 class StreamRunner(kafkaConfig: KafkaConfiguration,
                    accumulatorConfig: SpanAccumulatorConfiguration,
                    esConfig: ElasticSearchConfiguration,
-                   cassandraConfig: CassandraConfiguration,
+                   cassandraConfig: CassandraWriteConfiguration,
                    indexConfig: IndexConfiguration) extends AutoCloseable with StateListener {
 
   implicit private val executor = scala.concurrent.ExecutionContext.Implicits.global

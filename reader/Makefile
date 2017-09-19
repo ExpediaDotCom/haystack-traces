@@ -1,16 +1,9 @@
-.PHONY: all clean build prepare_integration_test_env integration_test release
+.PHONY: prepare_integration_test_env integration_test release
 
 export DOCKER_ORG := expediadotcom
 export DOCKER_IMAGE_NAME := haystack-trace-reader
 PWD := $(shell pwd)
 SERVICE_DEBUG_ON ?= false
-
-clean:
-	mvn clean
-
-build: clean
-	# build jar
-	mvn package
 
 docker_build:
 	# build docker image using existing app jar
@@ -50,18 +43,15 @@ integration_test: prepare_integration_test_env
 		--network=sandbox_default \
 		-v $(PWD)/..:/src \
 		-v ~/.m2:/root/.m2 \
-		-w /src/reader \
+		-w /src \
 		maven:3.5.0-jdk-8 \
-		mvn test -P integration-tests
+		mvn test -pl reader -am -P integration-tests
 
 	# stop all the containers
 	docker-compose -f build/integration-tests/docker-compose.yml -p sandbox stop
 	docker stop trace-reader
-	docker rm trace-reader
+	docker rm $(shell docker ps -a -q)
+	docker volume rm $(shell docker volume ls -q)
 
-# build jar, docker image and run integration tests
-all: build docker_build integration_test
-
-# build all and release
-release: all
-	./build/docker/publish-to-docker-hub.sh
+release: docker_build
+	../scripts/publish-to-docker-hub.sh

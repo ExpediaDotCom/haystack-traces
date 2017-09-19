@@ -65,19 +65,21 @@ class ConfigurationLoaderSpec extends FunSpec with Matchers {
     }
 
     it("should load the cassandra config from base.conf and few properties overridden from env variable") {
-      val cassandra = project.cassandraConfig
-      cassandra.consistencyLevel shouldEqual ConsistencyLevel.ONE
-      cassandra.autoDiscoverEnabled shouldBe false
+      val cassandraWriteConfig = project.cassandraWriteConfig
+      val clientConfig = cassandraWriteConfig.clientConfig
+
+      cassandraWriteConfig.consistencyLevel shouldEqual ConsistencyLevel.ONE
+      clientConfig.autoDiscoverEnabled shouldBe false
       // this will fail if run inside an editor, we override this config using env variable inside pom.xml
-      cassandra.endpoints should contain allOf("cass1", "cass2")
-      cassandra.autoCreateSchema shouldBe Some("cassandra_cql_schema")
-      cassandra.awsNodeDiscovery shouldBe empty
-      cassandra.socket.keepAlive shouldBe true
-      cassandra.socket.maxConnectionPerHost shouldBe 100
-      cassandra.socket.readTimeoutMills shouldBe 5000
-      cassandra.socket.connectionTimeoutMillis shouldBe 10000
-      cassandra.recordTTLInSec shouldBe 86400
-      cassandra.maxInFlightRequests shouldBe 100
+      clientConfig.endpoints should contain allOf("cass1", "cass2")
+      clientConfig.autoCreateSchema shouldBe Some("cassandra_cql_schema")
+      clientConfig.awsNodeDiscovery shouldBe empty
+      clientConfig.socket.keepAlive shouldBe true
+      clientConfig.socket.maxConnectionPerHost shouldBe 100
+      clientConfig.socket.readTimeoutMills shouldBe 5000
+      clientConfig.socket.connectionTimeoutMillis shouldBe 10000
+      cassandraWriteConfig.recordTTLInSec shouldBe 86400
+      cassandraWriteConfig.maxInFlightRequests shouldBe 100
     }
 
     it("should load the elastic search config from base.conf and one property overridden from env variable") {

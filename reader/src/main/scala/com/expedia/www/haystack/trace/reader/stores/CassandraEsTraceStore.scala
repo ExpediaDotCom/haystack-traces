@@ -19,7 +19,8 @@ package com.expedia.www.haystack.trace.reader.stores
 import java.util
 
 import com.expedia.open.tracing.api._
-import com.expedia.www.haystack.trace.reader.config.entities.{CassandraConfiguration, ElasticSearchConfiguration}
+import com.expedia.www.haystack.trace.commons.config.entities.CassandraConfiguration
+import com.expedia.www.haystack.trace.reader.config.entities.ElasticSearchConfiguration
 import com.expedia.www.haystack.trace.reader.exceptions.InvalidTraceIdInDocument
 import com.expedia.www.haystack.trace.reader.metrics.MetricsSupport
 import com.expedia.www.haystack.trace.reader.stores.readers.cassandra.CassandraReader

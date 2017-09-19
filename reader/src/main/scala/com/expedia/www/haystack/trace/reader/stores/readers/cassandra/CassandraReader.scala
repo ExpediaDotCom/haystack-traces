@@ -16,44 +16,33 @@
 
 package com.expedia.www.haystack.trace.reader.stores.readers.cassandra
 
-import com.datastax.driver.core.{BoundStatement, PreparedStatement}
-import com.datastax.driver.core.querybuilder.QueryBuilder
 import com.expedia.open.tracing.api.Trace
-import com.expedia.www.haystack.trace.reader.config.entities.CassandraConfiguration
+import com.expedia.www.haystack.trace.commons.clients.cassandra.CassandraSession
+import com.expedia.www.haystack.trace.commons.config.entities.CassandraConfiguration
 import com.expedia.www.haystack.trace.reader.metrics.MetricsSupport
-import com.expedia.www.haystack.trace.reader.stores.readers.cassandra.Schema._
 import org.slf4j.LoggerFactory
+
 import scala.concurrent.{ExecutionContextExecutor, Future, Promise}
 import scala.util.Try
 
-class CassandraReader(config: CassandraConfiguration)(implicit val dispatcher: ExecutionContextExecutor) extends MetricsSupport with AutoCloseable {
+class CassandraReader(config: CassandraConfiguration)(implicit val dispatcher: ExecutionContextExecutor)
+  extends MetricsSupport with AutoCloseable {
+
   private val LOGGER = LoggerFactory.getLogger(classOf[CassandraReader])
 
   private val readTimer = metricRegistry.timer("cassandra.read.time")
   private val readFailures = metricRegistry.meter("cassandra.read.failures")
 
-  private val sessionFactory = new CassandraSessionFactory(config)
-
-  private lazy val selectTrace: PreparedStatement = {
-    import QueryBuilder.bindMarker
-
-    sessionFactory.session.prepare(
-      QueryBuilder
-        .select()
-        .from(config.tableName)
-        .where(QueryBuilder.eq(ID_COLUMN_NAME, bindMarker(ID_COLUMN_NAME))))
-  }
-
-  private def constructSelectStatement(id: String) = new BoundStatement(selectTrace).setString(ID_COLUMN_NAME, id)
+  private val cassandra = new CassandraSession(config)
 
   def readTrace(traceId: String): Future[Trace] = {
     val timer = readTimer.time()
     val promise = Promise[Trace]
 
     try {
-      val asyncResult = sessionFactory.session.executeAsync(constructSelectStatement(traceId))
+      val statement = cassandra.newSelectBoundStatement(traceId)
+      val asyncResult = cassandra.session.executeAsync(statement)
       asyncResult.addListener(new CassandraReadResultListener(asyncResult, timer, readFailures, promise), dispatcher)
-
       promise.future
     } catch {
       case ex: Exception =>
@@ -64,5 +53,5 @@ class CassandraReader(config: CassandraConfiguration)(implicit val dispatcher: E
     }
   }
 
-  override def close(): Unit = Try(sessionFactory.close())
+  override def close(): Unit = Try(cassandra.close())
 }

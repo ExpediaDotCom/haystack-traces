@@ -17,14 +17,11 @@
 
 package com.expedia.www.haystack.trace.indexer.writers.cassandra
 
-import java.nio.ByteBuffer
-import java.util.Date
 import java.util.concurrent.Semaphore
 
-import com.datastax.driver.core._
-import com.datastax.driver.core.querybuilder.QueryBuilder
 import com.expedia.open.tracing.buffer.SpanBuffer
-import com.expedia.www.haystack.trace.indexer.config.entities.CassandraConfiguration
+import com.expedia.www.haystack.trace.commons.clients.cassandra.CassandraSession
+import com.expedia.www.haystack.trace.indexer.config.entities.CassandraWriteConfiguration
 import com.expedia.www.haystack.trace.indexer.metrics.{AppMetricNames, MetricsSupport}
 import com.expedia.www.haystack.trace.indexer.writers.TraceWriter
 import org.slf4j.LoggerFactory
@@ -32,31 +29,19 @@ import org.slf4j.LoggerFactory
 import scala.concurrent.ExecutionContextExecutor
 import scala.util.Try
 
-class CassandraWriter(config: CassandraConfiguration)(implicit val dispatcher: ExecutionContextExecutor)
+class CassandraWriter(config: CassandraWriteConfiguration)(implicit val dispatcher: ExecutionContextExecutor)
   extends TraceWriter with MetricsSupport {
 
   private val LOGGER = LoggerFactory.getLogger(classOf[CassandraWriter])
 
   private val writeTimer = metricRegistry.timer(AppMetricNames.CASSANDRA_WRITE_TIME)
   private val writeFailures = metricRegistry.meter(AppMetricNames.CASSANDRA_WRITE_FAILURE)
-  private val sessionFactory = new CassandraSessionFactory(config)
+  private val cassandra = new CassandraSession(config.clientConfig)
+
+  private val insertPreparedStatement = cassandra.createInsertPreparedStatement(config.recordTTLInSec)
 
   // this semaphore controls the parallel writes to cassandra
   private val inflightRequestsSemaphore = new Semaphore(config.maxInFlightRequests, true)
-
-  //insert into table(id, ts, span) values (?, ?, ?) using ttl ?
-  private lazy val insertSpan: PreparedStatement = {
-    import QueryBuilder.{bindMarker, ttl}
-    import Schema._
-
-    sessionFactory.session.prepare(
-      QueryBuilder
-        .insertInto(config.tableName)
-        .value(ID_COLUMN_NAME, bindMarker(ID_COLUMN_NAME))
-        .value(TIMESTAMP_COLUMN_NAME, bindMarker(TIMESTAMP_COLUMN_NAME))
-        .value(SPANS_COLUMN_NAME, bindMarker(SPANS_COLUMN_NAME))
-        .using(ttl(config.recordTTLInSec)))
-  }
 
   /**
     * writes the traceId and its spans to cassandra. Use the current timestamp as the sort key for the writes to same
@@ -78,8 +63,8 @@ class CassandraWriter(config: CassandraConfiguration)(implicit val dispatcher: E
       val timer = writeTimer.time()
 
       // prepare the statement
-      val statement = prepareStatement(traceId, spanBufferBytes)
-      val asyncResult = sessionFactory.session.executeAsync(statement)
+      val statement = cassandra.newInsertBoundStatement(traceId, spanBuffer, config.consistencyLevel, insertPreparedStatement)
+      val asyncResult = cassandra.session.executeAsync(statement)
       asyncResult.addListener(new CassandraWriteResultListener(asyncResult, timer, inflightRequestsSemaphore), dispatcher)
     } catch {
       case ex: Exception =>
@@ -89,16 +74,8 @@ class CassandraWriter(config: CassandraConfiguration)(implicit val dispatcher: E
     }
   }
 
-  private def prepareStatement(traceId: String, spansByte: Array[Byte]): Statement = {
-    new BoundStatement(insertSpan)
-      .setString(Schema.ID_COLUMN_NAME, traceId)
-      .setTimestamp(Schema.TIMESTAMP_COLUMN_NAME, new Date())
-      .setBytes(Schema.SPANS_COLUMN_NAME, ByteBuffer.wrap(spansByte))
-      .setConsistencyLevel(config.consistencyLevel)
-  }
-
   override def close(): Unit = {
     LOGGER.info("Closing cassandra session now..")
-    Try(sessionFactory.close())
+    Try(cassandra.close())
   }
 }

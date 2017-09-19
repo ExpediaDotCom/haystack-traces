@@ -18,8 +18,8 @@
 package com.expedia.www.haystack.trace.indexer
 
 import com.codahale.metrics.JmxReporter
+import com.expedia.www.haystack.trace.commons.health.{HealthController, UpdateHealthStatusFile}
 import com.expedia.www.haystack.trace.indexer.config.ProjectConfiguration
-import com.expedia.www.haystack.trace.indexer.health.{HealthController, UpdateHealthStatusFile}
 import com.expedia.www.haystack.trace.indexer.metrics.MetricsSupport
 import org.slf4j.LoggerFactory
 
@@ -38,7 +38,7 @@ object App extends MetricsSupport {
         appConfig.kafkaConfig,
         appConfig.spanAccumulateConfig,
         appConfig.elasticSearchConfig,
-        appConfig.cassandraConfig,
+        appConfig.cassandraWriteConfig,
         appConfig.indexConfig)
 
       Runtime.getRuntime.addShutdownHook(new Thread {

@@ -18,6 +18,8 @@ package com.expedia.www.haystack.trace.reader.config
 
 import java.util
 
+import com.expedia.www.haystack.trace.commons.config.ConfigurationLoader
+import com.expedia.www.haystack.trace.commons.config.entities.{AwsNodeDiscoveryConfiguration, CassandraConfiguration, SocketConfiguration}
 import com.expedia.www.haystack.trace.reader.config.entities._
 import com.expedia.www.haystack.trace.reader.readers.transformers.TraceTransformer
 import com.typesafe.config.Config
@@ -63,6 +65,7 @@ object ProviderConfiguration {
       awsConfig,
       cs.getString("keyspace.name"),
       cs.getString("keyspace.table.name"),
+      None,
       socket)
   }
 

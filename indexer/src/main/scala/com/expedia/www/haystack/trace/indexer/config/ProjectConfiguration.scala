@@ -20,6 +20,8 @@ package com.expedia.www.haystack.trace.indexer.config
 import java.util.Properties
 
 import com.datastax.driver.core.ConsistencyLevel
+import com.expedia.www.haystack.trace.commons.config.ConfigurationLoader
+import com.expedia.www.haystack.trace.commons.config.entities.{AwsNodeDiscoveryConfiguration, CassandraConfiguration, SocketConfiguration}
 import com.expedia.www.haystack.trace.indexer.config.entities._
 import com.expedia.www.haystack.trace.indexer.config.reload.{ConfigurationReloadElasticSearchProvider, Reloadable}
 import com.expedia.www.haystack.trace.indexer.serde.SpanDeserializer
@@ -120,10 +122,10 @@ class ProjectConfiguration extends AutoCloseable {
     *
     * cassandra configuration object
     */
-  val cassandraConfig: CassandraConfiguration = {
+  val cassandraWriteConfig: CassandraWriteConfiguration = {
     val cs = config.getConfig("cassandra")
 
-    val awsConfig =
+    val awsConfig: Option[AwsNodeDiscoveryConfiguration] =
       if(cs.hasPath("auto.discovery.aws")) {
         val aws = cs.getConfig("auto.discovery.aws")
         val tags = aws.getConfig("tags")
@@ -155,17 +157,18 @@ class ProjectConfiguration extends AutoCloseable {
       None
     }
 
-    CassandraConfiguration(
-      if(cs.hasPath("endpoints")) cs.getString("endpoints").split(",").toList else Nil,
-      cs.getBoolean("auto.discovery.enabled"),
-      awsConfig,
-      keyspaceConfig.getString("name"),
-      keyspaceConfig.getString("table.name"),
-      autoCreateSchema,
-      consistencyLevel,
-      cs.getInt("ttl.sec"),
-      socket,
-      cs.getInt("max.inflight.requests"))
+    CassandraWriteConfiguration(
+      clientConfig = CassandraConfiguration(
+        if(cs.hasPath("endpoints")) cs.getString("endpoints").split(",").toList else Nil,
+        cs.getBoolean("auto.discovery.enabled"),
+        awsConfig,
+        keyspaceConfig.getString("name"),
+        keyspaceConfig.getString("table.name"),
+        autoCreateSchema,
+        socket),
+      consistencyLevel = consistencyLevel,
+      recordTTLInSec = cs.getInt("ttl.sec"),
+      maxInFlightRequests = cs.getInt("max.inflight.requests"))
   }
 
   /**

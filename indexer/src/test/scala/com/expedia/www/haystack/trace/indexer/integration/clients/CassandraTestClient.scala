@@ -19,8 +19,9 @@ package com.expedia.www.haystack.trace.indexer.integration.clients
 
 import com.datastax.driver.core.{Cluster, ConsistencyLevel, SimpleStatement}
 import com.expedia.open.tracing.buffer.SpanBuffer
-import com.expedia.www.haystack.trace.indexer.config.entities.{CassandraConfiguration, SocketConfiguration}
-import com.expedia.www.haystack.trace.indexer.writers.cassandra.Schema
+import com.expedia.www.haystack.trace.commons.clients.cassandra.CassandraTableSchema
+import com.expedia.www.haystack.trace.commons.config.entities.{CassandraConfiguration, SocketConfiguration}
+import com.expedia.www.haystack.trace.indexer.config.entities.CassandraWriteConfiguration
 
 import scala.collection.JavaConversions._
 
@@ -37,7 +38,7 @@ class CassandraTestClient {
   }
 
   def prepare(): Unit = {
-    Schema.ensureExists(
+    CassandraTableSchema.ensureExists(
       KEYSPACE,
       TABLE_NAME,
       Some("CREATE KEYSPACE IF NOT EXISTS haystack WITH REPLICATION = { 'class': 'SimpleStrategy', 'replication_factor' : 1} AND durable_writes = false;\n\nuse haystack;\n\nCREATE TABLE traces (\nid varchar,\nts timestamp,\nspans blob,\nPRIMARY KEY ((id), ts)\n) WITH CLUSTERING ORDER BY (ts ASC);\n\nALTER TABLE traces WITH compaction = { 'class' :  'DateTieredCompactionStrategy'  };"),
@@ -45,21 +46,19 @@ class CassandraTestClient {
     truncateDataIfPresent()
   }
 
-  def buildConfig = CassandraConfiguration(List(CASSANDRA_ENDPOINT),
+  def buildConfig = CassandraWriteConfiguration(
+    CassandraConfiguration(List(CASSANDRA_ENDPOINT),
     autoDiscoverEnabled = false,
     None,
     KEYSPACE,
     TABLE_NAME,
     None,
-    ConsistencyLevel.ONE,
-    recordTTLInSec = 150,
-    SocketConfiguration(5, keepAlive = true, 5000, 5000),
-    10)
+    SocketConfiguration(5, keepAlive = true, 5000, 5000)), ConsistencyLevel.ONE, 150, 10)
 
   def queryAll(): Seq[CassandraRow] = {
     val rows = cassandraSession.execute(s"SELECT id, ts, spans from $KEYSPACE.$TABLE_NAME")
     val result = for(row <- rows)
-      yield CassandraRow(row.getString("id"), row.getTimestamp("ts"), SpanBuffer.parseFrom(row.getBytes("spans")))
+      yield CassandraRow(row.getString("id"), row.getTimestamp("ts"), SpanBuffer.parseFrom(row.getBytes("spans").array()))
     result.toList
   }
 }

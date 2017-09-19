@@ -20,7 +20,7 @@ package com.expedia.www.haystack.trace.indexer.unit
 import com.expedia.open.tracing.buffer.SpanBuffer
 import com.expedia.open.tracing.{Log, Span, Tag}
 import com.expedia.www.haystack.trace.indexer.config.entities.{IndexConfiguration, IndexField}
-import com.expedia.www.haystack.trace.indexer.writers.es.index.document.IndexDocumentGenerator
+import com.expedia.www.haystack.trace.indexer.writers.es.IndexDocumentGenerator
 import org.scalatest.{FunSpec, Matchers}
 
 class SpanIndexDocumentGeneratorSpec extends FunSpec with Matchers {

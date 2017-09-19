@@ -19,25 +19,20 @@ package com.expedia.www.haystack.trace.reader.stores.readers.cassandra
 import com.codahale.metrics.{Meter, Timer}
 import com.datastax.driver.core.{ResultSet, ResultSetFuture, Row}
 import com.expedia.open.tracing.api.Trace
+import com.expedia.www.haystack.trace.commons.clients.cassandra.CassandraTableSchema
 import com.expedia.www.haystack.trace.reader.exceptions.TraceNotFoundException
-import com.expedia.www.haystack.trace.reader.stores.serde.SpanBufferDeserializer
 import org.slf4j.{Logger, LoggerFactory}
 
 import scala.collection.JavaConversions._
 import scala.concurrent.Promise
 import scala.util.{Failure, Success, Try}
 
-object CassandraReadResultListener {
-  protected val deserializer = new SpanBufferDeserializer
-}
-
 class CassandraReadResultListener(asyncResult: ResultSetFuture,
                                   timer: Timer.Context,
                                   failure: Meter,
                                   promise: Promise[Trace]) extends Runnable {
-  import CassandraReadResultListener._
 
-  private val LOGGER: Logger = LoggerFactory.getLogger(classOf[CassandraReadResultListener])
+  private val LOGGER = LoggerFactory.getLogger(classOf[CassandraReadResultListener])
 
   override def run(): Unit = {
     timer.close()
@@ -65,9 +60,8 @@ class CassandraReadResultListener(asyncResult: ResultSetFuture,
     var deserFailed: Failure[Trace] = null
 
     for(row <- rows;
-        rawSpans = row.getBytes(Schema.SPANS_COLUMNE_NAME).array();
-        mayBeDeserialized = deserializer.deserialize(rawSpans)) {
-      mayBeDeserialized match {
+        spanBuffer = CassandraTableSchema.extractSpanBufferFromRow(row)) {
+      spanBuffer match {
         case Success(spans) => trace.setTraceId(spans.getTraceId).addAllChildSpans(spans.getChildSpansList)
         case Failure(cause) => deserFailed = Failure(cause)
       }

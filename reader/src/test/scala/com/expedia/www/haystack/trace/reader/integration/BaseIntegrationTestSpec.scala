@@ -21,10 +21,10 @@ import java.text.SimpleDateFormat
 import java.util.{Date, UUID}
 
 import com.datastax.driver.core.querybuilder.QueryBuilder
-import com.datastax.driver.core.{Cluster, Session, SimpleStatement}
+import com.datastax.driver.core.{Cluster, ResultSet, Session, SimpleStatement}
 import com.expedia.open.tracing.Span
 import com.expedia.open.tracing.buffer.SpanBuffer
-import com.expedia.www.haystack.trace.reader.stores.readers.cassandra.Schema._
+import com.expedia.www.haystack.trace.commons.clients.cassandra.CassandraTableSchema
 import io.searchbox.client.config.HttpClientConfig
 import io.searchbox.client.{JestClient, JestClientFactory}
 import io.searchbox.core.Index
@@ -130,14 +130,15 @@ trait BaseIntegrationTestSpec extends FunSpec with GivenWhenThen with Matchers w
   private def insertTraceInCassandra(traceId: String,
                                      spanId: String,
                                      serviceName: String,
-                                     operationName: String) = {
+                                     operationName: String): ResultSet = {
+    import CassandraTableSchema._
     val spanBuffer = createSpanBufferWithSingleSpan(traceId, spanId, serviceName, operationName)
 
     cassandraSession.execute(QueryBuilder
       .insertInto(CASSANDRA_TABLE)
       .value(ID_COLUMN_NAME, traceId)
       .value(TIMESTAMP_COLUMN_NAME, new Date())
-      .value(SPANS_COLUMNE_NAME, ByteBuffer.wrap(spanBuffer.toByteArray)))
+      .value(SPANS_COLUMN_NAME, ByteBuffer.wrap(spanBuffer.toByteArray)))
   }
 
   private def createSpanBufferWithSingleSpan(traceId: String,
@@ -160,7 +161,7 @@ trait BaseIntegrationTestSpec extends FunSpec with GivenWhenThen with Matchers w
   protected def putTraceInCassandra(traceId: String,
                                     spanId: String = UUID.randomUUID().toString,
                                     serviceName: String = "",
-                                    operationName: String = "") = {
+                                    operationName: String = ""): ResultSet = {
     insertTraceInCassandra(traceId, spanId, serviceName, operationName)
   }
 }

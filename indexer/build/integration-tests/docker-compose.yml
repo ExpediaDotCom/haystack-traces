@@ -13,3 +13,4 @@ services:
        HEAP_NEWSIZE: 256m
      ports:
        - "9042"
+

@@ -23,7 +23,8 @@ import com.datastax.driver.core.{ResultSet, ResultSetFuture, Row}
 import com.expedia.open.tracing.Span
 import com.expedia.open.tracing.buffer.SpanBuffer
 import com.expedia.open.tracing.api.Trace
-import com.expedia.www.haystack.trace.reader.stores.readers.cassandra.{CassandraReadResultListener, Schema}
+import com.expedia.www.haystack.trace.commons.clients.cassandra.CassandraTableSchema
+import com.expedia.www.haystack.trace.reader.stores.readers.cassandra.CassandraReadResultListener
 import com.expedia.www.haystack.trace.reader.unit.BaseUnitTestSpec
 import io.grpc.{Status, StatusException}
 import org.easymock.EasyMock
@@ -55,8 +56,8 @@ class CassandraReadResultListenerSpec extends BaseUnitTestSpec {
         timer.close()
         mockReadResult.get().andReturn(resultSet)
         resultSet.all().andReturn(List(mockSpanBufferRow_1, mockSpanBufferRow_2).asJava)
-        mockSpanBufferRow_1.getBytes(Schema.SPANS_COLUMNE_NAME).andReturn(ByteBuffer.wrap(spanBuffer_1.toByteArray))
-        mockSpanBufferRow_2.getBytes(Schema.SPANS_COLUMNE_NAME).andReturn(ByteBuffer.wrap(spanBuffer_2.toByteArray))
+        mockSpanBufferRow_1.getBytes(CassandraTableSchema.SPANS_COLUMN_NAME).andReturn(ByteBuffer.wrap(spanBuffer_1.toByteArray))
+        mockSpanBufferRow_2.getBytes(CassandraTableSchema.SPANS_COLUMN_NAME).andReturn(ByteBuffer.wrap(spanBuffer_2.toByteArray))
         promise.success(EasyMock.capture(capturedTrace)).andReturn(promise)
       }
 
@@ -86,8 +87,8 @@ class CassandraReadResultListenerSpec extends BaseUnitTestSpec {
         failureMeter.mark()
         mockReadResult.get().andReturn(resultSet)
         resultSet.all().andReturn(List(mockSpanBufferRow_1, mockSpanBufferRow_2).asJava)
-        mockSpanBufferRow_1.getBytes(Schema.SPANS_COLUMNE_NAME).andReturn(ByteBuffer.wrap(spanBuffer_1.toByteArray))
-        mockSpanBufferRow_2.getBytes(Schema.SPANS_COLUMNE_NAME).andReturn(ByteBuffer.wrap("illegal bytes".getBytes))
+        mockSpanBufferRow_1.getBytes(CassandraTableSchema.SPANS_COLUMN_NAME).andReturn(ByteBuffer.wrap(spanBuffer_1.toByteArray))
+        mockSpanBufferRow_2.getBytes(CassandraTableSchema.SPANS_COLUMN_NAME).andReturn(ByteBuffer.wrap("illegal bytes".getBytes))
         promise.failure(EasyMock.anyObject()).andReturn(promise)
       }
 

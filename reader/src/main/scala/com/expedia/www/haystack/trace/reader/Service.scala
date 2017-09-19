@@ -27,7 +27,7 @@ import io.grpc.netty.NettyServerBuilder
 import org.slf4j.{Logger, LoggerFactory}
 
 object Service extends MetricsSupport {
-  private val LOGGER: Logger = LoggerFactory.getLogger("TraceProvider")
+  private val LOGGER: Logger = LoggerFactory.getLogger("TraceReader")
 
   // primary executor for service's async tasks
   implicit private val executor = scala.concurrent.ExecutionContext.Implicits.global

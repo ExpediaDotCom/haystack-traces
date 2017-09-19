@@ -30,7 +30,7 @@ class TraceService(traceStore: TraceStore)(implicit val executor: ExecutionConte
   private val handleGetRawSpanResponse = new GrpcHandler(TraceReaderGrpc.METHOD_GET_RAW_SPAN.getFullMethodName)
   private val handleSearchResponse = new GrpcHandler(TraceReaderGrpc.METHOD_SEARCH_TRACES.getFullMethodName)
 
-  private val traceProvider: TraceReader = new TraceReader(traceStore)
+  private val traceReader = new TraceReader(traceStore)
 
   /**
     * endpoint for fetching a trace
@@ -42,7 +42,7 @@ class TraceService(traceStore: TraceStore)(implicit val executor: ExecutionConte
     */
   override def getTrace(request: TraceRequest, responseObserver: StreamObserver[Trace]): Unit = {
     handleGetTraceResponse.handle(responseObserver) {
-      traceProvider.getTrace(request)
+      traceReader.getTrace(request)
     }
   }
 
@@ -55,7 +55,7 @@ class TraceService(traceStore: TraceStore)(implicit val executor: ExecutionConte
     */
   override def getRawTrace(request: TraceRequest, responseObserver: StreamObserver[Trace]): Unit = {
     handleGetRawTraceResponse.handle(responseObserver) {
-      traceProvider.getRawTrace(request)
+      traceReader.getRawTrace(request)
     }
   }
 
@@ -68,7 +68,7 @@ class TraceService(traceStore: TraceStore)(implicit val executor: ExecutionConte
     */
   override def getRawSpan(request: SpanRequest, responseObserver: StreamObserver[Span]): Unit = {
     handleGetRawSpanResponse.handle(responseObserver) {
-      traceProvider.getRawSpan(request)
+      traceReader.getRawSpan(request)
     }
   }
 
@@ -79,7 +79,7 @@ class TraceService(traceStore: TraceStore)(implicit val executor: ExecutionConte
     */
   override def searchTraces(request: TracesSearchRequest, responseObserver: StreamObserver[TracesSearchResult]): Unit = {
     handleSearchResponse.handle(responseObserver) {
-      traceProvider.searchTraces(request)
+      traceReader.searchTraces(request)
     }
   }
 

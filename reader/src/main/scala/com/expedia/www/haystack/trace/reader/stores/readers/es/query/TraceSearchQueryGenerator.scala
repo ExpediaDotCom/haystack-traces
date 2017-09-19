@@ -41,7 +41,7 @@ class TraceSearchQueryGenerator(indexNamePrefix: String, indexType: String) {
   private def buildQueryString(request: TracesSearchRequest) = {
     val subQueries: Seq[QueryBuilder]  =
       for(field <- request.getFieldsList;
-      matchQuery = buildMatchQuery(field.getName, field.getValue); if matchQuery.isDefined) yield matchQuery.get
+          matchQuery = buildMatchQuery(field.getName, field.getValue); if matchQuery.isDefined) yield matchQuery.get
 
     val nestedMatchQuery: BoolQueryBuilder = subQueries
       .foldLeft(boolQuery())((boolQuery, q) => boolQuery.must(q))

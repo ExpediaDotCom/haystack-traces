@@ -25,31 +25,32 @@ import scala.util.Try
 
 trait TraceValidationHandler {
 
-  private def hasNonEmptyTraceId(traceId: String) = {
-    if (traceId.isEmpty)
-      throw new InvalidTraceException("invalid traceId")
+  private def hasNonEmptyTraceId(traceId: String): Unit = {
+    if (traceId.isEmpty) throw new InvalidTraceException("invalid traceId")
   }
 
   private def allSpansHaveAValidParent(spans: List[Span]): Unit = {
     val spanIdSet = spans.foldLeft(Set[String]())((set, span) => set + span.getSpanId)
-    if (!spans.forall(span => spanIdSet.contains(span.getParentSpanId) || span.getParentSpanId.isEmpty))
+    if (!spans.forall(sp => spanIdSet.contains(sp.getParentSpanId) || sp.getParentSpanId.isEmpty)) {
       throw new InvalidTraceException("spans without parent found")
+    }
   }
 
   private def noSpanHasSameParentIdAndSpanId(spans: List[Span]): Unit = {
-    if (!spans.forall(span => span.getSpanId != span.getParentSpanId))
+    if (!spans.forall(sp => sp.getSpanId != sp.getParentSpanId)) {
       throw new InvalidTraceException("same parent and span id found for a span")
+    }
   }
 
   private def onlyOneSpanIsRoot(spans: List[Span]): Unit = {
     val rootCount = spans.count(_.getParentSpanId.isEmpty)
-    if (rootCount != 1)
-      throw new InvalidTraceException(s"found $rootCount roots")
+    if (rootCount != 1) throw new InvalidTraceException(s"found $rootCount roots")
   }
 
   private def allSpansHaveSameTraceId(spans: List[Span], traceId: String) = {
-    if (!spans.forall(_.getTraceId.equals(traceId)))
+    if (!spans.forall(sp => sp.getTraceId.equals(traceId))) {
       throw new InvalidTraceException("span with different traceId are not allowed")
+    }
   }
 
   def validate(trace: Trace): Try[Unit] = {

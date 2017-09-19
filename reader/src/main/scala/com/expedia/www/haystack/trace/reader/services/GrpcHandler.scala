@@ -38,8 +38,7 @@ class GrpcHandler(operationName: String)(implicit val executor: ExecutionContext
   val timer: Timer = metricRegistry.timer(operationName)
   val failures: Meter = metricRegistry.meter(s"${operationName}.failures")
 
-  def handle[Rs](responseObserver: StreamObserver[Rs])
-                (op: => Future[Rs]) = {
+  def handle[Rs](responseObserver: StreamObserver[Rs])(op: => Future[Rs]): Unit = {
     val time = timer.time()
     op onComplete {
       case Success(response) =>

@@ -90,7 +90,7 @@ trait BaseIntegrationTestSpec extends FunSpec with GivenWhenThen with Matchers w
   }
 
   private def deleteCassandraTableRows(): Unit = {
-    cassandraSession.execute(new SimpleStatement(s"TRUNCATE ${CASSANDRA_TABLE}"))
+    cassandraSession.execute(new SimpleStatement(s"TRUNCATE $CASSANDRA_TABLE"))
   }
 
   protected def putTraceInCassandraAndEs(traceId: String = UUID.randomUUID().toString,
@@ -122,6 +122,9 @@ trait BaseIntegrationTestSpec extends FunSpec with GivenWhenThen with Matchers w
       .`type`(SPANS_INDEX_TYPE)
       .setParameter(Parameters.OP_TYPE, "create")
       .build)
+
+    // wait for few sec to let ES refresh its index
+    Thread.sleep(5000)
   }
 
   private def insertTraceInCassandra(traceId: String,

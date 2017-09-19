@@ -43,7 +43,7 @@ integration_test: prepare_integration_test_env
 		--network=sandbox_default \
 		-v $(PWD)/..:/src \
 		-v ~/.m2:/root/.m2 \
-		-w /src/reader \
+		-w /src \
 		maven:3.5.0-jdk-8 \
 		mvn test -pl reader -am -P integration-tests
 

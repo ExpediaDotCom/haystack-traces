@@ -30,8 +30,8 @@
         <query objectName="cassandra-cluster-metrics:name=other-errors" attribute="Count" resultAlias="cassandra-client.other-errors.count"/>
     </queries>
     <outputWriter class="org.jmxtrans.agent.GraphitePlainTextTcpOutputWriter">
-        <host>monitoring-influxdb-graphite.kube-system.svc</host>
-        <port>2003</port>
+        <host>${graphite.host:monitoring-influxdb-graphite.kube-system.svc}</host>
+        <port>${graphite.port:2003}</port>
         <namePrefix>haystack.traces.indexer.#hostname#.</namePrefix>
     </outputWriter>
     <collectIntervalInSeconds>30</collectIntervalInSeconds>

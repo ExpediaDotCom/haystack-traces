@@ -101,9 +101,9 @@ class CassandraEsTraceStore(cassandraConfiguration: CassandraConfiguration, esCo
   }
 
   // convert all Futures to Try to make sure they all complete
-  private def liftToTry(traceFutures: List[Future[Trace]]): List[Future[Try[Trace]]] = traceFutures.map(
-    _.map(Success(_)).recover { case t => Failure(t) }
-  )
+  private def liftToTry(traceFutures: List[Future[Trace]]): List[Future[Try[Trace]]] = traceFutures.map { f =>
+    f.map(Try(_)).recover { case t: Throwable => Failure(t) }
+  }
 
   override def close(): Unit = {
     cassandraReader.close()

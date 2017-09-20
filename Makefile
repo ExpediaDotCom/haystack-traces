@@ -6,7 +6,7 @@ clean:
 	mvn clean
 
 build: clean
-	mvn install package
+	mvn package
 
 all: clean indexer reader
 

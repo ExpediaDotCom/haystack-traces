@@ -20,7 +20,8 @@ package com.expedia.www.haystack.trace.indexer.integration.clients
 import java.text.SimpleDateFormat
 import java.util.Date
 
-import com.expedia.www.haystack.trace.indexer.config.entities.{ElasticSearchConfiguration, IndexConfiguration, IndexField}
+import com.expedia.www.haystack.trace.commons.config.entities.{WhitelistIndexField, WhitelistIndexFieldConfiguration}
+import com.expedia.www.haystack.trace.indexer.config.entities.ElasticSearchConfiguration
 import com.google.gson.{JsonArray, JsonObject}
 import io.searchbox.client.config.HttpClientConfig
 import io.searchbox.client.{JestClient, JestClientFactory}
@@ -60,9 +61,9 @@ class ElasticSearchTestClient {
     10,
     10)
 
-  def indexingConfig = IndexConfiguration(List(
-    IndexField(name = "role", `type` = "string"),
-    IndexField(name = "errorcode", `type` = "long")))
+  def indexingConfig = WhitelistIndexFieldConfiguration(List(
+    WhitelistIndexField(name = "role", `type` = "string"),
+    WhitelistIndexField(name = "errorcode", `type` = "long")))
 
   def query(query: String): JsonArray = {
     val searchQuery = new Search.Builder(query)

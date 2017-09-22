@@ -21,9 +21,9 @@ import java.util.Properties
 
 import com.datastax.driver.core.ConsistencyLevel
 import com.expedia.www.haystack.trace.commons.config.ConfigurationLoader
-import com.expedia.www.haystack.trace.commons.config.entities.{AwsNodeDiscoveryConfiguration, CassandraConfiguration, SocketConfiguration}
+import com.expedia.www.haystack.trace.commons.config.entities._
+import com.expedia.www.haystack.trace.commons.config.reload.{ConfigurationReloadElasticSearchProvider, Reloadable}
 import com.expedia.www.haystack.trace.indexer.config.entities._
-import com.expedia.www.haystack.trace.indexer.config.reload.{ConfigurationReloadElasticSearchProvider, Reloadable}
 import com.expedia.www.haystack.trace.indexer.serde.SpanDeserializer
 import com.typesafe.config.Config
 import org.apache.commons.lang3.StringUtils
@@ -203,8 +203,8 @@ class ProjectConfiguration extends AutoCloseable {
   /**
     * configuration that contains list of tags that should be indexed for a span
     */
-  val indexConfig: IndexConfiguration = {
-    val indexConfig = IndexConfiguration(Nil)
+  val indexConfig: WhitelistIndexFieldConfiguration = {
+    val indexConfig = WhitelistIndexFieldConfiguration(Nil)
     indexConfig.reloadConfigTableName = Option(config.getConfig("reload.tables").getString("index.fields.config"))
     indexConfig
   }

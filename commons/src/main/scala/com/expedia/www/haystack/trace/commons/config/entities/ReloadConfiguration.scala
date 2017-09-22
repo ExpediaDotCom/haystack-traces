@@ -15,12 +15,13 @@
  *
  */
 
-package com.expedia.www.haystack.trace.indexer.config.entities
+package com.expedia.www.haystack.trace.commons.config.entities
 
-import com.expedia.www.haystack.trace.indexer.config.reload.Reloadable
+import com.expedia.www.haystack.trace.commons.config.reload.Reloadable
 
 /**
   * defines the configuration parameters for reloading the app configs from external store like ElasticSearch
+ *
   * @param configStoreEndpoint: endpoint for external store where app configuration is stored
   * @param databaseName: name of the database
   * @param reloadIntervalInMillis: app config will be refreshed after this given interval in millis

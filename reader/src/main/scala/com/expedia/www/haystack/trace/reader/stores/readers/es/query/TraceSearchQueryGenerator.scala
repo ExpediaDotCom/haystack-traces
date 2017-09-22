@@ -28,27 +28,42 @@ import scala.collection.JavaConversions._
 
 class TraceSearchQueryGenerator(indexNamePrefix: String, indexType: String) {
   private val NESTED_DOC_NAME = "spans"
+  private val START_TIME_FIELD = "startTime"
 
   def generate(request: TracesSearchRequest): Search = {
+    require(request.getStartTime > 0)
+    require(request.getEndTime > 0)
+    require(request.getLimit > 0)
+
     new Search.Builder(buildQueryString(request))
-      .addIndex(s"$indexNamePrefix*") // TODO add specific indexes based on given time window
+      .addIndex(s"$indexNamePrefix*") // TODO use index alias instead
       .addType(indexType)
       .build()
   }
 
-  // TODO further improve query: add logs/tags, limit and sort order
-  // TODO optimize query
   private def buildQueryString(request: TracesSearchRequest) = {
-    val subQueries: Seq[QueryBuilder]  =
-      for(field <- request.getFieldsList;
-          matchQuery = buildMatchQuery(field.getName, field.getValue); if matchQuery.isDefined) yield matchQuery.get
-
-    val nestedMatchQuery: BoolQueryBuilder = subQueries
-      .foldLeft(boolQuery())((boolQuery, q) => boolQuery.must(q))
-
     new SearchSourceBuilder()
-      .query(boolQuery.must(nestedQuery(NESTED_DOC_NAME, nestedMatchQuery, ScoreMode.Avg).ignoreUnmapped(false)))
+      .query(boolQuery.must(createNestedQuery(request)))
+      .size(request.getLimit)
       .toString
+  }
+
+  def createNestedQuery(request: TracesSearchRequest): NestedQueryBuilder = {
+    val nestedBoolQuery: BoolQueryBuilder = boolQuery()
+
+    // add all fields as match sub query
+    val subQueries: Seq[QueryBuilder] =
+      for (field <- request.getFieldsList;
+           matchQuery = buildMatchQuery(field.getName, field.getValue); if matchQuery.isDefined) yield matchQuery.get
+    subQueries.foreach(nestedBoolQuery.filter(_))
+
+    // set time range window
+    nestedBoolQuery
+      .must(rangeQuery(withBaseDoc(START_TIME_FIELD))
+        .gte(request.getStartTime)
+        .lte(request.getEndTime))
+
+    nestedQuery(NESTED_DOC_NAME, nestedBoolQuery, ScoreMode.Avg)
   }
 
   private def buildMatchQuery(key: String, value: String): Option[MatchQueryBuilder] = {

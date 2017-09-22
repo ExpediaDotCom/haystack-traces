@@ -25,7 +25,7 @@ import com.expedia.www.haystack.trace.reader.exceptions.InvalidTraceIdInDocument
 import com.expedia.www.haystack.trace.reader.metrics.MetricsSupport
 import com.expedia.www.haystack.trace.reader.stores.readers.cassandra.CassandraReader
 import com.expedia.www.haystack.trace.reader.stores.readers.es.ElasticSearchReader
-import com.expedia.www.haystack.trace.reader.stores.readers.es.query.{FieldValuesQueryGenerator, TraceSearchQueryGenerator}
+import com.expedia.www.haystack.trace.reader.stores.readers.es.query.TraceSearchQueryGenerator
 import io.searchbox.client.JestResult
 import io.searchbox.core.SearchResult
 import org.slf4j.LoggerFactory
@@ -47,7 +47,6 @@ class CassandraEsTraceStore(cassandraConfiguration: CassandraConfiguration, esCo
   private val idRegex = """([a-zA-z0-9-]*)_([a-zA-z0-9]*)""".r
 
   private val traceSearchQueryGenerator = new TraceSearchQueryGenerator(esConfiguration.indexNamePrefix, esConfiguration.indexType)
-  private val fieldValueQueryGenerator = new FieldValuesQueryGenerator(esConfiguration.indexNamePrefix, esConfiguration.indexType)
 
   override def searchTraces(request: TracesSearchRequest): Future[List[Trace]] = {
     esReader

@@ -109,9 +109,12 @@ trait BaseIntegrationTestSpec extends FunSpec with GivenWhenThen with Matchers w
       s"""
          |{
          |  "duration": 0,
+         |  "traceId": "$traceId",
          |  "spans": [{
+         |    "spanId": "$spanId",
          |    "service": "$serviceName",
-         |    "operation": "$operationName"
+         |    "operation": "$operationName",
+         |    "startTime": ${System.currentTimeMillis() * 1000}
          |  }]
          |}
        """.stripMargin

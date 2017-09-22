@@ -146,6 +146,8 @@ class TraceServiceIntegrationTestSpec extends BaseIntegrationTestSpec {
       val spanId = UUID.randomUUID().toString
       val serviceName = "svcName"
       val operationName = "opName"
+      val startTime = 1
+      val endTime = (System.currentTimeMillis() + 10000000) * 1000
       putTraceInCassandraAndEs(traceId, spanId, serviceName, operationName)
 
       When("searching traces")
@@ -153,6 +155,9 @@ class TraceServiceIntegrationTestSpec extends BaseIntegrationTestSpec {
         .newBuilder()
         .addFields(Field.newBuilder().setName("service").setValue(serviceName).build())
         .addFields(Field.newBuilder().setName("operation").setValue(operationName).build())
+        .setStartTime(startTime)
+        .setEndTime(endTime)
+        .setLimit(10)
         .build())
 
       Then("should return traces for the service")

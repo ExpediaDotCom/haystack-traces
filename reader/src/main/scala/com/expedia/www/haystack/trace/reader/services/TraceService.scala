@@ -29,6 +29,8 @@ class TraceService(traceStore: TraceStore)(implicit val executor: ExecutionConte
   private val handleGetRawTraceResponse = new GrpcHandler(TraceReaderGrpc.METHOD_GET_RAW_TRACE.getFullMethodName)
   private val handleGetRawSpanResponse = new GrpcHandler(TraceReaderGrpc.METHOD_GET_RAW_SPAN.getFullMethodName)
   private val handleSearchResponse = new GrpcHandler(TraceReaderGrpc.METHOD_SEARCH_TRACES.getFullMethodName)
+  private val handleFieldNamesResponse = new GrpcHandler(TraceReaderGrpc.METHOD_GET_FIELD_NAMES.getFullMethodName)
+  private val handleFieldValuesResponse = new GrpcHandler(TraceReaderGrpc.METHOD_GET_FIELD_VALUES.getFullMethodName)
 
   private val traceReader = new TraceReader(traceStore)
 
@@ -83,7 +85,25 @@ class TraceService(traceStore: TraceStore)(implicit val executor: ExecutionConte
     }
   }
 
-  override def getFieldNames(request: Empty, responseObserver: StreamObserver[FieldNames]): Unit = ???
+  /**
+    * get list of field names available in indexing system
+    * @param request empty request object
+    * @param responseObserver response observer will contain list of field names
+    */
+  override def getFieldNames(request: Empty, responseObserver: StreamObserver[FieldNames]): Unit = {
+    handleFieldNamesResponse.handle(responseObserver) {
+      traceReader.getFieldNames()
+    }
+  }
 
-  override def getFieldValues(request: FieldValuesRequest, responseObserver: StreamObserver[FieldValues]): Unit = ???
+  /**
+    * get list of possible field values for a given field
+    * @param request contains field name and other field name-value pairs to be used as filters
+    * @param responseObserver response observer will contain list of field values for filter condition
+    */
+  override def getFieldValues(request: FieldValuesRequest, responseObserver: StreamObserver[FieldValues]): Unit = {
+    handleFieldValuesResponse.handle(responseObserver) {
+      traceReader.getFieldValues(request)
+    }
+  }
 }

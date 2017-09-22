@@ -28,6 +28,9 @@ class TraceSearchQueryGeneratorSpec extends BaseUnitTestSpec {
         .newBuilder()
         .addFields(Field.newBuilder().setName("service").setValue("svcName").build())
         .addFields(Field.newBuilder().setName("operation").setValue("opName").build())
+        .setStartTime(1)
+        .setEndTime(System.currentTimeMillis() * 1000)
+        .setLimit(10)
         .build()
       val queryGenerator = new TraceSearchQueryGenerator("haystack", `type`)
 

@@ -48,10 +48,6 @@ class CassandraEsTraceStore(cassandraConfiguration: CassandraConfiguration, esCo
 
   private val traceSearchQueryGenerator = new TraceSearchQueryGenerator(esConfiguration.indexNamePrefix, esConfiguration.indexType)
 
-  override def getTrace(traceId: String): Future[Trace] = {
-    cassandraReader.readTrace(traceId)
-  }
-
   override def searchTraces(request: TracesSearchRequest): Future[List[Trace]] = {
     esReader
       .search(traceSearchQueryGenerator.generate(request))
@@ -80,6 +76,10 @@ class CassandraEsTraceStore(cassandraConfiguration: CassandraConfiguration, esCo
     }
   }
 
+  override def getTrace(traceId: String): Future[Trace] = {
+    cassandraReader.readTrace(traceId)
+  }
+
   private def parseTraceId(sourceMap: util.Map[String, String]): Try[String] = {
     val docId = sourceMap.get(JestResult.ES_METADATA_ID)
 
@@ -104,6 +104,10 @@ class CassandraEsTraceStore(cassandraConfiguration: CassandraConfiguration, esCo
   private def liftToTry(traceFutures: List[Future[Trace]]): List[Future[Try[Trace]]] = traceFutures.map { f =>
     f.map(Try(_)).recover { case t: Throwable => Failure(t) }
   }
+
+  override def getFieldNames(): Future[List[String]] = ???
+
+  override def getFieldValues(request: FieldValuesRequest): Future[List[String]] = ???
 
   override def close(): Unit = {
     cassandraReader.close()

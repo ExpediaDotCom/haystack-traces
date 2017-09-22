@@ -20,6 +20,7 @@ import java.util.UUID
 
 import com.expedia.open.tracing.api._
 import io.grpc.{ManagedChannelBuilder, Status, StatusRuntimeException}
+import scala.collection.JavaConversions._
 
 class TraceServiceIntegrationTestSpec extends BaseIntegrationTestSpec {
   private val client = TraceReaderGrpc.newBlockingStub(ManagedChannelBuilder.forAddress("haystack-trace-reader", 8080)
@@ -140,7 +141,7 @@ class TraceServiceIntegrationTestSpec extends BaseIntegrationTestSpec {
   }
 
   describe("TraceReader.searchTraces") {
-    it("should search traces for given operation") {
+    it("should search traces for given service and operation") {
       Given("trace in cassandra and elasticsearch")
       val traceId = UUID.randomUUID().toString
       val spanId = UUID.randomUUID().toString
@@ -150,7 +151,7 @@ class TraceServiceIntegrationTestSpec extends BaseIntegrationTestSpec {
       val endTime = (System.currentTimeMillis() + 10000000) * 1000
       putTraceInCassandraAndEs(traceId, spanId, serviceName, operationName)
 
-      When("searching traces")
+      When("searching traces for service and operation")
       val traces = client.searchTraces(TracesSearchRequest
         .newBuilder()
         .addFields(Field.newBuilder().setName("service").setValue(serviceName).build())
@@ -160,11 +161,53 @@ class TraceServiceIntegrationTestSpec extends BaseIntegrationTestSpec {
         .setLimit(10)
         .build())
 
-      Then("should return traces for the service")
+      Then("should return traces for the searched service and operation name")
       traces.getTracesList.size() should be > 0
       traces.getTraces(0).getTraceId shouldBe traceId
       traces.getTraces(0).getChildSpans(0).getServiceName shouldBe serviceName
       traces.getTraces(0).getChildSpans(0).getOperationName shouldBe operationName
+    }
+
+    it("should search traces for given service") {
+      Given("traces in cassandra and elasticsearch")
+      val traceId1 = UUID.randomUUID().toString
+      val traceId2 = UUID.randomUUID().toString
+      val serviceName = "serviceToSearch"
+      val operationName = "opName"
+      val startTime = 1
+      val endTime = (System.currentTimeMillis() + 10000000) * 1000
+      putTraceInCassandraAndEs(traceId1, UUID.randomUUID().toString, serviceName, operationName)
+      putTraceInCassandraAndEs(traceId2, UUID.randomUUID().toString, serviceName, operationName)
+
+      When("searching traces for service")
+      val traces = client.searchTraces(TracesSearchRequest
+        .newBuilder()
+        .addFields(Field.newBuilder().setName("service").setValue(serviceName).build())
+        .setStartTime(startTime)
+        .setEndTime(endTime)
+        .setLimit(10)
+        .build())
+
+      Then("should return all traces for the service")
+      traces.getTracesList.size() should be(2)
+      traces.getTracesList.exists(_.getTraceId == traceId1) shouldBe (true)
+      traces.getTracesList.exists(_.getTraceId == traceId2) shouldBe (true)
+    }
+
+    it("should not return traces for unavailable searches") {
+      Given("traces in cassandra and elasticsearch")
+
+      When("searching traces for service")
+      val traces = client.searchTraces(TracesSearchRequest
+        .newBuilder()
+        .addFields(Field.newBuilder().setName("service").setValue("unavailableService").build())
+        .setStartTime(1)
+        .setEndTime((System.currentTimeMillis() + 10000000) * 1000)
+        .setLimit(10)
+        .build())
+
+      Then("should return all traces for the service")
+      traces.getTracesList.size() should be(0)
     }
   }
 }

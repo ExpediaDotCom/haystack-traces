@@ -15,11 +15,11 @@
  *
  */
 
-package com.expedia.www.haystack.trace.indexer.config.reload
+package com.expedia.www.haystack.trace.commons.config.reload
 
 import java.util.concurrent.{Executors, TimeUnit}
 
-import com.expedia.www.haystack.trace.indexer.config.entities.ReloadConfiguration
+import com.expedia.www.haystack.trace.commons.config.entities.ReloadConfiguration
 
 abstract class ConfigurationReloadProvider(config: ReloadConfiguration) extends AutoCloseable {
 

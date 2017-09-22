@@ -15,24 +15,25 @@
  *
  */
 
-package com.expedia.www.haystack.trace.indexer.config.entities
+package com.expedia.www.haystack.trace.commons.config.entities
 
 import java.util.concurrent.atomic.AtomicReference
 
-import com.expedia.www.haystack.trace.indexer.config.reload.Reloadable
+import com.expedia.www.haystack.trace.commons.config.reload.Reloadable
 import org.apache.commons.lang3.StringUtils
 import org.json4s.DefaultFormats
 import org.json4s.jackson.Serialization
 import org.slf4j.LoggerFactory
 
-case class IndexField(name: String, `type`: String, enabled: Boolean = true)
+case class WhitelistIndexField(name: String, `type`: String, enabled: Boolean = true)
 
-case class IndexConfiguration(var indexableTags: List[IndexField] = Nil) extends Reloadable {
-  private val LOGGER = LoggerFactory.getLogger(classOf[IndexConfiguration])
+case class WhitelistIndexFieldConfiguration(var indexableTags: List[WhitelistIndexField] = Nil) extends Reloadable {
+
+  private val LOGGER = LoggerFactory.getLogger(classOf[WhitelistIndexFieldConfiguration])
   private var currentVersion: Int = 0
   implicit val formats = DefaultFormats
 
-  val indexableTagsByTagName: AtomicReference[Map[String, IndexField]] = new AtomicReference[Map[String, IndexField]]()
+  val indexableTagsByTagName: AtomicReference[Map[String, WhitelistIndexField]] = new AtomicReference[Map[String, WhitelistIndexField]]()
 
   groupTagsWithKey()
 
@@ -50,7 +51,7 @@ case class IndexConfiguration(var indexableTags: List[IndexField] = Nil) extends
   override def onReload(configData: String): Unit = {
     if(StringUtils.isNotEmpty(configData) && hasConfigChanged(configData)) {
       LOGGER.info("new indexing configuration has arrived: " + configData)
-      val newConfig = Serialization.read[IndexConfiguration](configData)
+      val newConfig = Serialization.read[WhitelistIndexFieldConfiguration](configData)
       update(newConfig)
       // set the current version to newer one
       currentVersion = configData.hashCode
@@ -61,7 +62,7 @@ case class IndexConfiguration(var indexableTags: List[IndexField] = Nil) extends
     * update the new index configuration
     * @param newConfig new config object
     */
-  private def update(newConfig: IndexConfiguration): Unit = {
+  private def update(newConfig: WhitelistIndexFieldConfiguration): Unit = {
      if (newConfig.indexableTags != null) {
        this.indexableTags = newConfig.indexableTags
        groupTagsWithKey()

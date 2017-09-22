@@ -15,9 +15,9 @@
  *
  */
 
-package com.expedia.www.haystack.trace.indexer.config.reload
+package com.expedia.www.haystack.trace.commons.config.reload
 
-import com.expedia.www.haystack.trace.indexer.config.entities.ReloadConfiguration
+import com.expedia.www.haystack.trace.commons.config.entities.ReloadConfiguration
 import io.searchbox.client.config.HttpClientConfig
 import io.searchbox.client.{JestClient, JestClientFactory}
 import io.searchbox.core.Search

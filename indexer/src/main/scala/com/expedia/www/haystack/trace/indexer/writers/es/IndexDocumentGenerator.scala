@@ -21,9 +21,9 @@ import java.util.function.Supplier
 
 import com.expedia.open.tracing.buffer.SpanBuffer
 import com.expedia.open.tracing.{Span, Tag}
-import com.expedia.www.haystack.trace.commons.clients.es.document.{Document, TraceIndexDoc}
 import com.expedia.www.haystack.trace.commons.clients.es.document.Document.{TagKey, TagValue}
-import com.expedia.www.haystack.trace.indexer.config.entities.{IndexConfiguration, IndexField}
+import com.expedia.www.haystack.trace.commons.clients.es.document.{Document, TraceIndexDoc}
+import com.expedia.www.haystack.trace.commons.config.entities.{WhitelistIndexField, WhitelistIndexFieldConfiguration}
 import com.expedia.www.haystack.trace.indexer.metrics.MetricsSupport
 import org.apache.commons.lang3.StringUtils
 
@@ -32,7 +32,7 @@ import scala.collection.immutable.Stream
 import scala.collection.mutable
 import scala.util.{Failure, Random, Success, Try}
 
-class IndexDocumentGenerator(config: IndexConfiguration) extends MetricsSupport {
+class IndexDocumentGenerator(config: WhitelistIndexFieldConfiguration) extends MetricsSupport {
 
   private val ELASTIC_SEARCH_DOC_ID_SUFFIX_LENGTH = 4
   private val randomCharStream = ThreadLocal.withInitial(new Supplier[Stream[Char]] {
@@ -78,7 +78,7 @@ class IndexDocumentGenerator(config: IndexConfiguration) extends MetricsSupport 
     * @param span a span object
     * @return span index document as a map
     */
-  private def transform(span: Span, whitelistTagKeys: Map[String, IndexField]): mutable.Map[String, Any] = {
+  private def transform(span: Span, whitelistTagKeys: Map[String, WhitelistIndexField]): mutable.Map[String, Any] = {
     val spanIndexDoc = mutable.Map[String, Any]()
 
     def addTagKeys(tags: java.util.List[Tag]): Unit = {

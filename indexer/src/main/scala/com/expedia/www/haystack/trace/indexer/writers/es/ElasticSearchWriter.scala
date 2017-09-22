@@ -22,7 +22,8 @@ import java.util.Date
 import java.util.concurrent.Semaphore
 
 import com.expedia.open.tracing.buffer.SpanBuffer
-import com.expedia.www.haystack.trace.indexer.config.entities.{ElasticSearchConfiguration, IndexConfiguration}
+import com.expedia.www.haystack.trace.commons.config.entities.WhitelistIndexFieldConfiguration
+import com.expedia.www.haystack.trace.indexer.config.entities.ElasticSearchConfiguration
 import com.expedia.www.haystack.trace.indexer.metrics.{AppMetricNames, MetricsSupport}
 import com.expedia.www.haystack.trace.indexer.writers.TraceWriter
 import io.searchbox.action.BulkableAction
@@ -35,7 +36,7 @@ import org.slf4j.LoggerFactory
 
 import scala.util.Try
 
-class ElasticSearchWriter(esConfig: ElasticSearchConfiguration, indexConf: IndexConfiguration)
+class ElasticSearchWriter(esConfig: ElasticSearchConfiguration, indexConf: WhitelistIndexFieldConfiguration)
   extends TraceWriter with MetricsSupport {
 
   private val LOGGER = LoggerFactory.getLogger(classOf[ElasticSearchWriter])

@@ -17,7 +17,7 @@
 package com.expedia.www.haystack.trace.reader.readers
 
 import com.expedia.open.tracing.Span
-import com.expedia.open.tracing.api._
+import com.expedia.open.tracing.api.{FieldNames, _}
 import com.expedia.www.haystack.trace.reader.config.ProviderConfiguration
 import com.expedia.www.haystack.trace.reader.exceptions.SpanNotFoundException
 import com.expedia.www.haystack.trace.reader.metrics.MetricsSupport
@@ -91,5 +91,25 @@ class TraceReader(traceStore: TraceStore)(implicit val executor: ExecutionContex
         None
       }
     }
+  }
+
+  def getFieldNames(): Future[FieldNames] = {
+    traceStore
+      .getFieldNames()
+      .map(
+        FieldNames
+          .newBuilder()
+          .addAllNames(_)
+          .build())
+  }
+
+  def getFieldValues(request: FieldValuesRequest): Future[FieldValues] = {
+    traceStore
+      .getFieldValues(request)
+      .map(
+        FieldValues
+          .newBuilder()
+          .addAllValues(_)
+          .build())
   }
 }

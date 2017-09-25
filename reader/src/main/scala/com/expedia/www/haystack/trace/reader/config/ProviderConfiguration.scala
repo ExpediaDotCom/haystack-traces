@@ -19,7 +19,8 @@ package com.expedia.www.haystack.trace.reader.config
 import java.util
 
 import com.expedia.www.haystack.trace.commons.config.ConfigurationLoader
-import com.expedia.www.haystack.trace.commons.config.entities.{AwsNodeDiscoveryConfiguration, CassandraConfiguration, SocketConfiguration}
+import com.expedia.www.haystack.trace.commons.config.entities._
+import com.expedia.www.haystack.trace.commons.config.reload.{ConfigurationReloadElasticSearchProvider, Reloadable}
 import com.expedia.www.haystack.trace.reader.config.entities._
 import com.expedia.www.haystack.trace.reader.readers.transformers.TraceTransformer
 import com.typesafe.config.Config
@@ -27,7 +28,9 @@ import com.typesafe.config.Config
 import scala.collection.JavaConversions._
 
 object ProviderConfiguration {
-  lazy val serviceConfig: ServiceConfiguration = {
+  private val config: Config = ConfigurationLoader.loadAppConfig
+
+  val serviceConfig: ServiceConfiguration = {
     val serviceConfig = config.getConfig("service")
 
     val ssl = serviceConfig.getConfig("ssl")
@@ -36,7 +39,10 @@ object ProviderConfiguration {
     ServiceConfiguration(serviceConfig.getInt("port"), sslConfig)
   }
 
-  lazy val cassandraConfig: CassandraConfiguration = {
+  /**
+    * Cassandra configuration object
+    */
+  val cassandraConfig: CassandraConfiguration = {
     val cs = config.getConfig("cassandra")
 
     val awsConfig =
@@ -69,7 +75,10 @@ object ProviderConfiguration {
       socket)
   }
 
-  lazy val elasticSearchConfig: ElasticSearchConfiguration =  {
+  /**
+    * ElasticSearch configuration
+    */
+  val elasticSearchConfig: ElasticSearchConfiguration =  {
     val es = config.getConfig("elasticsearch")
     val indexConfig = es.getConfig("index")
 
@@ -81,12 +90,46 @@ object ProviderConfiguration {
       es.getInt("read.timeout.ms"))
   }
 
-  lazy val traceTransformerConfig: TraceTransformersConfiguration = {
+  /**
+    * Configurations to specify what all transforms to apply on traces
+    */
+  val traceTransformerConfig: TraceTransformersConfiguration = {
     val transformerConfig: Config = config.getConfig("trace.transformers")
     TraceTransformersConfiguration(toTransformerInstances(transformerConfig.getStringList("sequence")))
   }
 
-  private val config: Config = ConfigurationLoader.loadAppConfig
+  /**
+    * configuration that contains list of tags that should be indexed for a span
+    */
+  val indexConfig: WhitelistIndexFieldConfiguration = {
+    val indexConfig = WhitelistIndexFieldConfiguration(Nil)
+    indexConfig.reloadConfigTableName = Option(config.getConfig("reload.tables").getString("index.fields.config"))
+    indexConfig
+  }
+
+  // configuration reloader
+  private val reloader = registerReloadableConfigurations(List(indexConfig))
+
+  /**
+    * registers a reloadable config object to reloader instance.
+    * The reloader registers them as observers and invokes them periodically when it re-reads the
+    * configuration from an external store
+    * @param observers list of reloadable configuration objects
+    * @return the reloader instance that uses ElasticSearch as an external database for storing the configs
+    */
+  private def registerReloadableConfigurations(observers: Seq[Reloadable]): ConfigurationReloadElasticSearchProvider = {
+    val reload = config.getConfig("reload")
+    val reloadConfig = ReloadConfiguration(
+      reload.getString("config.endpoint"),
+      reload.getString("config.database.name"),
+      reload.getInt("interval.ms"),
+      observers,
+      loadOnStartup = reload.getBoolean("startup.load"))
+
+    val loader = new ConfigurationReloadElasticSearchProvider(reloadConfig)
+    if(reloadConfig.loadOnStartup) loader.load()
+    loader
+  }
 
   private def toTransformerInstances(transformerClasses: util.List[String]): scala.Seq[TraceTransformer] = {
     transformerClasses.map(className => {

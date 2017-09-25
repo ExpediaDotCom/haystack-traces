@@ -19,13 +19,13 @@ package com.expedia.www.haystack.trace.reader.stores
 import java.util
 
 import com.expedia.open.tracing.api._
-import com.expedia.www.haystack.trace.commons.config.entities.CassandraConfiguration
+import com.expedia.www.haystack.trace.commons.config.entities.{CassandraConfiguration, WhitelistIndexFieldConfiguration}
 import com.expedia.www.haystack.trace.reader.config.entities.ElasticSearchConfiguration
 import com.expedia.www.haystack.trace.reader.exceptions.InvalidTraceIdInDocument
 import com.expedia.www.haystack.trace.reader.metrics.MetricsSupport
 import com.expedia.www.haystack.trace.reader.stores.readers.cassandra.CassandraReader
 import com.expedia.www.haystack.trace.reader.stores.readers.es.ElasticSearchReader
-import com.expedia.www.haystack.trace.reader.stores.readers.es.query.TraceSearchQueryGenerator
+import com.expedia.www.haystack.trace.reader.stores.readers.es.query.{FieldValuesQueryGenerator, TraceSearchQueryGenerator}
 import io.searchbox.client.JestResult
 import io.searchbox.core.SearchResult
 import org.slf4j.LoggerFactory
@@ -34,9 +34,15 @@ import scala.collection.JavaConversions._
 import scala.concurrent.{ExecutionContextExecutor, Future}
 import scala.util.{Failure, Success, Try}
 
-class CassandraEsTraceStore(cassandraConfiguration: CassandraConfiguration, esConfiguration: ElasticSearchConfiguration)
+class CassandraEsTraceStore(cassandraConfiguration: CassandraConfiguration,
+                            esConfiguration: ElasticSearchConfiguration,
+                            indexConfiguration: WhitelistIndexFieldConfiguration)
                            (implicit val executor: ExecutionContextExecutor)
   extends TraceStore with MetricsSupport {
+  private val ES_AGGREGATIONS_FIELD_NAME = "aggregations"
+  private val ES_BUCKETS_FIELD_NAME = "buckets"
+  private val ES_KEY_FIELD_NAME = "key"
+  private val NESTED_DOC_NAME = "spans"
 
   private val LOGGER = LoggerFactory.getLogger(classOf[ElasticSearchReader])
   private val traceRejected = metricRegistry.meter("search.trace.rejected")
@@ -46,7 +52,8 @@ class CassandraEsTraceStore(cassandraConfiguration: CassandraConfiguration, esCo
 
   private val idRegex = """([a-zA-z0-9-]*)_([a-zA-z0-9]*)""".r
 
-  private val traceSearchQueryGenerator = new TraceSearchQueryGenerator(esConfiguration.indexNamePrefix, esConfiguration.indexType)
+  private val traceSearchQueryGenerator = new TraceSearchQueryGenerator(esConfiguration.indexNamePrefix, esConfiguration.indexType, NESTED_DOC_NAME)
+  private val fieldValuesQueryGenerator = new FieldValuesQueryGenerator(esConfiguration.indexNamePrefix, esConfiguration.indexType, NESTED_DOC_NAME)
 
   override def searchTraces(request: TracesSearchRequest): Future[List[Trace]] = {
     esReader
@@ -105,9 +112,25 @@ class CassandraEsTraceStore(cassandraConfiguration: CassandraConfiguration, esCo
     f.map(Try(_)).recover { case t: Throwable => Failure(t) }
   }
 
-  override def getFieldNames(): Future[List[String]] = ???
+  override def getFieldNames(): Future[List[String]] = {
+    Future.successful(indexConfiguration.indexableTags.map(_.name))
+  }
 
-  override def getFieldValues(request: FieldValuesRequest): Future[List[String]] = ???
+  override def getFieldValues(request: FieldValuesRequest): Future[List[String]] = {
+    esReader
+      .search(fieldValuesQueryGenerator.generate(request))
+      .map(extractFieldValues(_, request.getFieldName))
+  }
+
+  private def extractFieldValues(result: SearchResult, fieldName: String): List[String] =
+    result
+      .getJsonObject
+      .getAsJsonObject(ES_AGGREGATIONS_FIELD_NAME)
+      .getAsJsonObject(NESTED_DOC_NAME)
+      .getAsJsonObject(fieldName)
+      .getAsJsonArray(ES_BUCKETS_FIELD_NAME)
+      .map(element => element.getAsJsonObject.get(ES_KEY_FIELD_NAME).getAsString)
+      .toList
 
   override def close(): Unit = {
     cassandraReader.close()

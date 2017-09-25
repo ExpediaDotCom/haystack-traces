@@ -15,26 +15,24 @@
  */
 package com.expedia.www.haystack.trace.reader.unit.stores.readers.es.query
 
-import com.expedia.open.tracing.api.{Field, TracesSearchRequest}
-import com.expedia.www.haystack.trace.reader.stores.readers.es.query.TraceSearchQueryGenerator
+import com.expedia.open.tracing.api.{Field, FieldValuesRequest}
+import com.expedia.www.haystack.trace.reader.stores.readers.es.query.FieldValuesQueryGenerator
 import com.expedia.www.haystack.trace.reader.unit.BaseUnitTestSpec
 
-class TraceSearchQueryGeneratorSpec extends BaseUnitTestSpec {
-  describe("TraceSearchQueryGenerator") {
+class FieldValuesQueryGeneratorSpec extends BaseUnitTestSpec {
+  describe("FieldValuesQueryGenerator") {
     it("should generate valid search queries") {
       Given("a trace search request")
       val `type` = "spans"
       val serviceName = "svcName"
-      val operationName = "opName"
-      val request = TracesSearchRequest
+      val tagName = "tagName"
+      val request = FieldValuesRequest
         .newBuilder()
-        .addFields(Field.newBuilder().setName("service").setValue(serviceName).build())
-        .addFields(Field.newBuilder().setName("operation").setValue(operationName).build())
-        .setStartTime(1)
-        .setEndTime(System.currentTimeMillis() * 1000)
-        .setLimit(10)
+        .setFieldName("operation")
+        .addFilters(Field.newBuilder().setName("service").setValue(serviceName).build())
+        .addFilters(Field.newBuilder().setName("tag").setValue(tagName).build())
         .build()
-      val queryGenerator = new TraceSearchQueryGenerator("haystack", `type`, "spans")
+      val queryGenerator = new FieldValuesQueryGenerator("haystack", `type`, "spans")
 
       When("generating query")
       val query = queryGenerator.generate(request)

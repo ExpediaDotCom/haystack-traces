@@ -38,6 +38,8 @@ trait BaseIntegrationTestSpec extends FunSpec with GivenWhenThen with Matchers w
   private val CASSANDRA_TABLE = "traces"
 
   private val ELASTIC_SEARCH_ENDPOINT = "http://elasticsearch:9200"
+  private val ELASTIC_SEARCH_WHITELIST_INDEX = "reload-configs"
+  private val ELASTIC_SEARCH_WHITELIST_TYPE = "whitelist-index-fields"
   private val SPANS_INDEX_TYPE = "spans"
   private val HAYSTACK_TRACES_INDEX = {
     val formatter = new SimpleDateFormat("yyyy-MM-dd")
@@ -50,7 +52,22 @@ trait BaseIntegrationTestSpec extends FunSpec with GivenWhenThen with Matchers w
        |  "settings": {
        |    "number_of_shards": 1
        |  },
+       |  "aliases":{
+       |    "haystack-traces": {}
+       |  },
        |  "mappings": {
+       |    "_default_": {
+       |      "dynamic_templates": [
+       |        {
+       |          "strings": {
+       |            "match_mapping_type": "string",
+       |            "mapping": {
+       |              "type": "keyword"
+       |            }
+       |          }
+       |        }
+       |      ]
+       |    },
        |    "spans": {
        |      "_source": {
        |        "enabled": true
@@ -123,6 +140,34 @@ trait BaseIntegrationTestSpec extends FunSpec with GivenWhenThen with Matchers w
       .id(s"${traceId}_1234")
       .index(HAYSTACK_TRACES_INDEX)
       .`type`(SPANS_INDEX_TYPE)
+      .setParameter(Parameters.OP_TYPE, "create")
+      .build)
+
+    // wait for few sec to let ES refresh its index
+    Thread.sleep(5000)
+  }
+
+  protected def putWhitelistIndexFieldsInEs(fields: List[String]) = {
+    val indexableTagsList = fields.map(field =>
+      s"""
+         |{
+         |  "name": "$field",
+         |  "type": "string",
+         |  "enabled": true
+         |}
+      """.stripMargin).mkString("[",",", "]")
+
+    val source =
+      s"""
+         |{
+         |  "indexableTags": $indexableTagsList
+         |}
+       """.stripMargin
+
+    esClient.execute(new Index.Builder(source)
+      .id("docid")
+      .index(ELASTIC_SEARCH_WHITELIST_INDEX)
+      .`type`(ELASTIC_SEARCH_WHITELIST_TYPE)
       .setParameter(Parameters.OP_TYPE, "create")
       .build)
 

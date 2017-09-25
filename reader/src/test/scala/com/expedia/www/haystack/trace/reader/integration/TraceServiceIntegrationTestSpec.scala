@@ -210,4 +210,62 @@ class TraceServiceIntegrationTestSpec extends BaseIntegrationTestSpec {
       traces.getTracesList.size() should be(0)
     }
   }
+
+  describe("TraceReader.getFieldNames") {
+    ignore("should return names of enabled fields") {
+      Given("trace in cassandra and elasticsearch")
+      val field1 = "abc"
+      val field2 = "def"
+      putWhitelistIndexFieldsInEs(List(field1, field2))
+
+      When("calling getFieldNames")
+      val fieldNames = client.getFieldNames(Empty.newBuilder().build())
+
+      Then("should return fieldNames available in index")
+      fieldNames.getNamesList.size() should be(2)
+      fieldNames.getNamesList.toList should contain(field1)
+      fieldNames.getNamesList.toList should contain(field2)
+    }
+  }
+
+  describe("TraceReader.getFieldValues") {
+    it("should return values of a given fields") {
+      Given("trace in cassandra and elasticsearch")
+      val serviceName = "get_values_servicename"
+      putTraceInCassandraAndEs(UUID.randomUUID().toString, UUID.randomUUID().toString, serviceName, "op")
+      val request = FieldValuesRequest.newBuilder()
+        .setFieldName("service")
+        .build()
+
+      When("calling getFieldNames")
+      val result = client.getFieldValues(request)
+
+      Then("should return possible values for given field")
+      result.getValuesList.toList should contain(serviceName)
+    }
+
+    it("should return values of a given fields with filters") {
+      Given("trace in cassandra and elasticsearch")
+      val serviceName = "get_values_with_filters_servicename"
+      val op1 = "get_values_with_filters_operationname_1"
+      val op2 = "get_values_with_filters_operationname_2"
+
+      putTraceInCassandraAndEs(UUID.randomUUID().toString, UUID.randomUUID().toString, serviceName, op1)
+      putTraceInCassandraAndEs(UUID.randomUUID().toString, UUID.randomUUID().toString, serviceName, op2)
+      putTraceInCassandraAndEs(UUID.randomUUID().toString, UUID.randomUUID().toString, "non_matching_servicename", "non_matching_operationname")
+
+      val request = FieldValuesRequest.newBuilder()
+        .addFilters(Field.newBuilder().setName("service").setValue(serviceName))
+        .setFieldName("operation")
+        .build()
+
+      When("calling getFieldNames")
+      val result = client.getFieldValues(request)
+
+      Then("should return filtered values for given field")
+      result.getValuesList.size() should be(2)
+      result.getValuesList.toList should contain(op1)
+      result.getValuesList.toList should contain(op2)
+    }
+  }
 }

@@ -184,7 +184,7 @@ trait BaseIntegrationTestSpec extends FunSpec with GivenWhenThen with Matchers w
       .build)
 
     // wait for few sec to let ES refresh its index and app to reload its config
-    Thread.sleep(5000)
+    Thread.sleep(10000)
   }
 
   private def insertTraceInCassandra(traceId: String,

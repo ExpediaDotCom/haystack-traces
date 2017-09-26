@@ -52,7 +52,7 @@ class IndexDocumentGenerator(config: WhitelistIndexFieldConfiguration) extends M
     // We maintain a white list of tags that are to be indexed. The whitelist is maintained as a confguration
     // in an external database (outside this app boundary). However, the app periodically reads this whitelist config
     // and applies it to the new spans that are read.
-    val whitelistTagKeys = config.indexableTagsByTagName.get()
+    val whitelistTagKeys = config.indexableTagsByTagName
 
     val spanIndices = for(sp <- spanBuffer.getChildSpansList; if isValidForIndex(sp)) yield transform(sp, whitelistTagKeys)
     val docId = s"${traceId}_${randomCharStream.get().take(ELASTIC_SEARCH_DOC_ID_SUFFIX_LENGTH).mkString}"

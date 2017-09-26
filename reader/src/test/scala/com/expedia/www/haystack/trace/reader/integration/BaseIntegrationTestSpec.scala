@@ -25,14 +25,19 @@ import com.datastax.driver.core.{Cluster, ResultSet, Session, SimpleStatement}
 import com.expedia.open.tracing.Span
 import com.expedia.open.tracing.buffer.SpanBuffer
 import com.expedia.www.haystack.trace.commons.clients.cassandra.CassandraTableSchema
+import com.expedia.www.haystack.trace.commons.config.entities.{WhiteListIndexFields, WhitelistIndexField, WhitelistIndexFieldConfiguration}
 import io.searchbox.client.config.HttpClientConfig
 import io.searchbox.client.{JestClient, JestClientFactory}
 import io.searchbox.core.Index
 import io.searchbox.indices.CreateIndex
 import io.searchbox.params.Parameters
+import org.json4s.DefaultFormats
+import org.json4s.jackson.Serialization
 import org.scalatest._
 
 trait BaseIntegrationTestSpec extends FunSpec with GivenWhenThen with Matchers with BeforeAndAfterAll with BeforeAndAfterEach {
+  protected implicit val formats = DefaultFormats
+
   private val CASSANDRA_ENDPOINT = "cassandra"
   private val CASSANDRA_KEYSPACE = "haystack"
   private val CASSANDRA_TABLE = "traces"
@@ -46,53 +51,64 @@ trait BaseIntegrationTestSpec extends FunSpec with GivenWhenThen with Matchers w
     s"haystack-traces-${formatter.format(new Date())}"
   }
   private val INDEX_TEMPLATE =
-    s"""
-       |{
-       |    "template": "haystack-traces*",
-       |    "settings": {
-       |        "number_of_shards": 1
-       |    },
-       |    "aliases":{
-       |      "haystack-traces": {}
-       |    },
-       |    "mappings": {
-       |        "spans": {
-       |            "_source": {
-       |                "enabled": false
-       |            },
-       |            "properties": {
-       |                "spans": {
-       |                    "type": "nested"
-       |                }
-       |            },
-       |            "dynamic_templates": [
-       |                {
-       |                    "strings_as_keywords_1": {
-       |                        "match_mapping_type": "string",
-       |                        "match_pattern": "regex",
-       |                        "unmatch": "^(service|operation)$$",
-       |                        "mapping": {
-       |                            "type": "keyword",
-       |                            "doc_values": false
-       |                        }
-       |                    }
-       |                },
-       |                {
-       |                    "strings_as_keywords_2": {
-       |                        "match_mapping_type": "string",
-       |                        "match_pattern": "regex",
-       |                        "match": "^(service|operation)$$",
-       |                        "mapping": {
-       |                            "type": "keyword",
-       |                            "doc_values": true
-       |                        }
-       |                    }
-       |                }
-       |            ]
-       |        }
-       |    }
-       |}
- """.stripMargin
+    """
+      |{
+      |    "template": "haystack-traces*",
+      |    "settings": {
+      |        "number_of_shards": 1,
+      |        "index.mapping.ignore_malformed": true,
+      |        "analysis": {
+      |            "normalizer": {
+      |                "lowercase_normalizer": {
+      |                    "type": "custom",
+      |                    "filter": ["lowercase"]
+      |                }
+      |            }
+      |        }
+      |    },
+      |    "aliases": {
+      |        "haystack-traces": {}
+      |    },
+      |    "mappings": {
+      |        "spans": {
+      |            "_source": {
+      |                "enabled": false
+      |            },
+      |            "properties": {
+      |                "spans": {
+      |                    "type": "nested"
+      |                }
+      |            },
+      |            "dynamic_templates": [
+      |                {
+      |                    "strings_as_keywords_1": {
+      |                        "match_mapping_type": "string",
+      |                        "match_pattern": "regex",
+      |                        "unmatch": "^(service|operation)$",
+      |                        "mapping": {
+      |                            "type": "keyword",
+      |                            "normalizer": "lowercase_normalizer",
+      |                            "doc_values": false
+      |                        }
+      |                    }
+      |                },
+      |                {
+      |                    "strings_as_keywords_2": {
+      |                        "match_mapping_type": "string",
+      |                        "match_pattern": "regex",
+      |                        "match": "^(service|operation)$",
+      |                        "mapping": {
+      |                            "type": "keyword",
+      |                            "normalizer": "lowercase_normalizer",
+      |                            "doc_values": true
+      |                        }
+      |                    }
+      |                }
+      |            ]
+      |        }
+      |    }
+      |}
+    """.stripMargin
 
   private var cassandraSession: Session = _
   private var esClient: JestClient = _
@@ -125,7 +141,7 @@ trait BaseIntegrationTestSpec extends FunSpec with GivenWhenThen with Matchers w
   protected def putTraceInCassandraAndEs(traceId: String = UUID.randomUUID().toString,
                                          spanId: String = UUID.randomUUID().toString,
                                          serviceName: String = "",
-                                         operationName: String = "") = {
+                                         operationName: String = ""): Unit = {
     insertTraceInCassandra(traceId, spanId, serviceName, operationName)
     insertTraceInEs(traceId, spanId, serviceName, operationName)
   }
@@ -159,28 +175,11 @@ trait BaseIntegrationTestSpec extends FunSpec with GivenWhenThen with Matchers w
     Thread.sleep(5000)
   }
 
-  protected def putWhitelistIndexFieldsInEs(fields: List[String]) = {
-    val indexableTagsList = fields.map(field =>
-      s"""
-         |{
-         |  "name": "$field",
-         |  "type": "string",
-         |  "enabled": true
-         |}
-      """.stripMargin).mkString("[",",", "]")
-
-    val source =
-      s"""
-         |{
-         |  "indexableTags": $indexableTagsList
-         |}
-       """.stripMargin
-
-    esClient.execute(new Index.Builder(source)
-      .id("docid")
+  protected def putWhitelistIndexFieldsInEs(fields: List[String]): Unit = {
+    val whitelistFields = for(field <- fields) yield WhitelistIndexField(field, "string")
+    esClient.execute(new Index.Builder(Serialization.write(WhiteListIndexFields(whitelistFields)))
       .index(ELASTIC_SEARCH_WHITELIST_INDEX)
       .`type`(ELASTIC_SEARCH_WHITELIST_TYPE)
-      .setParameter(Parameters.OP_TYPE, "create")
       .build)
 
     // wait for few sec to let ES refresh its index and app to reload its config

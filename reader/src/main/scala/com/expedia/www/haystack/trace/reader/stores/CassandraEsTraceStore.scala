@@ -116,7 +116,7 @@ class CassandraEsTraceStore(cassandraConfiguration: CassandraConfiguration,
   }
 
   override def getFieldNames(): Future[List[String]] = {
-    Future.successful(indexConfiguration.indexableTags.map(_.name))
+    Future.successful(indexConfiguration.getWhitelistFields.fields.map(_.name))
   }
 
   override def getFieldValues(request: FieldValuesRequest): Future[List[String]] = {

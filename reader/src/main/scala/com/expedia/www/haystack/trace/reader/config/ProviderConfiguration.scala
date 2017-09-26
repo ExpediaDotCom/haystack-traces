@@ -102,7 +102,7 @@ object ProviderConfiguration {
     * configuration that contains list of tags that should be indexed for a span
     */
   val indexConfig: WhitelistIndexFieldConfiguration = {
-    val indexConfig = WhitelistIndexFieldConfiguration(Nil)
+    val indexConfig = WhitelistIndexFieldConfiguration()
     indexConfig.reloadConfigTableName = Option(config.getConfig("reload.tables").getString("index.fields.config"))
     indexConfig
   }

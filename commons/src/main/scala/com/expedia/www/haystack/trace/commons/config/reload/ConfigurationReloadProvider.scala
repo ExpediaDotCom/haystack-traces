@@ -22,7 +22,6 @@ import java.util.concurrent.{Executors, TimeUnit}
 import com.expedia.www.haystack.trace.commons.config.entities.ReloadConfiguration
 
 abstract class ConfigurationReloadProvider(config: ReloadConfiguration) extends AutoCloseable {
-
   private val executor = Executors.newSingleThreadScheduledExecutor()
 
   // schedule the reload process from an external store

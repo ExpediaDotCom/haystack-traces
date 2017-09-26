@@ -72,7 +72,7 @@ class SpanIndexProcessor(accumulatorConfig: SpanAccumulatorConfiguration,
         .foreach {
           record => {
             spanBufferMemStore.addOrUpdateSpanBuffer(record.key(), record.value(), record.timestamp(), record.offset())
-            currentTimestamp = record.timestamp()
+            currentTimestamp = Math.max(record.timestamp(), currentTimestamp)
           }
         }
 

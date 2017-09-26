@@ -66,7 +66,7 @@ class FieldValuesQueryGenerator(indexNamePrefix: String, indexType: String, nest
       val subQueries: Seq[QueryBuilder] =
         for (field <- filters;
              termQuery = buildTermQuery(field.getName, field.getValue); if termQuery.isDefined) yield termQuery.get
-      subQueries.foreach(nestedBoolQuery.filter(_))
+      subQueries.foreach(nestedBoolQuery.filter)
 
       Some(nestedQuery(nestedDocName, nestedBoolQuery, ScoreMode.Avg))
     }

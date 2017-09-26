@@ -45,7 +45,7 @@ object Service extends MetricsSupport {
   }
 
   private def startService(): Unit = {
-    val store = new CassandraEsTraceStore(cassandraConfig, elasticSearchConfig)(executor)
+    val store = new CassandraEsTraceStore(cassandraConfig, elasticSearchConfig, indexConfig)(executor)
 
     val serverBuilder = NettyServerBuilder
       .forPort(serviceConfig.port)

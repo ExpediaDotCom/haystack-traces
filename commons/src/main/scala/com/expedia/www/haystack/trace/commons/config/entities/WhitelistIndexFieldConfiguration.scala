@@ -17,8 +17,6 @@
 
 package com.expedia.www.haystack.trace.commons.config.entities
 
-import java.util.concurrent.atomic.AtomicReference
-
 import com.expedia.www.haystack.trace.commons.config.reload.Reloadable
 import org.apache.commons.lang3.StringUtils
 import org.json4s.DefaultFormats
@@ -26,16 +24,21 @@ import org.json4s.jackson.Serialization
 import org.slf4j.LoggerFactory
 
 case class WhitelistIndexField(name: String, `type`: String, enabled: Boolean = true)
+case class WhiteListIndexFields(fields: List[WhitelistIndexField])
 
-case class WhitelistIndexFieldConfiguration(var indexableTags: List[WhitelistIndexField] = Nil) extends Reloadable {
-
+case class WhitelistIndexFieldConfiguration() extends Reloadable {
   private val LOGGER = LoggerFactory.getLogger(classOf[WhitelistIndexFieldConfiguration])
-  private var currentVersion: Int = 0
+
   implicit val formats = DefaultFormats
 
-  val indexableTagsByTagName: AtomicReference[Map[String, WhitelistIndexField]] = new AtomicReference[Map[String, WhitelistIndexField]]()
+  @volatile
+  private var whitelistFields: WhiteListIndexFields = WhiteListIndexFields(Nil)
 
-  groupTagsWithKey()
+  @volatile
+  private var currentVersion: Int = 0
+
+  @volatile
+  var indexableTagsByTagName: Map[String, WhitelistIndexField] = groupTagsWithKey(whitelistFields)
 
   var reloadConfigTableName: Option[String] = None
 
@@ -51,21 +54,9 @@ case class WhitelistIndexFieldConfiguration(var indexableTags: List[WhitelistInd
   override def onReload(configData: String): Unit = {
     if(StringUtils.isNotEmpty(configData) && hasConfigChanged(configData)) {
       LOGGER.info("new indexing configuration has arrived: " + configData)
-      val newConfig = Serialization.read[WhitelistIndexFieldConfiguration](configData)
-      update(newConfig)
+      setWhitelistFields(Serialization.read[WhiteListIndexFields](configData))
       // set the current version to newer one
       currentVersion = configData.hashCode
-    }
-  }
-
-  /**
-    * update the new index configuration
-    * @param newConfig new config object
-    */
-  private def update(newConfig: WhitelistIndexFieldConfiguration): Unit = {
-     if (newConfig.indexableTags != null) {
-       this.indexableTags = newConfig.indexableTags
-       groupTagsWithKey()
     }
   }
 
@@ -73,8 +64,8 @@ case class WhitelistIndexFieldConfiguration(var indexableTags: List[WhitelistInd
     * convert the list of tags as key value pair, key being the indexField name and value is indexField itself
     * @return
     */
-  private def groupTagsWithKey(): Unit = {
-    indexableTagsByTagName.set(indexableTags.groupBy(_.name).mapValues(_.head))
+  private def groupTagsWithKey(newWhitelistFields: WhiteListIndexFields): Map[String, WhitelistIndexField] = {
+    newWhitelistFields.fields.groupBy(_.name).mapValues(_.head)
   }
 
   /**
@@ -83,4 +74,18 @@ case class WhitelistIndexFieldConfiguration(var indexableTags: List[WhitelistInd
     * @return
     */
   private def hasConfigChanged(newConfigData: String): Boolean = newConfigData.hashCode != currentVersion
+
+  /**
+    * public method is exposed only for testing
+    * @param fields: list of fields that needs to be indexed
+    */
+  def setWhitelistFields(fields: WhiteListIndexFields): Unit = {
+    whitelistFields = fields
+    indexableTagsByTagName = groupTagsWithKey(fields)
+  }
+
+  /**
+    * @return the whitelist index fields
+    */
+  def getWhitelistFields: WhiteListIndexFields = whitelistFields
 }

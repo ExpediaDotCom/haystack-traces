@@ -20,7 +20,7 @@ package com.expedia.www.haystack.trace.indexer.integration.clients
 import java.text.SimpleDateFormat
 import java.util.Date
 
-import com.expedia.www.haystack.trace.commons.config.entities.{WhitelistIndexField, WhitelistIndexFieldConfiguration}
+import com.expedia.www.haystack.trace.commons.config.entities.{WhiteListIndexFields, WhitelistIndexField, WhitelistIndexFieldConfiguration}
 import com.expedia.www.haystack.trace.indexer.config.entities.ElasticSearchConfiguration
 import com.google.gson.{JsonArray, JsonObject}
 import io.searchbox.client.config.HttpClientConfig
@@ -51,7 +51,7 @@ class ElasticSearchTestClient {
 
   def buildConfig = ElasticSearchConfiguration(
     ELASTIC_SEARCH_ENDPOINT,
-    Some("{\"template\": \"haystack-traces*\",\"settings\": {\"number_of_shards\": 1},\"mappings\": {\"spans\": {\"_source\": {\"enabled\": false},\"properties\": {\"spans\": {\"type\": \"nested\"}}}}}"),
+    Some(INDEX_TEMPLATE),
     "one",
     INDEX_NAME_PREFIX,
     INDEX_TYPE,
@@ -61,9 +61,13 @@ class ElasticSearchTestClient {
     10,
     10)
 
-  def indexingConfig = WhitelistIndexFieldConfiguration(List(
-    WhitelistIndexField(name = "role", `type` = "string"),
-    WhitelistIndexField(name = "errorcode", `type` = "long")))
+  def indexingConfig: WhitelistIndexFieldConfiguration = {
+    val cfg = WhitelistIndexFieldConfiguration()
+    cfg.setWhitelistFields(WhiteListIndexFields(List(
+      WhitelistIndexField(name = "role", `type` = "string"),
+      WhitelistIndexField(name = "errorcode", `type` = "long"))))
+    cfg
+  }
 
   def query(query: String): JsonArray = {
     val searchQuery = new Search.Builder(query)
@@ -74,4 +78,64 @@ class ElasticSearchTestClient {
     val obj = result.getJsonObject.get("hits").asInstanceOf[JsonObject]
     obj.get("hits").asInstanceOf[JsonArray]
   }
+
+  private val INDEX_TEMPLATE = """
+                                 |{
+                                 |    "template": "haystack-traces*",
+                                 |    "settings": {
+                                 |        "number_of_shards": 1,
+                                 |        "index.mapping.ignore_malformed": true,
+                                 |        "analysis": {
+                                 |            "normalizer": {
+                                 |                "lowercase_normalizer": {
+                                 |                    "type": "custom",
+                                 |                    "filter": ["lowercase"]
+                                 |                }
+                                 |            }
+                                 |        }
+                                 |    },
+                                 |    "aliases": {
+                                 |        "haystack-traces": {}
+                                 |    },
+                                 |    "mappings": {
+                                 |        "spans": {
+                                 |            "_source": {
+                                 |                "enabled": false
+                                 |            },
+                                 |            "properties": {
+                                 |                "spans": {
+                                 |                    "type": "nested"
+                                 |                }
+                                 |            },
+                                 |            "dynamic_templates": [
+                                 |                {
+                                 |                    "strings_as_keywords_1": {
+                                 |                        "match_mapping_type": "string",
+                                 |                        "match_pattern": "regex",
+                                 |                        "unmatch": "^(service|operation)$",
+                                 |                        "mapping": {
+                                 |                            "type": "keyword",
+                                 |                            "normalizer": "lowercase_normalizer",
+                                 |                            "doc_values": false
+                                 |                        }
+                                 |                    }
+                                 |                },
+                                 |                {
+                                 |                    "strings_as_keywords_2": {
+                                 |                        "match_mapping_type": "string",
+                                 |                        "match_pattern": "regex",
+                                 |                        "match": "^(service|operation)$",
+                                 |                        "mapping": {
+                                 |                            "type": "keyword",
+                                 |                            "normalizer": "lowercase_normalizer",
+                                 |                            "doc_values": true
+                                 |                        }
+                                 |                    }
+                                 |                }
+                                 |            ]
+                                 |        }
+                                 |    }
+                                 |}
+                               """.stripMargin
+
 }

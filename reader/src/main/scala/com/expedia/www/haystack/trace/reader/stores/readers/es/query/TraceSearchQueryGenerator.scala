@@ -26,8 +26,7 @@ import org.elasticsearch.search.builder.SearchSourceBuilder
 
 import scala.collection.JavaConversions._
 
-class TraceSearchQueryGenerator(indexNamePrefix: String, indexType: String) {
-  private val NESTED_DOC_NAME = "spans"
+class TraceSearchQueryGenerator(indexNamePrefix: String, indexType: String, nestedDocName: String) {
   private val START_TIME_FIELD = "startTime"
 
   def generate(request: TracesSearchRequest): Search = {
@@ -36,7 +35,7 @@ class TraceSearchQueryGenerator(indexNamePrefix: String, indexType: String) {
     require(request.getLimit > 0)
 
     new Search.Builder(buildQueryString(request))
-      .addIndex(s"$indexNamePrefix*") // TODO use index alias instead
+      .addIndex(s"$indexNamePrefix")
       .addType(indexType)
       .build()
   }
@@ -48,14 +47,14 @@ class TraceSearchQueryGenerator(indexNamePrefix: String, indexType: String) {
       .toString
   }
 
-  def createNestedQuery(request: TracesSearchRequest): NestedQueryBuilder = {
+  private def createNestedQuery(request: TracesSearchRequest): NestedQueryBuilder = {
     val nestedBoolQuery: BoolQueryBuilder = boolQuery()
 
-    // add all fields as match sub query
+    // add all fields as term sub query
     val subQueries: Seq[QueryBuilder] =
       for (field <- request.getFieldsList;
-           matchQuery = buildMatchQuery(field.getName, field.getValue); if matchQuery.isDefined) yield matchQuery.get
-    subQueries.foreach(nestedBoolQuery.filter(_))
+           termQuery = buildTermQuery(field.getName, field.getValue); if termQuery.isDefined) yield termQuery.get
+    subQueries.foreach(nestedBoolQuery.filter)
 
     // set time range window
     nestedBoolQuery
@@ -63,19 +62,19 @@ class TraceSearchQueryGenerator(indexNamePrefix: String, indexType: String) {
         .gte(request.getStartTime)
         .lte(request.getEndTime))
 
-    nestedQuery(NESTED_DOC_NAME, nestedBoolQuery, ScoreMode.Avg)
+    nestedQuery(nestedDocName, nestedBoolQuery, ScoreMode.Avg)
   }
 
-  private def buildMatchQuery(key: String, value: String): Option[MatchQueryBuilder] = {
+  private def buildTermQuery(key: String, value: String): Option[TermQueryBuilder] = {
     if (StringUtils.isBlank(value)) {
       None
     }
     else {
-      Some(matchQuery(withBaseDoc(key), value))
+      Some(termQuery(withBaseDoc(key), value))
     }
   }
 
   private def withBaseDoc(field: String) = {
-    s"$NESTED_DOC_NAME.$field"
+    s"$nestedDocName.$field"
   }
 }

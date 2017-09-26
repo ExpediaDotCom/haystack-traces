@@ -28,7 +28,7 @@ package com.expedia.www.haystack.trace.indexer.config.entities
   * @param readTimeoutMillis: read timeout in millis
   * @param maxInFlightBulkRequests: max bulk writes that can be run in parallel
   * @param maxDocsInBulk maximum number of index documents in a single bulk
-  * @param maxBulkDocSizeInKb maximum size (in kb) of a single bulk request
+  * @param maxBulkDocSizeInBytes maximum size (in bytes) of a single bulk request
   */
 case class ElasticSearchConfiguration(endpoint: String,
                                       indexTemplateJson: Option[String],
@@ -39,4 +39,4 @@ case class ElasticSearchConfiguration(endpoint: String,
                                       readTimeoutMillis: Int,
                                       maxInFlightBulkRequests: Int,
                                       maxDocsInBulk: Int,
-                                      maxBulkDocSizeInKb: Int)
+                                      maxBulkDocSizeInBytes: Int)

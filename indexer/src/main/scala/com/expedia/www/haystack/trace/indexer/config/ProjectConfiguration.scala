@@ -197,14 +197,14 @@ class ProjectConfiguration extends AutoCloseable {
       readTimeoutMillis = es.getInt("read.timeout.ms"),
       maxInFlightBulkRequests = es.getInt("bulk.max.inflight"),
       maxDocsInBulk = es.getInt("bulk.max.docs.count"),
-      maxBulkDocSizeInKb = es.getInt("bulk.max.docs.size.kb"))
+      maxBulkDocSizeInBytes = es.getInt("bulk.max.docs.size.kb") * 1000)
   }
 
   /**
     * configuration that contains list of tags that should be indexed for a span
     */
   val indexConfig: WhitelistIndexFieldConfiguration = {
-    val indexConfig = WhitelistIndexFieldConfiguration(Nil)
+    val indexConfig = WhitelistIndexFieldConfiguration()
     indexConfig.reloadConfigTableName = Option(config.getConfig("reload.tables").getString("index.fields.config"))
     indexConfig
   }

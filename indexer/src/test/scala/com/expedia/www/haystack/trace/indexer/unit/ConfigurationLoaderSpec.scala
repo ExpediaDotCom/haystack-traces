@@ -87,7 +87,7 @@ class ConfigurationLoaderSpec extends FunSpec with Matchers {
       elastic.endpoint shouldBe "http://elasticsearch:9200"
       elastic.maxInFlightBulkRequests shouldBe 10
       elastic.maxDocsInBulk shouldBe 100
-      elastic.maxBulkDocSizeInKb shouldBe 1000
+      elastic.maxBulkDocSizeInBytes shouldBe 1000000
       elastic.indexTemplateJson shouldBe Some("some_template_json")
       elastic.consistencyLevel shouldBe "one"
       elastic.readTimeoutMillis shouldBe 5000

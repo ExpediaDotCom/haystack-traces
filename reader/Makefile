@@ -33,7 +33,7 @@ prepare_integration_test_env: docker_build
 		--network-alias=haystack-trace-reader \
 		-v $(PWD)/build/integration-tests/docker-app.conf:/docker-app.conf \
 		-e SERVICE_DEBUG_ON=$(SERVICE_DEBUG_ON) \
-		-e OVERRIDES_CONFIG_PATH=/docker-app.conf \
+		-e HAYSTACK_OVERRIDES_CONFIG_PATH=/docker-app.conf \
 		$(DOCKER_IMAGE_NAME)
 
 integration_test: prepare_integration_test_env

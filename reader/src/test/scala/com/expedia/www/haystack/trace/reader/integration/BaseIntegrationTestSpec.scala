@@ -48,37 +48,49 @@ trait BaseIntegrationTestSpec extends FunSpec with GivenWhenThen with Matchers w
   private val INDEX_TEMPLATE =
     s"""
        |{
-       |  "template": "haystack-traces*",
-       |  "settings": {
-       |    "number_of_shards": 1
-       |  },
-       |  "aliases":{
-       |    "haystack-traces": {}
-       |  },
-       |  "mappings": {
-       |    "_default_": {
-       |      "dynamic_templates": [
-       |        {
-       |          "strings": {
-       |            "match_mapping_type": "string",
-       |            "mapping": {
-       |              "type": "keyword"
-       |            }
-       |          }
-       |        }
-       |      ]
+       |    "template": "haystack-traces*",
+       |    "settings": {
+       |        "number_of_shards": 1
        |    },
-       |    "spans": {
-       |      "_source": {
-       |        "enabled": true
-       |      },
-       |      "properties": {
+       |    "aliases":{
+       |      "haystack-traces": {}
+       |    },
+       |    "mappings": {
        |        "spans": {
-       |          "type": "nested"
+       |            "_source": {
+       |                "enabled": false
+       |            },
+       |            "properties": {
+       |                "spans": {
+       |                    "type": "nested"
+       |                }
+       |            },
+       |            "dynamic_templates": [
+       |                {
+       |                    "strings_as_keywords_1": {
+       |                        "match_mapping_type": "string",
+       |                        "match_pattern": "regex",
+       |                        "unmatch": "^(service|operation)$$",
+       |                        "mapping": {
+       |                            "type": "keyword",
+       |                            "doc_values": false
+       |                        }
+       |                    }
+       |                },
+       |                {
+       |                    "strings_as_keywords_2": {
+       |                        "match_mapping_type": "string",
+       |                        "match_pattern": "regex",
+       |                        "match": "^(service|operation)$$",
+       |                        "mapping": {
+       |                            "type": "keyword",
+       |                            "doc_values": true
+       |                        }
+       |                    }
+       |                }
+       |            ]
        |        }
-       |      }
        |    }
-       |  }
        |}
  """.stripMargin
 
@@ -171,7 +183,7 @@ trait BaseIntegrationTestSpec extends FunSpec with GivenWhenThen with Matchers w
       .setParameter(Parameters.OP_TYPE, "create")
       .build)
 
-    // wait for few sec to let ES refresh its index
+    // wait for few sec to let ES refresh its index and app to reload its config
     Thread.sleep(5000)
   }
 

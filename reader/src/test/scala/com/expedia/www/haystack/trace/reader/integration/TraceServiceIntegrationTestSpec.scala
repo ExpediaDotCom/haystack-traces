@@ -212,7 +212,7 @@ class TraceServiceIntegrationTestSpec extends BaseIntegrationTestSpec {
   }
 
   describe("TraceReader.getFieldNames") {
-    ignore("should return names of enabled fields") {
+    it("should return names of enabled fields") {
       Given("trace in cassandra and elasticsearch")
       val field1 = "abc"
       val field2 = "def"

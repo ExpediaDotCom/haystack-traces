@@ -26,7 +26,6 @@ import com.expedia.www.haystack.trace.reader.metrics.MetricsSupport
 import com.expedia.www.haystack.trace.reader.stores.readers.cassandra.CassandraReader
 import com.expedia.www.haystack.trace.reader.stores.readers.es.ElasticSearchReader
 import com.expedia.www.haystack.trace.reader.stores.readers.es.query.{FieldValuesQueryGenerator, TraceSearchQueryGenerator}
-import io.searchbox.client.JestResult
 import io.searchbox.core.SearchResult
 import org.slf4j.LoggerFactory
 
@@ -39,10 +38,12 @@ class CassandraEsTraceStore(cassandraConfiguration: CassandraConfiguration,
                             indexConfiguration: WhitelistIndexFieldConfiguration)
                            (implicit val executor: ExecutionContextExecutor)
   extends TraceStore with MetricsSupport {
-  private val ES_AGGREGATIONS_FIELD_NAME = "aggregations"
-  private val ES_BUCKETS_FIELD_NAME = "buckets"
-  private val ES_KEY_FIELD_NAME = "key"
-  private val NESTED_DOC_NAME = "spans"
+  private val ES_FIELD_AGGREGATIONS = "aggregations"
+  private val ES_FIELD_BUCKETS = "buckets"
+  private val ES_FIELD_KEY = "key"
+  private val ES_FIELD_HITS = "hits"
+  private val ES_FIELD_ID = "_id"
+  private val ES_NESTED_DOC_NAME = "spans"
 
   private val LOGGER = LoggerFactory.getLogger(classOf[ElasticSearchReader])
   private val traceRejected = metricRegistry.meter("search.trace.rejected")
@@ -52,8 +53,8 @@ class CassandraEsTraceStore(cassandraConfiguration: CassandraConfiguration,
 
   private val idRegex = """([a-zA-z0-9-]*)_([a-zA-z0-9]*)""".r
 
-  private val traceSearchQueryGenerator = new TraceSearchQueryGenerator(esConfiguration.indexNamePrefix, esConfiguration.indexType, NESTED_DOC_NAME)
-  private val fieldValuesQueryGenerator = new FieldValuesQueryGenerator(esConfiguration.indexNamePrefix, esConfiguration.indexType, NESTED_DOC_NAME)
+  private val traceSearchQueryGenerator = new TraceSearchQueryGenerator(esConfiguration.indexNamePrefix, esConfiguration.indexType, ES_NESTED_DOC_NAME)
+  private val fieldValuesQueryGenerator = new FieldValuesQueryGenerator(esConfiguration.indexNamePrefix, esConfiguration.indexType, ES_NESTED_DOC_NAME)
 
   override def searchTraces(request: TracesSearchRequest): Future[List[Trace]] = {
     esReader
@@ -63,8 +64,12 @@ class CassandraEsTraceStore(cassandraConfiguration: CassandraConfiguration,
 
   private def extractTraces(result: SearchResult): Future[List[Trace]] = {
     // go through each hit and fetch trace for parsed traceId
-    val traceFutures = result.getHits(classOf[java.util.Map[String, String]]).toList
-      .flatMap(hit => fetchTrace(hit.source))
+    val traceFutures = result
+      .getJsonObject.get(ES_FIELD_HITS)
+      .getAsJsonObject.get(ES_FIELD_HITS)
+      .getAsJsonArray.toList
+      .map(doc => doc.getAsJsonObject.get(ES_FIELD_ID).getAsString)
+      .flatMap(id => fetchTrace(id))
 
     // wait for all Futures to complete and then map them to Traces
     Future
@@ -72,8 +77,8 @@ class CassandraEsTraceStore(cassandraConfiguration: CassandraConfiguration,
       .map(_.flatMap(retrieveTriedTrace))
   }
 
-  private def fetchTrace(sourceMap: util.Map[String, String]): Option[Future[Trace]] = {
-    parseTraceId(sourceMap) match {
+  private def fetchTrace(id: String): Option[Future[Trace]] = {
+    parseTraceId(id) match {
       case Success(traceId) =>
         Some(getTrace(traceId))
       case Failure(ex) =>
@@ -87,9 +92,7 @@ class CassandraEsTraceStore(cassandraConfiguration: CassandraConfiguration,
     cassandraReader.readTrace(traceId)
   }
 
-  private def parseTraceId(sourceMap: util.Map[String, String]): Try[String] = {
-    val docId = sourceMap.get(JestResult.ES_METADATA_ID)
-
+  private def parseTraceId(docId: String): Try[String] = {
     docId match {
       case idRegex(traceId, _) => Success(traceId)
       case _ => Failure(InvalidTraceIdInDocument(docId))
@@ -125,11 +128,11 @@ class CassandraEsTraceStore(cassandraConfiguration: CassandraConfiguration,
   private def extractFieldValues(result: SearchResult, fieldName: String): List[String] =
     result
       .getJsonObject
-      .getAsJsonObject(ES_AGGREGATIONS_FIELD_NAME)
-      .getAsJsonObject(NESTED_DOC_NAME)
+      .getAsJsonObject(ES_FIELD_AGGREGATIONS)
+      .getAsJsonObject(ES_NESTED_DOC_NAME)
       .getAsJsonObject(fieldName)
-      .getAsJsonArray(ES_BUCKETS_FIELD_NAME)
-      .map(element => element.getAsJsonObject.get(ES_KEY_FIELD_NAME).getAsString)
+      .getAsJsonArray(ES_FIELD_BUCKETS)
+      .map(element => element.getAsJsonObject.get(ES_FIELD_KEY).getAsString)
       .toList
 
   override def close(): Unit = {

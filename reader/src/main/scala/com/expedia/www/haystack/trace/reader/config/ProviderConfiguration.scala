@@ -27,7 +27,7 @@ import com.typesafe.config.Config
 
 import scala.collection.JavaConversions._
 
-object ProviderConfiguration {
+class ProviderConfiguration {
   private val config: Config = ConfigurationLoader.loadAppConfig
 
   val serviceConfig: ServiceConfiguration = {

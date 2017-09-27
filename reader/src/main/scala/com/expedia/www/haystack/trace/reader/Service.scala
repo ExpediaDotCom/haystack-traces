@@ -19,7 +19,7 @@ package com.expedia.www.haystack.trace.reader
 import java.io.File
 
 import com.codahale.metrics.JmxReporter
-import com.expedia.www.haystack.trace.reader.config.ProviderConfiguration._
+import com.expedia.www.haystack.trace.reader.config.ProviderConfiguration
 import com.expedia.www.haystack.trace.reader.metrics.MetricsSupport
 import com.expedia.www.haystack.trace.reader.services.TraceService
 import com.expedia.www.haystack.trace.reader.stores.CassandraEsTraceStore
@@ -45,30 +45,40 @@ object Service extends MetricsSupport {
   }
 
   private def startService(): Unit = {
-    val store = new CassandraEsTraceStore(cassandraConfig, elasticSearchConfig, indexConfig)(executor)
+    try {
+      val config = new ProviderConfiguration
+      val store = new CassandraEsTraceStore(config.cassandraConfig, config.elasticSearchConfig, config.indexConfig)(executor)
 
-    val serverBuilder = NettyServerBuilder
-      .forPort(serviceConfig.port)
-      .addService(new TraceService(store)(executor))
+      val serviceConfig = config.serviceConfig
 
-    // enable ssl if enabled
-    if(serviceConfig.ssl.enabled) {
-      serverBuilder.useTransportSecurity(new File(serviceConfig.ssl.certChainFilePath), new File(serviceConfig.ssl.privateKeyPath))
-    }
+      val serverBuilder = NettyServerBuilder
+        .forPort(serviceConfig.port)
+        .addService(new TraceService(store, config.traceTransformerConfig)(executor))
 
-    val server = serverBuilder.build().start()
-
-    LOGGER.info(s"server started, listening on ${serviceConfig.port}")
-
-    Runtime.getRuntime.addShutdownHook(new Thread() {
-      override def run(): Unit = {
-        LOGGER.info("shutting down gRPC server since JVM is shutting down")
-        server.shutdown()
-        store.close()
-        LOGGER.info("server shut down")
+      // enable ssl if enabled
+      if (serviceConfig.ssl.enabled) {
+        serverBuilder.useTransportSecurity(new File(serviceConfig.ssl.certChainFilePath), new File(serviceConfig.ssl.privateKeyPath))
       }
-    })
 
-    server.awaitTermination()
+      val server = serverBuilder.build().start()
+
+      LOGGER.info(s"server started, listening on ${serviceConfig.port}")
+
+      Runtime.getRuntime.addShutdownHook(new Thread() {
+        override def run(): Unit = {
+          LOGGER.info("shutting down gRPC server since JVM is shutting down")
+          server.shutdown()
+          store.close()
+          LOGGER.info("server shut down")
+        }
+      })
+
+      server.awaitTermination()
+    } catch {
+      case ex: Exception => {
+        LOGGER.error("Fatal error observed while running the app", ex)
+        System.exit(1)
+      }
+    }
   }
 }

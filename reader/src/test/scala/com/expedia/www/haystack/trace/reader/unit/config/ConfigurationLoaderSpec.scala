@@ -22,7 +22,7 @@ import com.expedia.www.haystack.trace.reader.unit.BaseUnitTestSpec
 class ConfigurationLoaderSpec extends BaseUnitTestSpec {
   describe("ConfigurationLoader") {
     it("should load the service config from base.conf") {
-      val serviceConfig: ServiceConfiguration = ProviderConfiguration.serviceConfig
+      val serviceConfig: ServiceConfiguration = new ProviderConfiguration().serviceConfig
       serviceConfig.port shouldBe 8080
       serviceConfig.ssl.enabled shouldBe true
       serviceConfig.ssl.certChainFilePath shouldBe "/ssl/cert"
@@ -30,7 +30,7 @@ class ConfigurationLoaderSpec extends BaseUnitTestSpec {
     }
 
     it("should load the trace transformers") {
-      val traceConfig: TraceTransformersConfiguration = ProviderConfiguration.traceTransformerConfig
+      val traceConfig: TraceTransformersConfiguration = new ProviderConfiguration().traceTransformerConfig
       traceConfig.transformers.length should be >= 1
     }
   }

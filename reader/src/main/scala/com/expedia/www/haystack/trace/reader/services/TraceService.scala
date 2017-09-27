@@ -18,13 +18,17 @@ package com.expedia.www.haystack.trace.reader.services
 
 import com.expedia.open.tracing.Span
 import com.expedia.open.tracing.api._
+import com.expedia.www.haystack.trace.reader.config.entities.TraceTransformersConfiguration
 import com.expedia.www.haystack.trace.reader.readers.TraceReader
 import com.expedia.www.haystack.trace.reader.stores.TraceStore
 import io.grpc.stub.StreamObserver
 
 import scala.concurrent.ExecutionContextExecutor
 
-class TraceService(traceStore: TraceStore)(implicit val executor: ExecutionContextExecutor) extends TraceReaderGrpc.TraceReaderImplBase {
+class TraceService(traceStore: TraceStore,
+                   transformersConfig: TraceTransformersConfiguration)
+                  (implicit val executor: ExecutionContextExecutor) extends TraceReaderGrpc.TraceReaderImplBase {
+
   private val handleGetTraceResponse = new GrpcHandler(TraceReaderGrpc.METHOD_GET_TRACE.getFullMethodName)
   private val handleGetRawTraceResponse = new GrpcHandler(TraceReaderGrpc.METHOD_GET_RAW_TRACE.getFullMethodName)
   private val handleGetRawSpanResponse = new GrpcHandler(TraceReaderGrpc.METHOD_GET_RAW_SPAN.getFullMethodName)
@@ -32,7 +36,7 @@ class TraceService(traceStore: TraceStore)(implicit val executor: ExecutionConte
   private val handleFieldNamesResponse = new GrpcHandler(TraceReaderGrpc.METHOD_GET_FIELD_NAMES.getFullMethodName)
   private val handleFieldValuesResponse = new GrpcHandler(TraceReaderGrpc.METHOD_GET_FIELD_VALUES.getFullMethodName)
 
-  private val traceReader = new TraceReader(traceStore)
+  private val traceReader = new TraceReader(traceStore, transformersConfig)
 
   /**
     * endpoint for fetching a trace

@@ -27,8 +27,12 @@ import io.searchbox.client.config.HttpClientConfig
 import io.searchbox.client.{JestClient, JestClientFactory}
 import io.searchbox.core.Search
 import io.searchbox.indices.DeleteIndex
+import org.json4s.DefaultFormats
+import org.json4s.jackson.Serialization
 
 class ElasticSearchTestClient {
+  implicit val formats = DefaultFormats
+
   private val ELASTIC_SEARCH_ENDPOINT = "http://elasticsearch:9200"
   private val INDEX_NAME_PREFIX = "haystack-traces"
   private val INDEX_TYPE = "spans"
@@ -63,9 +67,9 @@ class ElasticSearchTestClient {
 
   def indexingConfig: WhitelistIndexFieldConfiguration = {
     val cfg = WhitelistIndexFieldConfiguration()
-    cfg.setWhitelistFields(WhiteListIndexFields(List(
-      WhitelistIndexField(name = "role", `type` = "string"),
-      WhitelistIndexField(name = "errorcode", `type` = "long"))))
+    val cfgJsonData = Serialization.write(WhiteListIndexFields(
+      List(WhitelistIndexField(name = "role", `type` = "string"), WhitelistIndexField(name = "errorcode", `type` = "long"))))
+    cfg.onReload(cfgJsonData)
     cfg
   }
 

@@ -17,11 +17,16 @@
 
 package com.expedia.www.haystack.trace.commons.config.entities
 
+import java.util.concurrent.ConcurrentHashMap
+import java.util.function.Predicate
+
 import com.expedia.www.haystack.trace.commons.config.reload.Reloadable
 import org.apache.commons.lang3.StringUtils
 import org.json4s.DefaultFormats
 import org.json4s.jackson.Serialization
 import org.slf4j.LoggerFactory
+
+import scala.collection.JavaConversions._
 
 case class WhitelistIndexField(name: String, `type`: String, enabled: Boolean = true)
 case class WhiteListIndexFields(fields: List[WhitelistIndexField])
@@ -32,13 +37,9 @@ case class WhitelistIndexFieldConfiguration() extends Reloadable {
   implicit val formats = DefaultFormats
 
   @volatile
-  private var whitelistFields: WhiteListIndexFields = WhiteListIndexFields(Nil)
-
-  @volatile
   private var currentVersion: Int = 0
 
-  @volatile
-  var indexableTagsByTagName: Map[String, WhitelistIndexField] = groupTagsWithKey(whitelistFields)
+  val indexFieldMap = new ConcurrentHashMap[String, WhitelistIndexField]()
 
   var reloadConfigTableName: Option[String] = None
 
@@ -60,12 +61,18 @@ case class WhitelistIndexFieldConfiguration() extends Reloadable {
     }
   }
 
-  /**
-    * convert the list of tags as key value pair, key being the indexField name and value is indexField itself
-    * @return
-    */
-  private def groupTagsWithKey(newWhitelistFields: WhiteListIndexFields): Map[String, WhitelistIndexField] = {
-    newWhitelistFields.fields.groupBy(_.name).mapValues(_.head)
+  private def updateIndexFieldMap(newWhitelistFields: WhiteListIndexFields): Unit = {
+    // remove the fields from the map if they are not present in the newly provided whitelist set
+    val fieldNames = newWhitelistFields.fields.map(_.name)
+
+    indexFieldMap.values().removeIf(new Predicate[WhitelistIndexField] {
+      override def test(t: WhitelistIndexField): Boolean = !fieldNames.contains(t.name)
+    })
+
+    // add the fields in the map
+    for(field <- newWhitelistFields.fields) {
+      indexFieldMap.put(field.name, field)
+    }
   }
 
   /**
@@ -76,16 +83,15 @@ case class WhitelistIndexFieldConfiguration() extends Reloadable {
   private def hasConfigChanged(newConfigData: String): Boolean = newConfigData.hashCode != currentVersion
 
   /**
-    * public method is exposed only for testing
+    * update the indexFieldMap
     * @param fields: list of fields that needs to be indexed
     */
-  def setWhitelistFields(fields: WhiteListIndexFields): Unit = {
-    whitelistFields = fields
-    indexableTagsByTagName = groupTagsWithKey(fields)
+  private def setWhitelistFields(fields: WhiteListIndexFields): Unit = {
+    updateIndexFieldMap(fields)
   }
 
   /**
     * @return the whitelist index fields
     */
-  def getWhitelistFields: WhiteListIndexFields = whitelistFields
+  def whitelistIndexFields: List[WhitelistIndexField] = indexFieldMap.values().toList
 }

@@ -16,7 +16,6 @@ ADD https://github.com/jmxtrans/jmxtrans-agent/releases/download/${JMXTRANS_AGEN
 
 WORKDIR ${APP_HOME}
 
-EXPOSE 80
-EXPOSE 5005
+EXPOSE 8080
 
 ENTRYPOINT ["./start-app.sh"]

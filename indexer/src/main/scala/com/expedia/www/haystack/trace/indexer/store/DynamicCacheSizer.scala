@@ -17,27 +17,24 @@
 
 package com.expedia.www.haystack.trace.indexer.store
 
-import java.util.concurrent.atomic.AtomicReference
-import java.util.function.UnaryOperator
-
 import com.expedia.www.haystack.trace.indexer.store.traits.CacheSizeObserver
 
 import scala.collection.mutable
-import scala.collection.mutable.ListBuffer
 
 class DynamicCacheSizer(val minTracesPerCache: Int, maxEntriesAcrossCaches: Int) {
 
-  private val cacheObservers = new AtomicReference[mutable.ListBuffer[CacheSizeObserver]](mutable.ListBuffer[CacheSizeObserver]())
+  private val cacheObservers = mutable.HashSet[CacheSizeObserver]()
 
   /**
     * adds cache observer
+    *
     * @param observer state store acts as an observer
     */
   def addCacheObserver(observer: CacheSizeObserver): Unit = {
-    val updatedObservers = cacheObservers.updateAndGet(new UnaryOperator[ListBuffer[CacheSizeObserver]] {
-      override def apply(observers: ListBuffer[CacheSizeObserver]) = observers += observer
-    })
-    evaluateCacheSizing(updatedObservers)
+    this.synchronized {
+      cacheObservers.add(observer)
+      evaluateNewCacheSizeAndNotify(cacheObservers)
+    }
   }
 
   /**
@@ -45,29 +42,28 @@ class DynamicCacheSizer(val minTracesPerCache: Int, maxEntriesAcrossCaches: Int)
     * @param observer state store acts as an observer
     */
   def removeCacheObserver(observer: CacheSizeObserver): Unit = {
-    val updatedObservers = cacheObservers.updateAndGet(new UnaryOperator[ListBuffer[CacheSizeObserver]] {
-      override def apply(observers: ListBuffer[CacheSizeObserver]) = observers -= observer
-    })
-    evaluateCacheSizing(updatedObservers)
-  }
-
-  /**
-    * notify the observers with a change in their cache size
-    * @param observers list of observers
-    * @param newMaxEntriesPerCache new cache size
-    */
-  private def notifyObservers(observers: mutable.ListBuffer[CacheSizeObserver], newMaxEntriesPerCache: Int): Unit = {
-    observers.foreach(obs => obs.onCacheSizeChange(newMaxEntriesPerCache))
+    this.synchronized {
+      cacheObservers.remove(observer)
+      evaluateNewCacheSizeAndNotify(cacheObservers)
+    }
   }
 
   /**
     * Cache sizing strategy is simple, distribute the maxEntriesAcrossCaches across all observers
     * @param observers list of changed observers
     */
-  private def evaluateCacheSizing(observers: mutable.ListBuffer[CacheSizeObserver]): Unit = {
+  private def evaluateNewCacheSizeAndNotify(observers: mutable.HashSet[CacheSizeObserver]): Unit = {
+    /**
+      * notify the observers with a change in their cache size
+      * @param newMaxEntriesPerCache new cache size
+      */
+    def notifyObservers(newMaxEntriesPerCache: Int): Unit = {
+      observers.foreach(obs => obs.onCacheSizeChange(newMaxEntriesPerCache))
+    }
+
     if(observers.nonEmpty) {
       val newMaxEntriesPerCache = Math.floor(maxEntriesAcrossCaches / observers.size).toInt
-      notifyObservers(observers, newMaxEntriesPerCache)
+      notifyObservers(newMaxEntriesPerCache)
     }
   }
 }

@@ -23,7 +23,7 @@ import com.expedia.open.tracing.buffer.SpanBuffer
 import com.expedia.open.tracing.{Span, Tag}
 import com.expedia.www.haystack.trace.commons.clients.es.document.Document.{TagKey, TagValue}
 import com.expedia.www.haystack.trace.commons.clients.es.document.{Document, TraceIndexDoc}
-import com.expedia.www.haystack.trace.commons.config.entities.{WhitelistIndexField, WhitelistIndexFieldConfiguration}
+import com.expedia.www.haystack.trace.commons.config.entities.WhitelistIndexFieldConfiguration
 import com.expedia.www.haystack.trace.indexer.metrics.MetricsSupport
 import org.apache.commons.lang3.StringUtils
 
@@ -52,9 +52,8 @@ class IndexDocumentGenerator(config: WhitelistIndexFieldConfiguration) extends M
     // We maintain a white list of tags that are to be indexed. The whitelist is maintained as a confguration
     // in an external database (outside this app boundary). However, the app periodically reads this whitelist config
     // and applies it to the new spans that are read.
-    val whitelistTagKeys = config.indexableTagsByTagName
 
-    val spanIndices = for(sp <- spanBuffer.getChildSpansList; if isValidForIndex(sp)) yield transform(sp, whitelistTagKeys)
+    val spanIndices = for(sp <- spanBuffer.getChildSpansList; if isValidForIndex(sp)) yield transform(sp)
     val docId = s"${traceId}_${randomCharStream.get().take(ELASTIC_SEARCH_DOC_ID_SUFFIX_LENGTH).mkString}"
     if (spanIndices.nonEmpty) Some(Document(docId, TraceIndexDoc(duration(spanBuffer), spanIndices))) else None
   }
@@ -78,15 +77,15 @@ class IndexDocumentGenerator(config: WhitelistIndexFieldConfiguration) extends M
     * @param span a span object
     * @return span index document as a map
     */
-  private def transform(span: Span, whitelistTagKeys: Map[String, WhitelistIndexField]): mutable.Map[String, Any] = {
+  private def transform(span: Span): mutable.Map[String, Any] = {
     val spanIndexDoc = mutable.Map[String, Any]()
 
     def addTagKeys(tags: java.util.List[Tag]): Unit = {
       for (tag <- tags;
-           indexField = whitelistTagKeys.get(tag.getKey)
-           if indexField.isDefined && indexField.get.enabled;
+           indexField = config.indexFieldMap.get(tag.getKey)
+           if indexField != null && indexField.enabled;
            (k, v) = transformTagToKVPair(tag);
-           convertedToIndexFieldType = adjustTagValueToIndexFieldType(indexField.get.`type`, v)
+           convertedToIndexFieldType = adjustTagValueToIndexFieldType(indexField.`type`, v)
            if convertedToIndexFieldType.isDefined) {
         val tagValues = spanIndexDoc.getOrElseUpdate(k, mutable.ListBuffer[TagValue]()).asInstanceOf[mutable.ListBuffer[TagValue]]
         tagValues += convertedToIndexFieldType.get

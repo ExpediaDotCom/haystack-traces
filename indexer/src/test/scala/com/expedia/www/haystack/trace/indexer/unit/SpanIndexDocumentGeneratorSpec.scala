@@ -21,9 +21,12 @@ import com.expedia.open.tracing.buffer.SpanBuffer
 import com.expedia.open.tracing.{Log, Span, Tag}
 import com.expedia.www.haystack.trace.commons.config.entities.{WhiteListIndexFields, WhitelistIndexField, WhitelistIndexFieldConfiguration}
 import com.expedia.www.haystack.trace.indexer.writers.es.IndexDocumentGenerator
+import org.json4s.DefaultFormats
+import org.json4s.jackson.Serialization
 import org.scalatest.{FunSpec, Matchers}
 
 class SpanIndexDocumentGeneratorSpec extends FunSpec with Matchers {
+  implicit val formats = DefaultFormats
 
   val TRACE_ID = "trace_id"
   describe("Span to IndexDocument Generator") {
@@ -75,7 +78,7 @@ class SpanIndexDocumentGeneratorSpec extends FunSpec with Matchers {
         WhitelistIndexField(name = "errorCode", `type` = "long"))
 
       val whitelistConfig = WhitelistIndexFieldConfiguration()
-      whitelistConfig.setWhitelistFields(WhiteListIndexFields(indexableTags))
+      whitelistConfig.onReload(Serialization.write(WhiteListIndexFields(indexableTags)))
       val generator = new IndexDocumentGenerator(whitelistConfig)
 
       val tag_1 = Tag.newBuilder().setKey("role").setType(Tag.TagType.STRING).setVStr("haystack").build()
@@ -114,7 +117,7 @@ class SpanIndexDocumentGeneratorSpec extends FunSpec with Matchers {
         WhitelistIndexField(name = "role", `type` = "string", enabled = false),
         WhitelistIndexField(name = "errorCode", `type` = "long"))
       val whitelistConfig = WhitelistIndexFieldConfiguration()
-      whitelistConfig.setWhitelistFields(WhiteListIndexFields(indexableTags))
+      whitelistConfig.onReload(Serialization.write(WhiteListIndexFields(indexableTags)))
       val generator = new IndexDocumentGenerator(whitelistConfig)
 
       val tag_1 = Tag.newBuilder().setKey("role").setType(Tag.TagType.STRING).setVStr("haystack").build()
@@ -145,7 +148,7 @@ class SpanIndexDocumentGeneratorSpec extends FunSpec with Matchers {
       val indexableTags = List(
         WhitelistIndexField(name = "errorCode", `type` = "long"))
       val whitelistConfig = WhitelistIndexFieldConfiguration()
-      whitelistConfig.setWhitelistFields(WhiteListIndexFields(indexableTags))
+      whitelistConfig.onReload(Serialization.write(WhiteListIndexFields(indexableTags)))
       val generator = new IndexDocumentGenerator(whitelistConfig)
 
       val tag_1 = Tag.newBuilder().setKey("errorCode").setType(Tag.TagType.LONG).setVLong(5).build()
@@ -177,7 +180,7 @@ class SpanIndexDocumentGeneratorSpec extends FunSpec with Matchers {
         WhitelistIndexField(name = "role", `type` = "string"),
         WhitelistIndexField(name = "errorCode", `type` = "long"))
       val whitelistConfig = WhitelistIndexFieldConfiguration()
-      whitelistConfig.setWhitelistFields(WhiteListIndexFields(indexableTags))
+      whitelistConfig.onReload(Serialization.write(WhiteListIndexFields(indexableTags)))
       val generator = new IndexDocumentGenerator(whitelistConfig)
 
       val tag_1 = Tag.newBuilder().setKey("role").setType(Tag.TagType.STRING).setVStr("haystack").build()
@@ -211,7 +214,7 @@ class SpanIndexDocumentGeneratorSpec extends FunSpec with Matchers {
         WhitelistIndexField(name = "exception", `type` = "string"))
 
       val whitelistConfig = WhitelistIndexFieldConfiguration()
-      whitelistConfig.setWhitelistFields(WhiteListIndexFields(indexableTags))
+      whitelistConfig.onReload(Serialization.write(WhiteListIndexFields(indexableTags)))
       val generator = new IndexDocumentGenerator(whitelistConfig)
 
       val tag_1 = Tag.newBuilder().setKey("role").setType(Tag.TagType.STRING).setVStr("haystack").build()

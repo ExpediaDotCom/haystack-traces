@@ -35,8 +35,9 @@ class ThreadSafeBulkBuilderSpec extends FunSpec with Matchers {
       bulkOp shouldBe 'empty
 
       bulkOp = builder.addAction(new Index.Builder("source3").build(), 10, forceBulkCreate = false)
-      val bulkJson = bulkOp.get.getData(gson)
-      bulkJson shouldEqual """{"index":{}}
+      var bulkJson = bulkOp.get.getData(gson)
+      bulkJson shouldEqual
+        """{"index":{}}
                              |source1
                              |{"index":{}}
                              |source2
@@ -44,11 +45,17 @@ class ThreadSafeBulkBuilderSpec extends FunSpec with Matchers {
                              |source3
                              |""".stripMargin
 
-      val currentBuilder = builder.bulkBuilder.build().getData(gson)
-      builder.docsCount shouldBe 0
-      builder.totalSizeInBytes shouldBe 0
-      currentBuilder shouldBe 'empty
-    }
+      builder.getDocsCount shouldBe 0
+      builder.getTotalSizeInBytes shouldBe 0
+
+      bulkOp = builder.addAction(new Index.Builder("source4").build(), 10, forceBulkCreate = true)
+      bulkJson = bulkOp.get.
+        getData(gson)
+      bulkJson shouldEqual
+        """{"index":{}}
+          |source4
+          |""".stripMargin
+     }
 
     it("should return the bulk after size of the index operations exceed the configured threshold") {
       val builder = new ThreadSafeBulkBuilder(maxDocuments = 10, 100)
@@ -68,10 +75,8 @@ class ThreadSafeBulkBuilderSpec extends FunSpec with Matchers {
                              |source3
                              |""".stripMargin
 
-      val currentBuilder = builder.bulkBuilder.build().getData(gson)
-      currentBuilder shouldBe 'empty
-      builder.docsCount shouldBe 0
-      builder.totalSizeInBytes shouldBe 0
+      builder.getDocsCount shouldBe 0
+      builder.getTotalSizeInBytes shouldBe 0
     }
 
     it("should return the bulk if forceBulkCreate attribute is set") {
@@ -97,10 +102,8 @@ class ThreadSafeBulkBuilderSpec extends FunSpec with Matchers {
                              |source4
                              |""".stripMargin
 
-      val currentBuilder = builder.bulkBuilder.build().getData(gson)
-      currentBuilder shouldBe 'empty
-      builder.docsCount shouldBe 0
-      builder.totalSizeInBytes shouldBe 0
+      builder.getDocsCount shouldBe 0
+      builder.getTotalSizeInBytes shouldBe 0
     }
   }
 }

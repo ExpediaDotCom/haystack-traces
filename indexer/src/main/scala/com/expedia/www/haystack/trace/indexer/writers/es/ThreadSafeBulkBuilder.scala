@@ -24,9 +24,9 @@ import io.searchbox.core.{Bulk, DocumentResult}
   * this is a thread safe builder to build index actions
   */
 class ThreadSafeBulkBuilder(maxDocuments: Int, maxDocSizeInBytes: Int) {
-  var bulkBuilder = new Bulk.Builder()
-  var docsCount = 0
-  var totalSizeInBytes = 0
+  private var bulkBuilder = new Bulk.Builder()
+  private var docsCount = 0
+  private var totalSizeInBytes = 0
 
   /**
     * add the action in the bulk builder, returns bulk if any of the following condition is true
@@ -63,4 +63,7 @@ class ThreadSafeBulkBuilder(maxDocuments: Int, maxDocSizeInBytes: Int) {
     totalSizeInBytes = 0
     bulk
   }
+
+  def getDocsCount: Int = docsCount
+  def getTotalSizeInBytes: Int = totalSizeInBytes
 }

@@ -20,6 +20,7 @@ package com.expedia.www.haystack.trace.indexer.unit
 import com.expedia.open.tracing.buffer.SpanBuffer
 import com.expedia.open.tracing.{Span, Tag}
 import com.expedia.www.haystack.trace.indexer.serde.SpanBufferSerializer
+import com.google.common.collect.Maps
 import org.scalatest.{FunSpec, Matchers}
 
 class SpanBufferSerdeSpec extends FunSpec with Matchers {
@@ -46,9 +47,12 @@ class SpanBufferSerdeSpec extends FunSpec with Matchers {
 
   describe("SpanBuffer Serde") {
     it("should serialize and deserialize a buffered span object") {
+      val serializer = new SpanBufferSerializer()
+      serializer.configure(Maps.newHashMap(), isKey = false)
       val serializedBytes = new SpanBufferSerializer().serialize(TOPIC, newSpanBuffer)
       serializedBytes should not be null
       serializedBytes.length should be >0
+      serializer.close()
     }
 
     it("should return null on serializing invalid span buffer bytes") {

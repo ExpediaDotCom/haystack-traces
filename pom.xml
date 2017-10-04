@@ -38,6 +38,7 @@
         <pegdown.version>1.6.0</pegdown.version>
         <scalatest.version>3.0.3</scalatest.version>
         <grpc.version>1.4.0</grpc.version>
+        <scoverage.plugin.version>1.3.0</scoverage.plugin.version>
     </properties>
 
     <dependencyManagement>
@@ -216,6 +217,7 @@
     </dependencies>
 
     <build>
+        <sourceDirectory>src/main/scala</sourceDirectory>
         <resources>
             <resource>
                 <directory>src/main/resources</directory>
@@ -326,7 +328,46 @@
                         <target>${project.jdk.version}</target>
                     </configuration>
                 </plugin>
+                <plugin>
+                    <groupId>org.scoverage</groupId>
+                    <artifactId>scoverage-maven-plugin</artifactId>
+                    <version>${scoverage.plugin.version}</version>
+                    <configuration>
+                        <minimumCoverage>50</minimumCoverage>
+                        <failOnMinimumCoverage>true</failOnMinimumCoverage>
+                        <highlighting>true</highlighting>
+                        <scalaVersion>${scala-library.version}</scalaVersion>
+                    </configuration>
+                    <executions>
+                        <execution>
+                            <id>report</id>
+                            <phase>test</phase>
+                            <goals>
+                                <goal>report</goal>
+                            </goals>
+                        </execution>
+                    </executions>
+                </plugin>
             </plugins>
         </pluginManagement>
     </build>
+    <reporting>
+        <plugins>
+            <plugin>
+                <groupId>org.scoverage</groupId>
+                <artifactId>scoverage-maven-plugin</artifactId>
+                <version>${scoverage.plugin.version}</version>
+                <reportSets>
+                    <reportSet>
+                        <reports>
+                            <report>report</report>
+                        </reports>
+                    </reportSet>
+                </reportSets>
+                <configuration>
+                    <aggregate>true</aggregate>
+                </configuration>
+            </plugin>
+        </plugins>
+    </reporting>
 </project>

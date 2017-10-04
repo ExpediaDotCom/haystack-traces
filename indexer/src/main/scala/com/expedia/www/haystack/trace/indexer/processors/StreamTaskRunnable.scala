@@ -76,6 +76,7 @@ class StreamTaskRunnable(taskId: Int, kafkaConfig: KafkaConfiguration, processor
     }
   }
 
+  @volatile
   private var state = StreamTaskState.NOT_RUNNING
   private var wakeups: Int = 0
 

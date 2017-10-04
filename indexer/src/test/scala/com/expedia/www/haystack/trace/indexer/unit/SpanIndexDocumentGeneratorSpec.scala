@@ -21,6 +21,7 @@ import com.expedia.open.tracing.buffer.SpanBuffer
 import com.expedia.open.tracing.{Log, Span, Tag}
 import com.expedia.www.haystack.trace.commons.config.entities.{WhiteListIndexFields, WhitelistIndexField, WhitelistIndexFieldConfiguration}
 import com.expedia.www.haystack.trace.indexer.writers.es.IndexDocumentGenerator
+import com.google.protobuf.ByteString
 import org.json4s.DefaultFormats
 import org.json4s.jackson.Serialization
 import org.scalatest.{FunSpec, Matchers}
@@ -84,14 +85,14 @@ class SpanIndexDocumentGeneratorSpec extends FunSpec with Matchers {
       val tag_1 = Tag.newBuilder().setKey("role").setType(Tag.TagType.STRING).setVStr("haystack").build()
       val tag_2  = Tag.newBuilder().setKey("errorCode").setType(Tag.TagType.LONG).setVLong(3).build()
 
-      val span_1 = Span.newBuilder().setTraceId("traceId")
+      val span_1 = Span.newBuilder().setTraceId(TRACE_ID)
         .setServiceName("service1")
         .setSpanId("span-1")
         .setOperationName("op1")
         .setDuration(100L)
         .addTags(tag_1)
         .build()
-      val span_2 = Span.newBuilder().setTraceId("traceId")
+      val span_2 = Span.newBuilder().setTraceId(TRACE_ID)
         .setServiceName("service1")
         .setSpanId("span-2")
         .setOperationName("op2")
@@ -99,7 +100,7 @@ class SpanIndexDocumentGeneratorSpec extends FunSpec with Matchers {
         .addTags(tag_2)
         .addTags(tag_1)
         .build()
-      val span_3 = Span.newBuilder().setTraceId("traceId")
+      val span_3 = Span.newBuilder().setTraceId(TRACE_ID)
         .setSpanId("span-3")
         .setServiceName("service2")
         .setDuration(1000L)
@@ -123,14 +124,14 @@ class SpanIndexDocumentGeneratorSpec extends FunSpec with Matchers {
       val tag_1 = Tag.newBuilder().setKey("role").setType(Tag.TagType.STRING).setVStr("haystack").build()
       val tag_2  = Tag.newBuilder().setKey("errorCode").setType(Tag.TagType.LONG).setVLong(3).build()
 
-      val span_1 = Span.newBuilder().setTraceId("traceId")
+      val span_1 = Span.newBuilder().setTraceId(TRACE_ID)
         .setSpanId("span-1")
         .setServiceName("service1")
         .setOperationName("op1")
         .setDuration(100L)
         .addTags(tag_1)
         .build()
-      val span_2 = Span.newBuilder().setTraceId("traceId")
+      val span_2 = Span.newBuilder().setTraceId(TRACE_ID)
         .setSpanId("span-2")
         .setServiceName("service1")
         .setOperationName("op2")
@@ -154,14 +155,14 @@ class SpanIndexDocumentGeneratorSpec extends FunSpec with Matchers {
       val tag_1 = Tag.newBuilder().setKey("errorCode").setType(Tag.TagType.LONG).setVLong(5).build()
       val tag_2  = Tag.newBuilder().setKey("errorCode").setType(Tag.TagType.LONG).setVLong(3).build()
 
-      val span_1 = Span.newBuilder().setTraceId("traceId")
+      val span_1 = Span.newBuilder().setTraceId(TRACE_ID)
         .setServiceName("service1")
         .setSpanId("span-1")
         .setOperationName("op1")
         .setDuration(100L)
         .addTags(tag_1)
         .build()
-      val span_2 = Span.newBuilder().setTraceId("traceId")
+      val span_2 = Span.newBuilder().setTraceId(TRACE_ID)
         .setServiceName("service1")
         .setSpanId("span-2")
         .setOperationName("op2")
@@ -186,14 +187,14 @@ class SpanIndexDocumentGeneratorSpec extends FunSpec with Matchers {
       val tag_1 = Tag.newBuilder().setKey("role").setType(Tag.TagType.STRING).setVStr("haystack").build()
       val tag_2  = Tag.newBuilder().setKey("errorCode").setType(Tag.TagType.LONG).setVLong(3).build()
 
-      val span_1 = Span.newBuilder().setTraceId("traceId")
+      val span_1 = Span.newBuilder().setTraceId(TRACE_ID)
         .setServiceName("service1")
         .setSpanId("span-1")
         .setOperationName("op1")
         .setDuration(100L)
         .addTags(tag_1)
         .build()
-      val span_2 = Span.newBuilder().setTraceId("traceId")
+      val span_2 = Span.newBuilder().setTraceId(TRACE_ID)
         .setServiceName("service1")
         .setSpanId("span-2")
         .setOperationName("op2")
@@ -226,7 +227,7 @@ class SpanIndexDocumentGeneratorSpec extends FunSpec with Matchers {
         .addFields(Tag.newBuilder().setKey("exception").setType(Tag.TagType.STRING).setVStr("aaa-bb-cccc").build())
         .setTimestamp(200L)
 
-      val span_1 = Span.newBuilder().setTraceId("traceId")
+      val span_1 = Span.newBuilder().setTraceId(TRACE_ID)
         .setServiceName("service1")
         .setSpanId("span-1")
         .setOperationName("op1")
@@ -247,6 +248,35 @@ class SpanIndexDocumentGeneratorSpec extends FunSpec with Matchers {
       val doc = generator.createIndexDocument(TRACE_ID, spanBuffer).get
       doc.id should startWith(TRACE_ID)
       doc.json shouldBe "{\"rootDuration\":0,\"spans\":[{\"operation\":\"op1\",\"role\":[\"haystack\"],\"spanid\":\"span-1\",\"service\":\"service1\",\"duration\":100},{\"operation\":\"op2\",\"errorCode\":[3],\"spanid\":\"span-2\",\"service\":\"service1\",\"duration\":200,\"exception\":[\"xxx-yy-zzz\",\"aaa-bb-cccc\"]}]}"
+    }
+
+    it("should transform the tags for all data types like bool, long, double to string type") {
+      val indexableTags = List(
+        WhitelistIndexField(name = "errorCode", `type` = "string"),
+        WhitelistIndexField(name = "isErrored", `type` = "string"),
+        WhitelistIndexField(name = "exception", `type` = "string"))
+      val whitelistConfig = WhitelistIndexFieldConfiguration()
+      whitelistConfig.onReload(Serialization.write(WhiteListIndexFields(indexableTags)))
+      val generator = new IndexDocumentGenerator(whitelistConfig)
+
+      val tag_1 = Tag.newBuilder().setKey("isErrored").setType(Tag.TagType.BOOL).setVBool(true).build()
+      val tag_2  = Tag.newBuilder().setKey("errorCode").setType(Tag.TagType.LONG).setVLong(500).build()
+      val log_1 = Log.newBuilder()
+        .addFields(Tag.newBuilder().setKey("exception").setType(Tag.TagType.BINARY).setVBytes(ByteString.copyFromUtf8("xxx-yy-zzz")).build())
+        .setTimestamp(100L)
+      val span_1 = Span.newBuilder().setTraceId(TRACE_ID)
+        .setServiceName("service1")
+        .setSpanId("span-1")
+        .setOperationName("op1")
+        .setDuration(100L)
+        .addTags(tag_1)
+        .addTags(tag_2)
+        .addLogs(log_1)
+        .build()
+      val spanBuffer = SpanBuffer.newBuilder().addChildSpans(span_1).setTraceId(TRACE_ID).build()
+
+      val doc = generator.createIndexDocument(TRACE_ID, spanBuffer)
+      doc.get.json shouldEqual "{\"rootDuration\":0,\"spans\":[{\"operation\":\"op1\",\"errorCode\":[\"500\"],\"spanid\":\"span-1\",\"service\":\"service1\",\"isErrored\":[\"true\"],\"duration\":100,\"exception\":[\"xxx-yy-zzz\"]}]}"
     }
   }
 }

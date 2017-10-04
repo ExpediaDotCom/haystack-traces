@@ -30,14 +30,14 @@ class ElasticSearchReadResultListener(promise: Promise[SearchResult],
   private val LOGGER: Logger = LoggerFactory.getLogger(classOf[ElasticSearchReadResultListener])
 
   override def completed(result: SearchResult): Unit = {
+    timer.close()
+
     if(result.getResponseCode >= 300) {
       val ex = ElasticSearchClientError(result.getResponseCode, result.getJsonString)
       LOGGER.error(s"Failed in reading from elasticsearch", ex)
-      timer.stop()
       failure.mark()
       promise.failure(ex)
     } else {
-      timer.stop()
       promise.success(result)
     }
   }
@@ -45,7 +45,7 @@ class ElasticSearchReadResultListener(promise: Promise[SearchResult],
   override def failed(ex: Exception): Unit = {
     LOGGER.error("Failed in reading from elasticsearch", ex)
     failure.mark()
-    timer.stop()
+    timer.close()
     promise.failure(ex)
   }
 }

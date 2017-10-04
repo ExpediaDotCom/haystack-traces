@@ -74,7 +74,5 @@ class TraceSearchQueryGenerator(indexNamePrefix: String, indexType: String, nest
     }
   }
 
-  private def withBaseDoc(field: String) = {
-    s"$nestedDocName.$field"
-  }
+  private def withBaseDoc(field: String) = s"$nestedDocName.$field"
 }

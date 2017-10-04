@@ -48,11 +48,11 @@ class CassandraWriteResultListener(asyncResult: ResultSetFuture,
     try {
       timer.close()
 
-      if (asyncResult.get != null &&
-        asyncResult.get.getExecutionInfo != null &&
-        asyncResult.get.getExecutionInfo.getWarnings != null &&
-        asyncResult.get.getExecutionInfo.getWarnings.nonEmpty) {
-        LOGGER.warn(s"Warning received in cassandra writes {}", asyncResult.get.getExecutionInfo.getWarnings.toList.mkString(","))
+      if (asyncResult.get() != null &&
+        asyncResult.get().getExecutionInfo != null &&
+        asyncResult.get().getExecutionInfo.getWarnings != null &&
+        asyncResult.get().getExecutionInfo.getWarnings.nonEmpty) {
+        LOGGER.warn(s"Warning received in cassandra writes {}", asyncResult.get().getExecutionInfo.getWarnings.toList.mkString(","))
         writeWarnings.mark(asyncResult.get.getExecutionInfo.getWarnings.size())
       }
     } catch {

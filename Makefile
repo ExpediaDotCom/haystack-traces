@@ -11,11 +11,11 @@ build: clean
 all: clean indexer reader
 
 indexer:
-	mvn package -pl indexer -am
+	mvn clean package -pl indexer -am
 	cd indexer && $(MAKE) integration_test
 
 reader:
-	mvn package -pl reader -am
+	mvn clean package -pl reader -am
 	cd reader && $(MAKE) integration_test
 
 # build all and release

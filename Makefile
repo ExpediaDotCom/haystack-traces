@@ -8,7 +8,10 @@ clean:
 build: clean
 	mvn package
 
-all: clean indexer reader
+all: clean indexer reader coverage
+
+coverage:
+	mvn scoverage:check scoverage:report 
 
 indexer:
 	mvn clean package -pl indexer -am

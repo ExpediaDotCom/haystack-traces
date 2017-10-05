@@ -333,41 +333,15 @@
                     <artifactId>scoverage-maven-plugin</artifactId>
                     <version>${scoverage.plugin.version}</version>
                     <configuration>
-                        <minimumCoverage>50</minimumCoverage>
+                        <!-- need to update this as improve the coverage -->
+                        <minimumCoverage>45</minimumCoverage>
                         <failOnMinimumCoverage>true</failOnMinimumCoverage>
                         <highlighting>true</highlighting>
                         <scalaVersion>${scala-library.version}</scalaVersion>
+                        <aggregate>true</aggregate>
                     </configuration>
-                    <executions>
-                        <execution>
-                            <id>report</id>
-                            <phase>test</phase>
-                            <goals>
-                                <goal>report</goal>
-                            </goals>
-                        </execution>
-                    </executions>
                 </plugin>
             </plugins>
         </pluginManagement>
     </build>
-    <reporting>
-        <plugins>
-            <plugin>
-                <groupId>org.scoverage</groupId>
-                <artifactId>scoverage-maven-plugin</artifactId>
-                <version>${scoverage.plugin.version}</version>
-                <reportSets>
-                    <reportSet>
-                        <reports>
-                            <report>report</report>
-                        </reports>
-                    </reportSet>
-                </reportSets>
-                <configuration>
-                    <aggregate>true</aggregate>
-                </configuration>
-            </plugin>
-        </plugins>
-    </reporting>
 </project>

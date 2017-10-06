@@ -29,7 +29,7 @@ import scala.collection.JavaConversions._
 
 object TraceIndexResultHandler extends MetricsSupport {
   protected val LOGGER: Logger = LoggerFactory.getLogger(TraceIndexResultHandler.getClass)
-  protected val esWriteFailureMeter: Meter = metricRegistry.meter(AppMetricNames.ES_WRITE_FAILURE)
+  val esWriteFailureMeter: Meter = metricRegistry.meter(AppMetricNames.ES_WRITE_FAILURE)
 }
 
 class TraceIndexResultHandler(inflightRequestsSemaphore: Semaphore, timer: Timer.Context)
@@ -44,7 +44,7 @@ class TraceIndexResultHandler(inflightRequestsSemaphore: Semaphore, timer: Timer
     */
   def completed(result: BulkResult): Unit = {
     inflightRequestsSemaphore.release()
-    timer.stop()
+    timer.close()
 
     // group the failed items as per status and log once for such a failed item
     result.getFailedItems.groupBy(_.status) foreach {
@@ -62,7 +62,7 @@ class TraceIndexResultHandler(inflightRequestsSemaphore: Semaphore, timer: Timer
     */
   def failed(ex: Exception): Unit = {
     inflightRequestsSemaphore.release()
-    timer.stop()
+    timer.close()
 
     LOGGER.error("Fail to write all the documents in elastic search with reason:", ex)
     esWriteFailureMeter.mark()

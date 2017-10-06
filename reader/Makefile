@@ -23,19 +23,6 @@ prepare_integration_test_env: docker_build
 		node:alpine \
 		/bin/sh -c 'npm install && node create-cassandra-table.js'
 
-	# run haystack-trace-reader and join the same network of its dependent services
-	docker run \
-		-d \
-		-p 5005:5005 \
-		-p 8080:8080 \
-		--name trace-reader \
-		--network=sandbox_default \
-		--network-alias=haystack-trace-reader \
-		-v $(PWD)/build/integration-tests/docker-app.conf:/docker-app.conf \
-		-e SERVICE_DEBUG_ON=$(SERVICE_DEBUG_ON) \
-		-e HAYSTACK_OVERRIDES_CONFIG_PATH=/docker-app.conf \
-		$(DOCKER_IMAGE_NAME)
-
 integration_test: prepare_integration_test_env
 	# run tests in a separate container and join the docker-compose network
 	docker run \
@@ -45,13 +32,12 @@ integration_test: prepare_integration_test_env
 		-v ~/.m2:/root/.m2 \
 		-w /src \
 		maven:3.5.0-jdk-8 \
-		mvn test -pl reader -am -P integration-tests
+		mvn scoverage:integration-check -pl reader -am
 
 	# stop all the containers
 	docker-compose -f build/integration-tests/docker-compose.yml -p sandbox stop
-	docker stop trace-reader
 	docker rm $(shell docker ps -a -q)
 	docker volume rm $(shell docker volume ls -q)
 
-release: docker_build
+release:
 	../scripts/publish-to-docker-hub.sh

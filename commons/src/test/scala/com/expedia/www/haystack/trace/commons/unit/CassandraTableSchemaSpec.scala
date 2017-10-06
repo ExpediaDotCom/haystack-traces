@@ -108,8 +108,53 @@ class CassandraTableSchemaSpec extends FunSpec with Matchers with EasyMockSugar 
         cluster.getMetadata.andReturn(metadata).once()
         session.getCluster.andReturn(cluster).once()
       }
-      whenExecuting(session, cluster, metadata, keyspaceMetadata) {
+      whenExecuting(session, cluster, metadata, keyspaceMetadata, tableMetadata) {
         CassandraTableSchema.ensureExists(keyspace, cassandraTableName, Some("apply schema"), session)
+      }
+    }
+
+    it("should throw an exception if keyspace and table does not exists in cassandra and no schema is applied") {
+      val session = mock[Session]
+      val cluster = mock[Cluster]
+      val metadata = mock[Metadata]
+      val keyspaceMetadata = mock[KeyspaceMetadata]
+
+      val keyspace = "my-keyspace"
+      val cassandraTableName = "my-table"
+
+      expecting {
+        keyspaceMetadata.getTable(cassandraTableName).andReturn(null).once()
+        metadata.getKeyspace(keyspace).andReturn(keyspaceMetadata).once()
+        cluster.getMetadata.andReturn(metadata).once()
+        session.getCluster.andReturn(cluster).once()
+      }
+      whenExecuting(session, cluster, metadata, keyspaceMetadata) {
+        val thrown = intercept[Exception] {
+          CassandraTableSchema.ensureExists(keyspace, cassandraTableName, None, session)
+        }
+        thrown.getMessage shouldEqual s"Fail to find the keyspace=$keyspace and/or table=$cassandraTableName !!!!"
+      }
+    }
+
+    it("should thrown an exception if fail to apply the schema when keyspace/table does not exist in cassandra") {
+      val session = mock[Session]
+      val cluster = mock[Cluster]
+      val metadata = mock[Metadata]
+      val applySchemaException = new RuntimeException
+      val keyspace = "my-keyspace"
+      val cassandraTableName = "my-table"
+
+      expecting {
+        session.execute("apply schema").andThrow(applySchemaException)
+        metadata.getKeyspace(keyspace).andReturn(null).once()
+        cluster.getMetadata.andReturn(metadata).once()
+        session.getCluster.andReturn(cluster).once()
+      }
+      whenExecuting(session, cluster, metadata) {
+        val thrown = intercept[Exception] {
+          CassandraTableSchema.ensureExists(keyspace, cassandraTableName, Some("apply schema;apply schema2"), session)
+        }
+        thrown.getCause shouldBe applySchemaException
       }
     }
   }

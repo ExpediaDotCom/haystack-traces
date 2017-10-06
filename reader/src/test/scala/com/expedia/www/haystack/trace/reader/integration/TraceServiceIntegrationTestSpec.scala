@@ -23,9 +23,6 @@ import io.grpc.{ManagedChannelBuilder, Status, StatusRuntimeException}
 import scala.collection.JavaConversions._
 
 class TraceServiceIntegrationTestSpec extends BaseIntegrationTestSpec {
-  private val client = TraceReaderGrpc.newBlockingStub(ManagedChannelBuilder.forAddress("haystack-trace-reader", 8080)
-    .usePlaintext(true)
-    .build())
 
   describe("TraceReader.getTrace") {
     it("should get trace for given traceID from cassandra") {

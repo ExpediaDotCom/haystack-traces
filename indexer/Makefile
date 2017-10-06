@@ -22,12 +22,12 @@ integration_test: prepare_integration_test_env
 		-v ~/.m2:/root/.m2 \
 		-w /src \
 		maven:3.5.0-jdk-8 \
-		mvn test -pl indexer -am -P integration-tests
+		mvn scoverage:integration-check -pl indexer -am
 
 	# stop all the containers
 	docker-compose -f build/integration-tests/docker-compose.yml -p sandbox stop
 	docker rm $(shell docker ps -a -q)
 	docker volume rm $(shell docker volume ls -q)
 
-release: docker_build
+release:
 	../scripts/publish-to-docker-hub.sh

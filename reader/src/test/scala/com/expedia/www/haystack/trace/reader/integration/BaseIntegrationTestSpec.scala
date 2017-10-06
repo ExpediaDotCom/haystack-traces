@@ -18,14 +18,19 @@ package com.expedia.www.haystack.trace.reader.integration
 
 import java.nio.ByteBuffer
 import java.text.SimpleDateFormat
+import java.util.concurrent.Executors
 import java.util.{Date, UUID}
 
 import com.datastax.driver.core.querybuilder.QueryBuilder
 import com.datastax.driver.core.{Cluster, ResultSet, Session, SimpleStatement}
 import com.expedia.open.tracing.Span
+import com.expedia.open.tracing.api.TraceReaderGrpc
+import com.expedia.open.tracing.api.TraceReaderGrpc.TraceReaderBlockingStub
 import com.expedia.open.tracing.buffer.SpanBuffer
 import com.expedia.www.haystack.trace.commons.clients.cassandra.CassandraTableSchema
-import com.expedia.www.haystack.trace.commons.config.entities.{WhiteListIndexFields, WhitelistIndexField, WhitelistIndexFieldConfiguration}
+import com.expedia.www.haystack.trace.commons.config.entities.{WhiteListIndexFields, WhitelistIndexField}
+import com.expedia.www.haystack.trace.reader.Service
+import io.grpc.ManagedChannelBuilder
 import io.searchbox.client.config.HttpClientConfig
 import io.searchbox.client.{JestClient, JestClientFactory}
 import io.searchbox.core.Index
@@ -46,10 +51,14 @@ trait BaseIntegrationTestSpec extends FunSpec with GivenWhenThen with Matchers w
   private val ELASTIC_SEARCH_WHITELIST_INDEX = "reload-configs"
   private val ELASTIC_SEARCH_WHITELIST_TYPE = "whitelist-index-fields"
   private val SPANS_INDEX_TYPE = "spans"
+
+  private val executors = Executors.newSingleThreadExecutor()
+
   private val HAYSTACK_TRACES_INDEX = {
     val formatter = new SimpleDateFormat("yyyy-MM-dd")
     s"haystack-traces-${formatter.format(new Date())}"
   }
+  protected var client:TraceReaderBlockingStub = _
   private val INDEX_TEMPLATE =
     """
       |{
@@ -132,6 +141,16 @@ trait BaseIntegrationTestSpec extends FunSpec with GivenWhenThen with Matchers w
     esClient.execute(new CreateIndex.Builder(HAYSTACK_TRACES_INDEX)
       .settings(INDEX_TEMPLATE)
       .build)
+
+    executors.submit(new Runnable {
+      override def run(): Unit = Service.main(null)
+    })
+
+    Thread.sleep(5000)
+
+    client = TraceReaderGrpc.newBlockingStub(ManagedChannelBuilder.forAddress("localhost", 8080)
+      .usePlaintext(true)
+      .build())
   }
 
   private def deleteCassandraTableRows(): Unit = {

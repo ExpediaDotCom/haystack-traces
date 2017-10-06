@@ -85,35 +85,36 @@
 
     </dependencies>
 
-    <profiles>
-        <profile>
-            <id>integration-tests</id>
-            <activation>
-                <activeByDefault>false</activeByDefault>
-            </activation>
-            <build>
-                <plugins>
-                    <plugin>
-                        <groupId>org.scalatest</groupId>
-                        <artifactId>scalatest-maven-plugin</artifactId>
-                        <configuration>
-                            <wildcardSuites>com.expedia.www.haystack.trace.reader.integration</wildcardSuites>
-                        </configuration>
-                    </plugin>
-                </plugins>
-            </build>
-        </profile>
-    </profiles>
-
     <build>
         <finalName>haystack-trace-reader</finalName>
         <plugins>
             <plugin>
                 <groupId>org.scalatest</groupId>
                 <artifactId>scalatest-maven-plugin</artifactId>
-                <configuration>
-                    <wildcardSuites>com.expedia.www.haystack.trace.reader.unit</wildcardSuites>
-                </configuration>
+                <executions>
+                    <execution>
+                        <id>test</id>
+                        <goals>
+                            <goal>test</goal>
+                        </goals>
+                        <configuration>
+                            <wildcardSuites>com.expedia.www.haystack.trace.reader.unit</wildcardSuites>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>integration-test</id>
+                        <phase>integration-test</phase>
+                        <goals>
+                            <goal>test</goal>
+                        </goals>
+                        <configuration>
+                            <environmentVariables>
+                                <HAYSTACK_OVERRIDES_CONFIG_PATH>/src/reader/build/integration-tests/docker-app.conf</HAYSTACK_OVERRIDES_CONFIG_PATH>
+                            </environmentVariables>
+                            <wildcardSuites>com.expedia.www.haystack.trace.reader.integration</wildcardSuites>
+                        </configuration>
+                    </execution>
+                </executions>
             </plugin>
 
             <plugin>

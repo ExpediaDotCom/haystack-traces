@@ -21,19 +21,27 @@ import java.nio.ByteBuffer
 import java.util.Date
 
 import com.datastax.driver.core._
-import com.datastax.driver.core.policies._
-import com.datastax.driver.core.querybuilder.QueryBuilder
+import com.datastax.driver.core.querybuilder.{Insert, QueryBuilder}
 import com.expedia.open.tracing.buffer.SpanBuffer
-import com.expedia.www.haystack.trace.commons.clients.AwsNodeDiscoverer
 import com.expedia.www.haystack.trace.commons.clients.cassandra.CassandraTableSchema._
 import com.expedia.www.haystack.trace.commons.config.entities.CassandraConfiguration
 
 import scala.util.Try
 
-class CassandraSession(config: CassandraConfiguration) {
-  var cluster: Cluster = _
+class CassandraSession(config: CassandraConfiguration, factory: ClusterFactory) {
+  /**
+    * builds a session object to interact with cassandra cluster
+    * Also ensure that keyspace and table names exists in cassandra.
+    */
+  private val (cluster, session) = {
+    val cluster = factory.buildCluster(config)
+    val newSession = cluster.connect()
+    CassandraTableSchema.ensureExists(config.keyspace, config.tableName, config.autoCreateSchema, newSession)
+    newSession.execute("USE " + config.keyspace)
+    (cluster, newSession)
+  }
 
-  lazy val selectTracePreparedStmt: PreparedStatement = {
+  private val selectTracePreparedStmt: PreparedStatement = {
       import QueryBuilder.bindMarker
       session.prepare(
         QueryBuilder
@@ -45,25 +53,14 @@ class CassandraSession(config: CassandraConfiguration) {
   def createInsertPreparedStatement(recordTTLInSec: Int): PreparedStatement = {
     import QueryBuilder.{bindMarker, ttl}
 
-    session.prepare(
-      QueryBuilder
-        .insertInto(config.tableName)
-        .value(ID_COLUMN_NAME, bindMarker(ID_COLUMN_NAME))
-        .value(TIMESTAMP_COLUMN_NAME, bindMarker(TIMESTAMP_COLUMN_NAME))
-        .value(SPANS_COLUMN_NAME, bindMarker(SPANS_COLUMN_NAME))
-        .using(ttl(recordTTLInSec)))
-  }
+    val insert = QueryBuilder
+      .insertInto(config.tableName)
+      .value(ID_COLUMN_NAME, bindMarker(ID_COLUMN_NAME))
+      .value(TIMESTAMP_COLUMN_NAME, bindMarker(TIMESTAMP_COLUMN_NAME))
+      .value(SPANS_COLUMN_NAME, bindMarker(SPANS_COLUMN_NAME))
+      .using(ttl(recordTTLInSec))
 
-  /**
-    * builds a session object to interact with cassandra cluster
-    * Also ensure that keyspace and table names exists in cassandra.
-    */
-  val session: Session = {
-    cluster = buildCluster()
-    val newSession = cluster.connect()
-    CassandraTableSchema.ensureExists(config.keyspace, config.tableName, config.autoCreateSchema, newSession)
-    newSession.execute("USE " + config.keyspace)
-    newSession
+    session.prepare(insert)
   }
 
   /**
@@ -72,32 +69,6 @@ class CassandraSession(config: CassandraConfiguration) {
   def close(): Unit = {
     Try(session.close())
     Try(cluster.close())
-  }
-
-  private def discoverNodes(): Seq[String] = {
-    config.awsNodeDiscovery match {
-      case Some(awsDiscovery) => AwsNodeDiscoverer.discover(awsDiscovery.region, awsDiscovery.tags)
-      case _ => Nil
-    }
-  }
-
-  private def buildCluster(): Cluster = {
-    val contactPoints = if(config.autoDiscoverEnabled) discoverNodes() else config.endpoints
-    require(contactPoints.nonEmpty, "cassandra contact points can't be empty!!!")
-
-    val tokenAwarePolicy = new TokenAwarePolicy(new LatencyAwarePolicy.Builder(new RoundRobinPolicy()).build())
-
-    Cluster.builder()
-      .withClusterName("cassandra-cluster")
-      .addContactPoints(contactPoints:_*)
-      .withRetryPolicy(DefaultRetryPolicy.INSTANCE)
-      .withSocketOptions(new SocketOptions()
-        .setKeepAlive(config.socket.keepAlive)
-        .setConnectTimeoutMillis(config.socket.connectionTimeoutMillis)
-        .setReadTimeoutMillis(config.socket.readTimeoutMills))
-      .withLoadBalancingPolicy(tokenAwarePolicy)
-      .withPoolingOptions(new PoolingOptions().setMaxConnectionsPerHost(HostDistance.LOCAL, config.socket.maxConnectionPerHost))
-      .build()
   }
 
   /**
@@ -126,4 +97,11 @@ class CassandraSession(config: CassandraConfiguration) {
   def newSelectBoundStatement(traceId: String): Statement = {
     new BoundStatement(selectTracePreparedStmt).setString(ID_COLUMN_NAME, traceId)
   }
+
+  /**
+    * executes the statement async and return the resultset future
+    * @param statement prepared statement to be executed
+    * @return future object of ResultSet
+    */
+  def executeAsync(statement: Statement): ResultSetFuture = session.executeAsync(statement)
 }

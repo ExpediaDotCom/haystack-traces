@@ -20,7 +20,7 @@ package com.expedia.www.haystack.trace.indexer.writers.cassandra
 import java.util.concurrent.Semaphore
 
 import com.expedia.open.tracing.buffer.SpanBuffer
-import com.expedia.www.haystack.trace.commons.clients.cassandra.CassandraSession
+import com.expedia.www.haystack.trace.commons.clients.cassandra.{CassandraClusterFactory, CassandraSession}
 import com.expedia.www.haystack.trace.indexer.config.entities.CassandraWriteConfiguration
 import com.expedia.www.haystack.trace.indexer.metrics.{AppMetricNames, MetricsSupport}
 import com.expedia.www.haystack.trace.indexer.writers.TraceWriter
@@ -36,7 +36,7 @@ class CassandraWriter(config: CassandraWriteConfiguration)(implicit val dispatch
 
   private val writeTimer = metricRegistry.timer(AppMetricNames.CASSANDRA_WRITE_TIME)
   private val writeFailures = metricRegistry.meter(AppMetricNames.CASSANDRA_WRITE_FAILURE)
-  private val cassandra = new CassandraSession(config.clientConfig)
+  private val cassandra = new CassandraSession(config.clientConfig, new CassandraClusterFactory)
 
   private val insertPreparedStatement = cassandra.createInsertPreparedStatement(config.recordTTLInSec)
 
@@ -64,7 +64,7 @@ class CassandraWriter(config: CassandraWriteConfiguration)(implicit val dispatch
 
       // prepare the statement
       val statement = cassandra.newInsertBoundStatement(traceId, spanBuffer, config.consistencyLevel, insertPreparedStatement)
-      val asyncResult = cassandra.session.executeAsync(statement)
+      val asyncResult = cassandra.executeAsync(statement)
       asyncResult.addListener(new CassandraWriteResultListener(asyncResult, timer, inflightRequestsSemaphore), dispatcher)
     } catch {
       case ex: Exception =>

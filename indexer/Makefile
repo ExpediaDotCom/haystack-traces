@@ -22,7 +22,7 @@ integration_test: prepare_integration_test_env
 		-v ~/.m2:/root/.m2 \
 		-w /src \
 		maven:3.5.0-jdk-8 \
-		mvn test -pl indexer -am -P integration-tests
+		mvn scoverage:integration-check -pl indexer -am
 
 	# stop all the containers
 	docker-compose -f build/integration-tests/docker-compose.yml -p sandbox stop

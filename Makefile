@@ -8,18 +8,22 @@ clean:
 build: clean
 	mvn package
 
-all: clean indexer reader coverage
+all: clean indexer reader report-coverage
 
-coverage:
-	mvn scoverage:check scoverage:report 
+report-coverage:
+	docker run -it -v ~/.m2:/root/.m2 -w /src -v `pwd`:/src maven:3.5.0-jdk-8 mvn scoverage:report-only
 
-indexer:
-	mvn clean package -pl indexer -am
+indexer: build_indexer
 	cd indexer && $(MAKE) integration_test
 
-reader:
-	mvn clean package -pl reader -am
+reader: build_reader
 	cd reader && $(MAKE) integration_test
+
+build_reader:
+	mvn clean package -pl reader -am
+
+build_indexer:
+	mvn clean package -pl indexer -am
 
 # build all and release
 release: all

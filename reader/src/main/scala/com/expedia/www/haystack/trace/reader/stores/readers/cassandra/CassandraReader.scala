@@ -17,7 +17,7 @@
 package com.expedia.www.haystack.trace.reader.stores.readers.cassandra
 
 import com.expedia.open.tracing.api.Trace
-import com.expedia.www.haystack.trace.commons.clients.cassandra.CassandraSession
+import com.expedia.www.haystack.trace.commons.clients.cassandra.{CassandraClusterFactory, CassandraSession}
 import com.expedia.www.haystack.trace.commons.config.entities.CassandraConfiguration
 import com.expedia.www.haystack.trace.reader.metrics.MetricsSupport
 import org.slf4j.LoggerFactory
@@ -33,7 +33,7 @@ class CassandraReader(config: CassandraConfiguration)(implicit val dispatcher: E
   private val readTimer = metricRegistry.timer("cassandra.read.time")
   private val readFailures = metricRegistry.meter("cassandra.read.failures")
 
-  private val cassandra = new CassandraSession(config)
+  private val cassandra = new CassandraSession(config, new CassandraClusterFactory)
 
   def readTrace(traceId: String): Future[Trace] = {
     val timer = readTimer.time()
@@ -41,7 +41,7 @@ class CassandraReader(config: CassandraConfiguration)(implicit val dispatcher: E
 
     try {
       val statement = cassandra.newSelectBoundStatement(traceId)
-      val asyncResult = cassandra.session.executeAsync(statement)
+      val asyncResult = cassandra.executeAsync(statement)
       asyncResult.addListener(new CassandraReadResultListener(asyncResult, timer, readFailures, promise), dispatcher)
       promise.future
     } catch {

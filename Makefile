@@ -20,10 +20,10 @@ reader: build_reader
 	cd reader && $(MAKE) integration_test
 
 build_reader:
-	mvn clean package -pl reader -am
+	mvn package -pl reader -am
 
 build_indexer:
-	mvn clean package -pl indexer -am
+	mvn package -pl indexer -am
 
 # build all and release
 release: all

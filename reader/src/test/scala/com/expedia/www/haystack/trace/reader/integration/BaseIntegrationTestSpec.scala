@@ -80,6 +80,9 @@ trait BaseIntegrationTestSpec extends FunSpec with GivenWhenThen with Matchers w
       |    },
       |    "mappings": {
       |        "spans": {
+      |            "_all": {
+      |              "enabled": false
+      |            },
       |            "_source": {
       |                "enabled": false
       |            },

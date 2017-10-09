@@ -17,6 +17,8 @@
 
 package com.expedia.www.haystack.trace.indexer.writers.es
 
+import java.util
+
 import io.searchbox.action.BulkableAction
 import io.searchbox.core.{Bulk, DocumentResult}
 
@@ -24,7 +26,7 @@ import io.searchbox.core.{Bulk, DocumentResult}
   * this is a thread safe builder to build index actions
   */
 class ThreadSafeBulkBuilder(maxDocuments: Int, maxDocSizeInBytes: Int) {
-  private var bulkBuilder = new Bulk.Builder()
+  private var bulkActions = new util.LinkedList[BulkableAction[DocumentResult]]
   private var docsCount = 0
   private var totalSizeInBytes = 0
 
@@ -33,37 +35,45 @@ class ThreadSafeBulkBuilder(maxDocuments: Int, maxDocSizeInBytes: Int) {
     * a) the total doc count in bulk is more than allowed setting
     * b) total size of the docs in bulk is more than allowed setting
     * c) force create the bulk
-    * @param action index action
-    * @param sizeInBytes total size of the json in the index action
+    *
+    * @param action          index action
+    * @param sizeInBytes     total size of the json in the index action
     * @param forceBulkCreate force to build the existing bulk
     * @return
     */
   def addAction(action: BulkableAction[DocumentResult],
                 sizeInBytes: Int,
                 forceBulkCreate: Boolean): Option[Bulk] = {
+    var dispatchActions: util.LinkedList[BulkableAction[DocumentResult]] = null
+
     this.synchronized {
-      bulkBuilder.addAction(action)
+      bulkActions.add(action)
       docsCount += 1
       totalSizeInBytes += sizeInBytes
 
       if (forceBulkCreate ||
         docsCount >= maxDocuments ||
         totalSizeInBytes >= maxDocSizeInBytes) {
-        Some(buildAndReset)
-      } else {
-        None
+        dispatchActions = getAndResetBulkActions()
       }
+    }
+
+    if (dispatchActions == null) {
+      None
+    } else {
+      Some(new Bulk.Builder().addAction(dispatchActions).build())
     }
   }
 
-  private def buildAndReset: Bulk = {
-    val bulk = bulkBuilder.build()
-    bulkBuilder = new Bulk.Builder
+  private def getAndResetBulkActions(): util.LinkedList[BulkableAction[DocumentResult]] = {
+    val dispatchActions = bulkActions
+    bulkActions = new util.LinkedList[BulkableAction[DocumentResult]]
     docsCount = 0
     totalSizeInBytes = 0
-    bulk
+    dispatchActions
   }
 
   def getDocsCount: Int = docsCount
+
   def getTotalSizeInBytes: Int = totalSizeInBytes
 }

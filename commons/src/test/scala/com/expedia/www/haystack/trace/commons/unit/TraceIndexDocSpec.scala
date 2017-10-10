@@ -17,7 +17,7 @@
 
 package com.expedia.www.haystack.trace.commons.unit
 
-import com.expedia.www.haystack.trace.commons.clients.es.document.{Document, TraceIndexDoc}
+import com.expedia.www.haystack.trace.commons.clients.es.document.TraceIndexDoc
 import org.scalatest.{FunSpec, Matchers}
 
 import scala.collection.mutable
@@ -26,9 +26,8 @@ class TraceIndexDocSpec extends FunSpec with Matchers {
   describe("TraceIndex Document") {
     it("should produce the valid json document for indexing") {
       val spanDoc = mutable.Map("spanid" -> "SPAN-1", "operatioName" -> "op1", "serviceName" -> "svc", "duration" -> 100)
-      val indexDoc = TraceIndexDoc(100L, Seq(spanDoc))
-      val doc = Document("trace-id", indexDoc)
-      doc.json shouldEqual "{\"rootDuration\":100,\"spans\":[{\"spanid\":\"SPAN-1\",\"serviceName\":\"svc\",\"operatioName\":\"op1\",\"duration\":100}]}"
+      val indexDoc = TraceIndexDoc("trace-id", 100L, Seq(spanDoc))
+      indexDoc.json shouldEqual "{\"traceid\":\"trace-id\",\"rootDuration\":100,\"spans\":[{\"spanid\":\"SPAN-1\",\"serviceName\":\"svc\",\"operatioName\":\"op1\",\"duration\":100}]}"
     }
   }
 }

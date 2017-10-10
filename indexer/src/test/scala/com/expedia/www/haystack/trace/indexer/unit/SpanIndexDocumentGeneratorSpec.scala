@@ -54,8 +54,7 @@ class SpanIndexDocumentGeneratorSpec extends FunSpec with Matchers {
 
       val spanBuffer = SpanBuffer.newBuilder().addChildSpans(span_1).addChildSpans(span_2).addChildSpans(span_3).setTraceId(TRACE_ID).build()
       val doc = generator.createIndexDocument(TRACE_ID, spanBuffer).get
-      doc.id should startWith(TRACE_ID)
-      doc.json shouldBe "{\"rootDuration\":0,\"spans\":[{\"operation\":\"op1\",\"spanid\":\"span-1\",\"service\":\"service1\",\"duration\":600},{\"operation\":\"op1\",\"spanid\":\"span-2\",\"service\":\"service1\",\"duration\":500},{\"operation\":\"op3\",\"spanid\":\"span-3\",\"service\":\"service2\",\"duration\":1000}]}"
+      doc.json shouldBe "{\"traceid\":\"trace_id\",\"rootDuration\":0,\"spans\":[{\"operation\":\"op1\",\"spanid\":\"span-1\",\"service\":\"service1\",\"duration\":600},{\"operation\":\"op1\",\"spanid\":\"span-2\",\"service\":\"service1\",\"duration\":500},{\"operation\":\"op3\",\"spanid\":\"span-3\",\"service\":\"service2\",\"duration\":1000}]}"
     }
 
     it ("should not create an index document if service name is absent") {
@@ -109,8 +108,7 @@ class SpanIndexDocumentGeneratorSpec extends FunSpec with Matchers {
 
       val spanBuffer = SpanBuffer.newBuilder().addChildSpans(span_1).addChildSpans(span_2).addChildSpans(span_3).setTraceId(TRACE_ID).build()
       val doc = generator.createIndexDocument(TRACE_ID, spanBuffer).get
-      doc.id should startWith(TRACE_ID)
-      doc.json shouldBe "{\"rootDuration\":0,\"spans\":[{\"operation\":\"op1\",\"role\":[\"haystack\"],\"spanid\":\"span-1\",\"service\":\"service1\",\"duration\":100},{\"operation\":\"op2\",\"role\":[\"haystack\"],\"errorCode\":[3],\"spanid\":\"span-2\",\"service\":\"service1\",\"duration\":200},{\"operation\":\"op3\",\"errorCode\":[3],\"spanid\":\"span-3\",\"service\":\"service2\",\"duration\":1000}]}"
+      doc.json shouldBe "{\"traceid\":\"trace_id\",\"rootDuration\":0,\"spans\":[{\"operation\":\"op1\",\"role\":[\"haystack\"],\"spanid\":\"span-1\",\"service\":\"service1\",\"duration\":100},{\"operation\":\"op2\",\"role\":[\"haystack\"],\"errorCode\":[3],\"spanid\":\"span-2\",\"service\":\"service1\",\"duration\":200},{\"operation\":\"op3\",\"errorCode\":[3],\"spanid\":\"span-3\",\"service\":\"service2\",\"duration\":1000}]}"
     }
 
     it ("should respect enabled flag of tags create right json document for indexing") {
@@ -141,8 +139,7 @@ class SpanIndexDocumentGeneratorSpec extends FunSpec with Matchers {
 
       val spanBuffer = SpanBuffer.newBuilder().addChildSpans(span_1).addChildSpans(span_2).setTraceId(TRACE_ID).build()
       val doc = generator.createIndexDocument(TRACE_ID, spanBuffer).get
-      doc.id should startWith(TRACE_ID)
-      doc.json shouldBe "{\"rootDuration\":0,\"spans\":[{\"operation\":\"op1\",\"spanid\":\"span-1\",\"service\":\"service1\",\"duration\":100},{\"operation\":\"op2\",\"errorCode\":[3],\"spanid\":\"span-2\",\"service\":\"service1\",\"duration\":200}]}"
+      doc.json shouldBe "{\"traceid\":\"trace_id\",\"rootDuration\":0,\"spans\":[{\"operation\":\"op1\",\"spanid\":\"span-1\",\"service\":\"service1\",\"duration\":100},{\"operation\":\"op2\",\"errorCode\":[3],\"spanid\":\"span-2\",\"service\":\"service1\",\"duration\":200}]}"
     }
 
     it ("one more test to verify the tags are indexed") {
@@ -172,8 +169,7 @@ class SpanIndexDocumentGeneratorSpec extends FunSpec with Matchers {
 
       val spanBuffer = SpanBuffer.newBuilder().addChildSpans(span_1).addChildSpans(span_2).setTraceId(TRACE_ID).build()
       val doc = generator.createIndexDocument(TRACE_ID, spanBuffer).get
-      doc.id should startWith(TRACE_ID)
-      doc.json shouldBe "{\"rootDuration\":0,\"spans\":[{\"operation\":\"op1\",\"errorCode\":[5],\"spanid\":\"span-1\",\"service\":\"service1\",\"duration\":100},{\"operation\":\"op2\",\"errorCode\":[3],\"spanid\":\"span-2\",\"service\":\"service1\",\"duration\":200}]}"
+      doc.json shouldBe "{\"traceid\":\"trace_id\",\"rootDuration\":0,\"spans\":[{\"operation\":\"op1\",\"errorCode\":[5],\"spanid\":\"span-1\",\"service\":\"service1\",\"duration\":100},{\"operation\":\"op2\",\"errorCode\":[3],\"spanid\":\"span-2\",\"service\":\"service1\",\"duration\":200}]}"
     }
 
     it ("should extract unique tag values along with serviceName, operationName and duration and create json document for indexing") {
@@ -204,8 +200,7 @@ class SpanIndexDocumentGeneratorSpec extends FunSpec with Matchers {
 
       val spanBuffer = SpanBuffer.newBuilder().addChildSpans(span_1).addChildSpans(span_2).setTraceId(TRACE_ID).build()
       val doc = generator.createIndexDocument(TRACE_ID, spanBuffer).get
-      doc.id should startWith(TRACE_ID)
-      doc.json shouldBe "{\"rootDuration\":0,\"spans\":[{\"operation\":\"op1\",\"role\":[\"haystack\"],\"spanid\":\"span-1\",\"service\":\"service1\",\"duration\":100},{\"operation\":\"op2\",\"errorCode\":[3],\"spanid\":\"span-2\",\"service\":\"service1\",\"duration\":200}]}"
+      doc.json shouldBe "{\"traceid\":\"trace_id\",\"rootDuration\":0,\"spans\":[{\"operation\":\"op1\",\"role\":[\"haystack\"],\"spanid\":\"span-1\",\"service\":\"service1\",\"duration\":100},{\"operation\":\"op2\",\"errorCode\":[3],\"spanid\":\"span-2\",\"service\":\"service1\",\"duration\":200}]}"
     }
 
     it ("should extract tags, log values along with serviceName, operationName and duration and create json document for indexing") {
@@ -246,8 +241,7 @@ class SpanIndexDocumentGeneratorSpec extends FunSpec with Matchers {
 
       val spanBuffer = SpanBuffer.newBuilder().addChildSpans(span_1).addChildSpans(span_2).setTraceId(TRACE_ID).build()
       val doc = generator.createIndexDocument(TRACE_ID, spanBuffer).get
-      doc.id should startWith(TRACE_ID)
-      doc.json shouldBe "{\"rootDuration\":0,\"spans\":[{\"operation\":\"op1\",\"role\":[\"haystack\"],\"spanid\":\"span-1\",\"service\":\"service1\",\"duration\":100},{\"operation\":\"op2\",\"errorCode\":[3],\"spanid\":\"span-2\",\"service\":\"service1\",\"duration\":200,\"exception\":[\"xxx-yy-zzz\",\"aaa-bb-cccc\"]}]}"
+      doc.json shouldBe "{\"traceid\":\"trace_id\",\"rootDuration\":0,\"spans\":[{\"operation\":\"op1\",\"role\":[\"haystack\"],\"spanid\":\"span-1\",\"service\":\"service1\",\"duration\":100},{\"operation\":\"op2\",\"errorCode\":[3],\"spanid\":\"span-2\",\"service\":\"service1\",\"duration\":200,\"exception\":[\"xxx-yy-zzz\",\"aaa-bb-cccc\"]}]}"
     }
 
     it("should transform the tags for all data types like bool, long, double to string type") {
@@ -276,7 +270,7 @@ class SpanIndexDocumentGeneratorSpec extends FunSpec with Matchers {
       val spanBuffer = SpanBuffer.newBuilder().addChildSpans(span_1).setTraceId(TRACE_ID).build()
 
       val doc = generator.createIndexDocument(TRACE_ID, spanBuffer)
-      doc.get.json shouldEqual "{\"rootDuration\":0,\"spans\":[{\"operation\":\"op1\",\"errorCode\":[\"500\"],\"spanid\":\"span-1\",\"service\":\"service1\",\"isErrored\":[\"true\"],\"duration\":100,\"exception\":[\"xxx-yy-zzz\"]}]}"
+      doc.get.json shouldEqual "{\"traceid\":\"trace_id\",\"rootDuration\":0,\"spans\":[{\"operation\":\"op1\",\"errorCode\":[\"500\"],\"spanid\":\"span-1\",\"service\":\"service1\",\"isErrored\":[\"true\"],\"duration\":100,\"exception\":[\"xxx-yy-zzz\"]}]}"
     }
   }
 }

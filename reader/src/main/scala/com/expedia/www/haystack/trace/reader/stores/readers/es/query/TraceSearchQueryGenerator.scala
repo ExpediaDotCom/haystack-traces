@@ -40,7 +40,7 @@ class TraceSearchQueryGenerator(indexNamePrefix: String, indexType: String, nest
       .build()
   }
 
-  private def buildQueryString(request: TracesSearchRequest) = {
+  private def buildQueryString(request: TracesSearchRequest): String = {
     new SearchSourceBuilder()
       .query(boolQuery.must(createNestedQuery(request)))
       .size(request.getLimit)

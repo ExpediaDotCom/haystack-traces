@@ -138,10 +138,6 @@ abstract class BaseIntegrationTestSpec extends WordSpec with GivenWhenThen with 
   }
 
   def verifyElasticSearchWrites(traceIds: Seq[String]): Unit = {
-    def extractTraceIdFromDocId(docId: String): String = {
-      StringUtils.substring(docId, 0, StringUtils.lastIndexOf(docId, "_"))
-    }
-
     val matchAllQuery =
       """{
         |    "query": {
@@ -152,8 +148,7 @@ abstract class BaseIntegrationTestSpec extends WordSpec with GivenWhenThen with 
     var docs = elastic.query(matchAllQuery)
     docs.size shouldBe traceIds.size
     (0 until docs.size()).toList foreach { idx =>
-      val docId = docs.get(idx).asInstanceOf[JsonObject].get("_id").getAsString
-      val traceId = extractTraceIdFromDocId(docId)
+      val traceId = docs.get(idx).traceid
       traceIds should contain(traceId)
     }
 
@@ -259,5 +254,6 @@ abstract class BaseIntegrationTestSpec extends WordSpec with GivenWhenThen with 
                     """.stripMargin
     docs = elastic.query(tagQuery)
     docs.size shouldBe traceIds.size
+    docs.map(_.traceid) should contain theSameElementsAs traceIds
   }
 }

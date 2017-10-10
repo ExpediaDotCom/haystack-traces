@@ -29,11 +29,12 @@ import scala.collection.JavaConversions._
 import scala.concurrent.{ExecutionContextExecutor, Future}
 import scala.util.{Failure, Success, Try}
 
-class TraceReader(traceStore: TraceStore, transformersConfig: TraceTransformersConfiguration)(implicit val executor: ExecutionContextExecutor)
-  extends TraceTransformationHandler(transformersConfig.transformers)
-    with TraceValidationHandler
-    with MetricsSupport {
+class TraceReader(traceStore: TraceStore, transformersConfig: TraceTransformersConfiguration)
+                 (implicit val executor: ExecutionContextExecutor)
+  extends TraceTransformationHandler(transformersConfig.transformers) with TraceValidationHandler with MetricsSupport {
+
   private val LOGGER: Logger = LoggerFactory.getLogger(s"${classOf[TraceReader]}.search.trace.rejection")
+
   private val traceRejectedCounter = metricRegistry.meter("search.trace.rejection")
 
   def getTrace(request: TraceRequest): Future[Trace] = {
@@ -93,7 +94,7 @@ class TraceReader(traceStore: TraceStore, transformersConfig: TraceTransformersC
     }
   }
 
-  def getFieldNames(): Future[FieldNames] = {
+  def getFieldNames: Future[FieldNames] = {
     traceStore
       .getFieldNames()
       .map(

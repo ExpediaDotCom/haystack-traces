@@ -96,7 +96,7 @@ class TraceService(traceStore: TraceStore,
     */
   override def getFieldNames(request: Empty, responseObserver: StreamObserver[FieldNames]): Unit = {
     handleFieldNamesResponse.handle(responseObserver) {
-      traceReader.getFieldNames()
+      traceReader.getFieldNames
     }
   }
 

@@ -17,45 +17,30 @@
 
 package com.expedia.www.haystack.trace.indexer.writers.es
 
-import java.util.function.Supplier
-
 import com.expedia.open.tracing.buffer.SpanBuffer
 import com.expedia.open.tracing.{Span, Tag}
-import com.expedia.www.haystack.trace.commons.clients.es.document.Document.{TagKey, TagValue}
-import com.expedia.www.haystack.trace.commons.clients.es.document.{Document, TraceIndexDoc}
+import com.expedia.www.haystack.trace.commons.clients.es.document.TraceIndexDoc
+import com.expedia.www.haystack.trace.commons.clients.es.document.TraceIndexDoc.{TagKey, TagValue}
 import com.expedia.www.haystack.trace.commons.config.entities.WhitelistIndexFieldConfiguration
 import com.expedia.www.haystack.trace.indexer.metrics.MetricsSupport
 import org.apache.commons.lang3.StringUtils
 
 import scala.collection.JavaConversions._
-import scala.collection.immutable.Stream
 import scala.collection.mutable
-import scala.util.{Failure, Random, Success, Try}
+import scala.util.{Failure, Success, Try}
 
 class IndexDocumentGenerator(config: WhitelistIndexFieldConfiguration) extends MetricsSupport {
 
-  private val ELASTIC_SEARCH_DOC_ID_SUFFIX_LENGTH = 4
-  private val randomCharStream = ThreadLocal.withInitial(new Supplier[Stream[Char]] {
-    override def get(): Stream[Char] = Random.alphanumeric
-  })
-
   /**
-    * we append a random id of length 4 to every elasticSearch index document for a given span buffer
-    * Since the span buffer can be in partial form and we may see another another span buffer object for
-    * the same TraceId, therefore we assign a random id to the elastic search document to avoid conflicts.
-    * With this, now every elastic search document bears the id : (TraceId)_(RANDOM_ID_OF_SIZE_4)
     * @param spanBuffer a span buffer object
     * @return index document that can be put in elastic search
     */
-
-  def createIndexDocument(traceId: String, spanBuffer: SpanBuffer): Option[Document] = {
-    // We maintain a white list of tags that are to be indexed. The whitelist is maintained as a confguration
+  def createIndexDocument(traceId: String, spanBuffer: SpanBuffer): Option[TraceIndexDoc] = {
+    // We maintain a white list of tags that are to be indexed. The whitelist is maintained as a configuration
     // in an external database (outside this app boundary). However, the app periodically reads this whitelist config
     // and applies it to the new spans that are read.
-
     val spanIndices = for(sp <- spanBuffer.getChildSpansList; if isValidForIndex(sp)) yield transform(sp)
-    val docId = s"${traceId}_${randomCharStream.get().take(ELASTIC_SEARCH_DOC_ID_SUFFIX_LENGTH).mkString}"
-    if (spanIndices.nonEmpty) Some(Document(docId, TraceIndexDoc(duration(spanBuffer), spanIndices))) else None
+    if (spanIndices.nonEmpty) Some(TraceIndexDoc(traceId, duration(spanBuffer), spanIndices)) else None
   }
 
   private def isValidForIndex(span: Span): Boolean = {

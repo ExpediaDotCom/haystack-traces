@@ -112,11 +112,9 @@ class ElasticSearchWriter(esConfig: ElasticSearchConfiguration, indexConf: White
     idxDocument match {
       case Some(doc) =>
         val action: Index = new Index.Builder(doc.json)
-          .id(doc.id)
           .index(indexName)
           .`type`(esConfig.indexType)
           .setParameter(Parameters.CONSISTENCY, esConfig.consistencyLevel)
-          .setParameter(Parameters.OP_TYPE, "create")
           .build()
         bulkBuilder.addAction(action, doc.json.getBytes("utf-8").length, forceBulkCreate)
       case _ =>

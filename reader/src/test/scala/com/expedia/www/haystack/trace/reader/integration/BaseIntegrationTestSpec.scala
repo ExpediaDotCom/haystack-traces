@@ -28,6 +28,7 @@ import com.expedia.open.tracing.api.TraceReaderGrpc
 import com.expedia.open.tracing.api.TraceReaderGrpc.TraceReaderBlockingStub
 import com.expedia.open.tracing.buffer.SpanBuffer
 import com.expedia.www.haystack.trace.commons.clients.cassandra.CassandraTableSchema
+import com.expedia.www.haystack.trace.commons.clients.es.document.TraceIndexDoc
 import com.expedia.www.haystack.trace.commons.config.entities.{WhiteListIndexFields, WhitelistIndexField}
 import com.expedia.www.haystack.trace.reader.Service
 import io.grpc.ManagedChannelBuilder
@@ -35,13 +36,15 @@ import io.searchbox.client.config.HttpClientConfig
 import io.searchbox.client.{JestClient, JestClientFactory}
 import io.searchbox.core.Index
 import io.searchbox.indices.CreateIndex
-import io.searchbox.params.Parameters
 import org.json4s.DefaultFormats
 import org.json4s.jackson.Serialization
 import org.scalatest._
 
+import scala.collection.mutable
+
 trait BaseIntegrationTestSpec extends FunSpec with GivenWhenThen with Matchers with BeforeAndAfterAll with BeforeAndAfterEach {
   protected implicit val formats = DefaultFormats
+  protected var client: TraceReaderBlockingStub = _
 
   private val CASSANDRA_ENDPOINT = "cassandra"
   private val CASSANDRA_KEYSPACE = "haystack"
@@ -58,7 +61,6 @@ trait BaseIntegrationTestSpec extends FunSpec with GivenWhenThen with Matchers w
     val formatter = new SimpleDateFormat("yyyy-MM-dd")
     s"haystack-traces-${formatter.format(new Date())}"
   }
-  protected var client:TraceReaderBlockingStub = _
   private val INDEX_TEMPLATE =
     """
       |{
@@ -84,11 +86,14 @@ trait BaseIntegrationTestSpec extends FunSpec with GivenWhenThen with Matchers w
       |              "enabled": false
       |            },
       |            "_source": {
-      |                "enabled": false
+      |                "includes": ["traceid"]
       |            },
       |            "properties": {
       |                "spans": {
       |                    "type": "nested"
+      |                },
+      |                "traceid": {
+      |                    "enabled": false
       |                }
       |            },
       |            "dynamic_templates": [
@@ -172,27 +177,23 @@ trait BaseIntegrationTestSpec extends FunSpec with GivenWhenThen with Matchers w
                               spanId: String,
                               serviceName: String,
                               operationName: String) = {
-    val source =
-      s"""
-         |{
-         |  "duration": 0,
-         |  "traceId": "$traceId",
-         |  "spans": [{
-         |    "spanId": "$spanId",
-         |    "service": "$serviceName",
-         |    "operation": "$operationName",
-         |    "startTime": ${System.currentTimeMillis() * 1000}
-         |  }]
-         |}
-       """.stripMargin
+    val indexDocument =
+      TraceIndexDoc(traceId,
+        0,
+        Seq(mutable.Map(
+          "spanId" -> spanId,
+          "service" -> serviceName,
+          "operation" -> operationName,
+          "startTime" -> (System.currentTimeMillis() * 1000))))
 
-    esClient.execute(new Index.Builder(source)
-      .id(s"${traceId}_1234")
+    val result = esClient.execute(new Index.Builder(indexDocument.json)
       .index(HAYSTACK_TRACES_INDEX)
       .`type`(SPANS_INDEX_TYPE)
-      .setParameter(Parameters.OP_TYPE, "create")
       .build)
 
+    if(result.getErrorMessage != null) {
+      fail("Fail to execute the indexing request " + result.getErrorMessage)
+    }
     // wait for few sec to let ES refresh its index
     Thread.sleep(5000)
   }

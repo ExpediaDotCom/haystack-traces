@@ -22,13 +22,14 @@ import java.util.Date
 
 import com.expedia.www.haystack.trace.commons.config.entities.{WhiteListIndexFields, WhitelistIndexField, WhitelistIndexFieldConfiguration}
 import com.expedia.www.haystack.trace.indexer.config.entities.ElasticSearchConfiguration
-import com.google.gson.{JsonArray, JsonObject}
 import io.searchbox.client.config.HttpClientConfig
 import io.searchbox.client.{JestClient, JestClientFactory}
 import io.searchbox.core.Search
 import io.searchbox.indices.DeleteIndex
 import org.json4s.DefaultFormats
 import org.json4s.jackson.Serialization
+
+case class EsSourceDocument(traceid: String)
 
 class ElasticSearchTestClient {
   implicit val formats = DefaultFormats
@@ -73,14 +74,19 @@ class ElasticSearchTestClient {
     cfg
   }
 
-  def query(query: String): JsonArray = {
+  def query(query: String): List[EsSourceDocument] = {
+    import scala.collection.JavaConversions._
     val searchQuery = new Search.Builder(query)
       .addIndex(HAYSTACK_TRACES_INDEX)
       .addType(INDEX_TYPE)
       .build()
     val result = esClient.execute(searchQuery)
-    val obj = result.getJsonObject.get("hits").asInstanceOf[JsonObject]
-    obj.get("hits").asInstanceOf[JsonArray]
+    if(result.getSourceAsStringList != null && result.getSourceAsStringList.size() > 0) {
+      result.getSourceAsStringList.map(Serialization.read[EsSourceDocument]).toList
+    }
+    else {
+      Nil
+    }
   }
 
   private val INDEX_TEMPLATE = """
@@ -103,12 +109,16 @@ class ElasticSearchTestClient {
                                  |    },
                                  |    "mappings": {
                                  |        "spans": {
+                                 |            "_all": { "enabled": false },
                                  |            "_source": {
-                                 |                "enabled": false
+                                 |               "includes": ["traceid"]
                                  |            },
                                  |            "properties": {
                                  |                "spans": {
                                  |                    "type": "nested"
+                                 |                },
+                                 |                "traceid": {
+                                 |                    "enabled": false
                                  |                }
                                  |            },
                                  |            "dynamic_templates": [

@@ -16,17 +16,15 @@
 
 package com.expedia.www.haystack.trace.reader.stores
 
-import java.util
-
 import com.expedia.open.tracing.api._
 import com.expedia.www.haystack.trace.commons.config.entities.{CassandraConfiguration, WhitelistIndexFieldConfiguration}
 import com.expedia.www.haystack.trace.reader.config.entities.ElasticSearchConfiguration
-import com.expedia.www.haystack.trace.reader.exceptions.InvalidTraceIdInDocument
 import com.expedia.www.haystack.trace.reader.metrics.MetricsSupport
 import com.expedia.www.haystack.trace.reader.stores.readers.cassandra.CassandraReader
 import com.expedia.www.haystack.trace.reader.stores.readers.es.ElasticSearchReader
 import com.expedia.www.haystack.trace.reader.stores.readers.es.query.{FieldValuesQueryGenerator, TraceSearchQueryGenerator}
 import io.searchbox.core.SearchResult
+import org.json4s.DefaultFormats
 import org.slf4j.LoggerFactory
 
 import scala.collection.JavaConversions._
@@ -38,11 +36,12 @@ class CassandraEsTraceStore(cassandraConfiguration: CassandraConfiguration,
                             indexConfiguration: WhitelistIndexFieldConfiguration)
                            (implicit val executor: ExecutionContextExecutor)
   extends TraceStore with MetricsSupport {
+  implicit val formats = DefaultFormats
+
   private val ES_FIELD_AGGREGATIONS = "aggregations"
   private val ES_FIELD_BUCKETS = "buckets"
+  private val ES_TRACE_ID_KEY = "traceid"
   private val ES_FIELD_KEY = "key"
-  private val ES_FIELD_HITS = "hits"
-  private val ES_FIELD_ID = "_id"
   private val ES_NESTED_DOC_NAME = "spans"
 
   private val LOGGER = LoggerFactory.getLogger(classOf[ElasticSearchReader])
@@ -51,56 +50,45 @@ class CassandraEsTraceStore(cassandraConfiguration: CassandraConfiguration,
   private val cassandraReader: CassandraReader = new CassandraReader(cassandraConfiguration)
   private val esReader: ElasticSearchReader = new ElasticSearchReader(esConfiguration)
 
-  private val idRegex = """([a-zA-z0-9-]*)_([a-zA-z0-9]*)""".r
-
   private val traceSearchQueryGenerator = new TraceSearchQueryGenerator(esConfiguration.indexNamePrefix, esConfiguration.indexType, ES_NESTED_DOC_NAME)
   private val fieldValuesQueryGenerator = new FieldValuesQueryGenerator(esConfiguration.indexNamePrefix, esConfiguration.indexType, ES_NESTED_DOC_NAME)
 
-  override def searchTraces(request: TracesSearchRequest): Future[List[Trace]] = {
+  override def searchTraces(request: TracesSearchRequest): Future[Seq[Trace]] = {
     esReader
       .search(traceSearchQueryGenerator.generate(request))
       .flatMap(extractTraces)
   }
 
-  private def extractTraces(result: SearchResult): Future[List[Trace]] = {
+  private def extractTraces(result: SearchResult): Future[Seq[Trace]] = {
+
     // go through each hit and fetch trace for parsed traceId
-    val traceFutures = result
-      .getJsonObject.get(ES_FIELD_HITS)
-      .getAsJsonObject.get(ES_FIELD_HITS)
-      .getAsJsonArray.toList
-      .map(doc => doc.getAsJsonObject.get(ES_FIELD_ID).getAsString)
-      .flatMap(id => fetchTrace(id))
+    val sourceList = result.getSourceAsStringList
+    if(sourceList != null && sourceList.size() > 0) {
+      val traceFutures = sourceList
+        .map(source => extractTraceIdFromSource(source))
+        .filter(!_.isEmpty)
+        .toSet[String]
+        .toSeq
+        .map(id => getTrace(id))
 
-    // wait for all Futures to complete and then map them to Traces
-    Future
-      .sequence(liftToTry(traceFutures))
-      .map(_.flatMap(retrieveTriedTrace))
-  }
-
-  private def fetchTrace(id: String): Option[Future[Trace]] = {
-    parseTraceId(id) match {
-      case Success(traceId) =>
-        Some(getTrace(traceId))
-      case Failure(ex) =>
-        LOGGER.warn("Invalid traceId, rejected searched trace", ex)
-        traceRejected.mark()
-        None
+      // wait for all Futures to complete and then map them to Traces
+      Future
+        .sequence(liftToTry(traceFutures))
+        .map(_.flatMap(retrieveTriedTrace))
+    } else {
+      Future.successful(Nil)
     }
   }
 
-  override def getTrace(traceId: String): Future[Trace] = {
-    cassandraReader.readTrace(traceId)
+  private def extractTraceIdFromSource(source: String): String = {
+    import org.json4s.jackson.JsonMethods._
+    (parse(source) \ ES_TRACE_ID_KEY).extract[String]
   }
 
-  private def parseTraceId(docId: String): Try[String] = {
-    docId match {
-      case idRegex(traceId, _) => Success(traceId)
-      case _ => Failure(InvalidTraceIdInDocument(docId))
-    }
-  }
+  override def getTrace(traceId: String): Future[Trace] = cassandraReader.readTrace(traceId)
 
-  private def retrieveTriedTrace(triedTrace: Try[Trace]): Option[Trace] = {
-    triedTrace match {
+  private def retrieveTriedTrace(mayBeTrace: Try[Trace]): Option[Trace] = {
+    mayBeTrace match {
       case Success(trace) =>
         Some(trace)
       case Failure(ex) =>
@@ -111,15 +99,15 @@ class CassandraEsTraceStore(cassandraConfiguration: CassandraConfiguration,
   }
 
   // convert all Futures to Try to make sure they all complete
-  private def liftToTry(traceFutures: List[Future[Trace]]): List[Future[Try[Trace]]] = traceFutures.map { f =>
+  private def liftToTry(traceFutures: Seq[Future[Trace]]): Seq[Future[Try[Trace]]] = traceFutures.map { f =>
     f.map(Try(_)).recover { case t: Throwable => Failure(t) }
   }
 
-  override def getFieldNames(): Future[List[String]] = {
+  override def getFieldNames(): Future[Seq[String]] = {
     Future.successful(indexConfiguration.whitelistIndexFields.map(_.name))
   }
 
-  override def getFieldValues(request: FieldValuesRequest): Future[List[String]] = {
+  override def getFieldValues(request: FieldValuesRequest): Future[Seq[String]] = {
     esReader
       .search(fieldValuesQueryGenerator.generate(request))
       .map(extractFieldValues(_, request.getFieldName))

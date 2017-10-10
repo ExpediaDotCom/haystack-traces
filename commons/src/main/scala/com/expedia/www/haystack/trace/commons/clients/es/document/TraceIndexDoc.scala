@@ -5,14 +5,12 @@ import org.json4s.jackson.Serialization
 
 import scala.collection.mutable
 
-object Document {
+object TraceIndexDoc {
   implicit val formats = DefaultFormats
   type TagKey = String
   type TagValue = Any
 }
 
-case class Document(id: String, doc: TraceIndexDoc) {
-  val json: String = Serialization.write(doc)(Document.formats)
+case class TraceIndexDoc(traceid: String, rootDuration: Long, spans: Seq[mutable.Map[String, Any]]) {
+  val json: String = Serialization.write(this)(TraceIndexDoc.formats)
 }
-
-case class TraceIndexDoc(rootDuration: Long, spans: Seq[mutable.Map[String, Any]])

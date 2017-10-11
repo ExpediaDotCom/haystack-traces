@@ -89,67 +89,73 @@ class ElasticSearchTestClient {
     }
   }
 
-  private val INDEX_TEMPLATE = """
-                                 |{
-                                 |    "template": "haystack-traces*",
-                                 |    "settings": {
-                                 |        "number_of_shards": 1,
-                                 |        "index.mapping.ignore_malformed": true,
-                                 |        "analysis": {
-                                 |            "normalizer": {
-                                 |                "lowercase_normalizer": {
-                                 |                    "type": "custom",
-                                 |                    "filter": ["lowercase"]
-                                 |                }
-                                 |            }
-                                 |        }
-                                 |    },
-                                 |    "aliases": {
-                                 |        "haystack-traces": {}
-                                 |    },
-                                 |    "mappings": {
-                                 |        "spans": {
-                                 |            "_all": { "enabled": false },
-                                 |            "_source": {
-                                 |               "includes": ["traceid"]
-                                 |            },
-                                 |            "properties": {
-                                 |                "spans": {
-                                 |                    "type": "nested"
-                                 |                },
-                                 |                "traceid": {
-                                 |                    "enabled": false
-                                 |                }
-                                 |            },
-                                 |            "dynamic_templates": [
-                                 |                {
-                                 |                    "strings_as_keywords_1": {
-                                 |                        "match_mapping_type": "string",
-                                 |                        "match_pattern": "regex",
-                                 |                        "unmatch": "^(service|operation)$",
-                                 |                        "mapping": {
-                                 |                            "type": "keyword",
-                                 |                            "normalizer": "lowercase_normalizer",
-                                 |                            "doc_values": false
-                                 |                        }
-                                 |                    }
-                                 |                },
-                                 |                {
-                                 |                    "strings_as_keywords_2": {
-                                 |                        "match_mapping_type": "string",
-                                 |                        "match_pattern": "regex",
-                                 |                        "match": "^(service|operation)$",
-                                 |                        "mapping": {
-                                 |                            "type": "keyword",
-                                 |                            "normalizer": "lowercase_normalizer",
-                                 |                            "doc_values": true
-                                 |                        }
-                                 |                    }
-                                 |                }
-                                 |            ]
-                                 |        }
-                                 |    }
-                                 |}
-                               """.stripMargin
-
+  private val INDEX_TEMPLATE =
+    """{
+      |    "template": "haystack-traces*",
+      |    "settings": {
+      |        "number_of_shards": 1,
+      |        "index.mapping.ignore_malformed": true,
+      |        "analysis": {
+      |            "normalizer": {
+      |                "lowercase_normalizer": {
+      |                    "type": "custom",
+      |                    "filter": ["lowercase"]
+      |                }
+      |            }
+      |        }
+      |    },
+      |    "aliases": {
+      |        "haystack-traces": {}
+      |    },
+      |    "mappings": {
+      |        "spans": {
+      |            "_all": {
+      |                "enabled": false
+      |            },
+      |            "_source": {
+      |                "includes": ["traceid"]
+      |            },
+      |            "properties": {
+      |                "spans": {
+      |                    "type": "nested",
+      |                    "properties": {
+      |                        "service": {
+      |                            "type": "keyword",
+      |                            "normalizer": "lowercase_normalizer",
+      |                            "doc_values": true,
+      |                            "norms": false
+      |                        },
+      |                        "operation": {
+      |                            "type": "keyword",
+      |                            "normalizer": "lowercase_normalizer",
+      |                            "doc_values": true,
+      |                            "norms": false
+      |                        }
+      |                    }
+      |                }
+      |            },
+      |            "dynamic_templates": [{
+      |                "strings_as_keywords_1": {
+      |                    "match_mapping_type": "string",
+      |                    "mapping": {
+      |                        "type": "keyword",
+      |                        "normalizer": "lowercase_normalizer",
+      |                        "doc_values": false,
+      |                        "norms": false
+      |                    }
+      |                }
+      |            }, {
+      |                "longs_disable_doc_norms": {
+      |                    "match_mapping_type": "long",
+      |                    "mapping": {
+      |                        "type": "long",
+      |                        "doc_values": false,
+      |                        "norms": false
+      |                    }
+      |                }
+      |            }]
+      |        }
+      |    }
+      |}
+      |""".stripMargin
 }

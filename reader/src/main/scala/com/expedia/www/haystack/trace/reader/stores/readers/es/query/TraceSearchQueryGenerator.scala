@@ -27,7 +27,7 @@ import org.elasticsearch.search.builder.SearchSourceBuilder
 import scala.collection.JavaConversions._
 
 class TraceSearchQueryGenerator(indexNamePrefix: String, indexType: String, nestedDocName: String) {
-  private val START_TIME_FIELD = "startTime"
+  import com.expedia.www.haystack.trace.commons.clients.es.document.TraceIndexDoc._
 
   def generate(request: TracesSearchRequest): Search = {
     require(request.getStartTime > 0)
@@ -58,20 +58,15 @@ class TraceSearchQueryGenerator(indexNamePrefix: String, indexType: String, nest
 
     // set time range window
     nestedBoolQuery
-      .must(rangeQuery(withBaseDoc(START_TIME_FIELD))
+      .must(rangeQuery(withBaseDoc(START_TIME_KEY_NAME))
         .gte(request.getStartTime)
         .lte(request.getEndTime))
 
-    nestedQuery(nestedDocName, nestedBoolQuery, ScoreMode.Avg)
+    nestedQuery(nestedDocName, nestedBoolQuery, ScoreMode.None)
   }
 
   private def buildTermQuery(key: String, value: String): Option[TermQueryBuilder] = {
-    if (StringUtils.isBlank(value)) {
-      None
-    }
-    else {
-      Some(termQuery(withBaseDoc(key), value))
-    }
+    if (StringUtils.isBlank(value)) None else Some(termQuery(withBaseDoc(key), value))
   }
 
   private def withBaseDoc(field: String) = s"$nestedDocName.$field"

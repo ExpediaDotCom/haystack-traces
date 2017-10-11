@@ -38,23 +38,26 @@ class SpanIndexDocumentGeneratorSpec extends FunSpec with Matchers {
         .setSpanId("span-1")
         .setServiceName("service1")
         .setOperationName("op1")
+        .setStartTime(100L)
         .setDuration(600L)
         .build()
       val span_2 = Span.newBuilder().setTraceId(TRACE_ID)
         .setSpanId("span-2")
         .setServiceName("service1")
         .setOperationName("op1")
+        .setStartTime(300L)
         .setDuration(500L)
         .build()
       val span_3 = Span.newBuilder().setTraceId(TRACE_ID)
         .setSpanId("span-3")
         .setServiceName("service2")
         .setDuration(1000L)
+        .setStartTime(400L)
         .setOperationName("op3").build()
 
       val spanBuffer = SpanBuffer.newBuilder().addChildSpans(span_1).addChildSpans(span_2).addChildSpans(span_3).setTraceId(TRACE_ID).build()
       val doc = generator.createIndexDocument(TRACE_ID, spanBuffer).get
-      doc.json shouldBe "{\"traceid\":\"trace_id\",\"rootDuration\":0,\"spans\":[{\"operation\":\"op1\",\"spanid\":\"span-1\",\"service\":\"service1\",\"duration\":600},{\"operation\":\"op1\",\"spanid\":\"span-2\",\"service\":\"service1\",\"duration\":500},{\"operation\":\"op3\",\"spanid\":\"span-3\",\"service\":\"service2\",\"duration\":1000}]}"
+      doc.json shouldBe "{\"traceid\":\"trace_id\",\"rootDuration\":0,\"spans\":[{\"operation\":\"op1\",\"spanid\":\"span-1\",\"starttime\":100,\"service\":\"service1\",\"duration\":600},{\"operation\":\"op1\",\"spanid\":\"span-2\",\"starttime\":300,\"service\":\"service1\",\"duration\":500},{\"operation\":\"op3\",\"spanid\":\"span-3\",\"starttime\":400,\"service\":\"service2\",\"duration\":1000}]}"
     }
 
     it ("should not create an index document if service name is absent") {
@@ -89,6 +92,7 @@ class SpanIndexDocumentGeneratorSpec extends FunSpec with Matchers {
         .setSpanId("span-1")
         .setOperationName("op1")
         .setDuration(100L)
+        .setStartTime(900L)
         .addTags(tag_1)
         .build()
       val span_2 = Span.newBuilder().setTraceId(TRACE_ID)
@@ -96,6 +100,7 @@ class SpanIndexDocumentGeneratorSpec extends FunSpec with Matchers {
         .setSpanId("span-2")
         .setOperationName("op2")
         .setDuration(200L)
+        .setStartTime(900L)
         .addTags(tag_2)
         .addTags(tag_1)
         .build()
@@ -103,12 +108,13 @@ class SpanIndexDocumentGeneratorSpec extends FunSpec with Matchers {
         .setSpanId("span-3")
         .setServiceName("service2")
         .setDuration(1000L)
+        .setStartTime(100L)
         .addTags(tag_2)
         .setOperationName("op3").build()
 
       val spanBuffer = SpanBuffer.newBuilder().addChildSpans(span_1).addChildSpans(span_2).addChildSpans(span_3).setTraceId(TRACE_ID).build()
       val doc = generator.createIndexDocument(TRACE_ID, spanBuffer).get
-      doc.json shouldBe "{\"traceid\":\"trace_id\",\"rootDuration\":0,\"spans\":[{\"operation\":\"op1\",\"role\":[\"haystack\"],\"spanid\":\"span-1\",\"service\":\"service1\",\"duration\":100},{\"operation\":\"op2\",\"role\":[\"haystack\"],\"errorCode\":[3],\"spanid\":\"span-2\",\"service\":\"service1\",\"duration\":200},{\"operation\":\"op3\",\"errorCode\":[3],\"spanid\":\"span-3\",\"service\":\"service2\",\"duration\":1000}]}"
+      doc.json shouldBe "{\"traceid\":\"trace_id\",\"rootDuration\":0,\"spans\":[{\"operation\":\"op1\",\"role\":[\"haystack\"],\"spanid\":\"span-1\",\"starttime\":900,\"service\":\"service1\",\"duration\":100},{\"operation\":\"op2\",\"role\":[\"haystack\"],\"spanid\":\"span-2\",\"starttime\":900,\"service\":\"service1\",\"errorcode\":[3],\"duration\":200},{\"operation\":\"op3\",\"spanid\":\"span-3\",\"starttime\":100,\"service\":\"service2\",\"errorcode\":[3],\"duration\":1000}]}"
     }
 
     it ("should respect enabled flag of tags create right json document for indexing") {
@@ -127,6 +133,7 @@ class SpanIndexDocumentGeneratorSpec extends FunSpec with Matchers {
         .setServiceName("service1")
         .setOperationName("op1")
         .setDuration(100L)
+        .setStartTime(600L)
         .addTags(tag_1)
         .build()
       val span_2 = Span.newBuilder().setTraceId(TRACE_ID)
@@ -134,12 +141,13 @@ class SpanIndexDocumentGeneratorSpec extends FunSpec with Matchers {
         .setServiceName("service1")
         .setOperationName("op2")
         .setDuration(200L)
+        .setStartTime(600L)
         .addTags(tag_2)
         .build()
 
       val spanBuffer = SpanBuffer.newBuilder().addChildSpans(span_1).addChildSpans(span_2).setTraceId(TRACE_ID).build()
       val doc = generator.createIndexDocument(TRACE_ID, spanBuffer).get
-      doc.json shouldBe "{\"traceid\":\"trace_id\",\"rootDuration\":0,\"spans\":[{\"operation\":\"op1\",\"spanid\":\"span-1\",\"service\":\"service1\",\"duration\":100},{\"operation\":\"op2\",\"errorCode\":[3],\"spanid\":\"span-2\",\"service\":\"service1\",\"duration\":200}]}"
+      doc.json shouldBe "{\"traceid\":\"trace_id\",\"rootDuration\":0,\"spans\":[{\"operation\":\"op1\",\"spanid\":\"span-1\",\"starttime\":600,\"service\":\"service1\",\"duration\":100},{\"operation\":\"op2\",\"spanid\":\"span-2\",\"starttime\":600,\"service\":\"service1\",\"errorcode\":[3],\"duration\":200}]}"
     }
 
     it ("one more test to verify the tags are indexed") {
@@ -169,7 +177,7 @@ class SpanIndexDocumentGeneratorSpec extends FunSpec with Matchers {
 
       val spanBuffer = SpanBuffer.newBuilder().addChildSpans(span_1).addChildSpans(span_2).setTraceId(TRACE_ID).build()
       val doc = generator.createIndexDocument(TRACE_ID, spanBuffer).get
-      doc.json shouldBe "{\"traceid\":\"trace_id\",\"rootDuration\":0,\"spans\":[{\"operation\":\"op1\",\"errorCode\":[5],\"spanid\":\"span-1\",\"service\":\"service1\",\"duration\":100},{\"operation\":\"op2\",\"errorCode\":[3],\"spanid\":\"span-2\",\"service\":\"service1\",\"duration\":200}]}"
+      doc.json shouldBe "{\"traceid\":\"trace_id\",\"rootDuration\":0,\"spans\":[{\"operation\":\"op1\",\"spanid\":\"span-1\",\"starttime\":0,\"service\":\"service1\",\"errorcode\":[5],\"duration\":100},{\"operation\":\"op2\",\"spanid\":\"span-2\",\"starttime\":0,\"service\":\"service1\",\"errorcode\":[3],\"duration\":200}]}"
     }
 
     it ("should extract unique tag values along with serviceName, operationName and duration and create json document for indexing") {
@@ -200,7 +208,7 @@ class SpanIndexDocumentGeneratorSpec extends FunSpec with Matchers {
 
       val spanBuffer = SpanBuffer.newBuilder().addChildSpans(span_1).addChildSpans(span_2).setTraceId(TRACE_ID).build()
       val doc = generator.createIndexDocument(TRACE_ID, spanBuffer).get
-      doc.json shouldBe "{\"traceid\":\"trace_id\",\"rootDuration\":0,\"spans\":[{\"operation\":\"op1\",\"role\":[\"haystack\"],\"spanid\":\"span-1\",\"service\":\"service1\",\"duration\":100},{\"operation\":\"op2\",\"errorCode\":[3],\"spanid\":\"span-2\",\"service\":\"service1\",\"duration\":200}]}"
+      doc.json shouldBe "{\"traceid\":\"trace_id\",\"rootDuration\":0,\"spans\":[{\"operation\":\"op1\",\"role\":[\"haystack\"],\"spanid\":\"span-1\",\"starttime\":0,\"service\":\"service1\",\"duration\":100},{\"operation\":\"op2\",\"spanid\":\"span-2\",\"starttime\":0,\"service\":\"service1\",\"errorcode\":[3],\"duration\":200}]}"
     }
 
     it ("should extract tags, log values along with serviceName, operationName and duration and create json document for indexing") {
@@ -227,6 +235,7 @@ class SpanIndexDocumentGeneratorSpec extends FunSpec with Matchers {
         .setSpanId("span-1")
         .setOperationName("op1")
         .setDuration(100L)
+        .setStartTime(400L)
         .addTags(tag_1)
         .build()
       val span_2 = Span.newBuilder().setTraceId("traceId")
@@ -234,6 +243,7 @@ class SpanIndexDocumentGeneratorSpec extends FunSpec with Matchers {
         .setSpanId("span-2")
         .setOperationName("op2")
         .setDuration(200L)
+        .setStartTime(400L)
         .addTags(tag_2)
         .addLogs(log_1)
         .addLogs(log_2)
@@ -241,7 +251,7 @@ class SpanIndexDocumentGeneratorSpec extends FunSpec with Matchers {
 
       val spanBuffer = SpanBuffer.newBuilder().addChildSpans(span_1).addChildSpans(span_2).setTraceId(TRACE_ID).build()
       val doc = generator.createIndexDocument(TRACE_ID, spanBuffer).get
-      doc.json shouldBe "{\"traceid\":\"trace_id\",\"rootDuration\":0,\"spans\":[{\"operation\":\"op1\",\"role\":[\"haystack\"],\"spanid\":\"span-1\",\"service\":\"service1\",\"duration\":100},{\"operation\":\"op2\",\"errorCode\":[3],\"spanid\":\"span-2\",\"service\":\"service1\",\"duration\":200,\"exception\":[\"xxx-yy-zzz\",\"aaa-bb-cccc\"]}]}"
+      doc.json shouldBe "{\"traceid\":\"trace_id\",\"rootDuration\":0,\"spans\":[{\"operation\":\"op1\",\"role\":[\"haystack\"],\"spanid\":\"span-1\",\"starttime\":400,\"service\":\"service1\",\"duration\":100},{\"operation\":\"op2\",\"spanid\":\"span-2\",\"starttime\":400,\"service\":\"service1\",\"errorcode\":[3],\"duration\":200,\"exception\":[\"xxx-yy-zzz\",\"aaa-bb-cccc\"]}]}"
     }
 
     it("should transform the tags for all data types like bool, long, double to string type") {
@@ -263,6 +273,7 @@ class SpanIndexDocumentGeneratorSpec extends FunSpec with Matchers {
         .setSpanId("span-1")
         .setOperationName("op1")
         .setDuration(100L)
+        .setStartTime(400L)
         .addTags(tag_1)
         .addTags(tag_2)
         .addLogs(log_1)
@@ -270,7 +281,7 @@ class SpanIndexDocumentGeneratorSpec extends FunSpec with Matchers {
       val spanBuffer = SpanBuffer.newBuilder().addChildSpans(span_1).setTraceId(TRACE_ID).build()
 
       val doc = generator.createIndexDocument(TRACE_ID, spanBuffer)
-      doc.get.json shouldEqual "{\"traceid\":\"trace_id\",\"rootDuration\":0,\"spans\":[{\"operation\":\"op1\",\"errorCode\":[\"500\"],\"spanid\":\"span-1\",\"service\":\"service1\",\"isErrored\":[\"true\"],\"duration\":100,\"exception\":[\"xxx-yy-zzz\"]}]}"
+      doc.get.json shouldEqual "{\"traceid\":\"trace_id\",\"rootDuration\":0,\"spans\":[{\"operation\":\"op1\",\"spanid\":\"span-1\",\"iserrored\":[\"true\"],\"starttime\":400,\"service\":\"service1\",\"errorcode\":[\"500\"],\"duration\":100,\"exception\":[\"xxx-yy-zzz\"]}]}"
     }
   }
 }

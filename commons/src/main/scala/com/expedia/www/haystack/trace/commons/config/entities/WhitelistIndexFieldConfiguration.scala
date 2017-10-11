@@ -71,7 +71,7 @@ case class WhitelistIndexFieldConfiguration() extends Reloadable {
 
     // add the fields in the map
     for(field <- newWhitelistFields.fields) {
-      indexFieldMap.put(field.name, field)
+      indexFieldMap.put(field.name.toLowerCase, field)
     }
   }
 

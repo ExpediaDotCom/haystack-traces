@@ -60,25 +60,20 @@ class FieldValuesQueryGenerator(indexNamePrefix: String, indexType: String, nest
     if (filters.size() == 0) {
       None
     } else {
-      val nestedBoolQuery: BoolQueryBuilder = boolQuery()
+      val nestedBoolQueryBuilder = boolQuery()
 
       // add all fields as term sub query
       val subQueries: Seq[QueryBuilder] =
         for (field <- filters;
              termQuery = buildTermQuery(field.getName, field.getValue); if termQuery.isDefined) yield termQuery.get
-      subQueries.foreach(nestedBoolQuery.filter)
+      subQueries.foreach(nestedBoolQueryBuilder.filter)
 
-      Some(nestedQuery(nestedDocName, nestedBoolQuery, ScoreMode.Avg))
+      Some(nestedQuery(nestedDocName, nestedBoolQueryBuilder, ScoreMode.None))
     }
   }
 
   private def buildTermQuery(key: String, value: String): Option[TermQueryBuilder] = {
-    if (StringUtils.isBlank(value)) {
-      None
-    }
-    else {
-      Some(termQuery(withBaseDoc(key), value))
-    }
+    if (StringUtils.isBlank(value)) None else Some(termQuery(withBaseDoc(key), value))
   }
 
   private def createNestedAggregationQuery(fieldName: String): AggregationBuilder =

@@ -67,7 +67,7 @@ class IndexDocumentGenerator(config: WhitelistIndexFieldConfiguration) extends M
 
     def addTagKeys(tags: java.util.List[Tag]): Unit = {
       for (tag <- tags;
-           indexField = config.indexFieldMap.get(tag.getKey)
+           indexField = config.indexFieldMap.get(tag.getKey.toLowerCase)
            if indexField != null && indexField.enabled;
            (k, v) = transformTagToKVPair(tag);
            convertedToIndexFieldType = adjustTagValueToIndexFieldType(indexField.`type`, v)
@@ -80,10 +80,13 @@ class IndexDocumentGenerator(config: WhitelistIndexFieldConfiguration) extends M
     addTagKeys(span.getTagsList)
     span.getLogsList.foreach(logEntry => addTagKeys(logEntry.getFieldsList))
 
-    spanIndexDoc.put("spanid", span.getSpanId)
-    spanIndexDoc.put("service", span.getServiceName)
-    spanIndexDoc.put("operation", span.getOperationName)
-    spanIndexDoc.put("duration", span.getDuration)
+    import com.expedia.www.haystack.trace.commons.clients.es.document.TraceIndexDoc._
+
+    spanIndexDoc.put(SPAN_ID_KEY_NAME, span.getSpanId)
+    spanIndexDoc.put(SERVICE_KEY_NAME, span.getServiceName)
+    spanIndexDoc.put(OPERATION_KEY_NAME, span.getOperationName)
+    spanIndexDoc.put(DURATION_KEY_NAME, span.getDuration)
+    spanIndexDoc.put(START_TIME_KEY_NAME, span.getStartTime)
 
     spanIndexDoc
   }
@@ -121,7 +124,7 @@ class IndexDocumentGenerator(config: WhitelistIndexFieldConfiguration) extends M
   private def transformTagToKVPair(tag: Tag): (TagKey, TagValue) = {
     import com.expedia.open.tracing.Tag.TagType._
 
-    val key = tag.getKey
+    val key = tag.getKey.toLowerCase
     tag.getType match {
       case BOOL => (key, tag.getVBool)
       case STRING => (key, tag.getVStr)

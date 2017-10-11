@@ -181,14 +181,15 @@ trait BaseIntegrationTestSpec extends FunSpec with GivenWhenThen with Matchers w
                               spanId: String,
                               serviceName: String,
                               operationName: String) = {
+    import TraceIndexDoc._
     val indexDocument =
       TraceIndexDoc(traceId,
         0,
         Seq(mutable.Map(
-          "spanId" -> spanId,
-          "service" -> serviceName,
-          "operation" -> operationName,
-          "startTime" -> (System.currentTimeMillis() * 1000))))
+          SPAN_ID_KEY_NAME -> spanId,
+          SERVICE_KEY_NAME -> serviceName,
+          OPERATION_KEY_NAME -> operationName,
+          START_TIME_KEY_NAME -> (System.currentTimeMillis() * 1000))))
 
     val result = esClient.execute(new Index.Builder(indexDocument.json)
       .index(HAYSTACK_TRACES_INDEX)

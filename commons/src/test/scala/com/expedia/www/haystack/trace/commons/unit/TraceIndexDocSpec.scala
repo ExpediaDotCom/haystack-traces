@@ -27,7 +27,7 @@ class TraceIndexDocSpec extends FunSpec with Matchers {
     it("should produce the valid json document for indexing") {
       val spanDoc = mutable.Map("spanid" -> "SPAN-1", "operatioName" -> "op1", "serviceName" -> "svc", "duration" -> 100)
       val indexDoc = TraceIndexDoc("trace-id", 100L, Seq(spanDoc))
-      indexDoc.json shouldEqual "{\"traceid\":\"trace-id\",\"rootDuration\":100,\"spans\":[{\"spanid\":\"SPAN-1\",\"serviceName\":\"svc\",\"operatioName\":\"op1\",\"duration\":100}]}"
+      indexDoc.json shouldEqual "{\"traceid\":\"trace-id\",\"rootduration\":100,\"spans\":[{\"spanid\":\"SPAN-1\",\"serviceName\":\"svc\",\"operatioName\":\"op1\",\"duration\":100}]}"
     }
   }
 }

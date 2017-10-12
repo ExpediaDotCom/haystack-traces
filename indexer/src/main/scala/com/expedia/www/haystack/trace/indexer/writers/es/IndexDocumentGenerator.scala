@@ -20,7 +20,7 @@ package com.expedia.www.haystack.trace.indexer.writers.es
 import com.expedia.open.tracing.buffer.SpanBuffer
 import com.expedia.open.tracing.{Span, Tag}
 import com.expedia.www.haystack.trace.commons.clients.es.document.TraceIndexDoc
-import com.expedia.www.haystack.trace.commons.clients.es.document.TraceIndexDoc.{TagKey, TagValue}
+import com.expedia.www.haystack.trace.commons.clients.es.document.TraceIndexDoc.TagValue
 import com.expedia.www.haystack.trace.commons.config.entities.WhitelistIndexFieldConfiguration
 import com.expedia.www.haystack.trace.indexer.metrics.MetricsSupport
 import org.apache.commons.lang3.StringUtils
@@ -40,7 +40,7 @@ class IndexDocumentGenerator(config: WhitelistIndexFieldConfiguration) extends M
     // in an external database (outside this app boundary). However, the app periodically reads this whitelist config
     // and applies it to the new spans that are read.
     val spanIndices = for(sp <- spanBuffer.getChildSpansList; if isValidForIndex(sp)) yield transform(sp)
-    if (spanIndices.nonEmpty) Some(TraceIndexDoc(traceId, duration(spanBuffer), spanIndices)) else None
+    if (spanIndices.nonEmpty) Some(TraceIndexDoc(traceId, rootDuration(spanBuffer), spanIndices)) else None
   }
 
   private def isValidForIndex(span: Span): Boolean = {
@@ -49,7 +49,7 @@ class IndexDocumentGenerator(config: WhitelistIndexFieldConfiguration) extends M
 
   // finds the amount of time it takes for one trace(span buffer) to complete.
   // span buffer contains all the spans for a given TraceId
-  private def duration(spanBuffer: SpanBuffer): Long = {
+  private def rootDuration(spanBuffer: SpanBuffer): Long = {
     spanBuffer.getChildSpansList
       .find(sp => sp.getParentSpanId == null)
       .map(_.getDuration)
@@ -65,23 +65,15 @@ class IndexDocumentGenerator(config: WhitelistIndexFieldConfiguration) extends M
   private def transform(span: Span): mutable.Map[String, Any] = {
     val spanIndexDoc = mutable.Map[String, Any]()
 
-    def addTagKeys(tags: java.util.List[Tag]): Unit = {
-      for (tag <- tags;
-           indexField = config.indexFieldMap.get(tag.getKey.toLowerCase)
-           if indexField != null && indexField.enabled;
-           (k, v) = transformTagToKVPair(tag);
-           convertedToIndexFieldType = adjustTagValueToIndexFieldType(indexField.`type`, v)
-           if convertedToIndexFieldType.isDefined) {
-        val tagValues = spanIndexDoc.getOrElseUpdate(k, mutable.ListBuffer[TagValue]()).asInstanceOf[mutable.ListBuffer[TagValue]]
-        tagValues += convertedToIndexFieldType.get
-      }
+    for (tag <- span.getTagsList;
+         normalizedTagKey = tag.getKey.toLowerCase;
+         indexField = config.indexFieldMap.get(normalizedTagKey); if indexField != null && indexField.enabled;
+         v = readTagValue(tag);
+         indexableValue = transformValueForIndexing(indexField.`type`, v); if indexableValue.isDefined) {
+      spanIndexDoc.put(normalizedTagKey, indexableValue)
     }
 
-    addTagKeys(span.getTagsList)
-    span.getLogsList.foreach(logEntry => addTagKeys(logEntry.getFieldsList))
-
     import com.expedia.www.haystack.trace.commons.clients.es.document.TraceIndexDoc._
-
     spanIndexDoc.put(SPAN_ID_KEY_NAME, span.getSpanId)
     spanIndexDoc.put(SERVICE_KEY_NAME, span.getServiceName)
     spanIndexDoc.put(OPERATION_KEY_NAME, span.getOperationName)
@@ -101,7 +93,7 @@ class IndexDocumentGenerator(config: WhitelistIndexFieldConfiguration) extends M
     * @param value tag value
     * @return tag value with adjusted(expected) type
     */
-  private def adjustTagValueToIndexFieldType(fieldType: String, value: TagValue): Option[TagValue] = {
+  private def transformValueForIndexing(fieldType: String, value: TagValue): Option[TagValue] = {
     Try (fieldType match {
       case "string" => value.toString
       case "long" | "int" => value.toString.toLong
@@ -119,18 +111,17 @@ class IndexDocumentGenerator(config: WhitelistIndexFieldConfiguration) extends M
   /**
     * converts the tag into key value pair
     * @param tag span tag
-    * @return TagKey(string), TagValue(Any)
+    * @return TagValue(Any)
     */
-  private def transformTagToKVPair(tag: Tag): (TagKey, TagValue) = {
+  private def readTagValue(tag: Tag): TagValue = {
     import com.expedia.open.tracing.Tag.TagType._
 
-    val key = tag.getKey.toLowerCase
     tag.getType match {
-      case BOOL => (key, tag.getVBool)
-      case STRING => (key, tag.getVStr)
-      case LONG => (key, tag.getVLong)
-      case DOUBLE => (key, tag.getVDouble)
-      case BINARY => (key, tag.getVBytes.toStringUtf8)
+      case BOOL => tag.getVBool
+      case STRING => tag.getVStr
+      case LONG => tag.getVLong
+      case DOUBLE => tag.getVDouble
+      case BINARY => tag.getVBytes.toStringUtf8
       case _ => throw new RuntimeException(s"Fail to understand the span tag type ${tag.getType} !!!")
     }
   }

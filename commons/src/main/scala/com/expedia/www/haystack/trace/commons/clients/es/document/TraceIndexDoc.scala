@@ -13,11 +13,10 @@ object TraceIndexDoc {
   val SERVICE_KEY_NAME = "service"
   val OPERATION_KEY_NAME = "operation"
   val DURATION_KEY_NAME = "duration"
-  val ROOT_DURATION_KEY_NAME = "rootduration"
   val START_TIME_KEY_NAME = "starttime"
   val SPAN_ID_KEY_NAME = "spanid"
 }
 
-case class TraceIndexDoc(traceid: String, rootDuration: Long, spans: Seq[mutable.Map[String, Any]]) {
+case class TraceIndexDoc(traceid: String, rootduration: Long, spans: Seq[mutable.Map[String, Any]]) {
   val json: String = Serialization.write(this)(TraceIndexDoc.formats)
 }

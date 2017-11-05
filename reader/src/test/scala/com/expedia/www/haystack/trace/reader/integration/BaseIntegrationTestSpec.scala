@@ -39,7 +39,7 @@ import io.searchbox.indices.CreateIndex
 import org.json4s.DefaultFormats
 import org.json4s.jackson.Serialization
 import org.scalatest._
-
+import collection.JavaConverters._
 import scala.collection.mutable
 
 trait BaseIntegrationTestSpec extends FunSpec with GivenWhenThen with Matchers with BeforeAndAfterAll with BeforeAndAfterEach {
@@ -160,7 +160,7 @@ trait BaseIntegrationTestSpec extends FunSpec with GivenWhenThen with Matchers w
 
     Thread.sleep(5000)
 
-    client = TraceReaderGrpc.newBlockingStub(ManagedChannelBuilder.forAddress("localhost", 8080)
+    client = TraceReaderGrpc.newBlockingStub(ManagedChannelBuilder.forAddress("localhost", 8088)
       .usePlaintext(true)
       .build())
   }
@@ -172,26 +172,29 @@ trait BaseIntegrationTestSpec extends FunSpec with GivenWhenThen with Matchers w
   protected def putTraceInCassandraAndEs(traceId: String = UUID.randomUUID().toString,
                                          spanId: String = UUID.randomUUID().toString,
                                          serviceName: String = "",
-                                         operationName: String = ""): Unit = {
-    insertTraceInCassandra(traceId, spanId, serviceName, operationName)
-    insertTraceInEs(traceId, spanId, serviceName, operationName)
+                                         operationName: String = "",
+                                         tags: Map[String, String] = Map.empty): Unit = {
+    insertTraceInCassandra(traceId, spanId, serviceName, operationName, tags)
+    insertTraceInEs(traceId, spanId, serviceName, operationName, tags)
   }
 
   private def insertTraceInEs(traceId: String,
                               spanId: String,
                               serviceName: String,
-                              operationName: String) = {
+                              operationName: String,
+                              tags: Map[String, String]) = {
     import TraceIndexDoc._
-    val indexDocument =
-      TraceIndexDoc(traceId,
-        0,
-        Seq(mutable.Map(
-          SPAN_ID_KEY_NAME -> spanId,
-          SERVICE_KEY_NAME -> serviceName,
-          OPERATION_KEY_NAME -> operationName,
-          START_TIME_KEY_NAME -> (System.currentTimeMillis() * 1000))))
+    // create map using service, operation and tags
+    val fieldMap = mutable.Map(
+      SPAN_ID_KEY_NAME -> spanId,
+      SERVICE_KEY_NAME -> serviceName,
+      OPERATION_KEY_NAME -> operationName,
+      START_TIME_KEY_NAME -> (System.currentTimeMillis() * 1000)
+    )
+    tags.foreach(pair => fieldMap.put(pair._1.toLowerCase(), pair._2))
 
-    val result = esClient.execute(new Index.Builder(indexDocument.json)
+    // index the document
+    val result = esClient.execute(new Index.Builder(TraceIndexDoc(traceId, 0, Seq(fieldMap)).json)
       .index(HAYSTACK_TRACES_INDEX)
       .`type`(SPANS_INDEX_TYPE)
       .build)
@@ -217,9 +220,10 @@ trait BaseIntegrationTestSpec extends FunSpec with GivenWhenThen with Matchers w
   private def insertTraceInCassandra(traceId: String,
                                      spanId: String,
                                      serviceName: String,
-                                     operationName: String): ResultSet = {
+                                     operationName: String,
+                                     tags: Map[String, String]): ResultSet = {
     import CassandraTableSchema._
-    val spanBuffer = createSpanBufferWithSingleSpan(traceId, spanId, serviceName, operationName)
+    val spanBuffer = createSpanBufferWithSingleSpan(traceId, spanId, serviceName, operationName, tags)
 
     cassandraSession.execute(QueryBuilder
       .insertInto(CASSANDRA_TABLE)
@@ -231,7 +235,10 @@ trait BaseIntegrationTestSpec extends FunSpec with GivenWhenThen with Matchers w
   private def createSpanBufferWithSingleSpan(traceId: String,
                                              spanId: String,
                                              serviceName: String,
-                                             operationName: String) = {
+                                             operationName: String,
+                                             tags: Map[String, String]) = {
+    val spanTags = tags.map(tag => com.expedia.open.tracing.Tag.newBuilder().setKey(tag._1).setVStr(tag._2).build())
+
     SpanBuffer
       .newBuilder()
       .setTraceId(traceId)
@@ -241,6 +248,7 @@ trait BaseIntegrationTestSpec extends FunSpec with GivenWhenThen with Matchers w
         .setSpanId(spanId)
         .setOperationName(operationName)
         .setServiceName(serviceName)
+        .addAllTags(spanTags.asJava)
         .build())
       .build()
   }
@@ -248,7 +256,8 @@ trait BaseIntegrationTestSpec extends FunSpec with GivenWhenThen with Matchers w
   protected def putTraceInCassandra(traceId: String,
                                     spanId: String = UUID.randomUUID().toString,
                                     serviceName: String = "",
-                                    operationName: String = ""): ResultSet = {
-    insertTraceInCassandra(traceId, spanId, serviceName, operationName)
+                                    operationName: String = "",
+                                    tags: Map[String, String] = Map.empty): ResultSet = {
+    insertTraceInCassandra(traceId, spanId, serviceName, operationName, tags)
   }
 }

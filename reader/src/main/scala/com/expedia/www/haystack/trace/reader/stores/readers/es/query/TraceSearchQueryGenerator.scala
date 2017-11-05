@@ -69,5 +69,5 @@ class TraceSearchQueryGenerator(indexNamePrefix: String, indexType: String, nest
     if (StringUtils.isBlank(value)) None else Some(termQuery(withBaseDoc(key), value))
   }
 
-  private def withBaseDoc(field: String) = s"$nestedDocName.$field"
+  private def withBaseDoc(field: String) = s"$nestedDocName.${field.toLowerCase}"
 }

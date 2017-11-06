@@ -24,6 +24,62 @@ import scala.collection.JavaConversions._
 
 class TraceServiceIntegrationTestSpec extends BaseIntegrationTestSpec {
 
+  describe("TraceReader.getFieldNames") {
+    it("should return names of enabled fields") {
+      Given("trace in cassandra and elasticsearch")
+      val field1 = "abc"
+      val field2 = "def"
+      putWhitelistIndexFieldsInEs(List(field1, field2))
+
+      When("calling getFieldNames")
+      val fieldNames = client.getFieldNames(Empty.newBuilder().build())
+
+      Then("should return fieldNames available in index")
+      fieldNames.getNamesList.size() should be(2)
+      fieldNames.getNamesList.toList should contain allOf (field1, field2)
+    }
+  }
+
+  describe("TraceReader.getFieldValues") {
+    it("should return values of a given fields") {
+      Given("trace in cassandra and elasticsearch")
+      val serviceName = "get_values_servicename"
+      putTraceInCassandraAndEs(UUID.randomUUID().toString, UUID.randomUUID().toString, serviceName, "op")
+      val request = FieldValuesRequest.newBuilder()
+        .setFieldName("service")
+        .build()
+
+      When("calling getFieldNames")
+      val result = client.getFieldValues(request)
+
+      Then("should return possible values for given field")
+      result.getValuesList.toList should contain(serviceName)
+    }
+
+    it("should return values of a given fields with filters") {
+      Given("trace in cassandra and elasticsearch")
+      val serviceName = "get_values_with_filters_servicename"
+      val op1 = "get_values_with_filters_operationname_1"
+      val op2 = "get_values_with_filters_operationname_2"
+
+      putTraceInCassandraAndEs(UUID.randomUUID().toString, UUID.randomUUID().toString, serviceName, op1)
+      putTraceInCassandraAndEs(UUID.randomUUID().toString, UUID.randomUUID().toString, serviceName, op2)
+      putTraceInCassandraAndEs(UUID.randomUUID().toString, UUID.randomUUID().toString, "non_matching_servicename", "non_matching_operationname")
+
+      val request = FieldValuesRequest.newBuilder()
+        .addFilters(Field.newBuilder().setName("service").setValue(serviceName))
+        .setFieldName("operation")
+        .build()
+
+      When("calling getFieldNames")
+      val result = client.getFieldValues(request)
+
+      Then("should return filtered values for given field")
+      result.getValuesList.size() should be(2)
+      result.getValuesList.toList should contain allOf(op1, op2)
+    }
+  }
+
   describe("TraceReader.getTrace") {
     it("should get trace for given traceID from cassandra") {
       Given("trace in cassandra")
@@ -203,64 +259,58 @@ class TraceServiceIntegrationTestSpec extends BaseIntegrationTestSpec {
         .setLimit(10)
         .build())
 
-      Then("should return all traces for the service")
+      Then("should not return traces")
       traces.getTracesList.size() should be(0)
     }
-  }
 
-  describe("TraceReader.getFieldNames") {
-    it("should return names of enabled fields") {
-      Given("trace in cassandra and elasticsearch")
-      val field1 = "abc"
-      val field2 = "def"
-      putWhitelistIndexFieldsInEs(List(field1, field2))
+    it("should search traces for given whitelisted tags") {
+      Given("traces with tags in cassandra and elasticsearch")
+      val traceId = UUID.randomUUID().toString
+      val serviceName = "svcWhitelisteTags"
+      val operationName = "opWhitelisteTags"
+      val tags = Map("aKey" -> "aValue", "bKey" -> "bValue")
+      val startTime = 1
+      val endTime = (System.currentTimeMillis() + 10000000) * 1000
+      putTraceInCassandraAndEs(traceId, UUID.randomUUID().toString, serviceName, operationName, tags)
 
-      When("calling getFieldNames")
-      val fieldNames = client.getFieldNames(Empty.newBuilder().build())
+      When("searching traces for tags")
+      val traces = client.searchTraces(TracesSearchRequest
+        .newBuilder()
+        .addFields(Field.newBuilder().setName("service").setValue(serviceName).build())
+        .addFields(Field.newBuilder().setName("akey").setValue("avalue").build())
+        .addFields(Field.newBuilder().setName("bkey").setValue("bvalue").build())
+        .setStartTime(startTime)
+        .setEndTime(endTime)
+        .setLimit(10)
+        .build())
 
-      Then("should return fieldNames available in index")
-      fieldNames.getNamesList.size() should be(2)
-      fieldNames.getNamesList.toList should contain allOf (field1, field2)
-    }
-  }
-
-  describe("TraceReader.getFieldValues") {
-    it("should return values of a given fields") {
-      Given("trace in cassandra and elasticsearch")
-      val serviceName = "get_values_servicename"
-      putTraceInCassandraAndEs(UUID.randomUUID().toString, UUID.randomUUID().toString, serviceName, "op")
-      val request = FieldValuesRequest.newBuilder()
-        .setFieldName("service")
-        .build()
-
-      When("calling getFieldNames")
-      val result = client.getFieldValues(request)
-
-      Then("should return possible values for given field")
-      result.getValuesList.toList should contain(serviceName)
+      Then("should return traces having tags")
+      traces.getTracesList.exists(_.getTraceId == traceId) shouldBe true
     }
 
-    it("should return values of a given fields with filters") {
-      Given("trace in cassandra and elasticsearch")
-      val serviceName = "get_values_with_filters_servicename"
-      val op1 = "get_values_with_filters_operationname_1"
-      val op2 = "get_values_with_filters_operationname_2"
+    it("should not return traces if tags are not available") {
+      Given("traces with tags in cassandra and elasticsearch")
+      val traceId = UUID.randomUUID().toString
+      val serviceName = "svcWhitelisteTags"
+      val operationName = "opWhitelisteTags"
+      val tags = Map("cKey" -> "cValue", "dKey" -> "dValue")
+      val startTime = 1
+      val endTime = (System.currentTimeMillis() + 10000000) * 1000
+      putTraceInCassandraAndEs(traceId, UUID.randomUUID().toString, serviceName, operationName, tags)
 
-      putTraceInCassandraAndEs(UUID.randomUUID().toString, UUID.randomUUID().toString, serviceName, op1)
-      putTraceInCassandraAndEs(UUID.randomUUID().toString, UUID.randomUUID().toString, serviceName, op2)
-      putTraceInCassandraAndEs(UUID.randomUUID().toString, UUID.randomUUID().toString, "non_matching_servicename", "non_matching_operationname")
+      When("searching traces for tags")
+      val traces = client.searchTraces(TracesSearchRequest
+        .newBuilder()
+        .addFields(Field.newBuilder().setName("service").setValue(serviceName).build())
+        .addFields(Field.newBuilder().setName("ckey").setValue("cvalue").build())
+        .addFields(Field.newBuilder().setName("akey").setValue("avalue").build())
+        .setStartTime(startTime)
+        .setEndTime(endTime)
+        .setLimit(10)
+        .build())
 
-      val request = FieldValuesRequest.newBuilder()
-        .addFilters(Field.newBuilder().setName("service").setValue(serviceName))
-        .setFieldName("operation")
-        .build()
-
-      When("calling getFieldNames")
-      val result = client.getFieldValues(request)
-
-      Then("should return filtered values for given field")
-      result.getValuesList.size() should be(2)
-      result.getValuesList.toList should contain allOf(op1, op2)
+      Then("should not return traces")
+      traces.getTracesList.exists(_.getTraceId == traceId) shouldBe false
     }
   }
 }

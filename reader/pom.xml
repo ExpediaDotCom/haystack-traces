@@ -39,17 +39,14 @@
             <artifactId>grpc-stub</artifactId>
         </dependency>
 
-        <!-- grpc -->
         <dependency>
             <groupId>io.grpc</groupId>
             <artifactId>grpc-netty</artifactId>
-            <version>${grpc.version}</version>
         </dependency>
-        <!-- for grpc client -->
+
         <dependency>
             <groupId>io.netty</groupId>
             <artifactId>netty-handler</artifactId>
-            <version>4.1.14.Final</version>
         </dependency>
 
         <dependency>

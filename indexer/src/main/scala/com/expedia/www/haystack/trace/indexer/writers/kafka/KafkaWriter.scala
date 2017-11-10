@@ -29,7 +29,7 @@ import org.slf4j.LoggerFactory
 import scala.util.Try
 
 object KafkaWriter extends MetricsSupport {
-  protected val kafkaProducerFailures: Meter = metricRegistry.meter(AppMetricNames.PROCESS_TIMER)
+  protected val kafkaProducerFailures: Meter = metricRegistry.meter(AppMetricNames.KAFKA_PRODUCE_FAILURES)
 }
 
 class KafkaWriter(producerConfig: Properties, topic: String) extends TraceWriter {

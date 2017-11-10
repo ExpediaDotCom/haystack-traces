@@ -35,5 +35,8 @@ object AppMetricNames {
   val ES_WRITE_FAILURE = "es.write.failure"
   val ES_WRITE_TIME = "es.writer.time"
 
+  val KAFKA_PRODUCE_FAILURES = "kafka.produce.failure"
+
+
   val SKIP_TAG_INDEXING = "ignore.tag.index"
 }

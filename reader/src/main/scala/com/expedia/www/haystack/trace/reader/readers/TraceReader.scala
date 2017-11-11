@@ -86,11 +86,10 @@ class TraceReader(traceStore: TraceStore, transformersConfig: TraceTransformersC
   private def transformTraceIgnoringInvalidSpans(trace: Trace): Option[Trace] = {
     validate(trace) match {
       case Success(_) => Some(transform(trace))
-      case Failure(ex) => {
-        LOGGER.warn(s"invalid trace rejected", ex)
+      case Failure(ex) =>
+        LOGGER.warn(s"invalid trace={} is rejected", trace, ex)
         traceRejectedCounter.mark()
         None
-      }
     }
   }
 

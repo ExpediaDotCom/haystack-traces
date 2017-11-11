@@ -47,7 +47,7 @@ class TraceService(traceStore: TraceStore,
     *                         or will error out with [[com.expedia.www.haystack.trace.reader.exceptions.TraceNotFoundException]]
     */
   override def getTrace(request: TraceRequest, responseObserver: StreamObserver[Trace]): Unit = {
-    handleGetTraceResponse.handle(responseObserver) {
+    handleGetTraceResponse.handle(request, responseObserver) {
       traceReader.getTrace(request)
     }
   }
@@ -60,7 +60,7 @@ class TraceService(traceStore: TraceStore,
     *                         or will error out with [[com.expedia.www.haystack.trace.reader.exceptions.TraceNotFoundException]]
     */
   override def getRawTrace(request: TraceRequest, responseObserver: StreamObserver[Trace]): Unit = {
-    handleGetRawTraceResponse.handle(responseObserver) {
+    handleGetRawTraceResponse.handle(request, responseObserver) {
       traceReader.getRawTrace(request)
     }
   }
@@ -73,7 +73,7 @@ class TraceService(traceStore: TraceStore,
     *                         or will error out with [[com.expedia.www.haystack.trace.reader.exceptions.SpanNotFoundException]]
     */
   override def getRawSpan(request: SpanRequest, responseObserver: StreamObserver[Span]): Unit = {
-    handleGetRawSpanResponse.handle(responseObserver) {
+    handleGetRawSpanResponse.handle(request, responseObserver) {
       traceReader.getRawSpan(request)
     }
   }
@@ -84,7 +84,7 @@ class TraceService(traceStore: TraceStore,
     * @param responseObserver response observer will stream out [[List[Trace]]
     */
   override def searchTraces(request: TracesSearchRequest, responseObserver: StreamObserver[TracesSearchResult]): Unit = {
-    handleSearchResponse.handle(responseObserver) {
+    handleSearchResponse.handle(request, responseObserver) {
       traceReader.searchTraces(request)
     }
   }
@@ -95,7 +95,7 @@ class TraceService(traceStore: TraceStore,
     * @param responseObserver response observer will contain list of field names
     */
   override def getFieldNames(request: Empty, responseObserver: StreamObserver[FieldNames]): Unit = {
-    handleFieldNamesResponse.handle(responseObserver) {
+    handleFieldNamesResponse.handle(request, responseObserver) {
       traceReader.getFieldNames
     }
   }
@@ -106,7 +106,7 @@ class TraceService(traceStore: TraceStore,
     * @param responseObserver response observer will contain list of field values for filter condition
     */
   override def getFieldValues(request: FieldValuesRequest, responseObserver: StreamObserver[FieldValues]): Unit = {
-    handleFieldValuesResponse.handle(responseObserver) {
+    handleFieldValuesResponse.handle(request, responseObserver) {
       traceReader.getFieldValues(request)
     }
   }

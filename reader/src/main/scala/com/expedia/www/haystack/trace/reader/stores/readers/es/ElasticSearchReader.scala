@@ -50,7 +50,7 @@ class ElasticSearchReader(config: ElasticSearchConfiguration)(implicit val dispa
     val promise = Promise[SearchResult]()
     val time = readTimer.time()
     try {
-      esClient.executeAsync(request, new ElasticSearchReadResultListener(promise, time, readFailures))
+      esClient.executeAsync(request, new ElasticSearchReadResultListener(request, promise, time, readFailures))
       promise.future
     } catch {
       case ex: Exception =>

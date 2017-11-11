@@ -27,12 +27,16 @@ import scala.collection.JavaConversions._
 import scala.concurrent.Promise
 import scala.util.{Failure, Success, Try}
 
+object CassandraReadResultListener {
+  protected val LOGGER: Logger = LoggerFactory.getLogger(classOf[CassandraReadResultListener])
+}
+
 class CassandraReadResultListener(asyncResult: ResultSetFuture,
                                   timer: Timer.Context,
                                   failure: Meter,
                                   promise: Promise[Trace]) extends Runnable {
 
-  private val LOGGER = LoggerFactory.getLogger(classOf[CassandraReadResultListener])
+  import CassandraReadResultListener._
 
   override def run(): Unit = {
     timer.close()

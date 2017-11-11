@@ -20,10 +20,15 @@ import com.expedia.www.haystack.trace.reader.metrics.MetricsSupport
 import com.google.protobuf.GeneratedMessageV3
 import io.grpc.Status
 import io.grpc.stub.StreamObserver
-import org.slf4j.LoggerFactory
+import org.slf4j.{Logger, LoggerFactory}
 
 import scala.concurrent.{ExecutionContextExecutor, Future}
 import scala.util.{Failure, Success}
+
+
+object GrpcHandler {
+  protected val LOGGER: Logger = LoggerFactory.getLogger(classOf[GrpcHandler])
+}
 
 /**
   * Handler for Grpc response
@@ -34,7 +39,7 @@ import scala.util.{Failure, Success}
   */
 
 class GrpcHandler(operationName: String)(implicit val executor: ExecutionContextExecutor) extends MetricsSupport {
-  private val logger = LoggerFactory.getLogger(s"${classOf[GrpcHandler]}.$operationName")
+  import GrpcHandler._
 
   private val timer = metricRegistry.timer(operationName)
   private val failureMeter = metricRegistry.meter(s"$operationName.failures")
@@ -46,13 +51,13 @@ class GrpcHandler(operationName: String)(implicit val executor: ExecutionContext
         responseObserver.onNext(response)
         responseObserver.onCompleted()
         time.stop()
-        logger.info(s"service invocation for operation={} and request={} completed successfully", operationName, request)
+        LOGGER.info(s"service invocation for operation=$operationName and request=${request.toString} completed successfully")
 
       case Failure(ex) =>
         responseObserver.onError(Status.fromThrowable(ex).asRuntimeException())
         failureMeter.mark()
         time.stop()
-        logger.error(s"service invocation for operation={} and request={} failed with error", operationName, request, ex)
+        LOGGER.error(s"service invocation for operation=$operationName and request=${request.toString} failed with error", ex)
     }
   }
 }

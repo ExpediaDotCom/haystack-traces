@@ -87,7 +87,7 @@ class TraceReader(traceStore: TraceStore, transformersConfig: TraceTransformersC
     validate(trace) match {
       case Success(_) => Some(transform(trace))
       case Failure(ex) =>
-        LOGGER.warn(s"invalid trace={} is rejected", trace, ex)
+        LOGGER.warn(s"invalid trace=${trace.toString} is rejected", ex)
         traceRejectedCounter.mark()
         None
     }

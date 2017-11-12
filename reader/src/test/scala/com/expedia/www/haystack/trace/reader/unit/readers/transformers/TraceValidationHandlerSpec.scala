@@ -68,7 +68,7 @@ class TraceValidationHandlerSpec extends BaseUnitTestSpec {
 
       Then("throw InvalidTraceException")
       val thrown = the[InvalidTraceException] thrownBy validationResult.get
-      thrown.getStatus.getDescription should include("same parent and span id found for a span")
+      thrown.getStatus.getDescription shouldEqual "Invalid Trace: same parent and span id found for one ore more span for traceId=traceId"
     }
 
     it("should throw exception for traces with multiple spans as root") {
@@ -84,7 +84,7 @@ class TraceValidationHandlerSpec extends BaseUnitTestSpec {
 
       Then("throw InvalidTraceException")
       val thrown = the[InvalidTraceException] thrownBy validationResult.get
-      thrown.getStatus.getDescription should include("found 2 roots")
+      thrown.getStatus.getDescription shouldEqual "Invalid Trace: found 2 roots with spanIDs=a,b and traceID=traceId"
     }
 
     it("should throw exception for traces with spans without parents") {
@@ -100,7 +100,7 @@ class TraceValidationHandlerSpec extends BaseUnitTestSpec {
 
       Then("throw InvalidTraceException")
       val thrown = the[InvalidTraceException] thrownBy validationResult.get
-      thrown.getStatus.getDescription should include("spans without parent found")
+      thrown.getStatus.getDescription shouldEqual "Invalid Trace: spans without valid parent found for traceId=traceId"
     }
 
     it("should accept valid traces") {
@@ -116,7 +116,7 @@ class TraceValidationHandlerSpec extends BaseUnitTestSpec {
       val validationResult = traceValidationHandler.validate(trace)
 
       Then("accept trace")
-      noException should be thrownBy(validationResult.get)
+      noException should be thrownBy validationResult.get
     }
   }
 }

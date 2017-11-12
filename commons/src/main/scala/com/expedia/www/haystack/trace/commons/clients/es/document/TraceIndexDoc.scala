@@ -10,8 +10,8 @@ object TraceIndexDoc {
   type TagKey = String
   type TagValue = Any
 
-  val SERVICE_KEY_NAME = "service"
-  val OPERATION_KEY_NAME = "operation"
+  val SERVICE_KEY_NAME = "servicename"
+  val OPERATION_KEY_NAME = "operationname"
   val DURATION_KEY_NAME = "duration"
   val START_TIME_KEY_NAME = "starttime"
   val SPAN_ID_KEY_NAME = "spanid"

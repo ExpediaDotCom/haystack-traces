@@ -19,6 +19,7 @@ package com.expedia.www.haystack.trace.reader
 import java.io.File
 
 import com.codahale.metrics.JmxReporter
+import com.expedia.www.haystack.trace.commons.logger.LoggerUtils
 import com.expedia.www.haystack.trace.reader.config.ProviderConfiguration
 import com.expedia.www.haystack.trace.reader.metrics.MetricsSupport
 import com.expedia.www.haystack.trace.reader.services.TraceService
@@ -70,16 +71,16 @@ object Service extends MetricsSupport {
           LOGGER.info("shutting down gRPC server since JVM is shutting down")
           server.shutdown()
           store.close()
-          LOGGER.info("server shut down")
+          LOGGER.info("server has been shutdown now")
         }
       })
 
       server.awaitTermination()
     } catch {
-      case ex: Exception => {
+      case ex: Exception =>
         LOGGER.error("Fatal error observed while running the app", ex)
+        LoggerUtils.shutdownLogger()
         System.exit(1)
-      }
     }
   }
 }

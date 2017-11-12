@@ -90,13 +90,13 @@ trait BaseIntegrationTestSpec extends FunSpec with GivenWhenThen with Matchers w
                                  |                "spans": {
                                  |                    "type": "nested",
                                  |                    "properties": {
-                                 |                        "service": {
+                                 |                        "servicename": {
                                  |                            "type": "keyword",
                                  |                            "normalizer": "lowercase_normalizer",
                                  |                            "doc_values": true,
                                  |                            "norms": false
                                  |                        },
-                                 |                        "operation": {
+                                 |                        "operationname": {
                                  |                            "type": "keyword",
                                  |                            "normalizer": "lowercase_normalizer",
                                  |                            "doc_values": true,

@@ -19,7 +19,9 @@ package com.expedia.www.haystack.trace.reader.integration
 import java.util.UUID
 
 import com.expedia.open.tracing.api._
-import io.grpc.{ManagedChannelBuilder, Status, StatusRuntimeException}
+import com.expedia.www.haystack.trace.commons.clients.es.document.TraceIndexDoc
+import io.grpc.{Status, StatusRuntimeException}
+
 import scala.collection.JavaConversions._
 
 class TraceServiceIntegrationTestSpec extends BaseIntegrationTestSpec {
@@ -46,7 +48,7 @@ class TraceServiceIntegrationTestSpec extends BaseIntegrationTestSpec {
       val serviceName = "get_values_servicename"
       putTraceInCassandraAndEs(UUID.randomUUID().toString, UUID.randomUUID().toString, serviceName, "op")
       val request = FieldValuesRequest.newBuilder()
-        .setFieldName("service")
+        .setFieldName(TraceIndexDoc.SERVICE_KEY_NAME)
         .build()
 
       When("calling getFieldNames")
@@ -67,8 +69,8 @@ class TraceServiceIntegrationTestSpec extends BaseIntegrationTestSpec {
       putTraceInCassandraAndEs(UUID.randomUUID().toString, UUID.randomUUID().toString, "non_matching_servicename", "non_matching_operationname")
 
       val request = FieldValuesRequest.newBuilder()
-        .addFilters(Field.newBuilder().setName("service").setValue(serviceName))
-        .setFieldName("operation")
+        .addFilters(Field.newBuilder().setName(TraceIndexDoc.SERVICE_KEY_NAME).setValue(serviceName))
+        .setFieldName(TraceIndexDoc.OPERATION_KEY_NAME)
         .build()
 
       When("calling getFieldNames")
@@ -207,8 +209,8 @@ class TraceServiceIntegrationTestSpec extends BaseIntegrationTestSpec {
       When("searching traces for service and operation")
       val traces = client.searchTraces(TracesSearchRequest
         .newBuilder()
-        .addFields(Field.newBuilder().setName("service").setValue(serviceName).build())
-        .addFields(Field.newBuilder().setName("operation").setValue(operationName).build())
+        .addFields(Field.newBuilder().setName(TraceIndexDoc.SERVICE_KEY_NAME).setValue(serviceName).build())
+        .addFields(Field.newBuilder().setName(TraceIndexDoc.OPERATION_KEY_NAME).setValue(operationName).build())
         .setStartTime(startTime)
         .setEndTime(endTime)
         .setLimit(10)
@@ -235,7 +237,7 @@ class TraceServiceIntegrationTestSpec extends BaseIntegrationTestSpec {
       When("searching traces for service")
       val traces = client.searchTraces(TracesSearchRequest
         .newBuilder()
-        .addFields(Field.newBuilder().setName("service").setValue(serviceName).build())
+        .addFields(Field.newBuilder().setName(TraceIndexDoc.SERVICE_KEY_NAME).setValue(serviceName).build())
         .setStartTime(startTime)
         .setEndTime(endTime)
         .setLimit(10)
@@ -253,7 +255,7 @@ class TraceServiceIntegrationTestSpec extends BaseIntegrationTestSpec {
       When("searching traces for service")
       val traces = client.searchTraces(TracesSearchRequest
         .newBuilder()
-        .addFields(Field.newBuilder().setName("service").setValue("unavailableService").build())
+        .addFields(Field.newBuilder().setName(TraceIndexDoc.SERVICE_KEY_NAME).setValue("unavailableService").build())
         .setStartTime(1)
         .setEndTime((System.currentTimeMillis() + 10000000) * 1000)
         .setLimit(10)
@@ -276,7 +278,7 @@ class TraceServiceIntegrationTestSpec extends BaseIntegrationTestSpec {
       When("searching traces for tags")
       val traces = client.searchTraces(TracesSearchRequest
         .newBuilder()
-        .addFields(Field.newBuilder().setName("service").setValue(serviceName).build())
+        .addFields(Field.newBuilder().setName(TraceIndexDoc.SERVICE_KEY_NAME).setValue(serviceName).build())
         .addFields(Field.newBuilder().setName("akey").setValue("avalue").build())
         .addFields(Field.newBuilder().setName("bkey").setValue("bvalue").build())
         .setStartTime(startTime)
@@ -301,7 +303,7 @@ class TraceServiceIntegrationTestSpec extends BaseIntegrationTestSpec {
       When("searching traces for tags")
       val traces = client.searchTraces(TracesSearchRequest
         .newBuilder()
-        .addFields(Field.newBuilder().setName("service").setValue(serviceName).build())
+        .addFields(Field.newBuilder().setName(TraceIndexDoc.SERVICE_KEY_NAME).setValue(serviceName).build())
         .addFields(Field.newBuilder().setName("ckey").setValue("cvalue").build())
         .addFields(Field.newBuilder().setName("akey").setValue("avalue").build())
         .setStartTime(startTime)

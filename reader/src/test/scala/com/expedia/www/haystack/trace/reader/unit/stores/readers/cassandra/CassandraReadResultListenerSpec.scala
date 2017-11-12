@@ -22,9 +22,10 @@ import com.codahale.metrics.{Meter, Timer}
 import com.datastax.driver.core.{ResultSet, ResultSetFuture, Row}
 import com.expedia.open.tracing.Span
 import com.expedia.open.tracing.buffer.SpanBuffer
-import com.expedia.open.tracing.api.Trace
+import com.expedia.open.tracing.api.{Field, Trace, TraceRequest, TracesSearchRequest}
 import com.expedia.www.haystack.trace.commons.clients.cassandra.CassandraTableSchema
 import com.expedia.www.haystack.trace.reader.stores.readers.cassandra.CassandraReadResultListener
+import com.expedia.www.haystack.trace.reader.stores.readers.es.query.TraceSearchQueryGenerator
 import com.expedia.www.haystack.trace.reader.unit.BaseUnitTestSpec
 import io.grpc.{Status, StatusException}
 import org.easymock.EasyMock
@@ -36,6 +37,12 @@ import scala.concurrent.Promise
 class CassandraReadResultListenerSpec extends BaseUnitTestSpec {
 
   describe("cassandra write listener") {
+    it("") {
+      val p = new TraceSearchQueryGenerator("haystack-traces", "spans", "spans")
+      val field = Field.newBuilder().setName("serviceName").setValue("expweb").build()
+      val s = p.generate(TracesSearchRequest.newBuilder().setStartTime(1510469157572000l).setEndTime(1510469161172000l).setLimit(40).addFields(field).build())
+      println(s.toString)
+    }
     it("should read the rows, deserialized spans column and return the complete trace") {
       val mockReadResult = mock[ResultSetFuture]
       val resultSet = mock[ResultSet]

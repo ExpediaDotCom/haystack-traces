@@ -18,15 +18,23 @@
 package com.expedia.www.haystack.trace.reader.unit.stores.readers.es.query
 
 import com.codahale.metrics.{Meter, Timer}
+import com.expedia.open.tracing.api.{Field, TracesSearchRequest}
 import com.expedia.www.haystack.trace.reader.exceptions.ElasticSearchClientError
 import com.expedia.www.haystack.trace.reader.stores.readers.es.ElasticSearchReadResultListener
+import com.expedia.www.haystack.trace.reader.stores.readers.es.query.TraceSearchQueryGenerator
 import com.expedia.www.haystack.trace.reader.unit.BaseUnitTestSpec
-import io.searchbox.core.{Search, SearchResult}
+import io.searchbox.core.SearchResult
 import org.easymock.EasyMock
 
 import scala.concurrent.Promise
 
 class ElasticSearchReadResultListenerSpec extends BaseUnitTestSpec {
+
+  private val searchRequest = {
+    val generator = new TraceSearchQueryGenerator("haystack-traces", "spans", "spans")
+    val field = Field.newBuilder().setName("serviceName").setValue("expweb").build()
+    generator.generate(TracesSearchRequest.newBuilder().setStartTime(1510469157572000l).setEndTime(1510469161172000l).setLimit(40).addFields(field).build())
+  }
 
   describe("ElasticSearch Read Result Listener") {
     it("should invoke successful promise with search result") {
@@ -34,7 +42,6 @@ class ElasticSearchReadResultListenerSpec extends BaseUnitTestSpec {
       val timer = mock[Timer.Context]
       val failureMeter = mock[Meter]
       val searchResult = mock[SearchResult]
-      val request = mock[Search]
 
       expecting {
         timer.close().once()
@@ -42,8 +49,8 @@ class ElasticSearchReadResultListenerSpec extends BaseUnitTestSpec {
         promise.success(searchResult).andReturn(promise).once()
       }
 
-      whenExecuting(request, promise, timer, failureMeter, searchResult) {
-        val listener = new ElasticSearchReadResultListener(request, promise, timer, failureMeter)
+      whenExecuting(promise, timer, failureMeter, searchResult) {
+        val listener = new ElasticSearchReadResultListener(searchRequest, promise, timer, failureMeter)
         listener.completed(searchResult)
       }
     }
@@ -53,7 +60,6 @@ class ElasticSearchReadResultListenerSpec extends BaseUnitTestSpec {
       val timer = mock[Timer.Context]
       val failureMeter = mock[Meter]
       val searchResult = mock[SearchResult]
-      val request = mock[Search]
 
       expecting {
         timer.close().once()
@@ -63,8 +69,8 @@ class ElasticSearchReadResultListenerSpec extends BaseUnitTestSpec {
         promise.failure(EasyMock.anyObject(classOf[ElasticSearchClientError])).andReturn(promise).once()
       }
 
-      whenExecuting(request, promise, timer, failureMeter, searchResult) {
-        val listener = new ElasticSearchReadResultListener(request, promise, timer, failureMeter)
+      whenExecuting(promise, timer, failureMeter, searchResult) {
+        val listener = new ElasticSearchReadResultListener(searchRequest, promise, timer, failureMeter)
         listener.completed(searchResult)
       }
     }
@@ -74,7 +80,6 @@ class ElasticSearchReadResultListenerSpec extends BaseUnitTestSpec {
       val timer = mock[Timer.Context]
       val failureMeter = mock[Meter]
       val expectedException = new Exception
-      val request = mock[Search]
 
       expecting {
         timer.close().once()
@@ -82,8 +87,8 @@ class ElasticSearchReadResultListenerSpec extends BaseUnitTestSpec {
         promise.failure(expectedException).andReturn(promise).once()
       }
 
-      whenExecuting(request, promise, timer, failureMeter) {
-        val listener = new ElasticSearchReadResultListener(request, promise, timer, failureMeter)
+      whenExecuting(promise, timer, failureMeter) {
+        val listener = new ElasticSearchReadResultListener(searchRequest, promise, timer, failureMeter)
         listener.failed(expectedException)
       }
     }

@@ -23,6 +23,11 @@ import org.slf4j.{ILoggerFactory, LoggerFactory}
 
 object LoggerUtils {
 
+  /**
+    * shutdown the logger using reflection.
+    * for logback, it calls stop() method on loggerContext
+    * for log4j, it calls close() method on log4j context
+    */
   def shutdownLogger(): Unit = {
     val factory = LoggerFactory.getILoggerFactory
     shutdownLoggerWithFactory(factory)

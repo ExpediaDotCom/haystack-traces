@@ -18,6 +18,7 @@ package com.expedia.www.haystack.trace.reader.stores.readers.es
 
 import com.expedia.www.haystack.trace.reader.config.entities.ElasticSearchConfiguration
 import com.expedia.www.haystack.trace.reader.metrics.MetricsSupport
+import com.google.gson.Gson
 import io.searchbox.client.config.HttpClientConfig
 import io.searchbox.client.{JestClient, JestClientFactory}
 import io.searchbox.core.{Search, SearchResult}
@@ -56,7 +57,7 @@ class ElasticSearchReader(config: ElasticSearchConfiguration)(implicit val dispa
       case ex: Exception =>
         readFailures.mark()
         time.stop()
-        LOGGER.error("Failed to read from elasticsearch with exception", ex)
+        LOGGER.error(s"Failed to read from elasticsearch for request=${request.getData(new Gson())} with exception", ex)
         Future.failed(ex)
     }
   }

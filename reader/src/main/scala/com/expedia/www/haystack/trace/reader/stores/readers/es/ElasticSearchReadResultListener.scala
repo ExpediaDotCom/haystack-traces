@@ -50,7 +50,7 @@ class ElasticSearchReadResultListener(request: Search,
   }
 
   override def failed(ex: Exception): Unit = {
-    LOGGER.error(s"Failed in reading from elasticsearch for request=${request.toString}", ex)
+    LOGGER.error(s"Failed in reading from elasticsearch for request=${request.getData(new Gson())}", ex)
     failure.mark()
     timer.close()
     promise.failure(ex)

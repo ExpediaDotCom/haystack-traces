@@ -114,8 +114,7 @@ class ProjectConfiguration extends AutoCloseable {
       commitOffsetRetries = kafka.getInt("commit.offset.retries"),
       commitBackoffInMillis = kafka.getLong("commit.offset.backoff.ms"),
       maxWakeups = kafka.getInt("max.wakeups"),
-      wakeupTimeoutInMillis = kafka.getInt("wakeup.timeout.ms"),
-      exitJvmAfterClose = true)
+      wakeupTimeoutInMillis = kafka.getInt("wakeup.timeout.ms"))
   }
 
   /**

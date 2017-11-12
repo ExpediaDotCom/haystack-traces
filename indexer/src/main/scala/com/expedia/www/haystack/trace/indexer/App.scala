@@ -19,6 +19,7 @@ package com.expedia.www.haystack.trace.indexer
 
 import com.codahale.metrics.JmxReporter
 import com.expedia.www.haystack.trace.commons.health.{HealthController, UpdateHealthStatusFile}
+import com.expedia.www.haystack.trace.commons.logger.LoggerUtils
 import com.expedia.www.haystack.trace.indexer.config.ProjectConfiguration
 import com.expedia.www.haystack.trace.indexer.metrics.MetricsSupport
 import org.slf4j.LoggerFactory
@@ -26,15 +27,18 @@ import org.slf4j.LoggerFactory
 object App extends MetricsSupport {
   private val LOGGER = LoggerFactory.getLogger(App.getClass)
 
+  private var stream: StreamRunner = _
+  private var appConfig: ProjectConfiguration = _
+
   def main(args: Array[String]): Unit = {
     startJmxReporter()
 
     try {
-      val appConfig = new ProjectConfiguration
+      appConfig = new ProjectConfiguration
 
       HealthController.addListener(new UpdateHealthStatusFile(appConfig.healthStatusFilePath))
 
-      val stream = new StreamRunner(
+      stream = new StreamRunner(
         appConfig.kafkaConfig,
         appConfig.spanAccumulateConfig,
         appConfig.elasticSearchConfig,
@@ -44,19 +48,26 @@ object App extends MetricsSupport {
       Runtime.getRuntime.addShutdownHook(new Thread {
         override def run(): Unit = {
           LOGGER.info("Shutdown hook is invoked, tearing down the application.")
-          stream.close()
-          appConfig.close()
+          shutdown()
         }
       })
 
       stream.start()
 
+      // mark the status of app as 'healthy'
       HealthController.setHealthy()
     } catch {
       case ex: Exception =>
         LOGGER.error("Observed fatal exception while running the app", ex)
+        shutdown()
         System.exit(1)
     }
+  }
+
+  private def shutdown(): Unit = {
+    if(stream != null) stream.close()
+    if(appConfig != null) appConfig.close()
+    LoggerUtils.shutdownLogger()
   }
 
   private def startJmxReporter() = {

@@ -21,16 +21,16 @@ import java.nio.ByteBuffer
 import com.codahale.metrics.{Meter, Timer}
 import com.datastax.driver.core.{ResultSet, ResultSetFuture, Row}
 import com.expedia.open.tracing.Span
-import com.expedia.open.tracing.buffer.SpanBuffer
 import com.expedia.open.tracing.api.Trace
+import com.expedia.open.tracing.buffer.SpanBuffer
 import com.expedia.www.haystack.trace.commons.clients.cassandra.CassandraTableSchema
 import com.expedia.www.haystack.trace.reader.stores.readers.cassandra.CassandraReadResultListener
 import com.expedia.www.haystack.trace.reader.unit.BaseUnitTestSpec
 import io.grpc.{Status, StatusException}
 import org.easymock.EasyMock
 
-import scala.collection.JavaConverters._
 import scala.collection.JavaConversions._
+import scala.collection.JavaConverters._
 import scala.concurrent.Promise
 
 class CassandraReadResultListenerSpec extends BaseUnitTestSpec {

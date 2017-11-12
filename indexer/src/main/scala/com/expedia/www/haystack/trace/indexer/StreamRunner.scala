@@ -46,7 +46,7 @@ class StreamRunner(kafkaConfig: KafkaConfiguration,
 
   private val LOGGER = LoggerFactory.getLogger(classOf[StreamRunner])
 
-  private val isClosing = new AtomicBoolean(false)
+  private val isStarted = new AtomicBoolean(false)
   private val streamThreadExecutor = Executors.newFixedThreadPool(kafkaConfig.numStreamThreads)
   private val taskRunnables = mutable.ListBuffer[StreamTaskRunnable]()
 
@@ -73,10 +73,12 @@ class StreamRunner(kafkaConfig: KafkaConfiguration,
       taskRunnables += task
       streamThreadExecutor.execute(task)
     }
+
+    isStarted.set(true)
   }
 
   override def close(): Unit = {
-    if(!isClosing.getAndSet(true)) {
+    if(isStarted.getAndSet(false)) {
       val shutdownThread = new Thread() {
         closeStreamTasks()
         closeWriters()
@@ -108,8 +110,5 @@ class StreamRunner(kafkaConfig: KafkaConfiguration,
     LOGGER.info("Shutting down the stream executor service")
     streamThreadExecutor.shutdown()
     streamThreadExecutor.awaitTermination(kafkaConfig.consumerCloseTimeoutInMillis, TimeUnit.MILLISECONDS)
-
-    // bluntly shutdown the app
-    if(kafkaConfig.exitJvmAfterClose) System.exit(1)
   }
 }

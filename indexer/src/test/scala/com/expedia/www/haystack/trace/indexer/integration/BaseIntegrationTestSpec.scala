@@ -25,8 +25,6 @@ import com.expedia.open.tracing.buffer.SpanBuffer
 import com.expedia.open.tracing.{Log, Span, Tag}
 import com.expedia.www.haystack.trace.indexer.config.entities.SpanAccumulatorConfiguration
 import com.expedia.www.haystack.trace.indexer.integration.clients.{CassandraTestClient, ElasticSearchTestClient, KafkaTestClient}
-import com.google.gson.JsonObject
-import org.apache.commons.lang3.StringUtils
 import org.apache.kafka.streams.KeyValue
 import org.apache.kafka.streams.integration.utils.IntegrationTestUtils
 import org.scalatest._
@@ -166,12 +164,12 @@ abstract class BaseIntegrationTestSpec extends WordSpec with GivenWhenThen with 
         |                "must": [
         |                  {
         |                    "match": {
-        |                      "spans.service": "service0"
+        |                      "spans.servicename": "service0"
         |                    }
         |                  },
         |                  {
         |                    "match": {
-        |                      "spans.operation": "op0"
+        |                      "spans.operationname": "op0"
         |                    }
         |                  }
         |                ]
@@ -199,12 +197,12 @@ abstract class BaseIntegrationTestSpec extends WordSpec with GivenWhenThen with 
         |                "must": [
         |                  {
         |                    "match": {
-        |                      "spans.service": "service0"
+        |                      "spans.servicename": "service0"
         |                    }
         |                  },
         |                  {
         |                    "match": {
-        |                      "spans.operation": "op1"
+        |                      "spans.operationname": "op1"
         |                    }
         |                  }
         |                ]
@@ -231,12 +229,12 @@ abstract class BaseIntegrationTestSpec extends WordSpec with GivenWhenThen with 
                       |                "must": [
                       |                  {
                       |                    "match": {
-                      |                      "spans.service": "service2"
+                      |                      "spans.servicename": "service2"
                       |                    }
                       |                  },
                       |                  {
                       |                    "match": {
-                      |                      "spans.operation": "op2"
+                      |                      "spans.operationname": "op2"
                       |                    }
                       |                  },
                       |                  {

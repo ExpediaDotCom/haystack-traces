@@ -18,6 +18,7 @@ package com.expedia.www.haystack.trace.reader.unit.stores.readers.es.query
 import com.expedia.open.tracing.api.{Field, FieldValuesRequest}
 import com.expedia.www.haystack.trace.reader.stores.readers.es.query.FieldValuesQueryGenerator
 import com.expedia.www.haystack.trace.reader.unit.BaseUnitTestSpec
+import com.google.gson.Gson
 
 class FieldValuesQueryGeneratorSpec extends BaseUnitTestSpec {
   describe("FieldValuesQueryGenerator") {
@@ -39,6 +40,28 @@ class FieldValuesQueryGeneratorSpec extends BaseUnitTestSpec {
 
       Then("generate a valid query")
       query.getType should be(`type`)
+    }
+
+    it("should generate caption independent search queries") {
+      Given("a trace search request")
+      val `type` = "spans"
+      val serviceField = "serviceName"
+      val operationField = "operationName"
+      val serviceName = "svcName"
+      val request = FieldValuesRequest
+        .newBuilder()
+        .setFieldName(operationField)
+        .addFilters(Field.newBuilder().setName(serviceField).setValue(serviceName).build())
+        .build()
+      val queryGenerator = new FieldValuesQueryGenerator("haystack", `type`, "spans")
+
+      When("generating query")
+      val query = queryGenerator.generate(request)
+
+      Then("generate a valid query with fields in lowercase")
+      val queryString = query.getData(new Gson())
+      queryString.contains(serviceField.toLowerCase()) should be(true)
+      queryString.contains(operationField.toLowerCase()) should be(true)
     }
   }
 }

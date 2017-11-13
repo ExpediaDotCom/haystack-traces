@@ -16,8 +16,11 @@
 package com.expedia.www.haystack.trace.reader.unit.stores.readers.es.query
 
 import com.expedia.open.tracing.api.{Field, TracesSearchRequest}
+import com.expedia.www.haystack.trace.commons.clients.es.document.TraceIndexDoc
 import com.expedia.www.haystack.trace.reader.stores.readers.es.query.TraceSearchQueryGenerator
 import com.expedia.www.haystack.trace.reader.unit.BaseUnitTestSpec
+import com.google.gson.Gson
+import io.searchbox.core.Search
 
 class TraceSearchQueryGeneratorSpec extends BaseUnitTestSpec {
   describe("TraceSearchQueryGenerator") {
@@ -28,7 +31,7 @@ class TraceSearchQueryGeneratorSpec extends BaseUnitTestSpec {
       val operationName = "opName"
       val request = TracesSearchRequest
         .newBuilder()
-        .addFields(Field.newBuilder().setName("service").setValue(serviceName).build())
+        .addFields(Field.newBuilder().setName(TraceIndexDoc.SERVICE_KEY_NAME).setValue(serviceName).build())
         .addFields(Field.newBuilder().setName("operation").setValue(operationName).build())
         .setStartTime(1)
         .setEndTime(System.currentTimeMillis() * 1000)
@@ -41,6 +44,27 @@ class TraceSearchQueryGeneratorSpec extends BaseUnitTestSpec {
 
       Then("generate a valid query")
       query.getType should be(`type`)
+    }
+
+    it("should generate caption independent search queries") {
+      Given("a trace search request")
+      val `type` = "spans"
+      val fieldKey = "svcName"
+      val fieldValue = "opName"
+      val request = TracesSearchRequest
+        .newBuilder()
+        .addFields(Field.newBuilder().setName(fieldKey).setValue(fieldValue).build())
+        .setStartTime(1)
+        .setEndTime(System.currentTimeMillis() * 1000)
+        .setLimit(10)
+        .build()
+      val queryGenerator = new TraceSearchQueryGenerator("haystack", `type`, "spans")
+
+      When("generating query")
+      val query: Search = queryGenerator.generate(request)
+
+      Then("generate a valid query with fields in lowercase")
+      query.getData(new Gson()).contains(fieldKey.toLowerCase()) should be(true)
     }
   }
 }

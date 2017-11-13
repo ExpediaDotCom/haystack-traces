@@ -18,23 +18,30 @@ package com.expedia.www.haystack.trace.reader.stores.readers.es
 
 import com.codahale.metrics.{Meter, Timer}
 import com.expedia.www.haystack.trace.reader.exceptions.ElasticSearchClientError
+import com.google.gson.Gson
 import io.searchbox.client.JestResultHandler
-import io.searchbox.core.SearchResult
+import io.searchbox.core.{Search, SearchResult}
 import org.slf4j.{Logger, LoggerFactory}
 
 import scala.concurrent.Promise
 
-class ElasticSearchReadResultListener(promise: Promise[SearchResult],
+object ElasticSearchReadResultListener {
+  protected val LOGGER: Logger = LoggerFactory.getLogger(classOf[ElasticSearchReadResultListener])
+  protected def is2xx(code: Int): Boolean = (code / 100) == 2
+}
+
+class ElasticSearchReadResultListener(request: Search,
+                                      promise: Promise[SearchResult],
                                       timer: Timer.Context,
                                       failure: Meter) extends JestResultHandler[SearchResult]  {
-  private val LOGGER: Logger = LoggerFactory.getLogger(classOf[ElasticSearchReadResultListener])
+  import ElasticSearchReadResultListener._
 
   override def completed(result: SearchResult): Unit = {
     timer.close()
 
-    if(result.getResponseCode >= 300) {
+    if(!is2xx(result.getResponseCode)) {
       val ex = ElasticSearchClientError(result.getResponseCode, result.getJsonString)
-      LOGGER.error(s"Failed in reading from elasticsearch", ex)
+      LOGGER.error(s"Failed in reading from elasticsearch for request='${request.getData(new Gson())}'", ex)
       failure.mark()
       promise.failure(ex)
     } else {
@@ -43,7 +50,7 @@ class ElasticSearchReadResultListener(promise: Promise[SearchResult],
   }
 
   override def failed(ex: Exception): Unit = {
-    LOGGER.error("Failed in reading from elasticsearch", ex)
+    LOGGER.error(s"Failed in reading from elasticsearch for request=${request.getData(new Gson())}", ex)
     failure.mark()
     timer.close()
     promise.failure(ex)

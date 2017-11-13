@@ -110,7 +110,7 @@ class CassandraEsTraceStore(cassandraConfiguration: CassandraConfiguration,
   override def getFieldValues(request: FieldValuesRequest): Future[Seq[String]] = {
     esReader
       .search(fieldValuesQueryGenerator.generate(request))
-      .map(extractFieldValues(_, request.getFieldName))
+      .map(extractFieldValues(_, request.getFieldName.toLowerCase))
   }
 
   private def extractFieldValues(result: SearchResult, fieldName: String): List[String] =

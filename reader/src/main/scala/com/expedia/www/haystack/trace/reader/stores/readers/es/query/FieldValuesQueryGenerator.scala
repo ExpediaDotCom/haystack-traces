@@ -45,12 +45,12 @@ class FieldValuesQueryGenerator(indexNamePrefix: String, indexType: String, nest
     if (filterQuery.isDefined) {
       new SearchSourceBuilder()
         .query(filterQuery.get)
-        .aggregation(createNestedAggregationQuery(request.getFieldName))
+        .aggregation(createNestedAggregationQuery(request.getFieldName.toLowerCase))
         .size(0)
         .toString
     } else {
       new SearchSourceBuilder()
-        .aggregation(createNestedAggregationQuery(request.getFieldName))
+        .aggregation(createNestedAggregationQuery(request.getFieldName.toLowerCase()))
         .size(0)
         .toString
     }

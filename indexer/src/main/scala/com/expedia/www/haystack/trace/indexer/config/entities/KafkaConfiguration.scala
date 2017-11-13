@@ -41,5 +41,4 @@ case class KafkaConfiguration(numStreamThreads: Int,
                               commitOffsetRetries: Int,
                               commitBackoffInMillis: Long,
                               maxWakeups: Int,
-                              wakeupTimeoutInMillis: Int,
-                              exitJvmAfterClose: Boolean)
+                              wakeupTimeoutInMillis: Int)

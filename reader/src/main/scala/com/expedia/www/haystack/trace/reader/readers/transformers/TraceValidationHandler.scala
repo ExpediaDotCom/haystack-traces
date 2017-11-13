@@ -29,27 +29,28 @@ trait TraceValidationHandler {
     if (traceId.isEmpty) throw new InvalidTraceException("invalid traceId")
   }
 
-  private def allSpansHaveAValidParent(spans: List[Span]): Unit = {
-    val spanIdSet = spans.foldLeft(Set[String]())((set, span) => set + span.getSpanId)
+  private def allSpansWithValidParent(spans: List[Span]): Unit = {
+    val spanIdSet = spans.map(_.getSpanId).toSet
     if (!spans.forall(sp => spanIdSet.contains(sp.getParentSpanId) || sp.getParentSpanId.isEmpty)) {
-      throw new InvalidTraceException("spans without parent found")
+      throw new InvalidTraceException(s"spans without valid parent found for traceId=${spans.head.getTraceId}")
     }
   }
 
   private def noSpanHasSameParentIdAndSpanId(spans: List[Span]): Unit = {
     if (!spans.forall(sp => sp.getSpanId != sp.getParentSpanId)) {
-      throw new InvalidTraceException("same parent and span id found for a span")
+      throw new InvalidTraceException(s"same parent and span id found for one ore more span for traceId=${spans.head.getTraceId}")
     }
   }
 
   private def onlyOneSpanIsRoot(spans: List[Span]): Unit = {
-    val rootCount = spans.count(_.getParentSpanId.isEmpty)
-    if (rootCount != 1) throw new InvalidTraceException(s"found $rootCount roots")
+    val roots = spans.filter(_.getParentSpanId.isEmpty).map(_.getSpanId).toSet
+    if (roots.size != 1) throw new InvalidTraceException(s"found ${roots.size} roots with spanIDs=${roots.mkString(",")} " +
+      s"and traceID=${spans.head.getTraceId}")
   }
 
   private def allSpansHaveSameTraceId(spans: List[Span], traceId: String) = {
     if (!spans.forall(sp => sp.getTraceId.equals(traceId))) {
-      throw new InvalidTraceException("span with different traceId are not allowed")
+      throw new InvalidTraceException(s"span with different traceId are not allowed for traceId=$traceId")
     }
   }
 
@@ -65,7 +66,7 @@ trait TraceValidationHandler {
 
       onlyOneSpanIsRoot(spans)
 
-      allSpansHaveAValidParent(spans)
+      allSpansWithValidParent(spans)
     }
   }
 }

@@ -19,7 +19,7 @@ package com.expedia.www.haystack.trace.reader.stores.readers.cassandra
 import com.expedia.open.tracing.api.Trace
 import com.expedia.www.haystack.trace.commons.clients.cassandra.{CassandraClusterFactory, CassandraSession}
 import com.expedia.www.haystack.trace.commons.config.entities.CassandraConfiguration
-import com.expedia.www.haystack.trace.reader.metrics.MetricsSupport
+import com.expedia.www.haystack.trace.reader.metrics.{AppMetricNames, MetricsSupport}
 import org.slf4j.LoggerFactory
 
 import scala.concurrent.{ExecutionContextExecutor, Future, Promise}
@@ -30,8 +30,8 @@ class CassandraReader(config: CassandraConfiguration)(implicit val dispatcher: E
 
   private val LOGGER = LoggerFactory.getLogger(classOf[CassandraReader])
 
-  private val readTimer = metricRegistry.timer("cassandra.read.time")
-  private val readFailures = metricRegistry.meter("cassandra.read.failures")
+  private val readTimer = metricRegistry.timer(AppMetricNames.CASSANDRA_READ_TIME)
+  private val readFailures = metricRegistry.meter(AppMetricNames.CASSANDRA_READ_FAILURES)
 
   private val cassandra = new CassandraSession(config, new CassandraClusterFactory)
 

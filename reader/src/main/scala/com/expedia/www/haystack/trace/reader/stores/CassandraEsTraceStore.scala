@@ -19,7 +19,7 @@ package com.expedia.www.haystack.trace.reader.stores
 import com.expedia.open.tracing.api._
 import com.expedia.www.haystack.trace.commons.config.entities.{CassandraConfiguration, WhitelistIndexFieldConfiguration}
 import com.expedia.www.haystack.trace.reader.config.entities.ElasticSearchConfiguration
-import com.expedia.www.haystack.trace.reader.metrics.MetricsSupport
+import com.expedia.www.haystack.trace.reader.metrics.{AppMetricNames, MetricsSupport}
 import com.expedia.www.haystack.trace.reader.stores.readers.cassandra.CassandraReader
 import com.expedia.www.haystack.trace.reader.stores.readers.es.ElasticSearchReader
 import com.expedia.www.haystack.trace.reader.stores.readers.es.query.{FieldValuesQueryGenerator, TraceSearchQueryGenerator}
@@ -45,7 +45,7 @@ class CassandraEsTraceStore(cassandraConfiguration: CassandraConfiguration,
   private val ES_NESTED_DOC_NAME = "spans"
 
   private val LOGGER = LoggerFactory.getLogger(classOf[ElasticSearchReader])
-  private val traceRejected = metricRegistry.meter("search.trace.rejected")
+  private val traceRejected = metricRegistry.meter(AppMetricNames.SEARCH_TRACE_REJECTED)
 
   private val cassandraReader: CassandraReader = new CassandraReader(cassandraConfiguration)
   private val esReader: ElasticSearchReader = new ElasticSearchReader(esConfiguration)

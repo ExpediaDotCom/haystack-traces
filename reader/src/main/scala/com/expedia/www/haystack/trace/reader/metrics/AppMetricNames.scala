@@ -15,23 +15,15 @@
  *
  */
 
-package com.expedia.www.haystack.trace.indexer.metrics
+package com.expedia.www.haystack.trace.reader.metrics
 
-/**
-  * list all app metric names that are published on jmx
-  */
 object AppMetricNames {
-  val PROCESS_TIMER = "buffer.process"
-  val BUFFERED_SPANS_COUNT = "buffered.spans.count"
-  val STATE_STORE_EVICTION = "state.store.eviction"
-  val SPAN_PROTO_DESER_FAILURE = "span.proto.deser.failure"
 
-  val CASSANDRA_WRITE_TIME = "cassandra.write.time"
-  val CASSANDRA_WRITE_FAILURE = "cassandra.write.failure"
-  val CASSANDRA_WRITE_WARNINGS = "cassandra.write.warnings"
+  val ELASTIC_SEARCH_READ_TIME = "elasticsearch.read.time"
+  val ELASTIC_SEARCH_READ_FAILURES = "elasticsearch.read.failures"
 
-  val ES_WRITE_FAILURE = "es.write.failure"
-  val ES_WRITE_TIME = "es.writer.time"
+  val CASSANDRA_READ_TIME = "cassandra.read.time"
+  val CASSANDRA_READ_FAILURES = "cassandra.read.failures"
 
-  val KAFKA_PRODUCE_FAILURES = "kafka.produce.failure"
+  val SEARCH_TRACE_REJECTED = "search.trace.rejected"
 }

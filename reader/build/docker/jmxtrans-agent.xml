@@ -1,5 +1,10 @@
 <jmxtrans-agent>
     <queries>
+        <query objectName="metrics:name=elasticsearch.read.time" resultAlias="elasticsearch.read.time.#attribute#"/>
+        <query objectName="metrics:name=elasticsearch.read.failures" resultAlias="elasticsearch.read.failures.OneMinuteRate"/>
+        <query objectName="metrics:name=cassandra.read.time" resultAlias="cassandra.read.time.#attribute#"/>
+        <query objectName="metrics:name=cassandra.read.failures" resultAlias="cassandra.read.failures.OneMinuteRate"/>
+        <query objectName="metrics:name=search.trace.rejected" resultAlias="search.trace.rejected.OneMinuteRate"/>
     </queries>
     <outputWriter class="org.jmxtrans.agent.GraphitePlainTextTcpOutputWriter">
         <host>${graphite.host:monitoring-influxdb-graphite.kube-system.svc}</host>

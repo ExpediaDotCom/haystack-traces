@@ -19,6 +19,8 @@
         <query objectName="kafka.consumer:type=consumer-metrics,client-id=*" attribute="request-rate" resultAlias="kafka-consumer.request.rate"/>
         <query objectName="kafka.consumer:type=consumer-metrics,client-id=*" attribute="response-rate" resultAlias="kafka-consumer.response.rate"/>
         <query objectName="kafka.consumer:type=consumer-metrics,client-id=*" attribute="incoming-byte-rate" resultAlias="kafka-consumer.incoming-byte.rate"/>
+        <query objectName="kafka.consumer:type=consumer-fetch-manager-metrics,client-id=*" attribute="records-lag-max" resultAlias="kafka-consumer.records-lag.max"/>
+        <query objectName="kafka.consumer:type=consumer-fetch-manager-metrics,client-id=*" attribute="records-consumed-rate" resultAlias="kafka-consumer.records-consumed.rate"/>
 
         <!-- cassandra metrics -->
         <query objectName="cassandra-cluster-metrics:name=connection-errors" attribute="Count" resultAlias="cassandra-client.errors.count"/>
@@ -28,6 +30,20 @@
         <query objectName="cassandra-cluster-metrics:name=requests" attribute="99thPercentile" resultAlias="cassandra-client.requests.99thPercentile"/>
         <query objectName="cassandra-cluster-metrics:name=write-timeouts" attribute="Count" resultAlias="cassandra-client.write-timeouts.count"/>
         <query objectName="cassandra-cluster-metrics:name=other-errors" attribute="Count" resultAlias="cassandra-client.other-errors.count"/>
+
+
+        <query objectName="metrics:name=state.store.eviction" resultAlias="state.store.eviction.OneMinuteRate"/>
+        <query objectName="metrics:name=span.proto.deser.failure" resultAlias="span.proto.deser.failure.OneMinuteRate"/>
+
+        <query objectName="metrics:name=es.write.failure" resultAlias="es.write.failure.OneMinuteRate"/>
+        <query objectName="metrics:name=es.writer.time" resultAlias="es.writer.time.#attribute#"/>
+        <query objectName="metrics:name=kafka.produce.failure" resultAlias="kafka.produce.failure.OneMinuteRate"/>
+        <query objectName="metrics:name=cassandra.write.failure" resultAlias="cassandra.write.failure.OneMinuteRate"/>
+        <query objectName="metrics:name=cassandra.write.warnings" resultAlias="cassandra.write.warnings.OneMinuteRate"/>
+
+        <query objectName="metrics:name=buffered.spans.count" resultAlias="buffered.spans.count.#attribute#"/>
+        <query objectName="metrics:name=buffer.process" resultAlias="buffer.process.#attribute#"/>
+
     </queries>
     <outputWriter class="org.jmxtrans.agent.GraphitePlainTextTcpOutputWriter">
         <host>${graphite.host:monitoring-influxdb-graphite.kube-system.svc}</host>

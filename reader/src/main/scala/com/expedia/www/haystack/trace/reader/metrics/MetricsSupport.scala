@@ -14,6 +14,7 @@
  *     limitations under the License.
  *
  */
+
 package com.expedia.www.haystack.trace.reader.metrics
 
 import com.codahale.metrics.MetricRegistry

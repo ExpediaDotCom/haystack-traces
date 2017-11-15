@@ -21,7 +21,7 @@ import java.util.Properties
 
 import com.expedia.www.haystack.trace.indexer.config.entities.KafkaConfiguration
 import com.expedia.www.haystack.trace.indexer.integration.serdes.{SpanBufferProtoDeserializer, SpanProtoSerializer}
-import com.expedia.www.haystack.trace.indexer.serde.{SpanBufferSerializer, SpanDeserializer}
+import com.expedia.www.haystack.trace.indexer.serde.SpanDeserializer
 import org.apache.kafka.clients.consumer.ConsumerConfig
 import org.apache.kafka.clients.producer.ProducerConfig
 import org.apache.kafka.common.serialization.{ByteArraySerializer, StringDeserializer, StringSerializer}

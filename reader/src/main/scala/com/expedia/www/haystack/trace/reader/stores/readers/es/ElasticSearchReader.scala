@@ -17,7 +17,7 @@
 package com.expedia.www.haystack.trace.reader.stores.readers.es
 
 import com.expedia.www.haystack.trace.reader.config.entities.ElasticSearchConfiguration
-import com.expedia.www.haystack.trace.reader.metrics.MetricsSupport
+import com.expedia.www.haystack.trace.reader.metrics.{AppMetricNames, MetricsSupport}
 import com.google.gson.Gson
 import io.searchbox.client.config.HttpClientConfig
 import io.searchbox.client.{JestClient, JestClientFactory}
@@ -29,8 +29,8 @@ import scala.util.Try
 
 class ElasticSearchReader(config: ElasticSearchConfiguration)(implicit val dispatcher: ExecutionContextExecutor) extends MetricsSupport with AutoCloseable {
   private val LOGGER = LoggerFactory.getLogger(classOf[ElasticSearchReader])
-  private val readTimer = metricRegistry.timer("elasticsearch.read.time")
-  private val readFailures = metricRegistry.meter("elasticsearch.read.failures")
+  private val readTimer = metricRegistry.timer(AppMetricNames.ELASTIC_SEARCH_READ_TIME)
+  private val readFailures = metricRegistry.meter(AppMetricNames.ELASTIC_SEARCH_READ_FAILURES)
 
   // initialize the elastic search client
   private val esClient: JestClient = {

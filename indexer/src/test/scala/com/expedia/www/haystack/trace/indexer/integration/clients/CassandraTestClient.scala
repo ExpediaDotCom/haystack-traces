@@ -48,16 +48,17 @@ class CassandraTestClient {
 
   def buildConfig = CassandraWriteConfiguration(
     CassandraConfiguration(List(CASSANDRA_ENDPOINT),
-    autoDiscoverEnabled = false,
-    None,
-    KEYSPACE,
-    TABLE_NAME,
-    None,
-    SocketConfiguration(5, keepAlive = true, 5000, 5000)), ConsistencyLevel.ONE, 150, 10)
+      autoDiscoverEnabled = false,
+      None,
+      None,
+      KEYSPACE,
+      TABLE_NAME,
+      None,
+      SocketConfiguration(5, keepAlive = true, 5000, 5000)), ConsistencyLevel.ONE, 150, 10)
 
   def queryAll(): Seq[CassandraRow] = {
     val rows = cassandraSession.execute(s"SELECT id, ts, spans from $KEYSPACE.$TABLE_NAME")
-    val result = for(row <- rows)
+    val result = for (row <- rows)
       yield CassandraRow(row.getString("id"), row.getTimestamp("ts"), SpanBuffer.parseFrom(row.getBytes("spans").array()))
     result.toList
   }

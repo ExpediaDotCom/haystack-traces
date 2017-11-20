@@ -17,10 +17,11 @@
 
 package com.expedia.www.haystack.trace.commons.clients.cassandra
 
+
+import com.datastax.driver.core._
 import com.datastax.driver.core.policies.{DefaultRetryPolicy, LatencyAwarePolicy, RoundRobinPolicy, TokenAwarePolicy}
-import com.datastax.driver.core.{Cluster, HostDistance, PoolingOptions, SocketOptions}
 import com.expedia.www.haystack.trace.commons.clients.AwsNodeDiscoverer
-import com.expedia.www.haystack.trace.commons.config.entities.{AwsNodeDiscoveryConfiguration, CassandraConfiguration}
+import com.expedia.www.haystack.trace.commons.config.entities.{AwsNodeDiscoveryConfiguration, CassandraConfiguration, CredentialsConfiguration}
 
 class CassandraClusterFactory extends ClusterFactory {
 
@@ -31,16 +32,18 @@ class CassandraClusterFactory extends ClusterFactory {
     }
   }
 
+
   override def buildCluster(config: CassandraConfiguration): Cluster = {
-    val contactPoints = if(config.autoDiscoverEnabled) discoverNodes(config.awsNodeDiscovery) else config.endpoints
+    val contactPoints = if (config.autoDiscoverEnabled) discoverNodes(config.awsNodeDiscovery) else config.endpoints
     require(contactPoints.nonEmpty, "cassandra contact points can't be empty!!!")
 
     val tokenAwarePolicy = new TokenAwarePolicy(new LatencyAwarePolicy.Builder(new RoundRobinPolicy()).build())
-
+    val authProvider = fetchAuthProvider(config.plaintextCredentials)
     Cluster.builder()
       .withClusterName("cassandra-cluster")
-      .addContactPoints(contactPoints:_*)
+      .addContactPoints(contactPoints: _*)
       .withRetryPolicy(DefaultRetryPolicy.INSTANCE)
+      .withAuthProvider(authProvider)
       .withSocketOptions(new SocketOptions()
         .setKeepAlive(config.socket.keepAlive)
         .setConnectTimeoutMillis(config.socket.connectionTimeoutMillis)
@@ -48,5 +51,12 @@ class CassandraClusterFactory extends ClusterFactory {
       .withLoadBalancingPolicy(tokenAwarePolicy)
       .withPoolingOptions(new PoolingOptions().setMaxConnectionsPerHost(HostDistance.LOCAL, config.socket.maxConnectionPerHost))
       .build()
+  }
+
+  private def fetchAuthProvider(plaintextCredentials: Option[CredentialsConfiguration]): AuthProvider = {
+    plaintextCredentials match {
+      case Some(credentialsConfiguration) => new PlainTextAuthProvider(credentialsConfiguration.username, credentialsConfiguration.password)
+      case _ => AuthProvider.NONE
+    }
   }
 }

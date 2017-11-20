@@ -56,6 +56,12 @@ class ProviderConfiguration {
       } else {
         None
       }
+    val credentialsConfig: Option[CredentialsConfiguration] =
+      if (cs.hasPath("credentials")) {
+        Some(CredentialsConfiguration(cs.getString("credentials.username"), cs.getString("credentials.password")))
+      } else {
+        None
+      }
 
     val socketConfig = cs.getConfig("connections")
 
@@ -69,6 +75,7 @@ class ProviderConfiguration {
       if (cs.hasPath("endpoints")) cs.getString("endpoints").split(",").toList else Nil,
       cs.getBoolean("auto.discovery.enabled"),
       awsConfig,
+      credentialsConfig,
       cs.getString("keyspace.name"),
       cs.getString("keyspace.table.name"),
       None,
@@ -78,7 +85,7 @@ class ProviderConfiguration {
   /**
     * ElasticSearch configuration
     */
-  val elasticSearchConfig: ElasticSearchConfiguration =  {
+  val elasticSearchConfig: ElasticSearchConfiguration = {
     val es = config.getConfig("elasticsearch")
     val indexConfig = es.getConfig("index")
 
@@ -114,6 +121,7 @@ class ProviderConfiguration {
     * registers a reloadable config object to reloader instance.
     * The reloader registers them as observers and invokes them periodically when it re-reads the
     * configuration from an external store
+    *
     * @param observers list of reloadable configuration objects
     * @return the reloader instance that uses ElasticSearch as an external database for storing the configs
     */
@@ -127,7 +135,7 @@ class ProviderConfiguration {
       loadOnStartup = reload.getBoolean("startup.load"))
 
     val loader = new ConfigurationReloadElasticSearchProvider(reloadConfig)
-    if(reloadConfig.loadOnStartup) loader.load()
+    if (reloadConfig.loadOnStartup) loader.load()
     loader
   }
 

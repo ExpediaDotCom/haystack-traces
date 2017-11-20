@@ -25,6 +25,7 @@ class CassandraSessionSpec extends FunSpec with Matchers with EasyMockSugar {
       val config = CassandraConfiguration(List("cassandra1"),
         autoDiscoverEnabled = false,
         None,
+        None,
         keyspaceName,
         tableName,
         None,

@@ -41,6 +41,7 @@ class ProjectConfiguration extends AutoCloseable {
 
   /**
     * span accumulation related configuration like max buffered records, buffer window, poll interval
+    *
     * @return a span config object
     */
   val spanAccumulateConfig: SpanAccumulatorConfiguration = {
@@ -77,7 +78,7 @@ class ProjectConfiguration extends AutoCloseable {
     }
 
     def addProps(config: Config, props: Properties): Unit = {
-      if(config != null ) {
+      if (config != null) {
         config.entrySet() foreach {
           kv => {
             props.setProperty(kv.getKey, kv.getValue.unwrapped().toString)
@@ -87,7 +88,7 @@ class ProjectConfiguration extends AutoCloseable {
     }
 
     val kafka = config.getConfig("kafka")
-    val producerConfig = if(kafka.hasPath("producer")) kafka.getConfig("producer") else null
+    val producerConfig = if (kafka.hasPath("producer")) kafka.getConfig("producer") else null
     val consumerConfig = kafka.getConfig("consumer")
 
     val consumerProps = new Properties
@@ -125,13 +126,20 @@ class ProjectConfiguration extends AutoCloseable {
     val cs = config.getConfig("cassandra")
 
     val awsConfig: Option[AwsNodeDiscoveryConfiguration] =
-      if(cs.hasPath("auto.discovery.aws")) {
+      if (cs.hasPath("auto.discovery.aws")) {
         val aws = cs.getConfig("auto.discovery.aws")
         val tags = aws.getConfig("tags")
           .entrySet()
           .map(elem => elem.getKey -> elem.getValue.unwrapped().toString)
           .toMap
         Some(AwsNodeDiscoveryConfiguration(aws.getString("region"), tags))
+      } else {
+        None
+      }
+
+    val credentialsConfig: Option[CredentialsConfiguration] =
+      if (cs.hasPath("credentials")) {
+        Some(CredentialsConfiguration(cs.getString("credentials.username"), cs.getString("credentials.password")))
       } else {
         None
       }
@@ -149,7 +157,7 @@ class ProjectConfiguration extends AutoCloseable {
     val keyspaceConfig = cs.getConfig("keyspace")
 
     val autoCreateSchemaField = "auto.create.schema"
-    val autoCreateSchema = if(keyspaceConfig.hasPath(autoCreateSchemaField)
+    val autoCreateSchema = if (keyspaceConfig.hasPath(autoCreateSchemaField)
       && StringUtils.isNotEmpty(keyspaceConfig.getString(autoCreateSchemaField))) {
       Some(keyspaceConfig.getString(autoCreateSchemaField))
     } else {
@@ -158,9 +166,10 @@ class ProjectConfiguration extends AutoCloseable {
 
     CassandraWriteConfiguration(
       clientConfig = CassandraConfiguration(
-        if(cs.hasPath("endpoints")) cs.getString("endpoints").split(",").toList else Nil,
+        if (cs.hasPath("endpoints")) cs.getString("endpoints").split(",").toList else Nil,
         cs.getBoolean("auto.discovery.enabled"),
         awsConfig,
+        credentialsConfig,
         keyspaceConfig.getString("name"),
         keyspaceConfig.getString("table.name"),
         autoCreateSchema,
@@ -179,7 +188,7 @@ class ProjectConfiguration extends AutoCloseable {
     val indexConfig = es.getConfig("index")
 
     val templateJsonConfigField = "template.json"
-    val indexTemplateJson = if(indexConfig.hasPath(templateJsonConfigField)
+    val indexTemplateJson = if (indexConfig.hasPath(templateJsonConfigField)
       && StringUtils.isNotEmpty(indexConfig.getString(templateJsonConfigField))) {
       Some(indexConfig.getString(templateJsonConfigField))
     } else {
@@ -215,6 +224,7 @@ class ProjectConfiguration extends AutoCloseable {
     * registers a reloadable config object to reloader instance.
     * The reloader registers them as observers and invokes them periodically when it re-reads the
     * configuration from an external store
+    *
     * @param observers list of reloadable configuration objects
     * @return the reloader instance that uses ElasticSearch as an external database for storing the configs
     */
@@ -228,7 +238,7 @@ class ProjectConfiguration extends AutoCloseable {
       loadOnStartup = reload.getBoolean("startup.load"))
 
     val loader = new ConfigurationReloadElasticSearchProvider(reloadConfig)
-    if(reloadConfig.loadOnStartup) loader.load()
+    if (reloadConfig.loadOnStartup) loader.load()
     loader
   }
 

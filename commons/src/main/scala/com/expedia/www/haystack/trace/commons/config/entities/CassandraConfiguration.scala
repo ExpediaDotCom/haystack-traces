@@ -20,17 +20,18 @@ package com.expedia.www.haystack.trace.commons.config.entities
 /**
   * defines the configuration parameters for cassandra
   *
-  * @param endpoints: list of cassandra endpoints
-  * @param autoDiscoverEnabled: if autodiscovery is enabled, then 'endpoints' config parameter will be ignored
-  * @param awsNodeDiscovery: discovery configuration for aws, optional. This is applied only if autoDiscoverEnabled is true
-  * @param keyspace: cassandra keyspance
-  * @param tableName: cassandra table name
-  * @param autoCreateSchema: apply cql and create keyspace and tables if not exist, optional
-  * @param socket: socket configuration like maxConnections, timeouts and keepAlive
+  * @param endpoints           : list of cassandra endpoints
+  * @param autoDiscoverEnabled : if autodiscovery is enabled, then 'endpoints' config parameter will be ignored
+  * @param awsNodeDiscovery    : discovery configuration for aws, optional. This is applied only if autoDiscoverEnabled is true
+  * @param keyspace            : cassandra keyspance
+  * @param tableName           : cassandra table name
+  * @param autoCreateSchema    : apply cql and create keyspace and tables if not exist, optional
+  * @param socket              : socket configuration like maxConnections, timeouts and keepAlive
   */
 case class CassandraConfiguration(endpoints: List[String],
                                   autoDiscoverEnabled: Boolean,
                                   awsNodeDiscovery: Option[AwsNodeDiscoveryConfiguration],
+                                  plaintextCredentials: Option[CredentialsConfiguration],
                                   keyspace: String,
                                   tableName: String,
                                   autoCreateSchema: Option[String],

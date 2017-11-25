@@ -29,6 +29,8 @@ import io.searchbox.indices.DeleteIndex
 import org.json4s.DefaultFormats
 import org.json4s.jackson.Serialization
 
+import scala.concurrent.duration._
+
 case class EsSourceDocument(traceid: String)
 
 class ElasticSearchTestClient {
@@ -64,7 +66,8 @@ class ElasticSearchTestClient {
     3000,
     10,
     10,
-    10)
+    10,
+    3, 2.seconds)
 
   def indexingConfig: WhitelistIndexFieldConfiguration = {
     val cfg = WhitelistIndexFieldConfiguration()

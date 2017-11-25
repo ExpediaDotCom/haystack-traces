@@ -94,6 +94,8 @@ class ConfigurationLoaderSpec extends FunSpec with Matchers {
       elastic.connectionTimeoutMillis shouldBe 10000
       elastic.indexNamePrefix shouldBe "haystack-test"
       elastic.indexType shouldBe "spans"
+      elastic.maxRetries shouldBe 5
+      elastic.retryBackOff.toMillis shouldBe 2000
     }
   }
 }

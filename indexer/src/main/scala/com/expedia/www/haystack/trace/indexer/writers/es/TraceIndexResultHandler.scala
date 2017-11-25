@@ -17,12 +17,13 @@
 
 package com.expedia.www.haystack.trace.indexer.writers.es
 
-import java.util.concurrent.Semaphore
-
 import com.codahale.metrics.{Meter, Timer}
+import com.expedia.www.haystack.trace.commons.retries.RetryOperation
 import com.expedia.www.haystack.trace.indexer.metrics.{AppMetricNames, MetricsSupport}
 import io.searchbox.client.JestResultHandler
 import io.searchbox.core.BulkResult
+import org.elasticsearch.ElasticsearchException
+import org.elasticsearch.rest.RestStatus
 import org.slf4j.{Logger, LoggerFactory}
 
 import scala.collection.JavaConversions._
@@ -32,10 +33,12 @@ object TraceIndexResultHandler extends MetricsSupport {
   val esWriteFailureMeter: Meter = metricRegistry.meter(AppMetricNames.ES_WRITE_FAILURE)
 }
 
-class TraceIndexResultHandler(inflightRequestsSemaphore: Semaphore, timer: Timer.Context)
+class TraceIndexResultHandler(timer: Timer.Context, asyncRetryResult: RetryOperation.Callback)
+
   extends JestResultHandler[BulkResult] {
 
   import TraceIndexResultHandler._
+
 
   /**
     * this callback is invoked when the elastic search writes is completed with success or warnings
@@ -43,16 +46,18 @@ class TraceIndexResultHandler(inflightRequestsSemaphore: Semaphore, timer: Timer
     * @param result bulk result
     */
   def completed(result: BulkResult): Unit = {
-    inflightRequestsSemaphore.release()
     timer.close()
 
     // group the failed items as per status and log once for such a failed item
-    result.getFailedItems.groupBy(_.status) foreach {
-      case (statusCode, failedItems) =>
-        esWriteFailureMeter.mark(failedItems.size)
-        LOGGER.error(s"Index operation has failed with status=$statusCode, totalFailedItems=${failedItems.size}, " +
-          s"errorReason=${failedItems.head.errorReason}, errorType=${failedItems.head.errorType}")
+    if(result.getFailedItems != null) {
+      result.getFailedItems.groupBy(_.status) foreach {
+        case (statusCode, failedItems) =>
+          esWriteFailureMeter.mark(failedItems.size)
+          LOGGER.error(s"Index operation has failed with status=$statusCode, totalFailedItems=${failedItems.size}, " +
+            s"errorReason=${failedItems.head.errorReason}, errorType=${failedItems.head.errorType}")
+      }
     }
+    asyncRetryResult.onResult(false)
   }
 
   /**
@@ -61,10 +66,18 @@ class TraceIndexResultHandler(inflightRequestsSemaphore: Semaphore, timer: Timer
     * @param ex the exception contains the reason of failure
     */
   def failed(ex: Exception): Unit = {
-    inflightRequestsSemaphore.release()
     timer.close()
-
-    LOGGER.error("Fail to write all the documents in elastic search with reason:", ex)
     esWriteFailureMeter.mark()
+    LOGGER.error("Fail to write the documents in elastic search with reason:", ex)
+    asyncRetryResult.onResult(shouldRetry(ex))
+  }
+
+  private def shouldRetry(failure: Exception): Boolean = {
+    if (failure != null) {
+      failure match {
+        case e: ElasticsearchException => e.status() == RestStatus.TOO_MANY_REQUESTS
+        case _ => false
+      }
+    } else false
   }
 }

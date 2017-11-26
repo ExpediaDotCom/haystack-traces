@@ -38,6 +38,8 @@ class ConfigurationReloadElasticSearchProvider(reloadConfig: ReloadConfiguration
     * loads the configuration from external store
     */
   override def load(): Unit = {
+    LOGGER.info("configuration reloader invoked at its scheduled interval!")
+
     reloadConfig.observers.foreach(observer => {
       val searchQuery = new Search.Builder(matchAllQuery)
         .addIndex(reloadConfig.databaseName)

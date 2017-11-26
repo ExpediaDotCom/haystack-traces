@@ -18,11 +18,13 @@
 package com.expedia.www.haystack.trace.indexer.config
 
 import java.util.Properties
+import java.util.concurrent.TimeUnit
 
 import com.datastax.driver.core.ConsistencyLevel
 import com.expedia.www.haystack.trace.commons.config.ConfigurationLoader
 import com.expedia.www.haystack.trace.commons.config.entities._
 import com.expedia.www.haystack.trace.commons.config.reload.{ConfigurationReloadElasticSearchProvider, Reloadable}
+import com.expedia.www.haystack.trace.commons.retries.RetryOperation
 import com.expedia.www.haystack.trace.indexer.config.entities._
 import com.expedia.www.haystack.trace.indexer.serde.SpanDeserializer
 import com.typesafe.config.Config
@@ -32,6 +34,7 @@ import org.apache.kafka.clients.producer.ProducerConfig
 import org.apache.kafka.common.serialization.{ByteArraySerializer, StringDeserializer, StringSerializer}
 
 import scala.collection.JavaConversions._
+import scala.concurrent.duration._
 import scala.util.Try
 
 class ProjectConfiguration extends AutoCloseable {
@@ -205,7 +208,11 @@ class ProjectConfiguration extends AutoCloseable {
       readTimeoutMillis = es.getInt("read.timeout.ms"),
       maxInFlightBulkRequests = es.getInt("bulk.max.inflight"),
       maxDocsInBulk = es.getInt("bulk.max.docs.count"),
-      maxBulkDocSizeInBytes = es.getInt("bulk.max.docs.size.kb") * 1000)
+      maxBulkDocSizeInBytes = es.getInt("bulk.max.docs.size.kb") * 1000,
+      retryConfig = RetryOperation.Config(
+        es.getInt("retries.max"),
+        es.getLong("retries.backoff.initial.ms"),
+        es.getDouble("retries.backoff.factor")))
   }
 
   /**

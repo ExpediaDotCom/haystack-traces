@@ -26,8 +26,6 @@ import org.slf4j.LoggerFactory
 class ConfigurationReloadElasticSearchProvider(reloadConfig: ReloadConfiguration)
   extends ConfigurationReloadProvider(reloadConfig) {
 
-  private val LOGGER = LoggerFactory.getLogger(classOf[ConfigurationReloadElasticSearchProvider])
-
   private val matchAllQuery = "{\"query\":{\"match_all\":{\"boost\":1.0}}}"
 
   private val esClient: JestClient = {

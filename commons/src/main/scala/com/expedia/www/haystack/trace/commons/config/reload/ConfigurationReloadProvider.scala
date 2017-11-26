@@ -20,14 +20,20 @@ package com.expedia.www.haystack.trace.commons.config.reload
 import java.util.concurrent.{Executors, TimeUnit}
 
 import com.expedia.www.haystack.trace.commons.config.entities.ReloadConfiguration
+import org.slf4j.{Logger, LoggerFactory}
 
 abstract class ConfigurationReloadProvider(config: ReloadConfiguration) extends AutoCloseable {
+  protected val LOGGER: Logger = LoggerFactory.getLogger(classOf[ConfigurationReloadElasticSearchProvider])
+
   private val executor = Executors.newSingleThreadScheduledExecutor()
 
   // schedule the reload process from an external store
   if(config.reloadIntervalInMillis > -1) {
+    LOGGER.info("configuration reload scheduler has been started with a delay of {}ms", config.reloadIntervalInMillis)
     executor.scheduleWithFixedDelay(new Runnable() {
-      override def run(): Unit = load()
+      override def run(): Unit = {
+        load()
+      }
     }, config.reloadIntervalInMillis, config.reloadIntervalInMillis, TimeUnit.MILLISECONDS)
   }
 

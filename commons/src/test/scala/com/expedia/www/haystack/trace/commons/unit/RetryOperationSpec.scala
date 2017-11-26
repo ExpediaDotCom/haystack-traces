@@ -24,22 +24,21 @@ import org.scalatest.{FunSpec, Matchers}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
-import scala.concurrent.duration._
 
 class RetryOperationSpec extends FunSpec with Matchers {
   describe("Retry Operation handler") {
     it("should not retry if main function runs successfully") {
       @volatile var onSuccessCalled = 0
       val mainFuncCalled = new AtomicInteger(0)
+
       RetryOperation.executeAsyncWithRetryBackoff((callback) => {
         mainFuncCalled.incrementAndGet()
         Future {
-          Thread.sleep(1000)
+          Thread.sleep(500)
           callback.onResult(false)
         }
       },
-        maxRetries = 3,
-        100.millis,
+        RetryOperation.Config(maxRetries = 3, initialBackoffInMillis = 100, backoffFactor = 1.5),
         onSuccess = () => {
           onSuccessCalled = onSuccessCalled + 1
         }, onFailure = (_) => {
@@ -53,51 +52,49 @@ class RetryOperationSpec extends FunSpec with Matchers {
   }
 
   it("should retry if callback says retry but should not fail as last attempt succeeds") {
-    var onSuccessCalled = 0
-    val maxRetries = 2
+    @volatile var onSuccessCalled = 0
+    val retryConfig = RetryOperation.Config(maxRetries = 3, initialBackoffInMillis = 100, backoffFactor = 1.5)
     val mainFuncCalled = new AtomicInteger(0)
 
     RetryOperation.executeAsyncWithRetryBackoff((callback) => {
       val count = mainFuncCalled.incrementAndGet()
-      if (count < maxRetries) {
+      if (count < retryConfig.maxRetries) {
         Future {
-          Thread.sleep(1000)
+          Thread.sleep(500)
           callback.onResult(true)
         }
       } else {
         Future {
-          Thread.sleep(1000)
+          Thread.sleep(500)
           callback.onResult(false)
         }
       }
     },
-      maxRetries,
-      100.millis,
+      retryConfig,
       onSuccess = () => {
         onSuccessCalled = onSuccessCalled + 1
       }, onFailure = (_) => {
         fail("onFailure should not be called")
       })
 
-    Thread.sleep(5000)
-    mainFuncCalled.get() shouldBe maxRetries
+    Thread.sleep(4000)
+    mainFuncCalled.get() shouldBe retryConfig.maxRetries
     onSuccessCalled shouldBe 1
   }
 
   it("should retry if callback asks for a retry and fail finally as all attempts fail") {
-    var onFailureCalled = 0
-    val maxRetries = 2
+    @volatile var onFailureCalled = 0
+    val retryConfig = RetryOperation.Config(maxRetries = 2, initialBackoffInMillis = 100, backoffFactor = 1.5)
     val mainFuncCalled = new AtomicInteger(0)
 
     RetryOperation.executeAsyncWithRetryBackoff((callback) => {
       mainFuncCalled.incrementAndGet()
       Future {
-        Thread.sleep(1000)
+        Thread.sleep(500)
         callback.onResult(true)
       }
     },
-      maxRetries,
-      100.millis,
+      retryConfig,
       onSuccess = () => {
         fail("onSuccess should not be called")
       }, onFailure = (ex) => {
@@ -105,8 +102,23 @@ class RetryOperationSpec extends FunSpec with Matchers {
         onFailureCalled = onFailureCalled + 1
       })
 
-    Thread.sleep(5000)
-    mainFuncCalled.get() shouldBe maxRetries + 1
+    Thread.sleep(4000)
+    mainFuncCalled.get() shouldBe (retryConfig.maxRetries + 1)
     onFailureCalled shouldBe 1
+  }
+
+  it("retry operation backoff config should return the next backoff config") {
+    val retry = RetryOperation.Config(3, 1000, 1.5)
+
+    var nextBackoffConfig = retry.nextBackOffConfig
+    nextBackoffConfig.maxRetries shouldBe 3
+    nextBackoffConfig.nextBackOffConfig.backoffFactor shouldBe 1.5
+    nextBackoffConfig.initialBackoffInMillis shouldBe 1500
+
+    nextBackoffConfig = nextBackoffConfig.nextBackOffConfig
+    nextBackoffConfig.maxRetries shouldBe 3
+    nextBackoffConfig.nextBackOffConfig.backoffFactor shouldBe 1.5
+    nextBackoffConfig.initialBackoffInMillis shouldBe 2250
+
   }
 }

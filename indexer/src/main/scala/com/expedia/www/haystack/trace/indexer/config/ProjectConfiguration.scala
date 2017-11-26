@@ -24,6 +24,7 @@ import com.datastax.driver.core.ConsistencyLevel
 import com.expedia.www.haystack.trace.commons.config.ConfigurationLoader
 import com.expedia.www.haystack.trace.commons.config.entities._
 import com.expedia.www.haystack.trace.commons.config.reload.{ConfigurationReloadElasticSearchProvider, Reloadable}
+import com.expedia.www.haystack.trace.commons.retries.RetryOperation
 import com.expedia.www.haystack.trace.indexer.config.entities._
 import com.expedia.www.haystack.trace.indexer.serde.SpanDeserializer
 import com.typesafe.config.Config
@@ -208,8 +209,10 @@ class ProjectConfiguration extends AutoCloseable {
       maxInFlightBulkRequests = es.getInt("bulk.max.inflight"),
       maxDocsInBulk = es.getInt("bulk.max.docs.count"),
       maxBulkDocSizeInBytes = es.getInt("bulk.max.docs.size.kb") * 1000,
-      maxRetries = es.getInt("retries.max"),
-      retryBackOff = es.getDuration("retries.backoff", TimeUnit.MILLISECONDS).millis)
+      retryConfig = RetryOperation.Config(
+        es.getInt("retries.max"),
+        es.getLong("retries.backoff.initial.ms"),
+        es.getDouble("retries.backoff.factor")))
   }
 
   /**

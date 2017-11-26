@@ -21,6 +21,7 @@ import java.text.SimpleDateFormat
 import java.util.Date
 
 import com.expedia.www.haystack.trace.commons.config.entities.{WhiteListIndexFields, WhitelistIndexField, WhitelistIndexFieldConfiguration}
+import com.expedia.www.haystack.trace.commons.retries.RetryOperation
 import com.expedia.www.haystack.trace.indexer.config.entities.ElasticSearchConfiguration
 import io.searchbox.client.config.HttpClientConfig
 import io.searchbox.client.{JestClient, JestClientFactory}
@@ -67,7 +68,7 @@ class ElasticSearchTestClient {
     10,
     10,
     10,
-    3, 2.seconds)
+    RetryOperation.Config(3, 2000, 2))
 
   def indexingConfig: WhitelistIndexFieldConfiguration = {
     val cfg = WhitelistIndexFieldConfiguration()

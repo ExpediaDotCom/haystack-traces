@@ -18,37 +18,36 @@
 
 package com.expedia.www.haystack.trace.commons.retries
 
-import scala.concurrent.duration.FiniteDuration
-
 object RetryOperation {
+  case class Config(maxRetries: Int, initialBackoffInMillis: Long, backoffFactor: Double) {
+    def nextBackOffConfig: Config = this.copy(initialBackoffInMillis = Math.ceil(initialBackoffInMillis * backoffFactor).toLong)
+  }
 
   trait Callback {
     def onResult(shouldRetry: Boolean): Unit
   }
 
   def executeAsyncWithRetryBackoff(f: (Callback) => Unit,
-                                   maxRetries: Int,
-                                   backOffDuration: FiniteDuration,
+                                   retryConfig: Config,
                                    onSuccess: () => Unit,
                                    onFailure: (Exception) => Unit): Unit = {
-    executeAsyncWithRetryBackoff(f, 0, maxRetries, backOffDuration, onSuccess, onFailure)
+    executeAsyncWithRetryBackoff(f, 0, retryConfig, onSuccess, onFailure)
   }
 
   private def executeAsyncWithRetryBackoff(f: (Callback) => Unit,
                                            currentRetry: Int,
-                                           maxRetries: Int,
-                                           backOffDuration: FiniteDuration,
+                                           retryConfig: Config,
                                            onSuccess: () => Unit,
                                            onFailure: (Exception) => Unit): Unit = {
     try {
       val asyncRetryResult = new Callback {
         override def onResult(shouldRetry: Boolean): Unit = {
           if (shouldRetry) {
-            if (currentRetry < maxRetries) {
-              Thread.sleep(backOffDuration.toMillis)
-              executeAsyncWithRetryBackoff(f, currentRetry + 1, maxRetries, backOffDuration, onSuccess, onFailure)
+            if (currentRetry < retryConfig.maxRetries) {
+              Thread.sleep(retryConfig.initialBackoffInMillis)
+              executeAsyncWithRetryBackoff(f, currentRetry + 1, retryConfig.nextBackOffConfig , onSuccess, onFailure)
             } else {
-              onFailure(new MaxRetriesAttemptedException(s"max retries=$maxRetries have reached and all attempts have failed!"))
+              onFailure(new MaxRetriesAttemptedException(s"max retries=${retryConfig.maxRetries} have reached and all attempts have failed!"))
             }
           } else {
             onSuccess()

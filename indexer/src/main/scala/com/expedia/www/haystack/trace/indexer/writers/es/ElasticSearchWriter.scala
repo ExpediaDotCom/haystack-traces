@@ -100,8 +100,7 @@ class ElasticSearchWriter(esConfig: ElasticSearchConfiguration, indexConf: White
           executeAsyncWithRetryBackoff((retryCallback) => {
             esClient.executeAsync(bulkToDispatch, new TraceIndexResultHandler(esWriteTime.time(), retryCallback))
           },
-            esConfig.maxRetries,
-            esConfig.retryBackOff,
+            esConfig.retryConfig,
             onSuccess = () => inflightRequestsSemaphore.release(),
             onFailure = (ex) => {
               LOGGER.error("Fail to write to ES after all retry attempts", ex)

@@ -17,6 +17,8 @@
 
 package com.expedia.www.haystack.trace.indexer.config.entities
 
+import com.expedia.www.haystack.trace.commons.retries.RetryOperation
+
 import scala.concurrent.duration.FiniteDuration
 
 /**
@@ -32,8 +34,7 @@ import scala.concurrent.duration.FiniteDuration
   * @param maxInFlightBulkRequests: max bulk writes that can be run in parallel
   * @param maxDocsInBulk maximum number of index documents in a single bulk
   * @param maxBulkDocSizeInBytes maximum size (in bytes) of a single bulk request
-  * @param maxRetries maximum write retries on failures that are recoverable
-  * @param retryBackOff retry backoff
+  * @param retryConfig retry max retries limit, initial backoff and exponential factor values
   */
 case class ElasticSearchConfiguration(endpoint: String,
                                       indexTemplateJson: Option[String],
@@ -45,5 +46,4 @@ case class ElasticSearchConfiguration(endpoint: String,
                                       maxInFlightBulkRequests: Int,
                                       maxDocsInBulk: Int,
                                       maxBulkDocSizeInBytes: Int,
-                                      maxRetries: Int,
-                                      retryBackOff: FiniteDuration)
+                                      retryConfig: RetryOperation.Config)

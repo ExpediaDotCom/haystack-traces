@@ -23,7 +23,7 @@ import com.expedia.www.haystack.trace.commons.config.entities.ReloadConfiguratio
 import org.slf4j.{Logger, LoggerFactory}
 
 abstract class ConfigurationReloadProvider(config: ReloadConfiguration) extends AutoCloseable {
-  protected val LOGGER: Logger = LoggerFactory.getLogger(classOf[ConfigurationReloadElasticSearchProvider])
+  protected val LOGGER: Logger = LoggerFactory.getLogger(classOf[ConfigurationReloadProvider])
 
   private val executor = Executors.newSingleThreadScheduledExecutor()
 

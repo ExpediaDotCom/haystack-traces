@@ -18,4 +18,4 @@
 
 package com.expedia.www.haystack.trace.commons.retries
 
-class MaxRetriesAttemptedException(message: String) extends RuntimeException(message)
+class MaxRetriesAttemptedException(message: String, reason: Throwable ) extends RuntimeException(message, reason)

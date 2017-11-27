@@ -101,10 +101,10 @@ class ElasticSearchWriter(esConfig: ElasticSearchConfiguration, indexConf: White
             esClient.executeAsync(bulkToDispatch, new TraceIndexResultHandler(esWriteTime.time(), retryCallback))
           },
             esConfig.retryConfig,
-            onSuccess = () => inflightRequestsSemaphore.release(),
+            onSuccess = (_: Any) => inflightRequestsSemaphore.release(),
             onFailure = (ex) => {
-              LOGGER.error("Fail to write to ES after all retry attempts", ex)
               inflightRequestsSemaphore.release()
+              LOGGER.error("Fail to write to ES after all retry attempts", ex)
             })
         case _ =>
       }

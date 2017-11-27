@@ -57,7 +57,7 @@ class TraceIndexResultHandler(timer: Timer.Context, asyncRetryResult: RetryOpera
             s"errorReason=${failedItems.head.errorReason}, errorType=${failedItems.head.errorType}")
       }
     }
-    asyncRetryResult.onResult(false)
+    asyncRetryResult.onResult(result)
   }
 
   /**
@@ -69,15 +69,13 @@ class TraceIndexResultHandler(timer: Timer.Context, asyncRetryResult: RetryOpera
     timer.close()
     esWriteFailureMeter.mark()
     LOGGER.error("Fail to write the documents in elastic search with reason:", ex)
-    asyncRetryResult.onResult(shouldRetry(ex))
+    asyncRetryResult.onError(ex, shouldRetry(ex))
   }
 
-  private def shouldRetry(failure: Exception): Boolean = {
-    if (failure != null) {
-      failure match {
-        case e: ElasticsearchException => e.status() == RestStatus.TOO_MANY_REQUESTS
-        case _ => false
-      }
-    } else false
+  private def shouldRetry(ex: Exception): Boolean = {
+    ex match {
+      case e: ElasticsearchException => e.status() == RestStatus.TOO_MANY_REQUESTS
+      case _ => false
+    }
   }
 }

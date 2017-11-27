@@ -18,10 +18,12 @@
 package com.expedia.www.haystack.trace.commons.config.reload
 
 import com.expedia.www.haystack.trace.commons.config.entities.ReloadConfiguration
+import com.expedia.www.haystack.trace.commons.retries.RetryOperation
 import io.searchbox.client.config.HttpClientConfig
 import io.searchbox.client.{JestClient, JestClientFactory}
 import io.searchbox.core.Search
-import org.slf4j.LoggerFactory
+
+import scala.util.{Failure, Success}
 
 class ConfigurationReloadElasticSearchProvider(reloadConfig: ReloadConfiguration)
   extends ConfigurationReloadProvider(reloadConfig) {
@@ -30,7 +32,7 @@ class ConfigurationReloadElasticSearchProvider(reloadConfig: ReloadConfiguration
 
   private val esClient: JestClient = {
     val factory = new JestClientFactory()
-    factory.setHttpClientConfig(new HttpClientConfig.Builder(reloadConfig.configStoreEndpoint).build())
+    factory.setHttpClientConfig(new HttpClientConfig.Builder(reloadConfig.configStoreEndpoint).multiThreaded(false).build())
     factory.getObject
   }
 
@@ -38,21 +40,26 @@ class ConfigurationReloadElasticSearchProvider(reloadConfig: ReloadConfiguration
     * loads the configuration from external store
     */
   override def load(): Unit = {
-    LOGGER.info("configuration reloader invoked at its scheduled interval!")
-
     reloadConfig.observers.foreach(observer => {
+
       val searchQuery = new Search.Builder(matchAllQuery)
         .addIndex(reloadConfig.databaseName)
         .addType(observer.name)
         .build()
 
-      val result = esClient.execute(searchQuery)
-      if (result.isSucceeded) {
-        LOGGER.info(s"Reloading(or loading) is successfully done for the configuration name =${observer.name}")
-        observer.onReload(result.getSourceAsString)
-      } else {
-        LOGGER.error(s"Fail to reload the configuration from elastic search with error: ${result.getErrorMessage} " +
-          s"for observer name=${observer.name}")
+      RetryOperation.executeWithRetryBackoff(() => esClient.execute(searchQuery), RetryOperation.Config(3, 1000, 2)) match {
+        case Success(result) =>
+          if (result.isSucceeded) {
+            LOGGER.info(s"Reloading(or loading) is successfully done for the configuration name =${observer.name}")
+            observer.onReload(result.getSourceAsString)
+          } else {
+            LOGGER.error(s"Fail to reload the configuration from elastic search with error: ${result.getErrorMessage} " +
+              s"for observer name=${observer.name}")
+          }
+
+        case Failure(reason) =>
+          LOGGER.error(s"Fail to reload the configuration from elastic search for observer name=${observer.name}. " +
+            s"Will try at next scheduled time", reason)
       }
     })
   }

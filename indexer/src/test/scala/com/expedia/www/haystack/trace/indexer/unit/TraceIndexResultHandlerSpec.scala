@@ -21,7 +21,7 @@ class TraceIndexResultHandlerSpec extends FunSpec with Matchers with EasyMockSug
       val bulkResult = mock[BulkResult]
 
       expecting {
-        retryCallback.onResult(shouldRetry = false)
+        retryCallback.onResult(bulkResult)
         timer.close()
         bulkResult.getFailedItems.andReturn(Collections.emptyList()).anyTimes()
       }
@@ -42,7 +42,7 @@ class TraceIndexResultHandlerSpec extends FunSpec with Matchers with EasyMockSug
         "error", 1, "errorType", "errorReason")
 
       expecting {
-        retryCallback.onResult(shouldRetry = false)
+        retryCallback.onResult(bulkResult)
         timer.close()
         bulkResult.getFailedItems.andReturn(util.Arrays.asList(resultItem)).anyTimes()
       }
@@ -55,38 +55,41 @@ class TraceIndexResultHandlerSpec extends FunSpec with Matchers with EasyMockSug
       }
     }
 
-    it("should report failure and mark the number of failures ") {
+    it("should report failure and mark the number of failures, and perform retry on any exception") {
       val retryCallback = mock[RetryOperation.Callback]
       val timer = mock[Timer.Context]
       val bulkResult = mock[BulkResult]
 
+      val error = new RuntimeException
       expecting {
-        retryCallback.onResult(shouldRetry = false)
+        retryCallback.onError(error, retry = true)
         timer.close()
       }
 
       whenExecuting(retryCallback, timer, bulkResult) {
         val handler = new TraceIndexResultHandler(timer, retryCallback)
         val initialFailures = TraceIndexResultHandler.esWriteFailureMeter.getCount
-        handler.failed(new RuntimeException)
+        handler.failed(error)
         TraceIndexResultHandler.esWriteFailureMeter.getCount - initialFailures shouldBe 1
       }
     }
 
-    it("should report failure and mark the number of failures and call retry callback function") {
+    it("should report failure and mark the number of failures and perform function on elastic search specific exception") {
       val retryCallback = mock[RetryOperation.Callback]
       val timer = mock[Timer.Context]
       val bulkResult = mock[BulkResult]
 
+      val error = new EsRejectedExecutionException("too many requests")
+
       expecting {
-        retryCallback.onResult(shouldRetry = true)
+        retryCallback.onError(error, retry = true)
         timer.close()
       }
 
       whenExecuting(retryCallback, timer, bulkResult) {
         val handler = new TraceIndexResultHandler(timer, retryCallback)
         val initialFailures = TraceIndexResultHandler.esWriteFailureMeter.getCount
-        handler.failed(new EsRejectedExecutionException("too many requests"))
+        handler.failed(error)
         TraceIndexResultHandler.esWriteFailureMeter.getCount - initialFailures shouldBe 1
       }
     }

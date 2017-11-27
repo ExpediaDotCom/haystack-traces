@@ -22,8 +22,6 @@ import com.expedia.www.haystack.trace.commons.retries.RetryOperation
 import com.expedia.www.haystack.trace.indexer.metrics.{AppMetricNames, MetricsSupport}
 import io.searchbox.client.JestResultHandler
 import io.searchbox.core.BulkResult
-import org.elasticsearch.{ElasticsearchException, ElasticsearchTimeoutException}
-import org.elasticsearch.rest.RestStatus
 import org.slf4j.{Logger, LoggerFactory}
 
 import scala.collection.JavaConversions._
@@ -49,7 +47,7 @@ class TraceIndexResultHandler(timer: Timer.Context, asyncRetryResult: RetryOpera
     timer.close()
 
     // group the failed items as per status and log once for such a failed item
-    if(result.getFailedItems != null) {
+    if (result.getFailedItems != null) {
       result.getFailedItems.groupBy(_.status) foreach {
         case (statusCode, failedItems) =>
           esWriteFailureMeter.mark(failedItems.size)
@@ -69,14 +67,6 @@ class TraceIndexResultHandler(timer: Timer.Context, asyncRetryResult: RetryOpera
     timer.close()
     esWriteFailureMeter.mark()
     LOGGER.error("Fail to write the documents in elastic search with reason:", ex)
-    asyncRetryResult.onError(ex, shouldRetry(ex))
-  }
-
-  private def shouldRetry(ex: Exception): Boolean = {
-    ex match {
-      case e: ElasticsearchException if e.status() == RestStatus.TOO_MANY_REQUESTS => true
-      case _: ElasticsearchTimeoutException => true
-      case _ => false
-    }
+    asyncRetryResult.onError(ex, retry = true)
   }
 }

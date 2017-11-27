@@ -32,7 +32,7 @@ class ConfigurationReloadElasticSearchProvider(reloadConfig: ReloadConfiguration
 
   private val esClient: JestClient = {
     val factory = new JestClientFactory()
-    factory.setHttpClientConfig(new HttpClientConfig.Builder(reloadConfig.configStoreEndpoint).build())
+    factory.setHttpClientConfig(new HttpClientConfig.Builder(reloadConfig.configStoreEndpoint).multiThreaded(false).build())
     factory.getObject
   }
 

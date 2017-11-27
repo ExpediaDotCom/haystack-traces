@@ -55,14 +55,14 @@ class TraceIndexResultHandlerSpec extends FunSpec with Matchers with EasyMockSug
       }
     }
 
-    it("should report failure and mark the number of failures ") {
+    it("should report failure and mark the number of failures, and perform retry on any exception") {
       val retryCallback = mock[RetryOperation.Callback]
       val timer = mock[Timer.Context]
       val bulkResult = mock[BulkResult]
 
       val error = new RuntimeException
       expecting {
-        retryCallback.onError(error, retry = false)
+        retryCallback.onError(error, retry = true)
         timer.close()
       }
 
@@ -74,7 +74,7 @@ class TraceIndexResultHandlerSpec extends FunSpec with Matchers with EasyMockSug
       }
     }
 
-    it("should report failure and mark the number of failures and call retry callback function") {
+    it("should report failure and mark the number of failures and perform function on elastic search specific exception") {
       val retryCallback = mock[RetryOperation.Callback]
       val timer = mock[Timer.Context]
       val bulkResult = mock[BulkResult]

@@ -22,7 +22,7 @@ import com.expedia.www.haystack.trace.commons.retries.RetryOperation
 import com.expedia.www.haystack.trace.indexer.metrics.{AppMetricNames, MetricsSupport}
 import io.searchbox.client.JestResultHandler
 import io.searchbox.core.BulkResult
-import org.elasticsearch.ElasticsearchException
+import org.elasticsearch.{ElasticsearchException, ElasticsearchTimeoutException}
 import org.elasticsearch.rest.RestStatus
 import org.slf4j.{Logger, LoggerFactory}
 
@@ -74,7 +74,8 @@ class TraceIndexResultHandler(timer: Timer.Context, asyncRetryResult: RetryOpera
 
   private def shouldRetry(ex: Exception): Boolean = {
     ex match {
-      case e: ElasticsearchException => e.status() == RestStatus.TOO_MANY_REQUESTS
+      case e: ElasticsearchException if e.status() == RestStatus.TOO_MANY_REQUESTS => true
+      case _: ElasticsearchTimeoutException => true
       case _ => false
     }
   }

@@ -17,6 +17,7 @@
 package com.expedia.www.haystack.trace.reader.readers.transformers
 
 import com.expedia.open.tracing.Span
+import com.expedia.www.haystack.trace.reader.readers.validators.TraceValidationHandler
 
 /**
   * Merges partial spans and generates a single [[Span]] combining a client and corresponding server span

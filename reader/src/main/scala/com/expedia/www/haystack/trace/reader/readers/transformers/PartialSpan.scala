@@ -16,7 +16,7 @@
 
 package com.expedia.www.haystack.trace.reader.readers.transformers
 
-import com.expedia.open.tracing.{Log, Span, Tag}
+import com.expedia.open.tracing.Span
 
 import scala.collection.JavaConversions._
 
@@ -30,8 +30,8 @@ object PartialSpan {
 class PartialSpan(first: Span, second: Span) {
 
   private def containsLogTag(span: Span, sendEvent: String, receiveEvent: String) = {
-    span.getLogsList.contains((log: Log) => {
-      log.getFieldsList.contains((tag: Tag) => {
+    span.getLogsList.exists(log => {
+      log.getFieldsList.exists(tag => {
         tag.getKey.equalsIgnoreCase("event") &&
           (tag.getVStr.equalsIgnoreCase(sendEvent) || tag.getVStr.equalsIgnoreCase(receiveEvent))
       })
@@ -42,21 +42,18 @@ class PartialSpan(first: Span, second: Span) {
 
   private def containsServerLogTag(span: Span) = containsLogTag(span, PartialSpan.SERVER_RECV_EVENT, PartialSpan.SERVER_SEND_EVENT)
 
-  // sequence of checks to identify which one of the spans is
-  private val isFirstClient =
-    containsClientLogTag(first) ||
-      containsServerLogTag(second) ||
-      Seq[Span](first, second).min(Ordering.by((span: Span) => span.getStartTime)) == first
+  val serverSpan: Span = if (containsServerLogTag(first)) first
+  else if (containsServerLogTag(second)) second
+  else if (containsClientLogTag(first)) second
+  else if (containsClientLogTag(second)) first
+  else Seq[Span](first, second).max(Ordering.by((span: Span) => span.getStartTime))
 
-  val clientSpan: Span = if (isFirstClient) first else second
-
-  val serverSpan: Span = if (isFirstClient) second else first
+  val clientSpan: Span = if (serverSpan == second) first else second
 
   val mergedSpan: Span = {
     Span
-      .newBuilder(clientSpan)
-      .setStartTime(Seq(clientSpan.getStartTime, serverSpan.getStartTime).min)
-      .addAllTags(serverSpan.getTagsList)
+      .newBuilder(serverSpan)
+      .addAllTags(clientSpan.getTagsList)
       .clearLogs().addAllLogs(clientSpan.getLogsList ++ serverSpan.getLogsList sortBy (_.getTimestamp))
       .build()
   }

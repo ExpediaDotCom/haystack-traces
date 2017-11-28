@@ -33,5 +33,10 @@ class ConfigurationLoaderSpec extends BaseUnitTestSpec {
       val traceConfig: TraceTransformersConfiguration = new ProviderConfiguration().traceTransformerConfig
       traceConfig.transformers.length should be >= 1
     }
+
+    it("should load the trace validators") {
+      val traceConfig: TraceTransformersConfiguration = new ProviderConfiguration().traceTransformerConfig
+      traceConfig.transformers.length should be >= 1
+    }
   }
 }

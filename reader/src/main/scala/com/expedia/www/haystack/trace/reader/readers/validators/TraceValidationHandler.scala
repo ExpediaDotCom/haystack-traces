@@ -14,24 +14,17 @@
  *       limitations under the License.
  */
 
-package com.expedia.www.haystack.trace.reader.readers.transformers
+package com.expedia.www.haystack.trace.reader.readers.validators
 
-import com.expedia.open.tracing.Span
+import com.expedia.open.tracing.api.Trace
 
-import scala.collection.mutable
+import scala.util.{Success, Try}
 
-/**
-  * dedup the spans with the same span id
-  */
-class DeDuplicateSpanTransformer extends TraceTransformer {
-
-  override def transform(spans: List[Span]): List[Span] = {
-    val seen = mutable.HashSet[String]()
-    spans.filter {
-      span =>
-        val alreadySeen = seen.contains(span.getSpanId)
-        seen.add(span.getSpanId)
-        !alreadySeen
-    }
+class TraceValidationHandler(validatorSeq: Seq[TraceValidator]) {
+  def validate(trace: Trace): Try[Trace] = {
+    validatorSeq
+      .map(_.validate(trace))
+      .find(_.isFailure)
+      .getOrElse(Success(trace))
   }
 }

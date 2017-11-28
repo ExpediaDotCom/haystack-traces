@@ -23,9 +23,11 @@ import com.expedia.www.haystack.trace.commons.config.entities._
 import com.expedia.www.haystack.trace.commons.config.reload.{ConfigurationReloadElasticSearchProvider, Reloadable}
 import com.expedia.www.haystack.trace.reader.config.entities._
 import com.expedia.www.haystack.trace.reader.readers.transformers.TraceTransformer
+import com.expedia.www.haystack.trace.reader.readers.validators.TraceValidator
 import com.typesafe.config.Config
 
 import scala.collection.JavaConversions._
+import scala.reflect.ClassTag
 
 class ProviderConfiguration {
   private val config: Config = ConfigurationLoader.loadAppConfig
@@ -97,12 +99,38 @@ class ProviderConfiguration {
       es.getInt("read.timeout.ms"))
   }
 
+  private def toInstances[T](classes: util.List[String])(implicit ct: ClassTag[T]): scala.Seq[T] = {
+    classes.map(className => {
+      val c = Class.forName(className)
+
+      if (c == null) {
+        throw new RuntimeException(s"No class found with name $className")
+      } else {
+        val o = c.newInstance()
+        val baseClass = ct.runtimeClass
+
+        if (!baseClass.isInstance(o)) {
+          throw new RuntimeException(s"${c.getName} is not an instance of ${baseClass.getName}")
+        }
+        o.asInstanceOf[T]
+      }
+    })
+  }
+
   /**
     * Configurations to specify what all transforms to apply on traces
     */
   val traceTransformerConfig: TraceTransformersConfiguration = {
     val transformerConfig: Config = config.getConfig("trace.transformers")
-    TraceTransformersConfiguration(toTransformerInstances(transformerConfig.getStringList("sequence")))
+    TraceTransformersConfiguration(toInstances[TraceTransformer](transformerConfig.getStringList("sequence")))
+  }
+
+  /**
+    * Configurations to specify what all validations to apply on traces
+    */
+  val traceValidatorConfig: TraceValidatorsConfiguration = {
+    val validatorConfig: Config = config.getConfig("trace.validators")
+    TraceValidatorsConfiguration(toInstances[TraceValidator](validatorConfig.getStringList("sequence")))
   }
 
   /**
@@ -137,23 +165,5 @@ class ProviderConfiguration {
     val loader = new ConfigurationReloadElasticSearchProvider(reloadConfig)
     if (reloadConfig.loadOnStartup) loader.load()
     loader
-  }
-
-  private def toTransformerInstances(transformerClasses: util.List[String]): scala.Seq[TraceTransformer] = {
-    transformerClasses.map(className => {
-      val c = Class.forName(className)
-
-      if (c == null) {
-        throw new RuntimeException(s"No class found with name $className for record key extractor")
-      } else {
-        val o = c.newInstance()
-        val baseClass = classOf[TraceTransformer]
-
-        if (!baseClass.isInstance(o)) {
-          throw new RuntimeException(s"${c.getName} is not an instance of${baseClass.getName}")
-        }
-        o.asInstanceOf[TraceTransformer]
-      }
-    })
   }
 }

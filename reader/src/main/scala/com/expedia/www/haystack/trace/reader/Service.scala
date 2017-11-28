@@ -55,7 +55,7 @@ object Service extends MetricsSupport {
       val serverBuilder = NettyServerBuilder
         .forPort(serviceConfig.port)
         .directExecutor()
-        .addService(new TraceService(store, config.traceTransformerConfig)(executor))
+        .addService(new TraceService(store, config.traceValidatorConfig, config.traceTransformerConfig)(executor))
 
       // enable ssl if enabled
       if (serviceConfig.ssl.enabled) {

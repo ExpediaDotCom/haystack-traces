@@ -21,5 +21,5 @@ import com.expedia.open.tracing.api.Trace
 import scala.util.Try
 
 trait TraceValidator {
-  def validate(spans: Trace): Try[Trace]
+  def validate(trace: Trace): Try[Trace]
 }

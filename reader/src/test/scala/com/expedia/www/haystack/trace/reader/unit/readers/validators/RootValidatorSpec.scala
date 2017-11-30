@@ -19,14 +19,14 @@ package com.expedia.www.haystack.trace.reader.unit.readers.validators
 import com.expedia.open.tracing.Span
 import com.expedia.open.tracing.api.Trace
 import com.expedia.www.haystack.trace.reader.exceptions.InvalidTraceException
-import com.expedia.www.haystack.trace.reader.readers.validators.SingleRootValidator
+import com.expedia.www.haystack.trace.reader.readers.validators.RootValidator
 import com.expedia.www.haystack.trace.reader.unit.BaseUnitTestSpec
 
-class SingleRootValidatorSpec extends BaseUnitTestSpec {
+class RootValidatorSpec extends BaseUnitTestSpec {
   val TRACE_ID = "traceId"
 
-  describe("TraceIdValidator") {
-    it("should throw exception for traces with multiple spans as root") {
+  describe("RootValidator") {
+    it("should fail for traces with multiple spans as root") {
       Given("trace with empty traceId")
       val trace = Trace.newBuilder()
         .setTraceId("traceId")
@@ -35,11 +35,27 @@ class SingleRootValidatorSpec extends BaseUnitTestSpec {
         .build()
 
       When("on validate")
-      val validationResult = new SingleRootValidator().validate(trace)
+      val validationResult = new RootValidator().validate(trace)
 
-      Then("throw InvalidTraceException")
+      Then("fail with InvalidTraceException")
       val thrown = the[InvalidTraceException] thrownBy validationResult.get
       thrown.getStatus.getDescription shouldEqual "Invalid Trace: found 2 roots with spanIDs=a,b and traceID=traceId"
+    }
+
+    it("should fail for traces with no root") {
+      Given("trace with empty traceId")
+      val trace = Trace.newBuilder()
+        .setTraceId("traceId")
+        .addChildSpans(Span.newBuilder().setTraceId(TRACE_ID).setSpanId("a").setParentSpanId("x"))
+        .addChildSpans(Span.newBuilder().setTraceId(TRACE_ID).setSpanId("b").setParentSpanId("x"))
+        .build()
+
+      When("on validate")
+      val validationResult = new RootValidator().validate(trace)
+
+      Then("fail with InvalidTraceException")
+      val thrown = the[InvalidTraceException] thrownBy validationResult.get
+      thrown.getStatus.getDescription shouldEqual "Invalid Trace: found 0 roots with spanIDs= and traceID=traceId"
     }
 
     it("should accept valid traces") {
@@ -52,7 +68,7 @@ class SingleRootValidatorSpec extends BaseUnitTestSpec {
         .build()
 
       When("on validate")
-      val validationResult = new SingleRootValidator().validate(trace)
+      val validationResult = new RootValidator().validate(trace)
 
       Then("accept trace")
       noException should be thrownBy validationResult.get

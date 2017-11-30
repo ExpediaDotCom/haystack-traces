@@ -26,19 +26,19 @@ class TraceIdValidatorSpec extends BaseUnitTestSpec {
   describe("TraceIdValidator") {
     val TRACE_ID = "traceId"
 
-    it("should throw exception for traces with empty traceId") {
+    it("should fail for traces with empty traceId") {
       Given("trace with empty traceId")
       val trace = Trace.newBuilder().build()
 
       When("on validate")
       val validationResult = new TraceIdValidator().validate(trace)
 
-      Then("throw InvalidTraceException")
+      Then("Fail with InvalidTraceException")
       val thrown = the[InvalidTraceException] thrownBy validationResult.get
       thrown.getStatus.getDescription should include("invalid traceId")
     }
 
-    it("should throw exception for traces with spans having different traceId") {
+    it("should fail for traces with spans having different traceId") {
       Given("trace with span having different id")
       val trace = Trace.newBuilder()
         .setTraceId("traceId")
@@ -48,7 +48,7 @@ class TraceIdValidatorSpec extends BaseUnitTestSpec {
       When("on validate")
       val validationResult = new TraceIdValidator().validate(trace)
 
-      Then("throw InvalidTraceException")
+      Then("Fail with InvalidTraceException")
       val thrown = the[InvalidTraceException] thrownBy validationResult.get
       thrown.getStatus.getDescription should include("span with different traceId")
     }

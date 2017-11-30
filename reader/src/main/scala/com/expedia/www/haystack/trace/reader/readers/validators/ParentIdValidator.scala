@@ -6,6 +6,10 @@ import com.expedia.www.haystack.trace.reader.exceptions.InvalidTraceException
 import scala.collection.JavaConversions._
 import scala.util.{Failure, Success, Try}
 
+/**
+  * validates if spans in the trace has a valid parentIds
+  * assumes that traceId is a non-empty string and there is a single root, apply [[TraceIdValidator]] and [[RootValidator]] to make sure
+  */
 class ParentIdValidator extends TraceValidator {
   override def validate(trace: Trace): Try[Trace] = {
     val spans = trace.getChildSpansList.toList

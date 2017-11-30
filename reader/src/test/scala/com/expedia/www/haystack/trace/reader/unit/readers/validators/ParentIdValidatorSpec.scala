@@ -26,7 +26,7 @@ class ParentIdValidatorSpec extends BaseUnitTestSpec {
   val TRACE_ID = "traceId"
 
   describe("ParentIdValidator") {
-    it("should throw exception for traces with spans having same id and parent id") {
+    it("should fail for traces with spans having same id and parent id") {
       Given("trace with span having same span and parent id")
       val trace = Trace.newBuilder()
         .setTraceId(TRACE_ID)
@@ -37,12 +37,12 @@ class ParentIdValidatorSpec extends BaseUnitTestSpec {
       When("on validate")
       val validationResult = new ParentIdValidator().validate(trace)
 
-      Then("throw InvalidTraceException")
+      Then("fail with InvalidTraceException")
       val thrown = the[InvalidTraceException] thrownBy validationResult.get
       thrown.getStatus.getDescription shouldEqual "Invalid Trace: same parent and span id found for one ore more span for traceId=traceId"
     }
 
-    it("should throw exception for traces with spans without parents") {
+    it("should fail for traces with spans without parents") {
       Given("trace with empty traceId")
       val trace = Trace.newBuilder()
         .setTraceId(TRACE_ID)
@@ -53,7 +53,7 @@ class ParentIdValidatorSpec extends BaseUnitTestSpec {
       When("on validate")
       val validationResult = new ParentIdValidator().validate(trace)
 
-      Then("throw InvalidTraceException")
+      Then("fail with InvalidTraceException")
       val thrown = the[InvalidTraceException] thrownBy validationResult.get
       thrown.getStatus.getDescription shouldEqual "Invalid Trace: spans without valid parent found for traceId=traceId"
     }

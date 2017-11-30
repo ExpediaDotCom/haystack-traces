@@ -6,7 +6,11 @@ import com.expedia.www.haystack.trace.reader.exceptions.InvalidTraceException
 import scala.collection.JavaConversions._
 import scala.util.{Failure, Success, Try}
 
-class SingleRootValidator extends TraceValidator {
+/**
+  * validates if the trace has a single root or not
+  * assumes that traceId is a non-empty string, apply [[TraceIdValidator]] to make sure
+  */
+class RootValidator extends TraceValidator {
   override def validate(trace: Trace): Try[Trace] = {
     val roots = trace.getChildSpansList.toList.filter(_.getParentSpanId.isEmpty).map(_.getSpanId).toSet
 

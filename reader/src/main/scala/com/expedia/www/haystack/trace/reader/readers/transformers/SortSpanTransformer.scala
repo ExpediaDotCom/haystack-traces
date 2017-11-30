@@ -22,8 +22,9 @@ import com.expedia.www.haystack.trace.reader.readers.validators.TraceValidationH
 /**
   *  Orders spans in natural ordering - root followed by other spans ordered by start time
   *
-  *  Assumes there is only one root in give spans List,
-  *  corresponding validations are done in [[TraceValidationHandler]]
+  *  Assumes there is only one root in give spans List
+  *  corresponding validations are done in [[com.expedia.www.haystack.trace.reader.readers.validators.RootValidator]]
+  *  corresponding transformation are done in [[InvalidRootTransformer]]
   */
 class SortSpanTransformer extends TraceTransformer {
   override def transform(spans: List[Span]): List[Span] = {

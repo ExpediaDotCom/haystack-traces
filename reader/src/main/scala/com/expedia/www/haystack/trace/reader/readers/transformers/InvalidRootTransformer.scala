@@ -22,7 +22,7 @@ import com.expedia.open.tracing.Span
   *
   * If there are multiple roots in the given trace, use the first root based on startTime to be root
   * mark other roots as children of the selected root
-  * If there is not root, assume loopback span or
+  * If there is no root, assume loopback span or first span in time order to be root
   *
   * **Apply this transformer only if you are not confident about clients sending in roots properly**
   */

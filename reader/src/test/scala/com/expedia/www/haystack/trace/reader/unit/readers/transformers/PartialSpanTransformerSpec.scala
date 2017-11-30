@@ -39,7 +39,12 @@ class PartialSpanTransformerSpec extends BaseUnitTestSpec {
       .addTags(tag)
       .addLogs(Log.newBuilder()
         .setTimestamp(System.currentTimeMillis)
-        .addFields(Tag.newBuilder().setKey("event").setVStr("cr").build()).build())
+        .addFields(Tag.newBuilder().setKey("event").setVStr("cr").build())
+        .build())
+      .addLogs(Log.newBuilder()
+        .setTimestamp(System.currentTimeMillis)
+        .addFields(Tag.newBuilder().setKey("event").setVStr("cs").build())
+        .build())
       .build()
 
     val partialServerSpan = Span.newBuilder()
@@ -52,7 +57,12 @@ class PartialSpanTransformerSpec extends BaseUnitTestSpec {
       .addTags(tag)
       .addLogs(Log.newBuilder()
         .setTimestamp(System.currentTimeMillis)
-        .addFields(Tag.newBuilder().setKey("event").setVStr("sr").build()).build())
+        .addFields(Tag.newBuilder().setKey("event").setVStr("sr").build())
+        .build())
+      .addLogs(Log.newBuilder()
+        .setTimestamp(System.currentTimeMillis)
+        .addFields(Tag.newBuilder().setKey("event").setVStr("ss").build())
+        .build())
       .build()
 
     List(partialServerSpan, partialClientSpan)
@@ -71,7 +81,7 @@ class PartialSpanTransformerSpec extends BaseUnitTestSpec {
       mergedSpans.length should be(1)
       mergedSpans.head.getStartTime should be(timestamp)
       mergedSpans.head.getTagsCount should be(2)
-      mergedSpans.head.getLogsCount should be(2)
+      mergedSpans.head.getLogsCount should be(4)
       mergedSpans.head.getServiceName should be("serverService")
     }
   }

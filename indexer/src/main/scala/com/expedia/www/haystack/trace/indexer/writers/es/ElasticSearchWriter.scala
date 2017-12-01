@@ -23,6 +23,7 @@ import java.util.concurrent.Semaphore
 
 import com.expedia.open.tracing.buffer.SpanBuffer
 import com.expedia.www.haystack.trace.commons.config.entities.WhitelistIndexFieldConfiguration
+import com.expedia.www.haystack.trace.commons.retries.RetryOperation._
 import com.expedia.www.haystack.trace.indexer.config.entities.ElasticSearchConfiguration
 import com.expedia.www.haystack.trace.indexer.metrics.{AppMetricNames, MetricsSupport}
 import com.expedia.www.haystack.trace.indexer.writers.TraceWriter
@@ -33,6 +34,7 @@ import io.searchbox.indices.template.PutTemplate
 import io.searchbox.params.Parameters
 import org.slf4j.LoggerFactory
 
+import scala.concurrent.duration._
 import scala.util.Try
 
 class ElasticSearchWriter(esConfig: ElasticSearchConfiguration, indexConf: WhitelistIndexFieldConfiguration)
@@ -93,8 +95,17 @@ class ElasticSearchWriter(esConfig: ElasticSearchConfiguration, indexConf: White
         case Some(bulkToDispatch) =>
           inflightRequestsSemaphore.acquire()
           isSemaphoreAcquired = true
-          // execute the request async
-          esClient.executeAsync(bulkToDispatch, new TraceIndexResultHandler(inflightRequestsSemaphore, esWriteTime.time()))
+
+          // execute the request async with retry
+          executeAsyncWithRetryBackoff((retryCallback) => {
+            esClient.executeAsync(bulkToDispatch, new TraceIndexResultHandler(esWriteTime.time(), retryCallback))
+          },
+            esConfig.retryConfig,
+            onSuccess = (_: Any) => inflightRequestsSemaphore.release(),
+            onFailure = (ex) => {
+              inflightRequestsSemaphore.release()
+              LOGGER.error("Fail to write to ES after all retry attempts", ex)
+            })
         case _ =>
       }
     } catch {

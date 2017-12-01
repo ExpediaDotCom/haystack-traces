@@ -64,7 +64,11 @@ object PartialSpanUtils {
 
   // merge multiple spans to single merged spans, use first span(based on startTime) as primary
   def mergeAllSpans(spans: List[Span]): Span = {
-    spans.sortBy(_.getStartTime).reduce((first, second) => {
+    val serverSpans = spans.filter(containsServerLogTag).sortBy(_.getStartTime)
+    val clientSpans = spans.filter(containsClientLogTag).sortBy(_.getStartTime)
+    val otherSpans = spans.filter(span => !containsClientLogTag(span) && !containsServerLogTag(span)).sortBy(_.getStartTime)
+
+    List.concat(serverSpans, clientSpans, otherSpans).reduce((first, second) => {
       Span
         .newBuilder(first)
         .addAllTags(second.getTagsList)

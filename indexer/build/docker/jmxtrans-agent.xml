@@ -46,8 +46,8 @@
         <query objectName="metrics:name=buffer.process" attributes="50thPercentile,99thPercentile" resultAlias="buffer.process.#attribute#"/>
     </queries>
     <outputWriter class="org.jmxtrans.agent.GraphitePlainTextTcpOutputWriter">
-        <host>${graphite.host:monitoring-influxdb-graphite.kube-system.svc}</host>
-        <port>${graphite.port:2003}</port>
+        <host>${HAYSTACK_GRAPHITE_HOST:monitoring-influxdb-graphite.kube-system.svc}</host>
+        <port>${HAYSTACK_GRAPHITE_PORT:2003}</port>
         <namePrefix>haystack.traces.indexer.#hostname#.</namePrefix>
     </outputWriter>
     <collectIntervalInSeconds>30</collectIntervalInSeconds>

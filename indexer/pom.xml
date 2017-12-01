@@ -83,6 +83,12 @@
             <version>${kafka-version}</version>
         </dependency>
 
+        <dependency>
+            <groupId>com.expedia.www</groupId>
+            <artifactId>haystack-logback-metrics-appender</artifactId>
+            <version>0.1.1</version>
+        </dependency>
+
         <!-- Test Dependencies  -->
 
         <dependency>

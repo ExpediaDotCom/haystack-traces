@@ -16,18 +16,17 @@
 
 package com.expedia.www.haystack.trace.reader.unit.readers.transformers
 
-import com.expedia.open.tracing.Span
+import com.expedia.open.tracing.{Log, Span, Tag}
 import com.expedia.www.haystack.trace.reader.readers.transformers.ClockSkewTransformer
 import com.expedia.www.haystack.trace.reader.unit.BaseUnitTestSpec
 
 class ClockSkewTransformerSpec extends BaseUnitTestSpec {
 
-  def createSpansWithSkew(timestamp: Long) = {
+  private def createTraceWithoutMergedSpans(timestamp: Long) = {
     // creating a trace with this timeline structure-
-    // a -> b(-50)  -> e(-100) -> e'(-10)
-    //              -> f(0)
-    //   -> c(+500) -> g(+200)
-    //   -> d(-100) -> h(0) -> i(+100)
+    // a -> b(-50)  -> e(-100)
+    //   -> c(+500)
+    //   -> d(-100)
 
     val traceId = "traceId"
 
@@ -70,61 +69,106 @@ class ClockSkewTransformerSpec extends BaseUnitTestSpec {
       .setDuration(100)
       .build()
 
-    val spanF = Span.newBuilder()
-      .setSpanId("f")
+    List(spanA, spanB, spanC, spanD, spanE)
+  }
+
+  private def createSpansWithClientAndServer(timestamp: Long) = {
+    val traceId = "traceId"
+    val skewedSpanId = "spanId"
+    val serviceName = "serviceNam"
+    val tag = Tag.newBuilder().setKey("tag").setVBool(true).build()
+    val log = Log.newBuilder().setTimestamp(System.currentTimeMillis).addFields(tag).build()
+
+    val partialSpan = Span.newBuilder()
+      .setSpanId(skewedSpanId)
+      .setTraceId(traceId)
+      .setServiceName(serviceName)
+      .setStartTime(timestamp + 2000)
+      .setDuration(1000)
+      .addTags(tag)
+      .addLogs(Log.newBuilder()
+        .setTimestamp(timestamp)
+        .addFields(Tag.newBuilder().setKey("event").setVStr("cs").build())
+        .build())
+      .addLogs(Log.newBuilder()
+        .setTimestamp(timestamp + 1000)
+        .addFields(Tag.newBuilder().setKey("event").setVStr("cr").build())
+        .build())
+      .addLogs(Log.newBuilder()
+        .setTimestamp(timestamp + 2000)
+        .addFields(Tag.newBuilder().setKey("event").setVStr("sr").build())
+        .build())
+      .addLogs(Log.newBuilder()
+        .setTimestamp(timestamp + 2000 + 400)
+        .addFields(Tag.newBuilder().setKey("event").setVStr("ss").build())
+        .build())
+      .build()
+
+    val aChildSpan = Span.newBuilder()
+      .setSpanId("a")
+      .setParentSpanId(skewedSpanId)
+      .setTraceId(traceId)
+      .setServiceName(serviceName)
+      .setStartTime(timestamp + 2500)
+      .setDuration(400)
+      .addTags(tag)
+      .build()
+
+    val bChildSpan = Span.newBuilder()
+      .setSpanId("b")
+      .setParentSpanId(skewedSpanId)
+      .setTraceId(traceId)
+      .setServiceName(serviceName)
+      .setStartTime(timestamp + 2700)
+      .setDuration(400)
+      .addTags(tag)
+      .build()
+
+    val cSpan = Span.newBuilder()
+      .setSpanId("c")
       .setParentSpanId("b")
       .setTraceId(traceId)
-      .setStartTime(spanB.getStartTime)
-      .setDuration(100)
+      .setServiceName("otherService")
+      .setStartTime(timestamp + 100)
+      .setDuration(400)
+      .addTags(tag)
       .build()
 
-    val spanG = Span.newBuilder()
-      .setSpanId("g")
-      .setParentSpanId("c")
-      .setTraceId(traceId)
-      .setStartTime(spanC.getStartTime + 200)
-      .setDuration(100)
-      .build()
-
-    val spanH = Span.newBuilder()
-      .setSpanId("h")
-      .setParentSpanId("d")
-      .setTraceId(traceId)
-      .setStartTime(spanD.getStartTime)
-      .setDuration(100)
-      .build()
-
-    val spanI = Span.newBuilder()
-      .setSpanId("i")
-      .setParentSpanId("h")
-      .setTraceId(traceId)
-      .setStartTime(spanH.getStartTime + 100)
-      .setDuration(100)
-      .build()
-
-    List(spanA, spanB, spanC, spanD, spanE, spanF, spanG, spanH, spanI)
+    List(aChildSpan, bChildSpan, cSpan, partialSpan)
   }
 
   describe("ClockSkewTransformer") {
-    it("should fix clock skew") {
+    it("should not change clock skew if there are no merged spans") {
       Given("trace with skewed spans")
       val timestamp = 150000000000l
-      val spans = createSpansWithSkew(timestamp)
+      val spans = createTraceWithoutMergedSpans(timestamp)
 
       When("invoking transform")
       val transformedSpans = new ClockSkewTransformer().transform(spans)
 
-      Then("return spans basedlined wrt parent spans")
-      transformedSpans.length should be(9)
-      transformedSpans.find(_.getSpanId == "a").get.getStartTime should be (timestamp)
-      transformedSpans.find(_.getSpanId == "b").get.getStartTime should be (timestamp)
-      transformedSpans.find(_.getSpanId == "c").get.getStartTime should be (timestamp + 500)
-      transformedSpans.find(_.getSpanId == "d").get.getStartTime should be (timestamp)
-      transformedSpans.find(_.getSpanId == "e").get.getStartTime should be (timestamp)
-      transformedSpans.find(_.getSpanId == "f").get.getStartTime should be (timestamp)
-      transformedSpans.find(_.getSpanId == "g").get.getStartTime should be (timestamp + 700)
-      transformedSpans.find(_.getSpanId == "h").get.getStartTime should be (timestamp)
-      transformedSpans.find(_.getSpanId == "i").get.getStartTime should be (timestamp + 100)
+      Then("return spans without fixing skew")
+      transformedSpans.length should be(5)
+      transformedSpans.find(_.getSpanId == "a").get.getStartTime should be(timestamp)
+      transformedSpans.find(_.getSpanId == "b").get.getStartTime should be(timestamp - 50)
+      transformedSpans.find(_.getSpanId == "c").get.getStartTime should be(timestamp + 500)
+      transformedSpans.find(_.getSpanId == "d").get.getStartTime should be(timestamp - 100)
+      transformedSpans.find(_.getSpanId == "e").get.getStartTime should be(timestamp - 150)
+    }
+
+    it("should fix clock skew if there merged spans with skew") {
+      Given("trace with skewed spans")
+      val timestamp = 150000000000l
+      val spans = createSpansWithClientAndServer(timestamp)
+
+      When("invoking transform")
+      val transformedSpans = new ClockSkewTransformer().transform(spans)
+
+      Then("return spans without fixing skew")
+      transformedSpans.length should be(4)
+      transformedSpans.find(_.getSpanId == "spanId").get.getStartTime should be(timestamp + 300)
+      transformedSpans.find(_.getSpanId == "a").get.getStartTime should be(timestamp + 300 + 500)
+      transformedSpans.find(_.getSpanId == "b").get.getStartTime should be(timestamp + 300 + 700)
+      transformedSpans.find(_.getSpanId == "c").get.getStartTime should be(timestamp + 100)
     }
   }
 }

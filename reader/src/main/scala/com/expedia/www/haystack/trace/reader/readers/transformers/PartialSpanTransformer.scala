@@ -17,18 +17,24 @@
 package com.expedia.www.haystack.trace.reader.readers.transformers
 
 import com.expedia.open.tracing.Span
+import com.expedia.www.haystack.trace.reader.readers.validators.TraceValidationHandler
 
 /**
   * Merges partial spans and generates a single [[Span]] combining a client and corresponding server span
-  *
-  * Assumes that each spanId will have maximum two spans associated with that,
-  * corresponding validation are done in [[TraceValidationHandler]]
   */
 class PartialSpanTransformer extends TraceTransformer {
   override def transform(spans: List[Span]): List[Span] = {
-    spans.groupBy(_.getSpanId).map((pair) => pair._2 match {
+    spans.groupBy(span => span.getSpanId).map((pair) => pair._2 match {
       case List(span: Span) => span
-      case List(first: Span, second: Span) => new PartialSpan(first, second).mergedSpan
+
+      case List(first: Span, second: Span) =>
+        PartialSpanUtils
+          .mergeSpans(first, second)
+          .getOrElse(PartialSpanUtils.mergeAllSpans(List(first, second)))
+
+      case list: List[Span] =>
+        PartialSpanUtils
+          .mergeAllSpans(list)
     }).toList
   }
 }

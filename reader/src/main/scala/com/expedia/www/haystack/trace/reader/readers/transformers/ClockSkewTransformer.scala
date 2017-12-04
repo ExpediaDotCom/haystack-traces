@@ -27,28 +27,95 @@ import com.expedia.open.tracing.Span
   * and recursively applies delta in its subtree
   */
 class ClockSkewTransformer extends TraceTransformer {
-  private def calculateDelta(subtreeRoot: Span, childSpan: Span): Long = {
-    if (subtreeRoot.getStartTime > childSpan.getStartTime) subtreeRoot.getStartTime - childSpan.getStartTime else 0
-  }
-
-  private def addSkewInSubtree(subtreeRoot: Span, spans: List[Span], skew: Long): scala.List[Span] = {
-    val children = spans.filter(_.getParentSpanId == subtreeRoot.getSpanId)
-
-    val skewAdjustedRoot =
-      if (skew > 0) Span.newBuilder(subtreeRoot).setStartTime(subtreeRoot.getStartTime + skew).build() else subtreeRoot
-
-    val skewAdjustedChildren: List[Span] =
-      for(childSpan <- children;
-          delta = calculateDelta(subtreeRoot, childSpan);
-          subtree = addSkewInSubtree(childSpan, spans, skew + delta);
-          skewAdjustedChild <- subtree)
-        yield skewAdjustedChild
-
-    skewAdjustedRoot :: skewAdjustedChildren
-  }
 
   override def transform(spans: List[Span]): List[Span] = {
-    val root = spans.find(_.getParentSpanId.isEmpty).get
-    addSkewInSubtree(root, spans, 0)
+    adjustSkew(SpanTree(spans), None)
   }
+
+  private def adjustSkew(node: SpanTree, previousSkew: Option[Skew]): List[Span] = {
+    val previousSkewAdjustedSpan: Span = previousSkew match {
+      case Some(skew) => adjustForASpan(node.span, skew)
+      case None => node.span
+    }
+
+    getClockSkew(previousSkewAdjustedSpan) match {
+      case Some(skew) =>
+        val selfSkewAdjustedSpan = adjustForASpan(previousSkewAdjustedSpan, skew)
+        selfSkewAdjustedSpan :: node.children.flatMap(adjustSkew(_, Some(skew)))
+      case None =>
+        previousSkewAdjustedSpan :: node.children.flatMap(adjustSkew(_, None))
+    }
+  }
+
+  private def adjustForASpan(span: Span, skew: Skew): Span =
+    if(span.getServiceName == skew.serviceName)
+      Span
+        .newBuilder(span)
+        .setStartTime(span.getStartTime - skew.delta)
+        .build()
+    else
+      span
+
+  // if span is a merged span of partial spans, calculate corresponding skew
+  private def getClockSkew(span: Span): Option[Skew] =
+    if(PartialSpanUtils.isMergedSpan(span))
+      calculateClockSkew(
+        PartialSpanUtils.getEventTimestamp(span, PartialSpanMarkers.CLIENT_SEND_EVENT),
+        PartialSpanUtils.getEventTimestamp(span, PartialSpanMarkers.CLIENT_RECV_EVENT),
+        PartialSpanUtils.getEventTimestamp(span, PartialSpanMarkers.SERVER_RECV_EVENT),
+        PartialSpanUtils.getEventTimestamp(span, PartialSpanMarkers.SERVER_SEND_EVENT),
+        span.getServiceName
+      )
+    else
+      None
+
+  /**
+    * Calculate the clock skew between two servers based on logs in a span
+    *
+    * Only adjust for clock skew if logs are not in the following order:
+    * Client send -> Server receive -> Server send -> Client receive
+    *
+    * Special case: if the server (child) span is longer than the client (parent), then do not
+    * adjust for clock skew.
+    */
+  private def calculateClockSkew(
+                            clientSend: Long,
+                            clientRecv: Long,
+                            serverRecv: Long,
+                            serverSend: Long,
+                            serviceName: String
+                          ): Option[Skew] = {
+    val clientDuration = clientRecv - clientSend
+    val serverDuration = serverSend - serverRecv
+
+    // There is only clock skew if CS is after SR or CR is before SS
+    val csAhead = clientSend < serverRecv
+    val crAhead = clientRecv > serverSend
+    if (serverDuration > clientDuration || (csAhead && crAhead)) None
+    else {
+      val latency = (clientDuration - serverDuration) / 2
+      serverRecv - latency - clientSend match {
+        case 0 => None
+        case _ => Some(Skew(serviceName, serverRecv - latency - clientSend))
+      }
+    }
+  }
+
+  case class Skew(serviceName: String, delta: Long)
+
+  object SpanTree {
+    def apply(spans: List[Span]): SpanTree = {
+      build(spans.find(_.getParentSpanId.isEmpty).get, spans)
+    }
+
+    private def build(root: Span, spans: List[Span]): SpanTree = {
+      val childTrees = spans.
+        filter(span => span.getParentSpanId == root.getSpanId)
+        .map(build(_, spans))
+
+      SpanTree(root, childTrees)
+    }
+  }
+
+  case class SpanTree(span: Span, children: List[SpanTree])
 }

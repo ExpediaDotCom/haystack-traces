@@ -18,20 +18,26 @@ package com.expedia.www.haystack.trace.reader.readers.transformers
 
 import com.expedia.open.tracing.Span
 
-import scala.collection.mutable
-
 /**
-  * dedup the spans with the same span id
+  * If there are spans with invalid parentId in the trace, mark root to be their parentId
+  *
+  * **Apply this transformer only if you are not confident about clients sending in parentIds properly**
   */
-class DeDuplicateSpanTransformer extends TraceTransformer {
-
+class InvalidParentTransformer extends TraceTransformer {
   override def transform(spans: List[Span]): List[Span] = {
-    val seen = mutable.HashSet[String]()
-    spans.filter {
-      span =>
-        val alreadySeen = seen.contains(span.getSpanId)
-        seen.add(span.getSpanId)
-        !alreadySeen
-    }
+    val rootSpan = spans.find(_.getParentSpanId.isEmpty).get
+    val spanIdSet = spans.map(_.getSpanId).toSet
+
+    spans.map(span =>
+      if (span != rootSpan && isInvalidSpanId(span, spanIdSet))
+        Span.newBuilder(span).setParentSpanId(rootSpan.getSpanId).build()
+      else
+        span
+    )
   }
+
+  private def isInvalidSpanId(span: Span, spanIdSet: Set[String]) =
+    span.getParentSpanId == span.getSpanId ||
+      span.getParentSpanId == span.getTraceId ||
+      !spanIdSet.contains(span.getParentSpanId)
 }

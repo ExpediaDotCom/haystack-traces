@@ -41,8 +41,9 @@ object GrpcHandler {
 class GrpcHandler(operationName: String)(implicit val executor: ExecutionContextExecutor) extends MetricsSupport {
   import GrpcHandler._
 
-  private val timer = metricRegistry.timer(operationName)
-  private val failureMeter = metricRegistry.meter(s"$operationName.failures")
+  private val metricFriendlyOperationName = operationName.replace('/', '.')
+  private val timer = metricRegistry.timer(metricFriendlyOperationName)
+  private val failureMeter = metricRegistry.meter(s"$metricFriendlyOperationName.failures")
 
   def handle[Rs](request: GeneratedMessageV3, responseObserver: StreamObserver[Rs])(op: => Future[Rs]): Unit = {
     val time = timer.time()

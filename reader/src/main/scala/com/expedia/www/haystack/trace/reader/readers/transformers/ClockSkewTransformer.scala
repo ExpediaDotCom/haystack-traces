@@ -73,10 +73,7 @@ class ClockSkewTransformer extends TraceTransformer {
     * Calculate the clock skew between two servers based on logs in a span
     *
     * Only adjust for clock skew if logs are not in the following order:
-    * - Client send
-    * - Server receive
-    * - Server send
-    * - Client receive
+    * Client send -> Server receive -> Server send -> Client receive
     *
     * Special case: if the server (child) span is longer than the client (parent), then do not
     * adjust for clock skew.

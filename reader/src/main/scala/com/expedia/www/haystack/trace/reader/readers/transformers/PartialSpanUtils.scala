@@ -21,29 +21,6 @@ import com.expedia.open.tracing.Span
 import scala.collection.JavaConversions._
 
 object PartialSpanUtils {
-  def getEventTimestamp(span: Span, event: String): Long =
-    span.getLogsList.find(log => {
-      log.getFieldsList.exists(tag => {
-        tag.getKey.equalsIgnoreCase("event") && tag.getVStr.equalsIgnoreCase(event)
-      })
-    }).get.getTimestamp
-
-  def isMergedSpan(span: Span): Boolean = containsClientLogTag(span) && containsServerLogTag(span)
-
-  private def containsServerLogTag(span: Span) =
-    containsLogTag(span, PartialSpanMarkers.SERVER_RECV_EVENT) && containsLogTag(span, PartialSpanMarkers.SERVER_SEND_EVENT)
-
-  private def containsClientLogTag(span: Span) =
-    containsLogTag(span, PartialSpanMarkers.CLIENT_RECV_EVENT) && containsLogTag(span, PartialSpanMarkers.CLIENT_RECV_EVENT)
-
-  private def containsLogTag(span: Span, event: String) = {
-    span.getLogsList.exists(log => {
-      log.getFieldsList.exists(tag => {
-        tag.getKey.equalsIgnoreCase("event") && tag.getVStr.equalsIgnoreCase(event)
-      })
-    })
-  }
-
   // merge sever and client spans to a single merged span, only if corresponding event tags are present
   // use server span as primary while merging
   // return None otherwise
@@ -74,6 +51,29 @@ object PartialSpanUtils {
         .addAllTags(second.getTagsList)
         .clearLogs().addAllLogs(first.getLogsList ++ second.getLogsList sortBy (_.getTimestamp))
         .build()
+    })
+  }
+
+  def getEventTimestamp(span: Span, event: String): Long =
+    span.getLogsList.find(log => {
+      log.getFieldsList.exists(tag => {
+        tag.getKey.equalsIgnoreCase("event") && tag.getVStr.equalsIgnoreCase(event)
+      })
+    }).get.getTimestamp
+
+  def isMergedSpan(span: Span): Boolean = containsClientLogTag(span) && containsServerLogTag(span)
+
+  private def containsServerLogTag(span: Span) =
+    containsLogTag(span, PartialSpanMarkers.SERVER_RECV_EVENT) && containsLogTag(span, PartialSpanMarkers.SERVER_SEND_EVENT)
+
+  private def containsClientLogTag(span: Span) =
+    containsLogTag(span, PartialSpanMarkers.CLIENT_RECV_EVENT) && containsLogTag(span, PartialSpanMarkers.CLIENT_RECV_EVENT)
+
+  private def containsLogTag(span: Span, event: String) = {
+    span.getLogsList.exists(log => {
+      log.getFieldsList.exists(tag => {
+        tag.getKey.equalsIgnoreCase("event") && tag.getVStr.equalsIgnoreCase(event)
+      })
     })
   }
 

@@ -80,6 +80,12 @@
             <artifactId>cassandra-driver-core</artifactId>
         </dependency>
 
+        <dependency>
+            <groupId>com.expedia.www</groupId>
+            <artifactId>haystack-logback-metrics-appender</artifactId>
+            <version>0.1.1</version>
+        </dependency>
+
     </dependencies>
 
     <build>

@@ -4,8 +4,14 @@ import com.expedia.www.haystack.trace.reader.readers.TraceProcessor
 import com.expedia.www.haystack.trace.reader.readers.transformers._
 import com.expedia.www.haystack.trace.reader.readers.validators._
 import com.expedia.www.haystack.trace.reader.unit.BaseUnitTestSpec
+import com.expedia.www.haystack.trace.reader.unit.readers.builders.{ClockSkewedTraceBuilder, MultiRootTraceBuilder, MultiServerSpanTraceBuilder, ValidTraceBuilder}
 
-class TraceProcessorSpec extends BaseUnitTestSpec with SpanCreator {
+class TraceProcessorSpec
+  extends BaseUnitTestSpec
+    with ValidTraceBuilder
+    with MultiServerSpanTraceBuilder
+    with MultiRootTraceBuilder
+    with ClockSkewedTraceBuilder {
 
   describe("TraceProcessor for well-formed traces") {
     val traceProcessor = new TraceProcessor(
@@ -14,7 +20,7 @@ class TraceProcessorSpec extends BaseUnitTestSpec with SpanCreator {
 
     it("should successfully process a simple valid trace") {
       Given("a simple liner trace ")
-      val trace = createSimpleLinerTrace()
+      val trace = buildSimpleLinerTrace()
 
       When("invoking process")
       val processedTraceOption = traceProcessor.process(trace)
@@ -32,7 +38,7 @@ class TraceProcessorSpec extends BaseUnitTestSpec with SpanCreator {
 
     it("should reject a multi-root trace") {
       Given("a multi-root trace ")
-      val trace = createMultiRootTrace()
+      val trace = buildMultiRootTrace()
 
       When("invoking process")
       val processedTraceOption = traceProcessor.process(trace)
@@ -43,7 +49,7 @@ class TraceProcessorSpec extends BaseUnitTestSpec with SpanCreator {
 
     it("should successfully process a valid multi-service trace without clock skew") {
       Given("a valid multi-service trace without skew")
-      val trace = createMultiServiceWithoutSkewTrace()
+      val trace = buildMultiServiceWithoutSkewTrace()
 
       When("invoking process")
       val processedTraceOption = traceProcessor.process(trace)
@@ -71,7 +77,7 @@ class TraceProcessorSpec extends BaseUnitTestSpec with SpanCreator {
 
     it("should successfully process a valid multi-service trace with positive clock skew") {
       Given("a valid multi-service trace with skew")
-      val trace = createMultiServiceWithPositiveSkewTrace()
+      val trace = buildMultiServiceWithPositiveSkewTrace()
 
       When("invoking process")
       val processedTraceOption = traceProcessor.process(trace)
@@ -99,7 +105,7 @@ class TraceProcessorSpec extends BaseUnitTestSpec with SpanCreator {
 
     it("should successfully process a valid multi-service trace with negative clock skew") {
       Given("a valid multi-service trace with negative skew")
-      val trace = createMultiServiceWithNegativeSkewTrace()
+      val trace = buildMultiServiceWithNegativeSkewTrace()
 
       When("invoking process")
       val processedTraceOption = traceProcessor.process(trace)
@@ -127,7 +133,7 @@ class TraceProcessorSpec extends BaseUnitTestSpec with SpanCreator {
 
     it("should successfully process a valid complex multi-service trace") {
       Given("a valid multi-service trace ")
-      val trace = createMultiServiceTrace()
+      val trace = buildMultiServiceTrace()
 
       When("invoking process")
       val processedTraceOption = traceProcessor.process(trace)
@@ -164,7 +170,7 @@ class TraceProcessorSpec extends BaseUnitTestSpec with SpanCreator {
 
     it("should successfully process a simple valid trace") {
       Given("a simple liner trace ")
-      val trace = createSimpleLinerTrace()
+      val trace = buildSimpleLinerTrace()
 
       When("invoking process")
       val processedTraceOption = traceProcessor.process(trace)
@@ -182,7 +188,7 @@ class TraceProcessorSpec extends BaseUnitTestSpec with SpanCreator {
 
     it("should successfully process a multi-root trace") {
       Given("a multi-root trace ")
-      val trace = createMultiRootTrace()
+      val trace = buildMultiRootTrace()
 
       When("invoking process")
       val processedTraceOption = traceProcessor.process(trace)
@@ -200,7 +206,7 @@ class TraceProcessorSpec extends BaseUnitTestSpec with SpanCreator {
 
     it("should successfully process a valid multi-service trace without clock skew") {
       Given("a valid multi-service trace without skew")
-      val trace = createMultiServiceWithoutSkewTrace()
+      val trace = buildMultiServiceWithoutSkewTrace()
 
       When("invoking process")
       val processedTraceOption = traceProcessor.process(trace)
@@ -228,7 +234,7 @@ class TraceProcessorSpec extends BaseUnitTestSpec with SpanCreator {
 
     it("should successfully process a valid multi-service trace with positive clock skew") {
       Given("a valid multi-service trace with skew")
-      val trace = createMultiServiceWithPositiveSkewTrace()
+      val trace = buildMultiServiceWithPositiveSkewTrace()
 
       When("invoking process")
       val processedTraceOption = traceProcessor.process(trace)
@@ -256,7 +262,7 @@ class TraceProcessorSpec extends BaseUnitTestSpec with SpanCreator {
 
     it("should successfully process a valid multi-service trace with negative clock skew") {
       Given("a valid multi-service trace with negative skew")
-      val trace = createMultiServiceWithNegativeSkewTrace()
+      val trace = buildMultiServiceWithNegativeSkewTrace()
 
       When("invoking process")
       val processedTraceOption = traceProcessor.process(trace)
@@ -284,7 +290,7 @@ class TraceProcessorSpec extends BaseUnitTestSpec with SpanCreator {
 
     it("should successfully process a valid complex multi-service trace") {
       Given("a valid multi-service trace ")
-      val trace = createMultiServiceTrace()
+      val trace = buildMultiServiceTrace()
 
       When("invoking process")
       val processedTraceOption = traceProcessor.process(trace)

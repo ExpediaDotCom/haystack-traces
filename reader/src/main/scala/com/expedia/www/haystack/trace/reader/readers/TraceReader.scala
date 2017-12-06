@@ -16,45 +16,37 @@
 
 package com.expedia.www.haystack.trace.reader.readers
 
+import com.codahale.metrics.Meter
 import com.expedia.open.tracing.Span
 import com.expedia.open.tracing.api.{FieldNames, _}
 import com.expedia.www.haystack.trace.reader.config.entities.{TraceTransformersConfiguration, TraceValidatorsConfiguration}
 import com.expedia.www.haystack.trace.reader.exceptions.SpanNotFoundException
 import com.expedia.www.haystack.trace.reader.metrics.MetricsSupport
-import com.expedia.www.haystack.trace.reader.readers.transformers.TraceTransformationHandler
-import com.expedia.www.haystack.trace.reader.readers.validators.TraceValidationHandler
 import com.expedia.www.haystack.trace.reader.stores.TraceStore
 import org.slf4j.{Logger, LoggerFactory}
 
 import scala.collection.JavaConversions._
 import scala.concurrent.{ExecutionContextExecutor, Future}
-import scala.util.{Failure, Success, Try}
+import scala.util.{Failure, Success}
+
+object TraceReader extends MetricsSupport {
+  private val LOGGER: Logger = LoggerFactory.getLogger(s"${classOf[TraceReader]}.search.trace.rejection")
+  private val traceRejectedCounter: Meter = metricRegistry.meter("search.trace.rejection")
+}
 
 class TraceReader(traceStore: TraceStore, validatorsConfig: TraceValidatorsConfiguration, transformersConfig: TraceTransformersConfiguration)
                  (implicit val executor: ExecutionContextExecutor)
-  extends MetricsSupport {
+  extends TraceProcessor(validatorsConfig.validators, transformersConfig.transformers) {
 
-  private val LOGGER: Logger = LoggerFactory.getLogger(s"${classOf[TraceReader]}.search.trace.rejection")
-
-  private val validationHandler: TraceValidationHandler = new TraceValidationHandler(validatorsConfig.validators)
-  private val transformationHandler: TraceTransformationHandler = new TraceTransformationHandler(transformersConfig.transformers)
-
-  private val traceRejectedCounter = metricRegistry.meter("search.trace.rejection")
+  import TraceReader._
 
   def getTrace(request: TraceRequest): Future[Trace] = {
     traceStore
       .getTrace(request.getTraceId)
-      .flatMap(transformTrace(_) match {
+      .flatMap(process(_) match {
         case Success(span) => Future.successful(span)
         case Failure(ex) => Future.failed(ex)
       })
-  }
-
-  private def transformTrace(trace: Trace): Try[Trace] = {
-    validationHandler.validate(trace) match {
-      case Success(_) => Success(transformationHandler.transform(trace))
-      case Failure(ex) => Failure(ex)
-    }
   }
 
   def getRawTrace(request: TraceRequest): Future[Trace] = {
@@ -82,14 +74,14 @@ class TraceReader(traceStore: TraceStore, validatorsConfig: TraceValidatorsConfi
         traces => {
           TracesSearchResult
             .newBuilder()
-            .addAllTraces(traces.flatMap(transformTraceIgnoringInvalidSpans))
+            .addAllTraces(traces.flatMap(transformTraceIgnoringInvalid))
             .build()
         })
   }
 
-  private def transformTraceIgnoringInvalidSpans(trace: Trace): Option[Trace] = {
-    validationHandler.validate(trace) match {
-      case Success(_) => Some(transformationHandler.transform(trace))
+  private def transformTraceIgnoringInvalid(trace: Trace): Option[Trace] = {
+    process(trace) match {
+      case Success(t) => Some(t)
       case Failure(ex) =>
         LOGGER.warn(s"invalid trace=${trace.getTraceId} is rejected", ex)
         traceRejectedCounter.mark()

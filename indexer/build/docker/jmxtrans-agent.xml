@@ -14,6 +14,7 @@
         <query objectName="kafka.producer:type=producer-metrics,client-id=*" attribute="record-error-rate" resultAlias="kafka-producer.record-error.rate"/>
         <query objectName="kafka.producer:type=producer-metrics,client-id=*" attribute="requests-in-flight" resultAlias="kafka-producer.request-in-flight.count"/>
         <query objectName="kafka.producer:type=producer-metrics,client-id=*" attribute="batch-size-avg" resultAlias="kafka-producer.batch-size.avg"/>
+        <query objectName="metrics:name=kafka.produce.failure" attributes="OneMinuteRate" resultAlias="kafka-producer.failure.#attribute#"/>
 
         <!-- kafka consumer metrics -->
         <query objectName="kafka.consumer:type=consumer-metrics,client-id=*" attribute="request-rate" resultAlias="kafka-consumer.request.rate"/>
@@ -22,32 +23,32 @@
         <query objectName="kafka.consumer:type=consumer-fetch-manager-metrics,client-id=*" attribute="records-lag-max" resultAlias="kafka-consumer.records-lag.max"/>
         <query objectName="kafka.consumer:type=consumer-fetch-manager-metrics,client-id=*" attribute="records-consumed-rate" resultAlias="kafka-consumer.records-consumed.rate"/>
 
-        <!-- cassandra metrics -->
-        <query objectName="cassandra-cluster-metrics:name=connection-errors" attribute="Count" resultAlias="cassandra-client.errors.count"/>
-        <query objectName="cassandra-cluster-metrics:name=read-timeouts" attribute="Count" resultAlias="cassandra-client.read-timeouts.count"/>
-        <query objectName="cassandra-cluster-metrics:name=client-timeouts" attribute="Count" resultAlias="cassandra-client.client-timeouts.count"/>
-        <query objectName="cassandra-cluster-metrics:name=requests" attribute="OneMinuteRate" resultAlias="cassandra-client.requests.rate"/>
-        <query objectName="cassandra-cluster-metrics:name=requests" attribute="99thPercentile" resultAlias="cassandra-client.requests.99thPercentile"/>
-        <query objectName="cassandra-cluster-metrics:name=write-timeouts" attribute="Count" resultAlias="cassandra-client.write-timeouts.count"/>
-        <query objectName="cassandra-cluster-metrics:name=other-errors" attribute="Count" resultAlias="cassandra-client.other-errors.count"/>
-
-
-        <query objectName="metrics:name=state.store.eviction" attributes="OneMinuteRate" resultAlias="state.store.eviction.#attribute#"/>
-        <query objectName="metrics:name=span.proto.deser.failure" attributes="OneMinuteRate" resultAlias="span.proto.deser.failure.#attribute#"/>
-
-        <query objectName="metrics:name=es.write.failure" attributes="OneMinuteRate" resultAlias="es.write.failure.#attribute#"/>
-        <query objectName="metrics:name=es.writer.time" attributes="50thPercentile,99thPercentile,OneMinuteRate" resultAlias="es.writer.time.#attribute#"/>
-
-        <query objectName="metrics:name=kafka.produce.failure" attributes="OneMinuteRate" resultAlias="kafka.produce.failure.#attribute#"/>
+        <!-- cassandra metrics coming from driver-->
+        <query objectName="cassandra-cluster-metrics:name=connection-errors" attribute="Count" resultAlias="cassandra.errors.count"/>
+        <query objectName="cassandra-cluster-metrics:name=read-timeouts" attribute="Count" resultAlias="cassandra.read-timeouts.count"/>
+        <query objectName="cassandra-cluster-metrics:name=client-timeouts" attribute="Count" resultAlias="cassandra.client-timeouts.count"/>
+        <query objectName="cassandra-cluster-metrics:name=requests" attribute="OneMinuteRate" resultAlias="cassandra.requests.rate"/>
+        <query objectName="cassandra-cluster-metrics:name=requests" attribute="99thPercentile" resultAlias="cassandra.requests.99thPercentile"/>
+        <query objectName="cassandra-cluster-metrics:name=write-timeouts" attribute="Count" resultAlias="cassandra.write-timeouts.count"/>
+        <query objectName="cassandra-cluster-metrics:name=other-errors" attribute="Count" resultAlias="cassandra.other-errors.count"/>
+        <!-- cassandra metrics coming from our code -->
         <query objectName="metrics:name=cassandra.write.failure" attributes="OneMinuteRate" resultAlias="cassandra.write.failure.#attribute#"/>
         <query objectName="metrics:name=cassandra.write.warnings" attributes="OneMinuteRate" resultAlias="cassandra.write.warnings.#attribute#"/>
 
-        <query objectName="metrics:name=buffered.spans.count" attributes="50thPercentile,99thPercentile,Max" resultAlias="buffered.spans.count.#attribute#"/>
-        <query objectName="metrics:name=buffer.process" attributes="50thPercentile,99thPercentile" resultAlias="buffer.process.#attribute#"/>
+        <query objectName="metrics:name=state.store.eviction" attributes="OneMinuteRate" resultAlias="span-state-store.eviction.#attribute#"/>
+        <query objectName="metrics:name=span.proto.deser.failure" attributes="OneMinuteRate" resultAlias="span-proto-deserializer.failure.#attribute#"/>
+
+        <!-- elasticsearch metrics coming from driver-->
+        <query objectName="metrics:name=es.write.failure" attributes="OneMinuteRate" resultAlias="elasticsearch.writer.failure.#attribute#"/>
+        <query objectName="metrics:name=es.writer.time" attributes="50thPercentile,99thPercentile,OneMinuteRate" resultAlias="elasticsearch.writer.time.#attribute#"/>
+
+        <query objectName="metrics:name=buffered.spans.count" attributes="50thPercentile,99thPercentile,Max" resultAlias="span-processor.buffer-size.#attribute#"/>
+        <query objectName="metrics:name=buffer.process" attributes="50thPercentile,99thPercentile" resultAlias="span-processor.process-time.#attribute#"/>
     </queries>
     <outputWriter class="org.jmxtrans.agent.GraphitePlainTextTcpOutputWriter">
         <host>${HAYSTACK_GRAPHITE_HOST:monitoring-influxdb-graphite.kube-system.svc}</host>
         <port>${HAYSTACK_GRAPHITE_PORT:2003}</port>
+        <!-- template used in influxdb : "haystack.* system.subsystem.application.host.class.measurement*" -->
         <namePrefix>haystack.traces.indexer.#hostname#.</namePrefix>
     </outputWriter>
     <collectIntervalInSeconds>30</collectIntervalInSeconds>

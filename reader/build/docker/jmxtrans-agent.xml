@@ -5,7 +5,22 @@
         <query objectName="metrics:name=cassandra.read.time" attributes="99thPercentile,50thPercentile,OneMinuteRate" resultAlias="cassandra.read.time.#attribute#"/>
         <query objectName="metrics:name=cassandra.read.failures" attributes="OneMinuteRate" resultAlias="cassandra.read.failures.#attribute#"/>
         <query objectName="metrics:name=search.trace.rejected" attributes="OneMinuteRate" resultAlias="trace-search.rejected.#attribute#"/>
+
+        <!-- reader endpoint metrics -->
+        <query objectName="metrics:name=TraceReader.getFieldNames" attributes="50thPercentile,99thPercentile,OneMinuteRate" resultAlias="trace.reader.getFieldNames.#attribute#"/>
+        <query objectName="metrics:name=TraceReader.getFieldNames.failures" attributes="OneMinuteRate" resultAlias="trace.reader.getFieldNames.failures.#attribute#"/>
+        <query objectName="metrics:name=TraceReader.getFieldValues" attributes="50thPercentile,99thPercentile,OneMinuteRate" resultAlias="trace.reader.getFieldValues.#attribute#"/>
+        <query objectName="metrics:name=TraceReader.getFieldValues.failures" attributes="OneMinuteRate" resultAlias="trace.reader.getFieldValues.failures.#attribute#"/>
+        <query objectName="metrics:name=TraceReader.getRawSpan" attributes="50thPercentile,99thPercentile,OneMinuteRate" resultAlias="trace.reader.getRawSpan.#attribute#"/>
+        <query objectName="metrics:name=TraceReader.getRawSpan.failures" attributes="OneMinuteRate" resultAlias="trace.reader.getRawSpan.failures.#attribute#"/>
+        <query objectName="metrics:name=TraceReader.getRawTrace" attributes="50thPercentile,99thPercentile,OneMinuteRate" resultAlias="trace.reader.getRawTrace.#attribute#"/>
+        <query objectName="metrics:name=TraceReader.getRawTrace.failures" attributes="OneMinuteRate" resultAlias="trace.reader.getRawTrace.failures.#attribute#"/>
+        <query objectName="metrics:name=TraceReader.getTrace" attributes="50thPercentile,99thPercentile,OneMinuteRate" resultAlias="trace.reader.getTrace.#attribute#"/>
+        <query objectName="metrics:name=TraceReader.getTrace.failures" attributes="OneMinuteRate" resultAlias="trace.reader.getTrace.failures.#attribute#"/>
+        <query objectName="metrics:name=TraceReader.searchTraces" attributes="50thPercentile,99thPercentile,OneMinuteRate" resultAlias="trace.reader.searchTraces.#attribute#"/>
+        <query objectName="metrics:name=TraceReader.searchTraces.failures" attributes="OneMinuteRate" resultAlias="trace.reader.searchTraces.failures.#attribute#"/>
     </queries>
+
     <outputWriter class="org.jmxtrans.agent.GraphitePlainTextTcpOutputWriter">
         <!-- template used in influxdb : "haystack.* system.subsystem.application.host.class.measurement*" -->
         <host>${HAYSTACK_GRAPHITE_HOST:monitoring-influxdb-graphite.kube-system.svc}</host>

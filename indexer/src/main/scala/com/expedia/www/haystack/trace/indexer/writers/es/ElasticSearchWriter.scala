@@ -149,6 +149,6 @@ class ElasticSearchWriter(esConfig: ElasticSearchConfiguration, indexConf: White
   private def indexName(): String = {
     val currentTime = Calendar.getInstance
     val bucket: Int = currentTime.get(Calendar.HOUR_OF_DAY) / esConfig.indexHourBucket
-    s"${esConfig.indexNamePrefix}-${format.format(currentTime.getTime)}-$bucket}"
+    s"${esConfig.indexNamePrefix}-${format.format(currentTime.getTime)}-$bucket"
   }
 }

@@ -17,9 +17,8 @@
 
 package com.expedia.www.haystack.trace.indexer.writers.es
 
-import java.text.SimpleDateFormat
-import java.util.Date
 import java.util.concurrent.Semaphore
+import java.util.{Calendar, Locale}
 
 import com.expedia.open.tracing.buffer.SpanBuffer
 import com.expedia.www.haystack.trace.commons.config.entities.WhitelistIndexFieldConfiguration
@@ -32,9 +31,9 @@ import io.searchbox.client.{JestClient, JestClientFactory}
 import io.searchbox.core._
 import io.searchbox.indices.template.PutTemplate
 import io.searchbox.params.Parameters
+import org.apache.commons.lang3.time.FastDateFormat
 import org.slf4j.LoggerFactory
 
-import scala.concurrent.duration._
 import scala.util.Try
 
 class ElasticSearchWriter(esConfig: ElasticSearchConfiguration, indexConf: WhitelistIndexFieldConfiguration)
@@ -53,6 +52,8 @@ class ElasticSearchWriter(esConfig: ElasticSearchConfiguration, indexConf: White
 
   // this semaphore controls the parallel writes to cassandra
   private val inflightRequestsSemaphore = new Semaphore(esConfig.maxInFlightBulkRequests, true)
+
+  private val format = FastDateFormat.getInstance("yyyy-MM-dd", Locale.US)
 
   // initialize the elastic search client
   private val esClient: JestClient = {
@@ -146,7 +147,8 @@ class ElasticSearchWriter(esConfig: ElasticSearchConfiguration, indexConf: White
   // elastic search indices:
   // haystack-span-2017-08-30
   private def indexName(): String = {
-    val formatter = new SimpleDateFormat("yyyy-MM-dd")
-    s"${esConfig.indexNamePrefix}-${formatter.format(new Date())}"
+    val currentTime = Calendar.getInstance
+    val bucket: Int = currentTime.get(Calendar.HOUR_OF_DAY) / esConfig.indexHourBucket
+    s"${esConfig.indexNamePrefix}-${format.format(currentTime.getTime)}-$bucket"
   }
 }

@@ -203,6 +203,7 @@ class ProjectConfiguration extends AutoCloseable {
       indexTemplateJson,
       consistencyLevel = es.getString("consistency.level"),
       indexNamePrefix = indexConfig.getString("name.prefix"),
+      indexHourBucket = indexConfig.getInt("hour.bucket"),
       indexType = indexConfig.getString("type"),
       connectionTimeoutMillis = es.getInt("conn.timeout.ms"),
       readTimeoutMillis = es.getInt("read.timeout.ms"),

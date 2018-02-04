@@ -34,14 +34,14 @@ class ConfigurationLoaderSpec extends BaseUnitTestSpec {
       val traceConfig: TraceTransformersConfiguration = new ProviderConfiguration().traceTransformerConfig
       traceConfig.postTransformers.length shouldBe 3
       traceConfig.preTransformers.length shouldBe 1
-      traceConfig.preTransformers.head.asInstanceOf[DeDuplicateSpanTransformer] shouldBe true
+      traceConfig.preTransformers.head.isInstanceOf[DeDuplicateSpanTransformer] shouldBe true
     }
 
     it("should load the trace validators") {
       val traceConfig: TraceTransformersConfiguration = new ProviderConfiguration().traceTransformerConfig
       traceConfig.postTransformers.length shouldBe 3
       traceConfig.preTransformers.length shouldBe 1
-      traceConfig.preTransformers.head.asInstanceOf[DeDuplicateSpanTransformer] shouldBe true
+      traceConfig.preTransformers.head.isInstanceOf[DeDuplicateSpanTransformer] shouldBe true
     }
   }
 }

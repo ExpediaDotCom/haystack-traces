@@ -36,7 +36,6 @@ class TraceService(traceStore: TraceStore,
   private val handleSearchResponse = new GrpcHandler(TraceReaderGrpc.METHOD_SEARCH_TRACES.getFullMethodName)
   private val handleFieldNamesResponse = new GrpcHandler(TraceReaderGrpc.METHOD_GET_FIELD_NAMES.getFullMethodName)
   private val handleFieldValuesResponse = new GrpcHandler(TraceReaderGrpc.METHOD_GET_FIELD_VALUES.getFullMethodName)
-
   private val traceReader = new TraceReader(traceStore, validatorsConfig, transformersConfig)
 
   /**

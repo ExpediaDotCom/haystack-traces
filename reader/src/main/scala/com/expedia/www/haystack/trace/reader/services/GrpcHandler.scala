@@ -17,6 +17,7 @@
 package com.expedia.www.haystack.trace.reader.services
 
 import com.expedia.www.haystack.trace.reader.metrics.MetricsSupport
+import com.expedia.www.haystack.trace.reader.services.GrpcHandler._
 import com.google.protobuf.GeneratedMessageV3
 import io.grpc.Status
 import io.grpc.stub.StreamObserver
@@ -24,7 +25,6 @@ import org.slf4j.{Logger, LoggerFactory}
 
 import scala.concurrent.{ExecutionContextExecutor, Future}
 import scala.util.{Failure, Success}
-
 
 object GrpcHandler {
   protected val LOGGER: Logger = LoggerFactory.getLogger(classOf[GrpcHandler])
@@ -39,8 +39,6 @@ object GrpcHandler {
   */
 
 class GrpcHandler(operationName: String)(implicit val executor: ExecutionContextExecutor) extends MetricsSupport {
-  import GrpcHandler._
-
   private val metricFriendlyOperationName = operationName.replace('/', '.')
   private val timer = metricRegistry.timer(metricFriendlyOperationName)
   private val failureMeter = metricRegistry.meter(s"$metricFriendlyOperationName.failures")

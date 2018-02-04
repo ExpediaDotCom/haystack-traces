@@ -47,18 +47,21 @@ class ClockSkewTransformer extends TraceTransformer {
     }
   }
 
-  private def adjustForASpan(span: Span, skew: Skew): Span =
-    if(span.getServiceName == skew.serviceName)
+  private def adjustForASpan(span: Span, skew: Skew): Span = {
+    if (span.getServiceName == skew.serviceName) {
       Span
         .newBuilder(span)
         .setStartTime(span.getStartTime - skew.delta)
         .build()
-    else
+    }
+    else {
       span
+    }
+  }
 
   // if span is a merged span of partial spans, calculate corresponding skew
-  private def getClockSkew(span: Span): Option[Skew] =
-    if(PartialSpanUtils.isMergedSpan(span))
+  private def getClockSkew(span: Span): Option[Skew] = {
+    if (PartialSpanUtils.isMergedSpan(span)) {
       calculateClockSkew(
         PartialSpanUtils.getEventTimestamp(span, PartialSpanMarkers.CLIENT_SEND_EVENT),
         PartialSpanUtils.getEventTimestamp(span, PartialSpanMarkers.CLIENT_RECV_EVENT),
@@ -66,8 +69,10 @@ class ClockSkewTransformer extends TraceTransformer {
         PartialSpanUtils.getEventTimestamp(span, PartialSpanMarkers.SERVER_SEND_EVENT),
         span.getServiceName
       )
-    else
+    } else {
       None
+    }
+  }
 
   /**
     * Calculate the clock skew between two servers based on logs in a span
@@ -91,8 +96,9 @@ class ClockSkewTransformer extends TraceTransformer {
     // There is only clock skew if CS is after SR or CR is before SS
     val csAhead = clientSend < serverRecv
     val crAhead = clientRecv > serverSend
-    if (serverDuration > clientDuration || (csAhead && crAhead)) None
-    else {
+    if (serverDuration > clientDuration || (csAhead && crAhead)) {
+      None
+    } else {
       val latency = (clientDuration - serverDuration) / 2
       serverRecv - latency - clientSend match {
         case 0 => None

@@ -17,6 +17,7 @@ package com.expedia.www.haystack.trace.reader.unit.config
 
 import com.expedia.www.haystack.trace.reader.config.ProviderConfiguration
 import com.expedia.www.haystack.trace.reader.config.entities.{ServiceConfiguration, TraceTransformersConfiguration}
+import com.expedia.www.haystack.trace.reader.readers.transformers.DeDuplicateSpanTransformer
 import com.expedia.www.haystack.trace.reader.unit.BaseUnitTestSpec
 
 class ConfigurationLoaderSpec extends BaseUnitTestSpec {
@@ -31,12 +32,16 @@ class ConfigurationLoaderSpec extends BaseUnitTestSpec {
 
     it("should load the trace transformers") {
       val traceConfig: TraceTransformersConfiguration = new ProviderConfiguration().traceTransformerConfig
-      traceConfig.transformers.length should be >= 1
+      traceConfig.postTransformers.length shouldBe 3
+      traceConfig.preTransformers.length shouldBe 1
+      traceConfig.preTransformers.head.isInstanceOf[DeDuplicateSpanTransformer] shouldBe true
     }
 
     it("should load the trace validators") {
       val traceConfig: TraceTransformersConfiguration = new ProviderConfiguration().traceTransformerConfig
-      traceConfig.transformers.length should be >= 1
+      traceConfig.postTransformers.length shouldBe 3
+      traceConfig.preTransformers.length shouldBe 1
+      traceConfig.preTransformers.head.isInstanceOf[DeDuplicateSpanTransformer] shouldBe true
     }
   }
 }

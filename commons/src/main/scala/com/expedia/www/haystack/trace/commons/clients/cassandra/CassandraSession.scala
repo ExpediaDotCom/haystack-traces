@@ -21,7 +21,7 @@ import java.nio.ByteBuffer
 import java.util.Date
 
 import com.datastax.driver.core._
-import com.datastax.driver.core.querybuilder.{Insert, QueryBuilder}
+import com.datastax.driver.core.querybuilder.QueryBuilder
 import com.expedia.open.tracing.buffer.SpanBuffer
 import com.expedia.www.haystack.trace.commons.clients.cassandra.CassandraTableSchema._
 import com.expedia.www.haystack.trace.commons.config.entities.CassandraConfiguration

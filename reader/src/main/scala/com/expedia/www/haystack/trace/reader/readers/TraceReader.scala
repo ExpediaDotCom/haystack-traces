@@ -36,9 +36,7 @@ object TraceReader extends MetricsSupport {
 
 class TraceReader(traceStore: TraceStore, validatorsConfig: TraceValidatorsConfiguration, transformersConfig: TraceTransformersConfiguration)
                  (implicit val executor: ExecutionContextExecutor)
-  extends TraceProcessor(validatorsConfig.validators, transformersConfig.transformers) {
-
-  import TraceReader._
+  extends TraceProcessor(validatorsConfig.validators, transformersConfig.preTransformers, transformersConfig.postTransformers) {
 
   def getTrace(request: TraceRequest): Future[Trace] = {
     traceStore
@@ -83,8 +81,8 @@ class TraceReader(traceStore: TraceStore, validatorsConfig: TraceValidatorsConfi
     process(trace) match {
       case Success(t) => Some(t)
       case Failure(ex) =>
-        LOGGER.warn(s"invalid trace=${trace.getTraceId} is rejected", ex)
-        traceRejectedCounter.mark()
+        TraceReader.LOGGER.warn(s"invalid trace=${trace.getTraceId} is rejected", ex)
+        TraceReader.traceRejectedCounter.mark()
         None
     }
   }

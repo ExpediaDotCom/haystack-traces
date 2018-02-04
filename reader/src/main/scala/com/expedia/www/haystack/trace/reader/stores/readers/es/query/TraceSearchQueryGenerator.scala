@@ -17,6 +17,7 @@
 package com.expedia.www.haystack.trace.reader.stores.readers.es.query
 
 import com.expedia.open.tracing.api.TracesSearchRequest
+import com.expedia.www.haystack.trace.commons.clients.es.document.TraceIndexDoc._
 import io.searchbox.core.Search
 import io.searchbox.strings.StringUtils
 import org.apache.lucene.search.join.ScoreMode
@@ -27,7 +28,6 @@ import org.elasticsearch.search.builder.SearchSourceBuilder
 import scala.collection.JavaConversions._
 
 class TraceSearchQueryGenerator(indexNamePrefix: String, indexType: String, nestedDocName: String) {
-  import com.expedia.www.haystack.trace.commons.clients.es.document.TraceIndexDoc._
 
   def generate(request: TracesSearchRequest): Search = {
     require(request.getStartTime > 0)

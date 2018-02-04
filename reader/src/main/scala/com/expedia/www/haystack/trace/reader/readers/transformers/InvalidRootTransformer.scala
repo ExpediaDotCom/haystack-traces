@@ -46,22 +46,18 @@ class InvalidRootTransformer extends TraceTransformer {
       .find(span => span.getParentSpanId == span.getSpanId)
       .getOrElse(sortedSpans.head)
 
-    spans.map(span =>
-      if (span == assumedRoot)
-        Span.newBuilder(span).setParentSpanId("").build()
-      else
-        span
-    )
+    spans.map(span => if (span == assumedRoot) Span.newBuilder(span).setParentSpanId("").build() else span)
   }
 
   private def toTraceWithSingleRoot(spans: List[Span], roots: List[Span]) = {
     val earliestRoot = roots.minBy(_.getStartTime)
 
     spans.map(span =>
-      if (span.getParentSpanId.isEmpty && span != earliestRoot)
+      if (span.getParentSpanId.isEmpty && span != earliestRoot) {
         Span.newBuilder(span).setParentSpanId(earliestRoot.getSpanId).build()
-      else
+      } else {
         span
+      }
     )
   }
 }

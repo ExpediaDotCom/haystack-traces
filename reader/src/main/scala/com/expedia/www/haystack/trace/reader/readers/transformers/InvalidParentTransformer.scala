@@ -29,15 +29,18 @@ class InvalidParentTransformer extends TraceTransformer {
     val spanIdSet = spans.map(_.getSpanId).toSet
 
     spans.map(span =>
-      if (span != rootSpan && isInvalidSpanId(span, spanIdSet))
+      if (span != rootSpan && isInvalidSpanId(span, spanIdSet)) {
         Span.newBuilder(span).setParentSpanId(rootSpan.getSpanId).build()
-      else
+      }
+      else {
         span
+      }
     )
   }
 
-  private def isInvalidSpanId(span: Span, spanIdSet: Set[String]) =
+  private def isInvalidSpanId(span: Span, spanIdSet: Set[String]) = {
     span.getParentSpanId == span.getSpanId ||
       span.getParentSpanId == span.getTraceId ||
       !spanIdSet.contains(span.getParentSpanId)
+  }
 }

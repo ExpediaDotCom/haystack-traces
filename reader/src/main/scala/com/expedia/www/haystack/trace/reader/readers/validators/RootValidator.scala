@@ -14,9 +14,10 @@ class RootValidator extends TraceValidator {
   override def validate(trace: Trace): Try[Trace] = {
     val roots = trace.getChildSpansList.toList.filter(_.getParentSpanId.isEmpty).map(_.getSpanId).toSet
 
-    if (roots.size != 1)
+    if (roots.size != 1) {
       Failure(new InvalidTraceException(s"found ${roots.size} roots with spanIDs=${roots.mkString(",")} and traceID=${trace.getTraceId}"))
-    else
+    } else {
       Success(trace)
+    }
   }
 }

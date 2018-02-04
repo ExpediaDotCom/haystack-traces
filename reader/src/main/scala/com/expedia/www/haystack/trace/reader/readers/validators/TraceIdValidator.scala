@@ -11,10 +11,11 @@ import scala.util.{Failure, Success, Try}
   */
 class TraceIdValidator extends TraceValidator {
   override def validate(trace: Trace): Try[Trace] =
-    if (trace.getTraceId.isEmpty)
+    if (trace.getTraceId.isEmpty) {
       Failure(new InvalidTraceException("invalid traceId"))
-    else if (!trace.getChildSpansList.toList.forall(_.getTraceId == trace.getTraceId))
+    } else if (!trace.getChildSpansList.toList.forall(_.getTraceId == trace.getTraceId)) {
       Failure(new InvalidTraceException(s"span with different traceId are not allowed for traceId=${trace.getTraceId}"))
-    else
+    } else {
       Success(trace)
+    }
 }

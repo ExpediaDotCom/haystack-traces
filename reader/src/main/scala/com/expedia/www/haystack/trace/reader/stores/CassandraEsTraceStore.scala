@@ -25,6 +25,7 @@ import com.expedia.www.haystack.trace.reader.stores.readers.es.ElasticSearchRead
 import com.expedia.www.haystack.trace.reader.stores.readers.es.query.{FieldValuesQueryGenerator, TraceSearchQueryGenerator}
 import io.searchbox.core.SearchResult
 import org.json4s.DefaultFormats
+import org.json4s.jackson.JsonMethods._
 import org.slf4j.LoggerFactory
 
 import scala.collection.JavaConversions._
@@ -81,7 +82,6 @@ class CassandraEsTraceStore(cassandraConfiguration: CassandraConfiguration,
   }
 
   private def extractTraceIdFromSource(source: String): String = {
-    import org.json4s.jackson.JsonMethods._
     (parse(source) \ ES_TRACE_ID_KEY).extract[String]
   }
 

@@ -36,7 +36,7 @@ object TraceReader extends MetricsSupport {
 
 class TraceReader(traceStore: TraceStore, validatorsConfig: TraceValidatorsConfiguration, transformersConfig: TraceTransformersConfiguration)
                  (implicit val executor: ExecutionContextExecutor)
-  extends TraceProcessor(validatorsConfig.validators, transformersConfig.transformers) {
+  extends TraceProcessor(validatorsConfig.validators, transformersConfig.preTransformers, transformersConfig.postTransformers) {
 
   import TraceReader._
 

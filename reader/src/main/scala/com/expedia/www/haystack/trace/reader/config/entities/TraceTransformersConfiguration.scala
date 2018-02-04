@@ -17,4 +17,4 @@ package com.expedia.www.haystack.trace.reader.config.entities
 
 import com.expedia.www.haystack.trace.reader.readers.transformers.TraceTransformer
 
-case class TraceTransformersConfiguration(transformers: Seq[TraceTransformer])
+case class TraceTransformersConfiguration(preTransformers: Seq[TraceTransformer], postTransformers: Seq[TraceTransformer])

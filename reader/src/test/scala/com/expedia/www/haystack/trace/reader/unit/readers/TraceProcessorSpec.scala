@@ -16,6 +16,7 @@ class TraceProcessorSpec
   describe("TraceProcessor for well-formed traces") {
     val traceProcessor = new TraceProcessor(
       Seq(new TraceIdValidator, new RootValidator, new ParentIdValidator),
+      Seq(new DeDuplicateSpanTransformer),
       Seq(new PartialSpanTransformer, new ClockSkewTransformer, new SortSpanTransformer))
 
     it("should successfully process a simple valid trace") {
@@ -166,6 +167,7 @@ class TraceProcessorSpec
   describe("TraceProcessor for non well-formed traces") {
     val traceProcessor = new TraceProcessor(
       Seq(new TraceIdValidator),
+      Seq(new DeDuplicateSpanTransformer),
       Seq(new InvalidParentTransformer, new InvalidRootTransformer, new PartialSpanTransformer, new ClockSkewTransformer, new SortSpanTransformer))
 
     it("should successfully process a simple valid trace") {

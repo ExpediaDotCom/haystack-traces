@@ -8,13 +8,11 @@
     </contextListener>
 
     <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
-        <encoder class="net.logstash.logback.encoder.LogstashEncoder">
-            <shortenedLoggerNameLength>36</shortenedLoggerNameLength>
-            <timeZone>UTC</timeZone>
-            <fieldNames>
-                <timestamp>time</timestamp>
-            </fieldNames>
-        </encoder>
+        <layout class="ch.qos.logback.classic.PatternLayout">
+            <Pattern>
+                %d{yyyy-MM-dd HH:mm:ss:SSS} %thread, %level, %logger{70},  "%msg" %replace(%ex){'[\n]+', '\\n'}%nopex%n
+            </Pattern>
+        </layout>
     </appender>
 
     <appender name="ASYNC" class="ch.qos.logback.classic.AsyncAppender">

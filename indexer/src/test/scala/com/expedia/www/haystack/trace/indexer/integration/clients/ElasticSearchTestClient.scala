@@ -117,6 +117,9 @@ class ElasticSearchTestClient {
       |    },
       |    "mappings": {
       |        "spans": {
+      |            "_field_names": {
+      |                "enabled": false
+      |            },
       |            "_all": {
       |                "enabled": false
       |            },

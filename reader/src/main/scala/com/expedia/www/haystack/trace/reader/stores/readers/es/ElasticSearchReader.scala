@@ -36,14 +36,16 @@ class ElasticSearchReader(config: ElasticSearchConfiguration)(implicit val dispa
   private val esClient: JestClient = {
     LOGGER.info("Initializing the http elastic search client with endpoint={}", config.endpoint)
     val factory = new JestClientFactory()
+    val builder = new HttpClientConfig.Builder(config.endpoint)
+                      .multiThreaded(true)
+                      .connTimeout(config.connectionTimeoutMillis)
+                      .readTimeout(config.readTimeoutMillis)
 
-    factory.setHttpClientConfig(
-      new HttpClientConfig.Builder(config.endpoint)
-        .multiThreaded(true)
-        .connTimeout(config.connectionTimeoutMillis)
-        .readTimeout(config.readTimeoutMillis)
-        .build())
+    if (config.username.isDefined && config.password.isDefined){
+      builder.defaultCredentials(config.username.get, config.password.get)
+    }
 
+    factory.setHttpClientConfig(builder.build())
     factory.getObject
   }
 

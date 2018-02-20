@@ -91,8 +91,13 @@ class ProviderConfiguration {
     val es = config.getConfig("elasticsearch")
     val indexConfig = es.getConfig("index")
 
+    val ausername = if (es.hasPath("username")){Option(es.getString("username"))}else{None}
+    val apassword = if (es.hasPath("password")){Option(es.getString("password"))}else{None}
+
     ElasticSearchConfiguration(
       endpoint = es.getString("endpoint"),
+      username = ausername,
+      password = apassword,
       indexNamePrefix = indexConfig.getString("name.prefix"),
       indexType = indexConfig.getString("type"),
       es.getInt("conn.timeout.ms"),

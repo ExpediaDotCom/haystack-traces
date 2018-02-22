@@ -27,6 +27,7 @@ build_indexer:
 
 # build all and release
 release: all
+	./.travis/deploy.sh
 	cd indexer && $(MAKE) release
 	cd reader && $(MAKE) release
 

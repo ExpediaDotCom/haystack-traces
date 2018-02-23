@@ -18,7 +18,6 @@
 package com.expedia.www.haystack.trace.indexer.config
 
 import java.util.Properties
-import java.util.concurrent.TimeUnit
 
 import com.datastax.driver.core.ConsistencyLevel
 import com.expedia.www.haystack.trace.commons.config.ConfigurationLoader
@@ -34,7 +33,6 @@ import org.apache.kafka.clients.producer.ProducerConfig
 import org.apache.kafka.common.serialization.{ByteArraySerializer, StringDeserializer, StringSerializer}
 
 import scala.collection.JavaConversions._
-import scala.concurrent.duration._
 import scala.util.Try
 
 class ProjectConfiguration extends AutoCloseable {

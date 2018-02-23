@@ -19,7 +19,7 @@ package com.expedia.www.haystack.trace.commons.config
 
 import java.io.File
 
-import com.typesafe.config.{Config, ConfigFactory}
+import com.typesafe.config.{Config, ConfigFactory, ConfigValueType}
 import org.apache.commons.lang3.StringUtils
 
 import scala.collection.JavaConversions._
@@ -37,20 +37,27 @@ object ConfigurationLoader {
   lazy val loadAppConfig: Config = {
     val baseConfig = ConfigFactory.load("config/base.conf")
 
+    val keysWithArrayValues = baseConfig.entrySet()
+      .filter(_.getValue.valueType() == ConfigValueType.LIST)
+      .map(_.getKey)
+      .toSet
+
     sys.env.get("HAYSTACK_OVERRIDES_CONFIG_PATH") match {
       case Some(path) => ConfigFactory.parseFile(new File(path)).withFallback(baseConfig).resolve()
-      case _ => loadFromEnvVars().withFallback(baseConfig).resolve()
+      case _ => loadFromEnvVars(keysWithArrayValues).withFallback(baseConfig).resolve()
     }
   }
 
   /**
     * @return new config object with haystack specific environment variables
     */
-  private def loadFromEnvVars(): Config = {
+  private def loadFromEnvVars(keysWithArrayValues: Set[String]): Config = {
     val envMap: Map[String, Object] = sys.env.filter {
       case (envName, _) => isHaystackEnvVar(envName)
     } map {
-      case (envName, envValue) => (transformEnvVarName(envName), transformEnvVarValue(envValue))
+      case (envName, envValue) =>
+        val key = transformEnvVarName(envName)
+        if (keysWithArrayValues.contains(key)) (key, transformEnvVarArrayValue(envValue)) else (key, envValue)
     }
 
     ConfigFactory.parseMap(envMap)
@@ -73,12 +80,12 @@ object ConfigurationLoader {
     * @param env environment variable value
     * @return string or iterable object
     */
-  private def transformEnvVarValue(env: String): Object = {
+  private def transformEnvVarArrayValue(env: String): java.util.List[String] = {
     if (env.startsWith("[") && env.endsWith("]")) {
       import scala.collection.JavaConverters._
       env.substring(1, env.length - 1).split(',').filter(StringUtils.isNotEmpty).toList.asJava
     } else {
-      env
+      throw new RuntimeException("config key is of array type, so it should start and end with '[', ']' respectively")
     }
   }
 }

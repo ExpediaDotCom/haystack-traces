@@ -12,7 +12,7 @@ before_install:
   - if [ ! -z "$GPG_OWNERTRUST" ]; then echo $GPG_OWNERTRUST | base64 --decode | $GPG_EXECUTABLE --import-ownertrust; fi
 
 install:
-  - mvn --settings .travis/settings.xml install -Dgpg.skip -Dmaven.javadoc.skip=true -B -V
+  - mvn --settings .travis/settings.xml install -DskipTests=true -Dgpg.skip -Dmaven.javadoc.skip=true -B -V
 
 script:
   # build, create docker image

@@ -19,7 +19,9 @@ package com.expedia.www.haystack.trace.commons.config
 
 import java.io.File
 
-import com.typesafe.config.{Config, ConfigFactory}
+import com.typesafe.config.{Config, ConfigFactory, ConfigValueType}
+import org.apache.commons.lang3.StringUtils
+
 import scala.collection.JavaConversions._
 
 object ConfigurationLoader {
@@ -35,20 +37,27 @@ object ConfigurationLoader {
   lazy val loadAppConfig: Config = {
     val baseConfig = ConfigFactory.load("config/base.conf")
 
+    val keysWithArrayValues = baseConfig.entrySet()
+      .filter(_.getValue.valueType() == ConfigValueType.LIST)
+      .map(_.getKey)
+      .toSet
+
     sys.env.get("HAYSTACK_OVERRIDES_CONFIG_PATH") match {
       case Some(path) => ConfigFactory.parseFile(new File(path)).withFallback(baseConfig).resolve()
-      case _ => loadFromEnvVars().withFallback(baseConfig).resolve()
+      case _ => loadFromEnvVars(keysWithArrayValues).withFallback(baseConfig).resolve()
     }
   }
 
   /**
     * @return new config object with haystack specific environment variables
     */
-  private def loadFromEnvVars(): Config = {
-    val envMap = sys.env.filter {
+  private def loadFromEnvVars(keysWithArrayValues: Set[String]): Config = {
+    val envMap: Map[String, Object] = sys.env.filter {
       case (envName, _) => isHaystackEnvVar(envName)
     } map {
-      case (envName, envValue) => (transformEnvVarName(envName), envValue)
+      case (envName, envValue) =>
+        val key = transformEnvVarName(envName)
+        if (keysWithArrayValues.contains(key)) (key, transformEnvVarArrayValue(envValue)) else (key, envValue)
     }
 
     ConfigFactory.parseMap(envMap)
@@ -60,9 +69,23 @@ object ConfigurationLoader {
     * converts the env variable to HOCON format
     * for e.g. env variable HAYSTACK_KAFKA_STREAMS_NUM_STREAM_THREADS gets converted to kafka.streams.num.stream.threads
     * @param env environment variable name
-    * @return
+    * @return variable name that complies with hocon key
     */
   private def transformEnvVarName(env: String): String = {
     env.replaceFirst(ENV_NAME_PREFIX, "").toLowerCase.replace("_", ".")
+  }
+
+  /**
+    * converts the env variable value to iterable object if it starts and ends with '[' and ']' respectively.
+    * @param env environment variable value
+    * @return string or iterable object
+    */
+  private def transformEnvVarArrayValue(env: String): java.util.List[String] = {
+    if (env.startsWith("[") && env.endsWith("]")) {
+      import scala.collection.JavaConverters._
+      env.substring(1, env.length - 1).split(',').filter(StringUtils.isNotEmpty).toList.asJava
+    } else {
+      throw new RuntimeException("config key is of array type, so it should start and end with '[', ']' respectively")
+    }
   }
 }

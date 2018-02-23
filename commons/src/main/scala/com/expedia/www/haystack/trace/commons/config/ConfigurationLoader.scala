@@ -19,7 +19,7 @@ package com.expedia.www.haystack.trace.commons.config
 
 import java.io.File
 
-import com.typesafe.config.{Config, ConfigFactory, ConfigValue, ConfigValueType}
+import com.typesafe.config.{Config, ConfigFactory}
 import org.apache.commons.lang3.StringUtils
 
 import scala.collection.JavaConversions._
@@ -37,7 +37,6 @@ object ConfigurationLoader {
   lazy val loadAppConfig: Config = {
     val baseConfig = ConfigFactory.load("config/base.conf")
 
-    baseConfig.entrySet().foreach(x => x.getValue.valueType() == ConfigValueType.OBJECT && x.getValue.)
     sys.env.get("HAYSTACK_OVERRIDES_CONFIG_PATH") match {
       case Some(path) => ConfigFactory.parseFile(new File(path)).withFallback(baseConfig).resolve()
       case _ => loadFromEnvVars().withFallback(baseConfig).resolve()

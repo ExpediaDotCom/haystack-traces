@@ -352,7 +352,7 @@
                     <version>${scoverage.plugin.version}</version>
                     <configuration>
                         <!-- need to update this as we improve the coverage -->
-                        <minimumCoverage>59</minimumCoverage>
+                        <minimumCoverage>58</minimumCoverage>
                         <failOnMinimumCoverage>true</failOnMinimumCoverage>
                         <highlighting>true</highlighting>
                         <scalaVersion>${scala-library.version}</scalaVersion>

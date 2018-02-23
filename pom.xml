@@ -31,7 +31,7 @@
         <scala.major.version>2</scala.major.version>
         <scala.minor.version>11</scala.minor.version>
         <scala.tiny.version>8</scala.tiny.version>
-        <haystack.logback.metrics.appender.version>0.1.10</haystack.logback.metrics.appender.version>
+        <haystack.logback.metrics.appender.version>0.1.12</haystack.logback.metrics.appender.version>
         <scala.major.minor.version>${scala.major.version}.${scala.minor.version}</scala.major.minor.version>
         <scala-library.version>${scala.major.version}.${scala.minor.version}.${scala.tiny.version}</scala-library.version>
 

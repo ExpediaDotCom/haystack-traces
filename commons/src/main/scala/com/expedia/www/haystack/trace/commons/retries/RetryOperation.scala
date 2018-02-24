@@ -74,18 +74,18 @@ object RetryOperation {
     * @param onFailure   this callback is called if the main 'f' function fails after all reattempts
     * @tparam T result object from the main 'f' function
     */
-  def executeAsyncWithRetryBackoff[T](f: (Callback) => Unit,
-                                      retryConfig: Config,
-                                      onSuccess: (T) => Unit,
-                                      onFailure: (Exception) => Unit): Unit = {
-    executeAsyncWithRetryBackoff(f, 0, retryConfig, onSuccess, onFailure)
+  def withRetryBackoff[T](f: (Callback) => Unit,
+                          retryConfig: Config,
+                          onSuccess: (T) => Unit,
+                          onFailure: (Exception) => Unit): Unit = {
+    withRetryBackoff(f, 0, retryConfig, onSuccess, onFailure)
   }
 
-  private def executeAsyncWithRetryBackoff[T](f: (Callback) => Unit,
-                                              currentRetry: Int,
-                                              retryConfig: Config,
-                                              onSuccess: (T) => Unit,
-                                              onFailure: (Exception) => Unit): Unit = {
+  private def withRetryBackoff[T](f: (Callback) => Unit,
+                                  currentRetry: Int,
+                                  retryConfig: Config,
+                                  onSuccess: (T) => Unit,
+                                  onFailure: (Exception) => Unit): Unit = {
     try {
       val asyncRetryResult = new Callback {
         override def onResult[Any](result: Any): Unit = {
@@ -95,7 +95,7 @@ object RetryOperation {
         override def onError(ex: Exception, retry: Boolean): Unit = {
           if (retry && currentRetry < retryConfig.maxRetries) {
             Thread.sleep(retryConfig.initialBackoffInMillis)
-            executeAsyncWithRetryBackoff(f, currentRetry + 1, retryConfig.nextBackOffConfig, onSuccess, onFailure)
+            withRetryBackoff(f, currentRetry + 1, retryConfig.nextBackOffConfig, onSuccess, onFailure)
           } else {
             onFailure(new MaxRetriesAttemptedException(s"max retries=${retryConfig.maxRetries} have reached and all attempts have failed!", ex))
           }

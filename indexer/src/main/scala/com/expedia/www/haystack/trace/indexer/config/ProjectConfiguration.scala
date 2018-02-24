@@ -177,7 +177,11 @@ class ProjectConfiguration extends AutoCloseable {
         socket),
       consistencyLevel = consistencyLevel,
       recordTTLInSec = cs.getInt("ttl.sec"),
-      maxInFlightRequests = cs.getInt("max.inflight.requests"))
+      maxInFlightRequests = cs.getInt("max.inflight.requests"),
+      retryConfig = RetryOperation.Config(
+        cs.getInt("retries.max"),
+        cs.getLong("retries.backoff.initial.ms"),
+        cs.getDouble("retries.backoff.factor")))
   }
 
   /**

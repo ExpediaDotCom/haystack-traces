@@ -19,11 +19,12 @@ package com.expedia.www.haystack.trace.indexer.unit
 
 import java.util
 import java.util.Collections
-import java.util.concurrent.Semaphore
 
 import com.codahale.metrics.Timer
 import com.datastax.driver.core.{ExecutionInfo, ResultSet, ResultSetFuture}
+import com.expedia.www.haystack.trace.commons.retries.RetryOperation
 import com.expedia.www.haystack.trace.indexer.writers.cassandra.CassandraWriteResultListener
+import org.easymock.EasyMock.anyObject
 import org.scalatest.easymock.EasyMockSugar
 import org.scalatest.{FunSpec, Matchers}
 
@@ -33,18 +34,18 @@ class CassandraWriteResultListenerSpec extends FunSpec with Matchers with EasyMo
       val asyncResult = mock[ResultSetFuture]
       val resultSet = mock[ResultSet]
       val timer = mock[Timer.Context]
-      val inflightSemaphore = mock[Semaphore]
+      val retryOp = mock[RetryOperation.Callback]
       val executionInfo = mock[ExecutionInfo]
 
       expecting {
-        inflightSemaphore.release().once()
+        retryOp.onResult(anyObject).once()
         timer.close().once()
         asyncResult.get().andReturn(resultSet).atLeastOnce()
         executionInfo.getWarnings.andReturn(Collections.emptyList()).atLeastOnce()
         resultSet.getExecutionInfo.andReturn(executionInfo).atLeastOnce()
       }
-      whenExecuting(asyncResult, resultSet, timer, inflightSemaphore, executionInfo) {
-        val listener = new CassandraWriteResultListener(asyncResult, timer, inflightSemaphore)
+      whenExecuting(asyncResult, resultSet, timer, retryOp, executionInfo) {
+        val listener = new CassandraWriteResultListener(asyncResult, timer, retryOp)
         listener.run()
       }
     }
@@ -52,15 +53,16 @@ class CassandraWriteResultListenerSpec extends FunSpec with Matchers with EasyMo
     it("should run successfully without throwing any error even if asyncResult has errored") {
       val asyncResult = mock[ResultSetFuture]
       val timer = mock[Timer.Context]
-      val inflightSemaphore = mock[Semaphore]
+      val retryOp = mock[RetryOperation.Callback]
 
+      val thrownException = new RuntimeException
       expecting {
-        inflightSemaphore.release().once()
+        retryOp.onError(thrownException, retry = true)
         timer.close().once()
-        asyncResult.get().andThrow(new RuntimeException)
+        asyncResult.get().andThrow(thrownException)
       }
-      whenExecuting(asyncResult, timer, inflightSemaphore) {
-        val listener = new CassandraWriteResultListener(asyncResult, timer, inflightSemaphore)
+      whenExecuting(asyncResult, timer, retryOp) {
+        val listener = new CassandraWriteResultListener(asyncResult, timer, retryOp)
         listener.run()
       }
     }
@@ -69,20 +71,20 @@ class CassandraWriteResultListenerSpec extends FunSpec with Matchers with EasyMo
       val asyncResult = mock[ResultSetFuture]
       val resultSet = mock[ResultSet]
       val timer = mock[Timer.Context]
-      val inflightSemaphore = mock[Semaphore]
+      val retryOp = mock[RetryOperation.Callback]
       val executionInfo = mock[ExecutionInfo]
 
       val warnings = util.Arrays.asList("warning-1")
 
       expecting {
-        inflightSemaphore.release().once()
+        retryOp.onResult(anyObject).once()
         timer.close().once()
         executionInfo.getWarnings.andReturn(warnings).atLeastOnce()
         resultSet.getExecutionInfo.andReturn(executionInfo).atLeastOnce()
         asyncResult.get().andReturn(resultSet).atLeastOnce()
       }
-      whenExecuting(asyncResult, resultSet, timer, inflightSemaphore, executionInfo) {
-        val listener = new CassandraWriteResultListener(asyncResult, timer, inflightSemaphore)
+      whenExecuting(asyncResult, resultSet, timer, retryOp, executionInfo) {
+        val listener = new CassandraWriteResultListener(asyncResult, timer, retryOp)
         listener.run()
       }
     }

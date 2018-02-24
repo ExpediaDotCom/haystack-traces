@@ -19,6 +19,7 @@ package com.expedia.www.haystack.trace.indexer.config.entities
 
 import com.datastax.driver.core.ConsistencyLevel
 import com.expedia.www.haystack.trace.commons.config.entities.CassandraConfiguration
+import com.expedia.www.haystack.trace.commons.retries.RetryOperation
 
 /**
   * @param consistencyLevel: consistency level of writes
@@ -28,4 +29,5 @@ import com.expedia.www.haystack.trace.commons.config.entities.CassandraConfigura
 case class CassandraWriteConfiguration(clientConfig: CassandraConfiguration,
                                        consistencyLevel: ConsistencyLevel,
                                        recordTTLInSec: Int,
-                                       maxInFlightRequests: Int)
+                                       maxInFlightRequests: Int,
+                                       retryConfig: RetryOperation.Config)

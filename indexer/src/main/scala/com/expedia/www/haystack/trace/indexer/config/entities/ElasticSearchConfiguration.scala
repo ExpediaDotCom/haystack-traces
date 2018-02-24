@@ -19,8 +19,6 @@ package com.expedia.www.haystack.trace.indexer.config.entities
 
 import com.expedia.www.haystack.trace.commons.retries.RetryOperation
 
-import scala.concurrent.duration.FiniteDuration
-
 /**
   * defines the config parameters for elastic search writes
  *

@@ -19,7 +19,7 @@ package com.expedia.www.haystack.trace.commons.config
 
 import java.io.File
 
-import com.typesafe.config.{Config, ConfigFactory, ConfigRenderOptions, ConfigValueType}
+import com.typesafe.config.{Config, ConfigFactory, ConfigValueType}
 import org.apache.commons.lang3.StringUtils
 import org.slf4j.LoggerFactory
 
@@ -29,7 +29,7 @@ object ConfigurationLoader {
 
   private val LOGGER = LoggerFactory.getLogger(ConfigurationLoader.getClass)
 
-  private val ENV_NAME_PREFIX = "HAYSTACK_PROP_"
+  private[haystack] val ENV_NAME_PREFIX = "HAYSTACK_PROP_"
 
   /**
     * Load and return the configuration
@@ -47,19 +47,19 @@ object ConfigurationLoader {
 
     val config = sys.env.get("HAYSTACK_OVERRIDES_CONFIG_PATH") match {
       case Some(path) => ConfigFactory.parseFile(new File(path)).withFallback(baseConfig).resolve()
-      case _ => loadFromEnvVars(keysWithArrayValues).withFallback(baseConfig).resolve()
+      case _ => loadFromEnv(sys.env, keysWithArrayValues).withFallback(baseConfig).resolve()
     }
 
     LOGGER.info(config.root().render())
-    
+
     config
   }
 
   /**
     * @return new config object with haystack specific environment variables
     */
-  private def loadFromEnvVars(keysWithArrayValues: Set[String]): Config = {
-    val envMap: Map[String, Object] = sys.env.filter {
+  private[haystack] def loadFromEnv(envVars: Map[String, String], keysWithArrayValues: Set[String]): Config = {
+    val envMap: Map[String, Object] = envVars.filter {
       case (envName, _) => isHaystackEnvVar(envName)
     } map {
       case (envName, envValue) =>

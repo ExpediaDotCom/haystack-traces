@@ -21,6 +21,7 @@ import java.util.concurrent.Semaphore
 
 import com.expedia.open.tracing.buffer.SpanBuffer
 import com.expedia.www.haystack.trace.commons.clients.cassandra.{CassandraClusterFactory, CassandraSession}
+import com.expedia.www.haystack.trace.commons.retries.RetryOperation.withRetryBackoff
 import com.expedia.www.haystack.trace.indexer.config.entities.CassandraWriteConfiguration
 import com.expedia.www.haystack.trace.indexer.metrics.{AppMetricNames, MetricsSupport}
 import com.expedia.www.haystack.trace.indexer.writers.TraceWriter
@@ -64,8 +65,18 @@ class CassandraWriter(config: CassandraWriteConfiguration)(implicit val dispatch
 
       // prepare the statement
       val statement = cassandra.newInsertBoundStatement(traceId, spanBuffer, config.consistencyLevel, insertPreparedStatement)
-      val asyncResult = cassandra.executeAsync(statement)
-      asyncResult.addListener(new CassandraWriteResultListener(asyncResult, timer, inflightRequestsSemaphore), dispatcher)
+
+      // execute the request async with retry
+      withRetryBackoff((retryCallback) => {
+        val asyncResult = cassandra.executeAsync(statement)
+        asyncResult.addListener(new CassandraWriteResultListener(asyncResult, timer, retryCallback), dispatcher)
+      },
+        config.retryConfig,
+        onSuccess = (_: Any) => inflightRequestsSemaphore.release(),
+        onFailure = (ex) => {
+          inflightRequestsSemaphore.release()
+          LOGGER.error("Fail to write to ES after all retry attempts", ex)
+        })
     } catch {
       case ex: Exception =>
         LOGGER.error("Fail to write the spans to cassandra with exception", ex)

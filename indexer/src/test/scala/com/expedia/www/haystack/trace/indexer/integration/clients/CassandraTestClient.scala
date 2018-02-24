@@ -21,6 +21,7 @@ import com.datastax.driver.core.{Cluster, ConsistencyLevel, SimpleStatement}
 import com.expedia.open.tracing.buffer.SpanBuffer
 import com.expedia.www.haystack.trace.commons.clients.cassandra.CassandraTableSchema
 import com.expedia.www.haystack.trace.commons.config.entities.{CassandraConfiguration, SocketConfiguration}
+import com.expedia.www.haystack.trace.commons.retries.RetryOperation
 import com.expedia.www.haystack.trace.indexer.config.entities.CassandraWriteConfiguration
 
 import scala.collection.JavaConversions._
@@ -54,7 +55,7 @@ class CassandraTestClient {
       KEYSPACE,
       TABLE_NAME,
       None,
-      SocketConfiguration(5, keepAlive = true, 5000, 5000)), ConsistencyLevel.ONE, 150, 10)
+      SocketConfiguration(5, keepAlive = true, 5000, 5000)), ConsistencyLevel.ONE, 150, 10, RetryOperation.Config(10, 250, 2))
 
   def queryAll(): Seq[CassandraRow] = {
     val rows = cassandraSession.execute(s"SELECT id, ts, spans from $KEYSPACE.$TABLE_NAME")

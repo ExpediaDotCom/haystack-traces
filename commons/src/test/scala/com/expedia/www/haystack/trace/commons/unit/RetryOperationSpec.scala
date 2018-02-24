@@ -31,7 +31,7 @@ class RetryOperationSpec extends FunSpec with Matchers {
       @volatile var onSuccessCalled = 0
       val mainFuncCalled = new AtomicInteger(0)
 
-      RetryOperation.executeAsyncWithRetryBackoff((callback) => {
+      RetryOperation.withRetryBackoff((callback) => {
         mainFuncCalled.incrementAndGet()
         Future {
           Thread.sleep(500)
@@ -57,7 +57,7 @@ class RetryOperationSpec extends FunSpec with Matchers {
     val retryConfig = RetryOperation.Config(maxRetries = 3, initialBackoffInMillis = 100, backoffFactor = 1.5)
     val mainFuncCalled = new AtomicInteger(0)
 
-    RetryOperation.executeAsyncWithRetryBackoff((callback) => {
+    RetryOperation.withRetryBackoff((callback) => {
       val count = mainFuncCalled.incrementAndGet()
       if (count <= retryConfig.maxRetries) {
         Future {
@@ -90,7 +90,7 @@ class RetryOperationSpec extends FunSpec with Matchers {
     val mainFuncCalled = new AtomicInteger(0)
 
     val error = new RuntimeException("error")
-    RetryOperation.executeAsyncWithRetryBackoff((callback) => {
+    RetryOperation.withRetryBackoff((callback) => {
       mainFuncCalled.incrementAndGet()
       Future {
         Thread.sleep(500)

@@ -98,7 +98,7 @@ class ElasticSearchWriter(esConfig: ElasticSearchConfiguration, indexConf: White
           isSemaphoreAcquired = true
 
           // execute the request async with retry
-          executeAsyncWithRetryBackoff((retryCallback) => {
+          withRetryBackoff((retryCallback) => {
             esClient.executeAsync(bulkToDispatch, new TraceIndexResultHandler(esWriteTime.time(), retryCallback))
           },
             esConfig.retryConfig,

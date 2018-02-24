@@ -80,6 +80,9 @@ class ConfigurationLoaderSpec extends FunSpec with Matchers {
       clientConfig.socket.connectionTimeoutMillis shouldBe 10000
       cassandraWriteConfig.recordTTLInSec shouldBe 86400
       cassandraWriteConfig.maxInFlightRequests shouldBe 100
+      cassandraWriteConfig.retryConfig.maxRetries shouldBe 10
+      cassandraWriteConfig.retryConfig.initialBackoffInMillis shouldBe 250
+      cassandraWriteConfig.retryConfig.backoffFactor shouldBe 2
     }
 
     it("should load the elastic search config from base.conf and one property overridden from env variable") {

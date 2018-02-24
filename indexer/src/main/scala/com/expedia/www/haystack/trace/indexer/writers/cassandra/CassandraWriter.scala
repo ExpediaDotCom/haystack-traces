@@ -75,7 +75,7 @@ class CassandraWriter(config: CassandraWriteConfiguration)(implicit val dispatch
         onSuccess = (_: Any) => inflightRequestsSemaphore.release(),
         onFailure = (ex) => {
           inflightRequestsSemaphore.release()
-          LOGGER.error("Fail to write to ES after all retry attempts", ex)
+          LOGGER.error("Fail to write to cassandra after {} retry attempts", config.retryConfig.maxRetries, ex)
         })
     } catch {
       case ex: Exception =>

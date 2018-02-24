@@ -105,7 +105,7 @@ class ElasticSearchWriter(esConfig: ElasticSearchConfiguration, indexConf: White
             onSuccess = (_: Any) => inflightRequestsSemaphore.release(),
             onFailure = (ex) => {
               inflightRequestsSemaphore.release()
-              LOGGER.error("Fail to write to ES after all retry attempts", ex)
+              LOGGER.error("Fail to write to ES after {} retry attempts", esConfig.retryConfig.maxRetries, ex)
             })
         case _ =>
       }
@@ -130,7 +130,7 @@ class ElasticSearchWriter(esConfig: ElasticSearchConfiguration, indexConf: White
           .build()
         bulkBuilder.addAction(action, doc.json.getBytes("utf-8").length, forceBulkCreate)
       case _ =>
-        LOGGER.warn("Skipping the span buffer record for index operation!")
+        LOGGER.warn("Skipping the span buffer record for index operation for traceId={}!", traceId)
         None
     }
   }

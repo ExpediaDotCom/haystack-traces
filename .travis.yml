@@ -6,8 +6,6 @@ services:
 env:
   global:
     - BRANCH=${TRAVIS_BRANCH}
-    - TAG=${TRAVIS_TAG}
-    - SHA=${TRAVIS_COMMIT}
 
 script:
   # build, create docker image

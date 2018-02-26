@@ -18,6 +18,7 @@
 package com.expedia.www.haystack.trace.indexer.unit
 
 import com.datastax.driver.core.ConsistencyLevel
+import com.datastax.driver.core.exceptions.UnavailableException
 import com.expedia.www.haystack.trace.indexer.config.ProjectConfiguration
 import org.apache.kafka.clients.consumer.ConsumerConfig
 import org.apache.kafka.clients.producer.ProducerConfig
@@ -81,8 +82,14 @@ class ConfigurationLoaderSpec extends FunSpec with Matchers {
       cassandraWriteConfig.recordTTLInSec shouldBe 86400
       cassandraWriteConfig.maxInFlightRequests shouldBe 100
       cassandraWriteConfig.retryConfig.maxRetries shouldBe 10
-      cassandraWriteConfig.retryConfig.initialBackoffInMillis shouldBe 250
+      cassandraWriteConfig.retryConfig.backOffInMillis shouldBe 250
       cassandraWriteConfig.retryConfig.backoffFactor shouldBe 2
+
+      // test consistency level on error
+      val writeError = new UnavailableException(ConsistencyLevel.ONE, 0, 0)
+      cassandraWriteConfig.writeConsistencyLevel(writeError) shouldEqual ConsistencyLevel.ANY
+      cassandraWriteConfig.writeConsistencyLevel(null) shouldEqual ConsistencyLevel.ONE
+      cassandraWriteConfig.writeConsistencyLevel(new RuntimeException) shouldEqual ConsistencyLevel.ONE
     }
 
     it("should load the elastic search config from base.conf and one property overridden from env variable") {
@@ -98,7 +105,7 @@ class ConfigurationLoaderSpec extends FunSpec with Matchers {
       elastic.indexNamePrefix shouldBe "haystack-test"
       elastic.indexType shouldBe "spans"
       elastic.retryConfig.maxRetries shouldBe 10
-      elastic.retryConfig.initialBackoffInMillis shouldBe 1000
+      elastic.retryConfig.backOffInMillis shouldBe 1000
       elastic.retryConfig.backoffFactor shouldBe 2
       elastic.indexHourBucket shouldBe 6
     }

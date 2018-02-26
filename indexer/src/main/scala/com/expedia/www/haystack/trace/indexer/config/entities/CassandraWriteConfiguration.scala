@@ -25,9 +25,23 @@ import com.expedia.www.haystack.trace.commons.retries.RetryOperation
   * @param consistencyLevel: consistency level of writes
   * @param recordTTLInSec: record ttl in seconds
   * @param maxInFlightRequests defines the max parallel writes to cassandra
+  * @param retryConfig retry configuration if writes fail
+  * @param consistencyLevelOnError: downgraded consistency level on write error
   */
 case class CassandraWriteConfiguration(clientConfig: CassandraConfiguration,
                                        consistencyLevel: ConsistencyLevel,
                                        recordTTLInSec: Int,
                                        maxInFlightRequests: Int,
-                                       retryConfig: RetryOperation.Config)
+                                       retryConfig: RetryOperation.Config,
+                                       consistencyLevelOnError: List[(Class[_], ConsistencyLevel)]) {
+  def writeConsistencyLevel(error: Throwable): ConsistencyLevel = {
+    if (error == null) {
+      consistencyLevel
+    } else {
+      consistencyLevelOnError
+        .find(errorClass => errorClass._1.isAssignableFrom(error.getClass))
+        .map(_._2)
+        .getOrElse(consistencyLevel)
+    }
+  }
+}

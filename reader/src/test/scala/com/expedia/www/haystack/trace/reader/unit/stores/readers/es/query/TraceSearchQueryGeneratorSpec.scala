@@ -21,10 +21,6 @@ import com.expedia.www.haystack.trace.reader.stores.readers.es.query.TraceSearch
 import com.expedia.www.haystack.trace.reader.unit.BaseUnitTestSpec
 import com.google.gson.Gson
 import io.searchbox.core.Search
-import org.elasticsearch.search.aggregations.bucket.nested.NestedAggregationBuilder
-import org.elasticsearch.search.aggregations.bucket.terms.TermsAggregationBuilder
-import org.elasticsearch.search.aggregations.support.ValueType
-import org.elasticsearch.search.builder.SearchSourceBuilder
 
 class TraceSearchQueryGeneratorSpec extends BaseUnitTestSpec {
   describe("TraceSearchQueryGenerator") {
@@ -52,19 +48,6 @@ class TraceSearchQueryGeneratorSpec extends BaseUnitTestSpec {
 
     it("should generate caption independent search queries") {
       Given("a trace search request")
-
-
-      val p = new NestedAggregationBuilder("spans", "spans")
-        .subAggregation(
-          new TermsAggregationBuilder("servicename", ValueType.STRING)
-            .field("spans.servicename")
-            .size(1000))
-      val r = new SearchSourceBuilder()
-        .aggregation(p)
-        .size(0)
-        .toString
-
-
       val `type` = "spans"
       val fieldKey = "svcName"
       val fieldValue = "opName"

@@ -72,11 +72,11 @@ class ConfigurationLoaderSpec extends FunSpec with Matchers {
       cassandraWriteConfig.consistencyLevel shouldEqual ConsistencyLevel.ONE
       clientConfig.autoDiscoverEnabled shouldBe false
       // this will fail if run inside an editor, we override this config using env variable inside pom.xml
-      //clientConfig.endpoints should contain allOf("cass1", "cass2")
+      clientConfig.endpoints should contain allOf("cass1", "cass2")
       clientConfig.autoCreateSchema shouldBe Some("cassandra_cql_schema")
       clientConfig.awsNodeDiscovery shouldBe empty
       clientConfig.socket.keepAlive shouldBe true
-      //clientConfig.socket.maxConnectionPerHost shouldBe 100
+      clientConfig.socket.maxConnectionPerHost shouldBe 100
       clientConfig.socket.readTimeoutMills shouldBe 5000
       clientConfig.socket.connectionTimeoutMillis shouldBe 10000
       cassandraWriteConfig.recordTTLInSec shouldBe 86400

@@ -6,7 +6,7 @@ clean:
 	mvn clean
 
 build: clean
-	mvn -Dgpg.skip package
+	mvn package
 
 all: clean indexer reader report-coverage
 
@@ -20,10 +20,10 @@ reader: build_reader
 	cd reader && $(MAKE) integration_test
 
 build_reader:
-	mvn -Dgpg.skip package -pl reader -am
+	mvn package -pl reader -am
 
 build_indexer:
-	mvn -Dgpg.skip package -pl indexer -am
+	mvn package -pl indexer -am
 
 # build all and release
 release: all

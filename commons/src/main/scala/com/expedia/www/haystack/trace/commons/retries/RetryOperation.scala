@@ -26,20 +26,22 @@ object RetryOperation {
   /**
     * retry configuration
     * @param maxRetries maximum number of retry attempts
-    * @param initialBackoffInMillis initial backkoff in millis
+    * @param backOffInMillis initial backkoff in millis
     * @param backoffFactor exponential backoff that gets applied on the previousBackoff value
     */
-  case class Config(maxRetries: Int, initialBackoffInMillis: Long, backoffFactor: Double) {
+  case class Config(maxRetries: Int, backOffInMillis: Long, backoffFactor: Double) {
     /**
       * @return next back off config after applying the exponential factor to initialBackOffInMillis
       */
-    def nextBackOffConfig: Config = this.copy(initialBackoffInMillis = Math.ceil(initialBackoffInMillis * backoffFactor).toLong)
+    def nextBackOffConfig: Config = this.copy(backOffInMillis = Math.ceil(backOffInMillis * backoffFactor).toLong)
   }
 
   trait Callback {
     def onResult[T](result: T): Unit
 
-    def onError(ex: Exception, retry: Boolean): Unit
+    def onError(ex: Throwable, retry: Boolean): Unit
+
+    def lastError(): Throwable
   }
 
   /**
@@ -59,7 +61,7 @@ object RetryOperation {
       f()
     } match {
       case Failure(reason) if currentRetryCount < retryConfig.maxRetries && !reason.isInstanceOf[InterruptedException] =>
-        Thread.sleep(retryConfig.initialBackoffInMillis)
+        Thread.sleep(retryConfig.backOffInMillis)
         executeWithRetryBackoff(f, currentRetryCount + 1, retryConfig.nextBackOffConfig)
       case result@_ => result
     }
@@ -85,23 +87,26 @@ object RetryOperation {
                                   currentRetry: Int,
                                   retryConfig: Config,
                                   onSuccess: (T) => Unit,
-                                  onFailure: (Exception) => Unit): Unit = {
+                                  onFailure: (Exception) => Unit,
+                                  lastSeenError: Throwable = null): Unit = {
     try {
-      val asyncRetryResult = new Callback {
+      val retryResult = new Callback {
         override def onResult[Any](result: Any): Unit = {
           onSuccess(result.asInstanceOf[T])
         }
 
-        override def onError(ex: Exception, retry: Boolean): Unit = {
+        override def onError(ex: Throwable, retry: Boolean): Unit = {
           if (retry && currentRetry < retryConfig.maxRetries) {
-            Thread.sleep(retryConfig.initialBackoffInMillis)
-            withRetryBackoff(f, currentRetry + 1, retryConfig.nextBackOffConfig, onSuccess, onFailure)
+            Thread.sleep(retryConfig.backOffInMillis)
+            withRetryBackoff(f, currentRetry + 1, retryConfig.nextBackOffConfig, onSuccess, onFailure, ex)
           } else {
             onFailure(new MaxRetriesAttemptedException(s"max retries=${retryConfig.maxRetries} have reached and all attempts have failed!", ex))
           }
         }
+
+        override def lastError(): Throwable = lastSeenError
       }
-      f(asyncRetryResult)
+      f(retryResult)
     } catch {
       case ex: Exception => onFailure(ex)
     }

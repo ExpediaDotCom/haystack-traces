@@ -48,6 +48,7 @@ class CassandraWriter(config: CassandraWriteConfiguration)(implicit val dispatch
     * writes the traceId and its spans to cassandra. Use the current timestamp as the sort key for the writes to same
     * TraceId. Also if the parallel writes exceed the max inflight requests, then we block and this puts backpressure on
     * upstream
+    *
     * @param traceId: trace id
     * @param spanBuffer: list of spans belonging to this traceId - span buffer
     * @param spanBufferBytes: list of spans belonging to this traceId - serialized bytes of span buffer
@@ -63,11 +64,14 @@ class CassandraWriter(config: CassandraWriteConfiguration)(implicit val dispatch
 
       val timer = writeTimer.time()
 
-      // prepare the statement
-      val statement = cassandra.newInsertBoundStatement(traceId, spanBuffer, config.consistencyLevel, insertPreparedStatement)
-
       // execute the request async with retry
       withRetryBackoff((retryCallback) => {
+        // prepare the statement
+        val statement = cassandra.newInsertBoundStatement(traceId,
+          spanBuffer,
+          config.writeConsistencyLevel(retryCallback.lastError()),
+          insertPreparedStatement)
+
         val asyncResult = cassandra.executeAsync(statement)
         asyncResult.addListener(new CassandraWriteResultListener(asyncResult, timer, retryCallback), dispatcher)
       },

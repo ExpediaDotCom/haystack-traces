@@ -55,7 +55,7 @@ class CassandraTestClient {
       KEYSPACE,
       TABLE_NAME,
       None,
-      SocketConfiguration(5, keepAlive = true, 5000, 5000)), ConsistencyLevel.ONE, 150, 10, RetryOperation.Config(10, 250, 2))
+      SocketConfiguration(5, keepAlive = true, 5000, 5000)), ConsistencyLevel.ONE, 150, 10, RetryOperation.Config(10, 250, 2), List((Class.forName("com.datastax.driver.core.exceptions.UnavailableException"), ConsistencyLevel.ANY)))
 
   def queryAll(): Seq[CassandraRow] = {
     val rows = cassandraSession.execute(s"SELECT id, ts, spans from $KEYSPACE.$TABLE_NAME")

@@ -18,9 +18,9 @@
 package com.expedia.www.haystack.trace.indexer.config
 
 import java.util.Properties
-import java.util.concurrent.TimeUnit
 
 import com.datastax.driver.core.ConsistencyLevel
+import com.datastax.driver.core.exceptions.DriverException
 import com.expedia.www.haystack.trace.commons.config.ConfigurationLoader
 import com.expedia.www.haystack.trace.commons.config.entities._
 import com.expedia.www.haystack.trace.commons.config.reload.{ConfigurationReloadElasticSearchProvider, Reloadable}
@@ -34,7 +34,6 @@ import org.apache.kafka.clients.producer.ProducerConfig
 import org.apache.kafka.common.serialization.{ByteArraySerializer, StringDeserializer, StringSerializer}
 
 import scala.collection.JavaConversions._
-import scala.concurrent.duration._
 import scala.util.Try
 
 class ProjectConfiguration extends AutoCloseable {
@@ -126,6 +125,24 @@ class ProjectConfiguration extends AutoCloseable {
     * cassandra configuration object
     */
   val cassandraWriteConfig: CassandraWriteConfiguration = {
+
+    def toConsistencyLevel(level: String) = ConsistencyLevel.values().find(_.toString.equalsIgnoreCase(level)).get
+
+    def consistencyLevelOnErrors(cs: Config) = {
+      val consistencyLevelOnErrors = cs.getStringList("on.error.consistency.level")
+      val consistencyLevelOnErrorList = scala.collection.mutable.ListBuffer[(Class[_], ConsistencyLevel)]()
+
+      var idx = 0
+      while(idx < consistencyLevelOnErrors.size()) {
+        val errorClass = consistencyLevelOnErrors.get(idx)
+        val level = consistencyLevelOnErrors.get(idx + 1)
+        consistencyLevelOnErrorList.+=((Class.forName(errorClass), toConsistencyLevel(level)))
+        idx = idx + 2
+      }
+
+      consistencyLevelOnErrorList.toList
+    }
+
     val cs = config.getConfig("cassandra")
 
     val awsConfig: Option[AwsNodeDiscoveryConfiguration] =
@@ -155,7 +172,7 @@ class ProjectConfiguration extends AutoCloseable {
       socketConfig.getInt("conn.timeout.ms"),
       socketConfig.getInt("read.timeout.ms"))
 
-    val consistencyLevel = ConsistencyLevel.values().find(_.toString.equalsIgnoreCase(cs.getString("consistency.level"))).get
+    val consistencyLevel = toConsistencyLevel(cs.getString("consistency.level"))
 
     val keyspaceConfig = cs.getConfig("keyspace")
 
@@ -166,6 +183,7 @@ class ProjectConfiguration extends AutoCloseable {
     } else {
       None
     }
+
 
     CassandraWriteConfiguration(
       clientConfig = CassandraConfiguration(
@@ -179,7 +197,12 @@ class ProjectConfiguration extends AutoCloseable {
         socket),
       consistencyLevel = consistencyLevel,
       recordTTLInSec = cs.getInt("ttl.sec"),
-      maxInFlightRequests = cs.getInt("max.inflight.requests"))
+      maxInFlightRequests = cs.getInt("max.inflight.requests"),
+      retryConfig = RetryOperation.Config(
+        cs.getInt("retries.max"),
+        cs.getLong("retries.backoff.initial.ms"),
+        cs.getDouble("retries.backoff.factor")),
+      consistencyLevelOnErrors(cs))
   }
 
   /**
@@ -203,6 +226,7 @@ class ProjectConfiguration extends AutoCloseable {
       indexTemplateJson,
       consistencyLevel = es.getString("consistency.level"),
       indexNamePrefix = indexConfig.getString("name.prefix"),
+      indexHourBucket = indexConfig.getInt("hour.bucket"),
       indexType = indexConfig.getString("type"),
       connectionTimeoutMillis = es.getInt("conn.timeout.ms"),
       readTimeoutMillis = es.getInt("read.timeout.ms"),

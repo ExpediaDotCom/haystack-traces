@@ -121,8 +121,12 @@ class ProviderConfiguration {
     * Configurations to specify what all transforms to apply on traces
     */
   val traceTransformerConfig: TraceTransformersConfiguration = {
-    val transformerConfig: Config = config.getConfig("trace.transformers")
-    TraceTransformersConfiguration(toInstances[TraceTransformer](transformerConfig.getStringList("sequence")))
+    val preTransformers = config.getStringList("trace.transformers.pre.sequence")
+    val postTransformers = config.getStringList("trace.transformers.post.sequence")
+
+    TraceTransformersConfiguration(
+      toInstances[TraceTransformer](preTransformers),
+      toInstances[TraceTransformer](postTransformers))
   }
 
   /**

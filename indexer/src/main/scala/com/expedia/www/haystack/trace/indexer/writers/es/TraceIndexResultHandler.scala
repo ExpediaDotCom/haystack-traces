@@ -31,7 +31,7 @@ object TraceIndexResultHandler extends MetricsSupport {
   val esWriteFailureMeter: Meter = metricRegistry.meter(AppMetricNames.ES_WRITE_FAILURE)
 }
 
-class TraceIndexResultHandler(timer: Timer.Context, asyncRetryResult: RetryOperation.Callback)
+class TraceIndexResultHandler(timer: Timer.Context, retryOp: RetryOperation.Callback)
 
   extends JestResultHandler[BulkResult] {
 
@@ -55,7 +55,7 @@ class TraceIndexResultHandler(timer: Timer.Context, asyncRetryResult: RetryOpera
             s"errorReason=${failedItems.head.errorReason}, errorType=${failedItems.head.errorType}")
       }
     }
-    asyncRetryResult.onResult(result)
+    retryOp.onResult(result)
   }
 
   /**
@@ -67,6 +67,6 @@ class TraceIndexResultHandler(timer: Timer.Context, asyncRetryResult: RetryOpera
     timer.close()
     esWriteFailureMeter.mark()
     LOGGER.error("Fail to write the documents in elastic search with reason:", ex)
-    asyncRetryResult.onError(ex, retry = true)
+    retryOp.onError(ex, retry = true)
   }
 }

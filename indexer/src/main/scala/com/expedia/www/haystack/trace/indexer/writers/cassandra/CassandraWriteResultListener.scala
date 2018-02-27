@@ -21,6 +21,7 @@ import java.util.concurrent.Semaphore
 
 import com.codahale.metrics.{Meter, Timer}
 import com.datastax.driver.core.ResultSetFuture
+import com.expedia.www.haystack.trace.commons.retries.RetryOperation
 import com.expedia.www.haystack.trace.indexer.metrics.{AppMetricNames, MetricsSupport}
 import org.slf4j.{Logger, LoggerFactory}
 
@@ -34,7 +35,7 @@ object CassandraWriteResultListener extends MetricsSupport {
 
 class CassandraWriteResultListener(asyncResult: ResultSetFuture,
                                    timer: Timer.Context,
-                                   inflightRequestsSemaphore: Semaphore) extends Runnable {
+                                   retryOp: RetryOperation.Callback) extends Runnable {
 
   import CassandraWriteResultListener._
 
@@ -43,22 +44,24 @@ class CassandraWriteResultListener(asyncResult: ResultSetFuture,
     * We measure the time write operation takes and records any warnings or errors
     */
   override def run(): Unit = {
-    inflightRequestsSemaphore.release()
-
     try {
       timer.close()
 
-      if (asyncResult.get() != null &&
-        asyncResult.get().getExecutionInfo != null &&
-        asyncResult.get().getExecutionInfo.getWarnings != null &&
-        asyncResult.get().getExecutionInfo.getWarnings.nonEmpty) {
-        LOGGER.warn(s"Warning received in cassandra writes {}", asyncResult.get().getExecutionInfo.getWarnings.toList.mkString(","))
-        writeWarnings.mark(asyncResult.get.getExecutionInfo.getWarnings.size())
+      val result = asyncResult.get()
+      if (result != null &&
+        result.getExecutionInfo != null &&
+        result.getExecutionInfo.getWarnings != null &&
+        result.getExecutionInfo.getWarnings.nonEmpty) {
+        LOGGER.warn(s"Warning received in cassandra writes {}", result.getExecutionInfo.getWarnings.toList.mkString(","))
+        writeWarnings.mark(result.getExecutionInfo.getWarnings.size())
       }
+      retryOp.onResult(result)
     } catch {
       case ex: Exception =>
         LOGGER.error("Fail to write the record to cassandra with exception", ex)
         writeFailures.mark()
+        val innerException = if(ex.getCause != null) ex.getCause else ex
+        retryOp.onError(innerException, retry = true)
     }
   }
 }

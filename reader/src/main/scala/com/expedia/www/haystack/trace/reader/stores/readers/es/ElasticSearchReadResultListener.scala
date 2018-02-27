@@ -18,6 +18,7 @@ package com.expedia.www.haystack.trace.reader.stores.readers.es
 
 import com.codahale.metrics.{Meter, Timer}
 import com.expedia.www.haystack.trace.reader.exceptions.ElasticSearchClientError
+import com.expedia.www.haystack.trace.reader.stores.readers.es.ElasticSearchReadResultListener._
 import com.google.gson.Gson
 import io.searchbox.client.JestResultHandler
 import io.searchbox.core.{Search, SearchResult}
@@ -34,7 +35,6 @@ class ElasticSearchReadResultListener(request: Search,
                                       promise: Promise[SearchResult],
                                       timer: Timer.Context,
                                       failure: Meter) extends JestResultHandler[SearchResult]  {
-  import ElasticSearchReadResultListener._
 
   override def completed(result: SearchResult): Unit = {
     timer.close()

@@ -30,8 +30,6 @@ import io.searchbox.indices.DeleteIndex
 import org.json4s.DefaultFormats
 import org.json4s.jackson.Serialization
 
-import scala.concurrent.duration._
-
 case class EsSourceDocument(traceid: String)
 
 class ElasticSearchTestClient {
@@ -40,6 +38,7 @@ class ElasticSearchTestClient {
   private val ELASTIC_SEARCH_ENDPOINT = "http://elasticsearch:9200"
   private val INDEX_NAME_PREFIX = "haystack-traces"
   private val INDEX_TYPE = "spans"
+  private val INDEX_HOUR_BUCKET = 6
 
   private val HAYSTACK_TRACES_INDEX = {
     val formatter = new SimpleDateFormat("yyyy-MM-dd")
@@ -54,7 +53,11 @@ class ElasticSearchTestClient {
 
   def prepare(): Unit = {
     // drop the haystack-traces-<today's date> index
-    esClient.execute(new DeleteIndex.Builder(HAYSTACK_TRACES_INDEX).build())
+    0 until (24 / INDEX_HOUR_BUCKET) foreach {
+      idx => {
+        esClient.execute(new DeleteIndex.Builder(s"$HAYSTACK_TRACES_INDEX-$idx").build())
+      }
+    }
   }
 
   def buildConfig = ElasticSearchConfiguration(
@@ -62,6 +65,7 @@ class ElasticSearchTestClient {
     Some(INDEX_TEMPLATE),
     "one",
     INDEX_NAME_PREFIX,
+    INDEX_HOUR_BUCKET,
     INDEX_TYPE,
     3000,
     3000,
@@ -81,7 +85,7 @@ class ElasticSearchTestClient {
   def query(query: String): List[EsSourceDocument] = {
     import scala.collection.JavaConversions._
     val searchQuery = new Search.Builder(query)
-      .addIndex(HAYSTACK_TRACES_INDEX)
+      .addIndex(INDEX_NAME_PREFIX)
       .addType(INDEX_TYPE)
       .build()
     val result = esClient.execute(searchQuery)
@@ -113,6 +117,9 @@ class ElasticSearchTestClient {
       |    },
       |    "mappings": {
       |        "spans": {
+      |            "_field_names": {
+      |                "enabled": false
+      |            },
       |            "_all": {
       |                "enabled": false
       |            },

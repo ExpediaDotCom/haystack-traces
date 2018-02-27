@@ -21,6 +21,7 @@ import com.datastax.driver.core.{ResultSet, ResultSetFuture, Row}
 import com.expedia.open.tracing.api.Trace
 import com.expedia.www.haystack.trace.commons.clients.cassandra.CassandraTableSchema
 import com.expedia.www.haystack.trace.reader.exceptions.TraceNotFoundException
+import com.expedia.www.haystack.trace.reader.stores.readers.cassandra.CassandraReadResultListener._
 import org.slf4j.{Logger, LoggerFactory}
 
 import scala.collection.JavaConversions._
@@ -35,8 +36,6 @@ class CassandraReadResultListener(asyncResult: ResultSetFuture,
                                   timer: Timer.Context,
                                   failure: Meter,
                                   promise: Promise[Trace]) extends Runnable {
-
-  import CassandraReadResultListener._
 
   override def run(): Unit = {
     timer.close()

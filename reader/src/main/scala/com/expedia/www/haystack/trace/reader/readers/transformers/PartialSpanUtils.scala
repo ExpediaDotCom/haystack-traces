@@ -78,9 +78,11 @@ object PartialSpanUtils {
   }
 
   private def getServerSpan(first: Span, second: Span): Option[Span] =
-  if (containsServerLogTag(second) && containsClientLogTag(first)) Some(second)
-  else if (containsServerLogTag(first) && containsClientLogTag(second)) Some(first)
-  else None
+  if (containsServerLogTag(second) && containsClientLogTag(first)) {
+    Some(second)
+  } else {
+    if (containsServerLogTag(first) && containsClientLogTag(second)) Some(first) else None
+  }
 }
 
 

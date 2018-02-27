@@ -19,8 +19,6 @@ package com.expedia.www.haystack.trace.indexer.config.entities
 
 import com.expedia.www.haystack.trace.commons.retries.RetryOperation
 
-import scala.concurrent.duration.FiniteDuration
-
 /**
   * defines the config parameters for elastic search writes
  *
@@ -28,6 +26,7 @@ import scala.concurrent.duration.FiniteDuration
   * @param indexTemplateJson: template as json that will be applied when the app runs, this is optional
   * @param consistencyLevel: consistency level of writes, for e.g. one, quoram
   * @param indexNamePrefix: prefix for naming the elastic search index
+  * @param indexHourBucket: creates index for that hour duration. for e.g. for value 6, we create an index every 6 hours in a day so total 4 buckets
   * @param indexType: elastic search index type
   * @param connectionTimeoutMillis: connection timeout in millis
   * @param readTimeoutMillis: read timeout in millis
@@ -40,6 +39,7 @@ case class ElasticSearchConfiguration(endpoint: String,
                                       indexTemplateJson: Option[String],
                                       consistencyLevel: String,
                                       indexNamePrefix: String,
+                                      indexHourBucket: Int,
                                       indexType: String,
                                       connectionTimeoutMillis: Int,
                                       readTimeoutMillis: Int,

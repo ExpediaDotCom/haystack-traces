@@ -21,6 +21,7 @@ import java.util.concurrent.Semaphore
 
 import com.expedia.open.tracing.buffer.SpanBuffer
 import com.expedia.www.haystack.trace.commons.clients.cassandra.{CassandraClusterFactory, CassandraSession}
+import com.expedia.www.haystack.trace.commons.retries.RetryOperation.withRetryBackoff
 import com.expedia.www.haystack.trace.indexer.config.entities.CassandraWriteConfiguration
 import com.expedia.www.haystack.trace.indexer.metrics.{AppMetricNames, MetricsSupport}
 import com.expedia.www.haystack.trace.indexer.writers.TraceWriter
@@ -47,6 +48,7 @@ class CassandraWriter(config: CassandraWriteConfiguration)(implicit val dispatch
     * writes the traceId and its spans to cassandra. Use the current timestamp as the sort key for the writes to same
     * TraceId. Also if the parallel writes exceed the max inflight requests, then we block and this puts backpressure on
     * upstream
+    *
     * @param traceId: trace id
     * @param spanBuffer: list of spans belonging to this traceId - span buffer
     * @param spanBufferBytes: list of spans belonging to this traceId - serialized bytes of span buffer
@@ -62,10 +64,23 @@ class CassandraWriter(config: CassandraWriteConfiguration)(implicit val dispatch
 
       val timer = writeTimer.time()
 
-      // prepare the statement
-      val statement = cassandra.newInsertBoundStatement(traceId, spanBuffer, config.consistencyLevel, insertPreparedStatement)
-      val asyncResult = cassandra.executeAsync(statement)
-      asyncResult.addListener(new CassandraWriteResultListener(asyncResult, timer, inflightRequestsSemaphore), dispatcher)
+      // execute the request async with retry
+      withRetryBackoff((retryCallback) => {
+        // prepare the statement
+        val statement = cassandra.newInsertBoundStatement(traceId,
+          spanBuffer,
+          config.writeConsistencyLevel(retryCallback.lastError()),
+          insertPreparedStatement)
+
+        val asyncResult = cassandra.executeAsync(statement)
+        asyncResult.addListener(new CassandraWriteResultListener(asyncResult, timer, retryCallback), dispatcher)
+      },
+        config.retryConfig,
+        onSuccess = (_: Any) => inflightRequestsSemaphore.release(),
+        onFailure = (ex) => {
+          inflightRequestsSemaphore.release()
+          LOGGER.error("Fail to write to cassandra after {} retry attempts", config.retryConfig.maxRetries, ex)
+        })
     } catch {
       case ex: Exception =>
         LOGGER.error("Fail to write the spans to cassandra with exception", ex)

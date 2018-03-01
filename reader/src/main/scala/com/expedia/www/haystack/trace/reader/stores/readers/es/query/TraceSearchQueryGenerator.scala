@@ -24,6 +24,7 @@ import org.apache.lucene.search.join.ScoreMode
 import org.elasticsearch.index.query.QueryBuilders._
 import org.elasticsearch.index.query._
 import org.elasticsearch.search.builder.SearchSourceBuilder
+import org.elasticsearch.search.sort.{FieldSortBuilder, SortOrder}
 
 import scala.collection.JavaConversions._
 
@@ -43,6 +44,7 @@ class TraceSearchQueryGenerator(indexNamePrefix: String, indexType: String, nest
   private def buildQueryString(request: TracesSearchRequest): String = {
     new SearchSourceBuilder()
       .query(boolQuery.must(createNestedQuery(request)))
+      .sort(new FieldSortBuilder(withBaseDoc(START_TIME_KEY_NAME)).order(SortOrder.DESC).setNestedPath(nestedDocName))
       .size(request.getLimit)
       .toString
   }

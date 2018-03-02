@@ -99,6 +99,11 @@ class ProviderConfiguration {
       es.getInt("read.timeout.ms"))
   }
 
+  val cacheConfig: FieldValuesCacheConfiguration = {
+    val cfg = config.getConfig("field.values.cache")
+    FieldValuesCacheConfiguration(cfg.getBoolean("enabled"), cfg.getInt("max.entries"), cfg.getLong("ttl.ms"))
+  }
+
   private def toInstances[T](classes: util.List[String])(implicit ct: ClassTag[T]): scala.Seq[T] = {
     classes.map(className => {
       val c = Class.forName(className)
@@ -147,7 +152,7 @@ class ProviderConfiguration {
   }
 
   // configuration reloader
-  private val reloader = registerReloadableConfigurations(List(indexConfig))
+  registerReloadableConfigurations(List(indexConfig))
 
   /**
     * registers a reloadable config object to reloader instance.

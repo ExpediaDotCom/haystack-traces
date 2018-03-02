@@ -41,10 +41,12 @@ class FieldValuesCache(config: FieldValuesCacheConfiguration,
       try {
         val result = cache.get(key)
         if (result != null && (System.currentTimeMillis() - result.lastRefreshTimestamp >= config.ttlInMillis)) {
+          // reset the cache value so that next cache.get() doesn't rerun the refresh operation
+          set(key, result.value)
+
           refreshOp(key) map { newValue =>
             set(key, newValue)
           }
-
           Future.successful(result.value)
         } else {
           refreshOp(key) andThen {

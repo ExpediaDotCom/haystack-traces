@@ -101,6 +101,10 @@ trait BaseIntegrationTestSpec extends FunSpec with GivenWhenThen with Matchers w
                                  |                            "normalizer": "lowercase_normalizer",
                                  |                            "doc_values": true,
                                  |                            "norms": false
+                                 |                        },
+                                 |                        "starttime": {
+                                 |                            "type": "long",
+                                 |                            "doc_values": true
                                  |                        }
                                  |                    }
                                  |                }

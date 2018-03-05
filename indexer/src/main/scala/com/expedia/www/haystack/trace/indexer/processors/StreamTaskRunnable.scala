@@ -88,7 +88,7 @@ class StreamTaskRunnable(taskId: Int, kafkaConfig: KafkaConfiguration, processor
 
   private val consumer = {
     val props = new Properties()
-    kafkaConfig.consumerProps.foreach(p => props.put(p._1, p._2))
+    kafkaConfig.consumerProps.entrySet().foreach(entry => props.put(entry.getKey, entry.getValue))
     props.setProperty(ConsumerConfig.CLIENT_ID_CONFIG, taskId.toString)
     new KafkaConsumer[String, Span](props)
   }

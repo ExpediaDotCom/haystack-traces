@@ -18,6 +18,7 @@
 package com.expedia.www.haystack.trace.indexer.processors
 
 import java.util
+import java.util.Properties
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.{ConcurrentHashMap, Executors, TimeUnit}
 
@@ -84,7 +85,13 @@ class StreamTaskRunnable(taskId: Int, kafkaConfig: KafkaConfiguration, processor
   private val wakeupScheduler = Executors.newScheduledThreadPool(1)
   private val listeners = mutable.ListBuffer[StateListener]()
   private val processors = new ConcurrentHashMap[TopicPartition, StreamProcessor[String, Span]]()
-  private val consumer = new KafkaConsumer[String, Span](kafkaConfig.consumerProps)
+
+  private val consumer = {
+    val props = new Properties(kafkaConfig.consumerProps)
+    props.setProperty(ConsumerConfig.CLIENT_ID_CONFIG, taskId.toString)
+    new KafkaConsumer[String, Span](props)
+  }
+
   private val rebalanceListener = new RebalanceListener
 
   consumer.subscribe(util.Arrays.asList(kafkaConfig.consumeTopic), rebalanceListener)

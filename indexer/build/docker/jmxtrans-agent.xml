@@ -28,7 +28,9 @@
         <query objectName="cassandra-cluster-metrics:name=requests" attribute="OneMinuteRate" resultAlias="cassandra.requests.rate"/>
         <query objectName="cassandra-cluster-metrics:name=requests" attribute="99thPercentile" resultAlias="cassandra.requests.99thPercentile"/>
         <query objectName="cassandra-cluster-metrics:name=write-timeouts" attribute="Count" resultAlias="cassandra.write-timeouts.count"/>
+        <query objectName="cassandra-cluster-metrics:name=open-connections" attribute="Count" resultAlias="cassandra.open-connections.count"/>
         <query objectName="cassandra-cluster-metrics:name=other-errors" attribute="Count" resultAlias="cassandra.other-errors.count"/>
+
         <!-- cassandra metrics coming from our code -->
         <query objectName="metrics:name=cassandra.write.failure" attributes="OneMinuteRate" resultAlias="cassandra.write.failure.#attribute#"/>
         <query objectName="metrics:name=cassandra.write.warnings" attributes="OneMinuteRate" resultAlias="cassandra.write.warnings.#attribute#"/>

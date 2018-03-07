@@ -36,6 +36,8 @@ import com.expedia.www.haystack.trace.commons.retries.RetryOperation
   * @param retryConfig retry max retries limit, initial backoff and exponential factor values
   */
 case class ElasticSearchConfiguration(endpoint: String,
+                                      username: Option[String],
+                                      password: Option[String],
                                       indexTemplateJson: Option[String],
                                       consistencyLevel: String,
                                       indexNamePrefix: String,

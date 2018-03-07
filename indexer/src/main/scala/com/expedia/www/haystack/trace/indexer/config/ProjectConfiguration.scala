@@ -220,9 +220,13 @@ class ProjectConfiguration extends AutoCloseable {
     } else {
       None
     }
+    val ausername = if (es.hasPath("username")){Option(es.getString("username"))}else{None}
+    val apassword = if (es.hasPath("password")){Option(es.getString("password"))}else{None}
 
     ElasticSearchConfiguration(
       endpoint = es.getString("endpoint"),
+      username = ausername,
+      password = apassword,
       indexTemplateJson,
       consistencyLevel = es.getString("consistency.level"),
       indexNamePrefix = indexConfig.getString("name.prefix"),

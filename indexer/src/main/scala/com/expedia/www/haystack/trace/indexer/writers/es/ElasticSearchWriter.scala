@@ -58,14 +58,17 @@ class ElasticSearchWriter(esConfig: ElasticSearchConfiguration, indexConf: White
   // initialize the elastic search client
   private val esClient: JestClient = {
     LOGGER.info("Initializing the http elastic search client with endpoint={}", esConfig.endpoint)
-    val factory = new JestClientFactory()
 
-    factory.setHttpClientConfig(
-      new HttpClientConfig.Builder(esConfig.endpoint)
-        .multiThreaded(true)
-        .connTimeout(esConfig.connectionTimeoutMillis)
-        .readTimeout(esConfig.readTimeoutMillis)
-        .build())
+    val factory = new JestClientFactory()
+    val builder = new HttpClientConfig.Builder(esConfig.endpoint).multiThreaded(true)
+                                      .connTimeout(esConfig.connectionTimeoutMillis)
+                                      .readTimeout(esConfig.readTimeoutMillis)
+
+    if (esConfig.username.isDefined && esConfig.password.isDefined){
+      builder.defaultCredentials(esConfig.username.get, esConfig.password.get)
+    }
+
+    factory.setHttpClientConfig(builder.build())
     factory.getObject
   }
 

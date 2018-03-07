@@ -17,6 +17,8 @@
 package com.expedia.www.haystack.trace.reader.config.entities
 
 case class ElasticSearchConfiguration(endpoint: String,
+                                      username: Option[String],
+                                      password: Option[String],
                                       indexNamePrefix: String,
                                       indexType: String,
                                       connectionTimeoutMillis: Int,

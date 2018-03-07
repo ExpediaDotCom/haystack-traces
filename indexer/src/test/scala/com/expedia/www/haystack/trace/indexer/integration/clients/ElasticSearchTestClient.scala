@@ -62,6 +62,8 @@ class ElasticSearchTestClient {
 
   def buildConfig = ElasticSearchConfiguration(
     ELASTIC_SEARCH_ENDPOINT,
+    None,
+    None,
     Some(INDEX_TEMPLATE),
     "one",
     INDEX_NAME_PREFIX,

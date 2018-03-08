@@ -1,18 +1,18 @@
 <jmxtrans-agent>
     <queries>
         <!-- kafka producer metrics -->
-        <query objectName="kafka.producer:type=producer-metrics,client-id=*" attribute="record-send-rate" resultAlias="kafka-producer-%client-id%.record-send.rate"/>
-        <query objectName="kafka.producer:type=producer-metrics,client-id=*" attribute="buffer-exhausted-rate" resultAlias="kafka-producer-%client-id%.buffer-exhausted.rate"/>
-        <query objectName="kafka.producer:type=producer-metrics,client-id=*" attribute="record-retry-rate" resultAlias="kafka-producer-%client-id%.record-retry.rate"/>
-        <query objectName="kafka.producer:type=producer-metrics,client-id=*" attribute="request-latency-avg" resultAlias="kafka-producer-%client-id%.request-latency.avg"/>
-        <query objectName="kafka.producer:type=producer-metrics,client-id=*" attribute="buffer-available-bytes" resultAlias="kafka-producer-%client-id%.buffer-bytes.available"/>
-        <query objectName="kafka.producer:type=producer-metrics,client-id=*" attribute="request-size-max" resultAlias="kafka-producer-%client-id%.request-size.max"/>
-        <query objectName="kafka.producer:type=producer-metrics,client-id=*" attribute="request-rate" resultAlias="kafka-producer-%client-id%.request.rate"/>
-        <query objectName="kafka.producer:type=producer-metrics,client-id=*" attribute="response-rate" resultAlias="kafka-producer-%client-id%.response.rate"/>
-        <query objectName="kafka.producer:type=producer-metrics,client-id=*" attribute="record-error-rate" resultAlias="kafka-producer-%client-id%.record-error.rate"/>
-        <query objectName="kafka.producer:type=producer-metrics,client-id=*" attribute="requests-in-flight" resultAlias="kafka-producer-%client-id%.request-in-flight.count"/>
-        <query objectName="kafka.producer:type=producer-metrics,client-id=*" attribute="batch-size-avg" resultAlias="kafka-producer-%client-id%.batch-size.avg"/>
-        <query objectName="metrics:name=kafka.produce.failure" attributes="OneMinuteRate" resultAlias="kafka-producer.failure.#attribute#"/>
+        <!--<query objectName="kafka.producer:type=producer-metrics,client-id=*" attribute="record-send-rate" resultAlias="kafka-producer-%client-id%.record-send.rate"/>-->
+        <!--<query objectName="kafka.producer:type=producer-metrics,client-id=*" attribute="buffer-exhausted-rate" resultAlias="kafka-producer-%client-id%.buffer-exhausted.rate"/>-->
+        <!--<query objectName="kafka.producer:type=producer-metrics,client-id=*" attribute="record-retry-rate" resultAlias="kafka-producer-%client-id%.record-retry.rate"/>-->
+        <!--<query objectName="kafka.producer:type=producer-metrics,client-id=*" attribute="request-latency-avg" resultAlias="kafka-producer-%client-id%.request-latency.avg"/>-->
+        <!--<query objectName="kafka.producer:type=producer-metrics,client-id=*" attribute="buffer-available-bytes" resultAlias="kafka-producer-%client-id%.buffer-bytes.available"/>-->
+        <!--<query objectName="kafka.producer:type=producer-metrics,client-id=*" attribute="request-size-max" resultAlias="kafka-producer-%client-id%.request-size.max"/>-->
+        <!--<query objectName="kafka.producer:type=producer-metrics,client-id=*" attribute="request-rate" resultAlias="kafka-producer-%client-id%.request.rate"/>-->
+        <!--<query objectName="kafka.producer:type=producer-metrics,client-id=*" attribute="response-rate" resultAlias="kafka-producer-%client-id%.response.rate"/>-->
+        <!--<query objectName="kafka.producer:type=producer-metrics,client-id=*" attribute="record-error-rate" resultAlias="kafka-producer-%client-id%.record-error.rate"/>-->
+        <!--<query objectName="kafka.producer:type=producer-metrics,client-id=*" attribute="requests-in-flight" resultAlias="kafka-producer-%client-id%.request-in-flight.count"/>-->
+        <!--<query objectName="kafka.producer:type=producer-metrics,client-id=*" attribute="batch-size-avg" resultAlias="kafka-producer-%client-id%.batch-size.avg"/>-->
+        <!--<query objectName="metrics:name=kafka.produce.failure" attributes="OneMinuteRate" resultAlias="kafka-producer.failure.#attribute#"/>-->
 
         <!-- kafka consumer metrics -->
         <query objectName="kafka.consumer:type=consumer-metrics,client-id=*" attribute="request-rate" resultAlias="kafka-consumer-%client-id%.request.rate"/>
@@ -51,5 +51,5 @@
         <!-- template used in influxdb : "haystack.* system.subsystem.application.host.class.measurement*" -->
         <namePrefix>haystack.traces.indexer.#hostname#.</namePrefix>
     </outputWriter>
-    <collectIntervalInSeconds>30</collectIntervalInSeconds>
+    <collectIntervalInSeconds>60</collectIntervalInSeconds>
 </jmxtrans-agent>

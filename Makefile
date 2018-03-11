@@ -6,7 +6,7 @@ clean:
 	mvn clean
 
 build: clean
-	mvn package
+	mvn --settings .travis/settings.xml package
 
 all: clean indexer reader report-coverage
 
@@ -20,10 +20,10 @@ reader: build_reader
 	cd reader && $(MAKE) integration_test
 
 build_reader:
-	mvn package -pl reader -am
+	mvn --settings .travis/settings.xml package -pl reader -am
 
 build_indexer:
-	mvn package -pl indexer -am
+	mvn --settings .travis/settings.xml package -pl indexer -am
 
 # build all and release
 release: all

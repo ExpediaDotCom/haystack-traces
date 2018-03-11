@@ -34,11 +34,9 @@ else
 fi
 
 #Clean up any artifacts with the original settings
-mvn clean
-#build and deploy
 echo "installing with custom settings.xml"
 
-mvn install deploy --settings .travis/settings.xml -Dgpg.skip=$SKIP_GPG_SIGN -DskipTests=true -B -U
+mvn deploy --settings .travis/settings.xml -Dgpg.skip=$SKIP_GPG_SIGN -DskipTests=true -B -U
 
 echo "successfully deployed the jars to nexus"
 

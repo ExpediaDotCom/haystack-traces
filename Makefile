@@ -6,12 +6,12 @@ clean:
 	mvn clean
 
 build: clean
-	mvn --settings .travis/settings.xml package
+	mvn package
 
 all: clean indexer reader report-coverage
 
 report-coverage:
-	docker run -it -v ~/.m2:/root/.m2 -w /src -v `pwd`:/src maven:3.5.0-jdk-8 mvn scoverage:report-only
+	docker run -it -v ~/.m2:/root/.m2 -w /src -v `pwd`:/src maven:3.5.0-jdk-8 /bin/sh -c 'mvn scoverage:report-only && mvn clean'
 
 indexer: build_indexer
 	cd indexer && $(MAKE) integration_test
@@ -20,14 +20,12 @@ reader: build_reader
 	cd reader && $(MAKE) integration_test
 
 build_reader:
-	mvn --settings .travis/settings.xml package -pl reader -am
+	mvn package -pl reader -am
 
 build_indexer:
-	mvn --settings .travis/settings.xml package -pl indexer -am
+	mvn package -pl indexer -am
 
 # build all and release
 release: all
-	cd indexer && $(MAKE) release
-	cd reader && $(MAKE) release
 	./.travis/deploy.sh
 

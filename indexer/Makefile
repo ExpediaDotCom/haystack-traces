@@ -11,7 +11,7 @@ prepare_integration_test_env: docker_build
 	docker-compose -f build/integration-tests/docker-compose.yml -p sandbox up -d
 
 	# cassandra takes time to start
-	sleep 30
+	sleep 10
 
 integration_test: prepare_integration_test_env
 	# run tests in a container so that we can join the docker-compose network and talk to kafka, elasticsearch and cassandra
@@ -22,7 +22,7 @@ integration_test: prepare_integration_test_env
 		-v ~/.m2:/root/.m2 \
 		-w /src \
 		maven:3.5.0-jdk-8 \
-		mvn --settings .travis/settings.xml scoverage:integration-check -pl indexer -am
+		mvn scoverage:integration-check -pl indexer -am
 
 	# stop all the containers
 	docker-compose -f build/integration-tests/docker-compose.yml -p sandbox stop

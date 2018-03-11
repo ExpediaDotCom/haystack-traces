@@ -6,8 +6,8 @@
         <server>
             <!-- Maven Central Deployment -->
             <id>ossrh</id>
-            <username>expedia-haystack-admin</username>
-            <password>Haystack@2017</password>
+            <username>${env.SONATYPE_USERNAME}</username>
+            <password>${env.SONATYPE_PASSWORD}</password>
         </server>
     </servers>
     <profiles>
@@ -17,8 +17,8 @@
                 <activeByDefault>true</activeByDefault>
             </activation>
             <properties>
-                <gpg.executable>gpg</gpg.executable>
-                <gpg.passphrase>Haystack@2017</gpg.passphrase>
+                <gpg.executable>${env.GPG_EXECUTABLE}</gpg.executable>
+                <gpg.passphrase>${env.GPG_PASSPHRASE}</gpg.passphrase>
             </properties>
         </profile>
     </profiles>

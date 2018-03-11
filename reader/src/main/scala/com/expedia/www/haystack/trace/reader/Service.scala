@@ -48,7 +48,11 @@ object Service extends MetricsSupport {
   private def startService(): Unit = {
     try {
       val config = new ProviderConfiguration
-      val store = new CassandraEsTraceStore(config.cassandraConfig, config.elasticSearchConfig, config.indexConfig)(executor)
+      val store = new CassandraEsTraceStore(
+        config.cassandraConfig,
+        config.elasticSearchConfig,
+        config.indexConfig,
+        config.cacheConfig)(executor)
 
       val serviceConfig = config.serviceConfig
 

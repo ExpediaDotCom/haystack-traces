@@ -18,7 +18,7 @@ package com.expedia.www.haystack.trace.reader.stores
 
 import com.expedia.open.tracing.api._
 import com.expedia.www.haystack.trace.commons.config.entities.{CassandraConfiguration, WhitelistIndexFieldConfiguration}
-import com.expedia.www.haystack.trace.reader.config.entities.ElasticSearchConfiguration
+import com.expedia.www.haystack.trace.reader.config.entities.{ElasticSearchConfiguration, FieldValuesCacheConfiguration}
 import com.expedia.www.haystack.trace.reader.metrics.{AppMetricNames, MetricsSupport}
 import com.expedia.www.haystack.trace.reader.stores.readers.cassandra.CassandraReader
 import com.expedia.www.haystack.trace.reader.stores.readers.es.ElasticSearchReader
@@ -34,8 +34,8 @@ import scala.util.{Failure, Success, Try}
 
 class CassandraEsTraceStore(cassandraConfiguration: CassandraConfiguration,
                             esConfiguration: ElasticSearchConfiguration,
-                            indexConfiguration: WhitelistIndexFieldConfiguration)
-                           (implicit val executor: ExecutionContextExecutor)
+                            indexConfiguration: WhitelistIndexFieldConfiguration,
+                            cacheConfiguration: FieldValuesCacheConfiguration)(implicit val executor: ExecutionContextExecutor)
   extends TraceStore with MetricsSupport {
   implicit val formats = DefaultFormats
 
@@ -53,6 +53,8 @@ class CassandraEsTraceStore(cassandraConfiguration: CassandraConfiguration,
 
   private val traceSearchQueryGenerator = new TraceSearchQueryGenerator(esConfiguration.indexNamePrefix, esConfiguration.indexType, ES_NESTED_DOC_NAME)
   private val fieldValuesQueryGenerator = new FieldValuesQueryGenerator(esConfiguration.indexNamePrefix, esConfiguration.indexType, ES_NESTED_DOC_NAME)
+
+  private val cache = new FieldValuesCache(cacheConfiguration, fieldValuesFromDatabase)(executor)
 
   override def searchTraces(request: TracesSearchRequest): Future[Seq[Trace]] = {
     esReader
@@ -108,6 +110,10 @@ class CassandraEsTraceStore(cassandraConfiguration: CassandraConfiguration,
   }
 
   override def getFieldValues(request: FieldValuesRequest): Future[Seq[String]] = {
+    cache.get(request)
+  }
+
+  private def fieldValuesFromDatabase(request: FieldValuesRequest): Future[Seq[String]] = {
     esReader
       .search(fieldValuesQueryGenerator.generate(request))
       .map(extractFieldValues(_, request.getFieldName.toLowerCase))

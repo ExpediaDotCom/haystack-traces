@@ -33,12 +33,7 @@ else
     echo "no travis tag is set, hence keeping the snapshot version in pom.xml"
 fi
 
-#Clean up any artifacts with the original settings
-mvn clean
-#build and deploy
-echo "installing with custom settings.xml"
-
-mvn install deploy --settings .travis/settings.xml -Dgpg.skip=$SKIP_GPG_SIGN -DskipTests=true -B -U
+mvn clean deploy --settings .travis/settings.xml -Dgpg.skip=$SKIP_GPG_SIGN -DskipTests=true -B -U
 
 echo "successfully deployed the jars to nexus"
 

@@ -11,7 +11,7 @@ build: clean
 all: clean indexer reader report-coverage
 
 report-coverage:
-	docker run -it -v ~/.m2:/root/.m2 -w /src -v `pwd`:/src maven:3.5.0-jdk-8 mvn scoverage:report-only
+	docker run -it -v ~/.m2:/root/.m2 -w /src -v `pwd`:/src maven:3.5.0-jdk-8 /bin/sh -c 'mvn scoverage:report-only && mvn clean'
 
 indexer: build_indexer
 	cd indexer && $(MAKE) integration_test

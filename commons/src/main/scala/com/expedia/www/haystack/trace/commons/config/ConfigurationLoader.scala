@@ -50,7 +50,8 @@ object ConfigurationLoader {
       case _ => loadFromEnv(sys.env, keysWithArrayValues).withFallback(baseConfig).resolve()
     }
 
-    LOGGER.info(config.root().render())
+    // In key-value pairs that contain 'password' in the key, replace the value with asterisks
+    LOGGER.info(config.root().render().replaceAll("(?i)(\\\".*password\\\"\\s*:\\s*)\\\".+\\\"", "$1********"))
 
     config
   }

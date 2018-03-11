@@ -19,7 +19,7 @@ package com.expedia.www.haystack.trace.commons.config
 
 import java.io.File
 
-import com.typesafe.config.{Config, ConfigFactory, ConfigValueType}
+import com.typesafe.config.{Config, ConfigFactory, ConfigRenderOptions, ConfigValueType}
 import org.apache.commons.lang3.StringUtils
 import org.slf4j.LoggerFactory
 
@@ -51,7 +51,9 @@ object ConfigurationLoader {
     }
 
     // In key-value pairs that contain 'password' in the key, replace the value with asterisks
-    LOGGER.info(config.root().render().replaceAll("(?i)(\\\".*password\\\"\\s*:\\s*)\\\".+\\\"", "$1********"))
+    LOGGER.info(config.root()
+      .render(ConfigRenderOptions.defaults().setOriginComments(false))
+      .replaceAll("(?i)(\\\".*password\\\"\\s*:\\s*)\\\".+\\\"", "$1********"))
 
     config
   }

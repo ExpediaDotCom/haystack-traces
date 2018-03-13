@@ -190,7 +190,6 @@ trait BaseIntegrationTestSpec extends FunSpec with GivenWhenThen with Matchers w
     import TraceIndexDoc._
     // create map using service, operation and tags
     val fieldMap = mutable.Map(
-      SPAN_ID_KEY_NAME -> spanId,
       SERVICE_KEY_NAME -> serviceName,
       OPERATION_KEY_NAME -> operationName,
       START_TIME_KEY_NAME -> (System.currentTimeMillis() * 1000)

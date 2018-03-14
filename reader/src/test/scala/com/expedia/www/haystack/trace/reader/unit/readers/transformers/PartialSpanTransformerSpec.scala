@@ -18,9 +18,14 @@ package com.expedia.www.haystack.trace.reader.unit.readers.transformers
 
 import com.expedia.open.tracing.{Log, Span, Tag}
 import com.expedia.www.haystack.trace.reader.readers.transformers.PartialSpanTransformer
+import com.expedia.www.haystack.trace.reader.readers.utils.AuxiliaryTags
+import com.expedia.www.haystack.trace.reader.readers.utils.TagExtractors._
 import com.expedia.www.haystack.trace.reader.unit.BaseUnitTestSpec
+import com.expedia.www.haystack.trace.reader.unit.readers.builders.ValidTraceBuilder
 
-class PartialSpanTransformerSpec extends BaseUnitTestSpec {
+import scala.collection.JavaConversions._
+
+class PartialSpanTransformerSpec extends BaseUnitTestSpec with ValidTraceBuilder {
 
   private def createSpansWithClientAndServer(timestamp: Long) = {
     val traceId = "traceId"
@@ -235,6 +240,24 @@ class PartialSpanTransformerSpec extends BaseUnitTestSpec {
 
       Then("return partial spans merged")
       mergedSpans.length should be(3)
+    }
+
+    it("should add auxiliary tags") {
+      Given("trace with partial spans")
+      val spans = buildMultiServiceTrace().getChildSpansList
+
+      When("invoking transform")
+      val mergedSpans = new PartialSpanTransformer().transform(spans.toList)
+
+      Then("return partial spans merged with auxiliary tags")
+      mergedSpans.size() should be(6)
+      val bSpan = getSpanById(mergedSpans, "b")
+      bSpan.getStartTime should be(startTimestamp + 20)
+      bSpan.getServiceName should be("x")
+
+      extractTagLongValue(bSpan, AuxiliaryTags.NETWORK_DELTA) should be(40)
+      extractTagStringValue(bSpan, AuxiliaryTags.CLIENT_SERVICE_NAME) should be("w")
+      extractTagStringValue(bSpan, AuxiliaryTags.SERVER_SERVICE_NAME) should be("x")
     }
   }
 }

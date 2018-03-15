@@ -23,7 +23,7 @@ import java.util.{Date, UUID}
 
 import com.datastax.driver.core.querybuilder.QueryBuilder
 import com.datastax.driver.core.{Cluster, ResultSet, Session, SimpleStatement}
-import com.expedia.open.tracing.Span
+import com.expedia.open.tracing.{Log, Span}
 import com.expedia.open.tracing.api.TraceReaderGrpc
 import com.expedia.open.tracing.api.TraceReaderGrpc.TraceReaderBlockingStub
 import com.expedia.open.tracing.buffer.SpanBuffer
@@ -31,6 +31,7 @@ import com.expedia.www.haystack.trace.commons.clients.cassandra.CassandraTableSc
 import com.expedia.www.haystack.trace.commons.clients.es.document.TraceIndexDoc
 import com.expedia.www.haystack.trace.commons.config.entities.{WhiteListIndexFields, WhitelistIndexField}
 import com.expedia.www.haystack.trace.reader.Service
+import com.expedia.www.haystack.trace.reader.unit.readers.builders.ValidTraceBuilder
 import io.grpc.ManagedChannelBuilder
 import io.searchbox.client.config.HttpClientConfig
 import io.searchbox.client.{JestClient, JestClientFactory}
@@ -39,10 +40,11 @@ import io.searchbox.indices.CreateIndex
 import org.json4s.DefaultFormats
 import org.json4s.jackson.Serialization
 import org.scalatest._
+
 import collection.JavaConverters._
 import scala.collection.mutable
 
-trait BaseIntegrationTestSpec extends FunSpec with GivenWhenThen with Matchers with BeforeAndAfterAll with BeforeAndAfterEach {
+trait BaseIntegrationTestSpec extends FunSpec with GivenWhenThen with Matchers with BeforeAndAfterAll with BeforeAndAfterEach with ValidTraceBuilder {
   protected implicit val formats = DefaultFormats
   protected var client: TraceReaderBlockingStub = _
 
@@ -225,8 +227,12 @@ trait BaseIntegrationTestSpec extends FunSpec with GivenWhenThen with Matchers w
                                      serviceName: String,
                                      operationName: String,
                                      tags: Map[String, String]): ResultSet = {
-    import CassandraTableSchema._
     val spanBuffer = createSpanBufferWithSingleSpan(traceId, spanId, serviceName, operationName, tags)
+    writeToCassandra(spanBuffer, traceId)
+  }
+
+  private def writeToCassandra(spanBuffer: SpanBuffer, traceId: String) = {
+    import CassandraTableSchema._
 
     cassandraSession.execute(QueryBuilder
       .insertInto(CASSANDRA_TABLE)
@@ -262,5 +268,16 @@ trait BaseIntegrationTestSpec extends FunSpec with GivenWhenThen with Matchers w
                                     operationName: String = "",
                                     tags: Map[String, String] = Map.empty): ResultSet = {
     insertTraceInCassandra(traceId, spanId, serviceName, operationName, tags)
+  }
+
+  protected def putTraceInCassandraWithPartialSpans(traceId: String): ResultSet = {
+    val trace = buildMultiServiceTrace()
+    val spanBuffer = SpanBuffer
+      .newBuilder()
+      .setTraceId(traceId)
+      .addAllChildSpans(trace.getChildSpansList)
+      .build()
+
+    writeToCassandra(spanBuffer, traceId)
   }
 }

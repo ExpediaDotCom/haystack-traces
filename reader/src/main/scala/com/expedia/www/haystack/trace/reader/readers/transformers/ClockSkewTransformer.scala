@@ -17,6 +17,7 @@
 package com.expedia.www.haystack.trace.reader.readers.transformers
 
 import com.expedia.open.tracing.Span
+import com.expedia.www.haystack.trace.reader.readers.utils.{PartialSpanMarkers, PartialSpanUtils}
 
 /**
   * Fixes clock skew between parent and child spans

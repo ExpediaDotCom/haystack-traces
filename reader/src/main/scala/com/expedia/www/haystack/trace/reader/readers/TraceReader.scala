@@ -22,6 +22,8 @@ import com.expedia.open.tracing.api.{FieldNames, _}
 import com.expedia.www.haystack.trace.reader.config.entities.{TraceTransformersConfiguration, TraceValidatorsConfiguration}
 import com.expedia.www.haystack.trace.reader.exceptions.SpanNotFoundException
 import com.expedia.www.haystack.trace.reader.metrics.MetricsSupport
+import com.expedia.www.haystack.trace.reader.readers.utils.{AuxiliaryTags, PartialSpanUtils}
+import com.expedia.www.haystack.trace.reader.readers.utils.TagExtractors._
 import com.expedia.www.haystack.trace.reader.stores.TraceStore
 import org.slf4j.{Logger, LoggerFactory}
 
@@ -105,5 +107,43 @@ class TraceReader(traceStore: TraceStore, validatorsConfig: TraceValidatorsConfi
           .newBuilder()
           .addAllValues(_)
           .build())
+  }
+
+  def getTraceCallGraph(request: TraceRequest): Future[TraceCallGraph] = {
+    traceStore
+      .getTrace(request.getTraceId)
+      .flatMap(process(_) match {
+        case Success(trace) => Future.successful(buildTraceCallGraph(trace))
+        case Failure(ex) => Future.failed(ex)
+      })
+  }
+
+  private def buildTraceCallGraph(trace: Trace): TraceCallGraph = {
+    val calls = trace.getChildSpansList
+      .filter(containsTag(_, AuxiliaryTags.IS_MERGED_SPAN))
+      .map(span => {
+        val from = CallNode.newBuilder()
+          .setServiceName(extractTagStringValue(span, AuxiliaryTags.CLIENT_SERVICE_NAME))
+          .setOperationName(extractTagStringValue(span, AuxiliaryTags.CLIENT_OPERATION_NAME))
+          .setInfrastructureProvider(extractTagStringValue(span, AuxiliaryTags.CLIENT_INFRASTRUCTURE_PROVIDER))
+          .setInfrastructureLocation(extractTagStringValue(span, AuxiliaryTags.CLIENT_INFRASTRUCTURE_LOCATION))
+          
+        val to = CallNode.newBuilder()
+          .setServiceName(extractTagStringValue(span, AuxiliaryTags.SERVER_SERVICE_NAME))
+          .setOperationName(extractTagStringValue(span, AuxiliaryTags.SERVER_OPERATION_NAME))
+          .setInfrastructureProvider(extractTagStringValue(span, AuxiliaryTags.SERVER_INFRASTRUCTURE_PROVIDER))
+          .setInfrastructureLocation(extractTagStringValue(span, AuxiliaryTags.SERVER_INFRASTRUCTURE_LOCATION))
+
+        Call.newBuilder()
+          .setFrom(from)
+          .setTo(to)
+          .setNetworkDelta(extractTagLongValue(span, AuxiliaryTags.NETWORK_DELTA))
+          .build()
+      })
+
+    TraceCallGraph
+      .newBuilder()
+      .addAllCalls(calls)
+      .build()
   }
 }

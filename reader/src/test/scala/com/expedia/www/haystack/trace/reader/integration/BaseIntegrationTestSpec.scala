@@ -292,7 +292,6 @@ trait BaseIntegrationTestSpec extends FunSpec with GivenWhenThen with Matchers w
         .newBuilder()
         .setTraceId(traceId)
         .setSpanId(parentSpanId)
-        .setOperationName("root")
         .setServiceName(clientServiceName)
         .setOperationName("root-op")
         .build())

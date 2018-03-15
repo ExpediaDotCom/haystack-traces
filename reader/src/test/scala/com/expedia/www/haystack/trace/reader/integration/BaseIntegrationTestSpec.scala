@@ -28,10 +28,10 @@ import com.expedia.open.tracing.api.TraceReaderGrpc
 import com.expedia.open.tracing.api.TraceReaderGrpc.TraceReaderBlockingStub
 import com.expedia.open.tracing.buffer.SpanBuffer
 import com.expedia.www.haystack.trace.commons.clients.cassandra.CassandraTableSchema
-import com.expedia.www.haystack.trace.commons.clients.cassandra.CassandraTableSchema.{ID_COLUMN_NAME, SPANS_COLUMN_NAME, TIMESTAMP_COLUMN_NAME}
 import com.expedia.www.haystack.trace.commons.clients.es.document.TraceIndexDoc
 import com.expedia.www.haystack.trace.commons.config.entities.{WhiteListIndexFields, WhitelistIndexField}
 import com.expedia.www.haystack.trace.reader.Service
+import com.expedia.www.haystack.trace.reader.unit.readers.builders.ValidTraceBuilder
 import io.grpc.ManagedChannelBuilder
 import io.searchbox.client.config.HttpClientConfig
 import io.searchbox.client.{JestClient, JestClientFactory}
@@ -44,7 +44,7 @@ import org.scalatest._
 import collection.JavaConverters._
 import scala.collection.mutable
 
-trait BaseIntegrationTestSpec extends FunSpec with GivenWhenThen with Matchers with BeforeAndAfterAll with BeforeAndAfterEach {
+trait BaseIntegrationTestSpec extends FunSpec with GivenWhenThen with Matchers with BeforeAndAfterAll with BeforeAndAfterEach with ValidTraceBuilder {
   protected implicit val formats = DefaultFormats
   protected var client: TraceReaderBlockingStub = _
 
@@ -270,49 +270,12 @@ trait BaseIntegrationTestSpec extends FunSpec with GivenWhenThen with Matchers w
     insertTraceInCassandra(traceId, spanId, serviceName, operationName, tags)
   }
 
-  protected def putTraceInCassandraWithPartialSpans(traceId: String,
-                                                    spanId: String = "partial-span",
-                                                    parentSpanId: String = "partial-span-parent",
-                                                    clientServiceName: String = "x",
-                                                    clientOperationName: String = "x-op",
-                                                    serverServiceName: String = "y",
-                                                    serverOperationName: String = "y-op"): ResultSet = {
-    val clientLogs = List(
-      Log.newBuilder().addFields(com.expedia.open.tracing.Tag.newBuilder().setKey("cs")).setTimestamp(0).build(),
-      Log.newBuilder().addFields(com.expedia.open.tracing.Tag.newBuilder().setKey("cr")).setTimestamp(1000).build())
-
-    val serverLogs = List(
-      Log.newBuilder().addFields(com.expedia.open.tracing.Tag.newBuilder().setKey("sr")).setTimestamp(100).build(),
-      Log.newBuilder().addFields(com.expedia.open.tracing.Tag.newBuilder().setKey("ss")).setTimestamp(900).build())
-
+  protected def putTraceInCassandraWithPartialSpans(traceId: String): ResultSet = {
+    val trace = buildMultiServiceTrace()
     val spanBuffer = SpanBuffer
       .newBuilder()
       .setTraceId(traceId)
-      .addChildSpans(Span
-        .newBuilder()
-        .setTraceId(traceId)
-        .setSpanId(parentSpanId)
-        .setServiceName(clientServiceName)
-        .setOperationName("root-op")
-        .build())
-      .addChildSpans(Span
-        .newBuilder()
-        .setTraceId(traceId)
-        .setSpanId(spanId)
-        .setParentSpanId(parentSpanId)
-        .setOperationName(clientOperationName)
-        .setServiceName(clientServiceName)
-        .addAllLogs(clientLogs.asJava)
-        .build())
-      .addChildSpans(Span
-        .newBuilder()
-        .setTraceId(traceId)
-        .setSpanId(spanId)
-        .setParentSpanId(parentSpanId)
-        .setOperationName(serverOperationName)
-        .setServiceName(serverServiceName)
-        .addAllLogs(serverLogs.asJava)
-        .build())
+      .addAllChildSpans(trace.getChildSpansList)
       .build()
 
     writeToCassandra(spanBuffer, traceId)

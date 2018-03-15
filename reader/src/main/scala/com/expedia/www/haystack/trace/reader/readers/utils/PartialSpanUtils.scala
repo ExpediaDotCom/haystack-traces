@@ -102,7 +102,7 @@ object PartialSpanUtils {
   private def auxiliaryCommonTags(clientSpan: Span, serverSpan: Span): List[Tag]  =
     List(
       buildBoolTag(AuxiliaryTags.IS_MERGED_SPAN, tagValue = true),
-      buildLongTag(AuxiliaryTags.NETWORK_DELTA, calculateNetworkDelta(clientSpan, serverSpan).getOrElse(-1)),
+      buildLongTag(AuxiliaryTags.NETWORK_DELTA, calculateNetworkDelta(clientSpan, serverSpan).getOrElse(-1))
     )
 
   private def auxiliaryClientTags(span: Span): List[Tag] =

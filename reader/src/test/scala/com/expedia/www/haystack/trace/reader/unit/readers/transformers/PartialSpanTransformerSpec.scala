@@ -209,7 +209,7 @@ class PartialSpanTransformerSpec extends BaseUnitTestSpec with ValidTraceBuilder
       Then("return partial spans merged with server span being primary")
       mergedSpans.length should be(1)
       mergedSpans.head.getStartTime should be(timestamp + 20)
-      mergedSpans.head.getTagsCount should be(2)
+      mergedSpans.head.getTagsCount should be(16)
       mergedSpans.head.getLogsCount should be(4)
       mergedSpans.head.getServiceName should be("serverService")
     }

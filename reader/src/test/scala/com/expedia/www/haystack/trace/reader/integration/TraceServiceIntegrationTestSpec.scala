@@ -315,4 +315,18 @@ class TraceServiceIntegrationTestSpec extends BaseIntegrationTestSpec {
       traces.getTracesList.exists(_.getTraceId == traceId) shouldBe false
     }
   }
+
+  describe("TraceReader.getTraceCallGraph") {
+    it("should get trace  for given traceID from cassandra") {
+      Given("trace in cassandra")
+      val traceId = UUID.randomUUID().toString
+      putTraceInCassandraWithPartialSpans(traceId)
+
+      When("getTrace is invoked")
+      val traceCallGraph = client.getTraceCallGraph(TraceRequest.newBuilder().setTraceId(traceId).build())
+
+      Then("should return the trace call graph")
+      traceCallGraph.getCallsCount should be(1)
+    }
+  }
 }

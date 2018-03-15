@@ -18,6 +18,7 @@ package com.expedia.www.haystack.trace.reader.readers.utils
 
 import com.expedia.open.tracing.{Span, Tag}
 import com.expedia.www.haystack.trace.reader.readers.utils.TagExtractors._
+import com.expedia.www.haystack.trace.reader.readers.utils.TagBuilders.{buildStringTag, _}
 
 import scala.collection.JavaConversions._
 
@@ -100,86 +101,30 @@ object PartialSpanUtils {
 
   private def auxiliaryCommonTags(clientSpan: Span, serverSpan: Span): List[Tag]  =
     List(
-      Tag.newBuilder()
-        .setKey(AuxiliaryTags.IS_MERGED_SPAN)
-        .setType(Tag.TagType.BOOL)
-        .setVBool(true)
-        .build(),
-      Tag.newBuilder()
-        .setKey(AuxiliaryTags.NETWORK_DELTA)
-        .setType(Tag.TagType.LONG)
-        .setVLong(calculateNetworkDelta(clientSpan, serverSpan).getOrElse(-1))
-        .build()
+      buildBoolTag(AuxiliaryTags.IS_MERGED_SPAN, tagValue = true),
+      buildLongTag(AuxiliaryTags.NETWORK_DELTA, calculateNetworkDelta(clientSpan, serverSpan).getOrElse(-1)),
     )
-
 
   private def auxiliaryClientTags(span: Span): List[Tag] =
     List(
-      Tag.newBuilder()
-        .setKey(AuxiliaryTags.CLIENT_SERVICE_NAME)
-        .setType(Tag.TagType.STRING)
-        .setVStr(span.getServiceName)
-        .build(),
-      Tag.newBuilder()
-        .setKey(AuxiliaryTags.CLIENT_OPERATION_NAME)
-        .setType(Tag.TagType.STRING)
-        .setVStr(span.getOperationName)
-        .build(),
-      Tag.newBuilder()
-        .setKey(AuxiliaryTags.CLIENT_INFRASTRUCTURE_PROVIDER)
-        .setType(Tag.TagType.STRING)
-        .setVStr(extractTagStringValue(span, AuxiliaryTags.INFRASTRUCTURE_PROVIDER))
-        .build(),
-      Tag.newBuilder()
-        .setKey(AuxiliaryTags.CLIENT_INFRASTRUCTURE_LOCATION)
-        .setType(Tag.TagType.STRING)
-        .setVStr(extractTagStringValue(span, AuxiliaryTags.INFRASTRUCTURE_LOCATION))
-        .build(),
-      Tag.newBuilder()
-        .setKey(AuxiliaryTags.CLIENT_START_TIME)
-        .setType(Tag.TagType.LONG)
-        .setVLong(span.getStartTime)
-        .build(),
-      Tag.newBuilder()
-        .setKey(AuxiliaryTags.CLIENT_DURATION)
-        .setType(Tag.TagType.LONG)
-        .setVLong(span.getDuration)
-        .build()
+      buildStringTag(AuxiliaryTags.CLIENT_SERVICE_NAME, span.getServiceName),
+      buildStringTag(AuxiliaryTags.CLIENT_OPERATION_NAME, span.getOperationName),
+      buildStringTag(AuxiliaryTags.CLIENT_INFRASTRUCTURE_PROVIDER, extractTagStringValue(span, AuxiliaryTags.INFRASTRUCTURE_PROVIDER)),
+      buildStringTag(AuxiliaryTags.CLIENT_INFRASTRUCTURE_LOCATION, extractTagStringValue(span, AuxiliaryTags.INFRASTRUCTURE_LOCATION)),
+      buildLongTag(AuxiliaryTags.CLIENT_START_TIME, span.getStartTime),
+      buildLongTag(AuxiliaryTags.CLIENT_DURATION, span.getDuration)
     )
-  
-  private def auxiliaryServerTags(span: Span): List[Tag] =
+
+  private def auxiliaryServerTags(span: Span): List[Tag] = {
     List(
-      Tag.newBuilder()
-        .setKey(AuxiliaryTags.SERVER_SERVICE_NAME)
-        .setType(Tag.TagType.STRING)
-        .setVStr(span.getServiceName)
-        .build(),
-      Tag.newBuilder()
-        .setKey(AuxiliaryTags.SERVER_OPERATION_NAME)
-        .setType(Tag.TagType.STRING)
-        .setVStr(span.getOperationName)
-        .build(),
-      Tag.newBuilder()
-        .setKey(AuxiliaryTags.SERVER_INFRASTRUCTURE_PROVIDER)
-        .setType(Tag.TagType.STRING)
-        .setVStr(extractTagStringValue(span, AuxiliaryTags.INFRASTRUCTURE_PROVIDER))
-        .build(),
-      Tag.newBuilder()
-        .setKey(AuxiliaryTags.SERVER_INFRASTRUCTURE_LOCATION)
-        .setType(Tag.TagType.STRING)
-        .setVStr(extractTagStringValue(span, AuxiliaryTags.INFRASTRUCTURE_LOCATION))
-        .build(),
-      Tag.newBuilder()
-        .setKey(AuxiliaryTags.SERVER_START_TIME)
-        .setType(Tag.TagType.LONG)
-        .setVLong(span.getStartTime)
-        .build(),
-      Tag.newBuilder()
-        .setKey(AuxiliaryTags.SERVER_DURATION)
-        .setType(Tag.TagType.LONG)
-        .setVLong(span.getDuration)
-        .build()
+      buildStringTag(AuxiliaryTags.SERVER_SERVICE_NAME, span.getServiceName),
+      buildStringTag(AuxiliaryTags.SERVER_OPERATION_NAME, span.getOperationName),
+      buildStringTag(AuxiliaryTags.SERVER_INFRASTRUCTURE_PROVIDER, extractTagStringValue(span, AuxiliaryTags.INFRASTRUCTURE_PROVIDER)),
+      buildStringTag(AuxiliaryTags.SERVER_INFRASTRUCTURE_LOCATION, extractTagStringValue(span, AuxiliaryTags.INFRASTRUCTURE_LOCATION)),
+      buildLongTag(AuxiliaryTags.SERVER_START_TIME, span.getStartTime),
+      buildLongTag(AuxiliaryTags.SERVER_DURATION, span.getDuration)
     )
+  }
 }
 
 

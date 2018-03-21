@@ -14,9 +14,11 @@
  *       limitations under the License.
  */
 
-package com.expedia.www.haystack.trace.reader.readers.transformers
+package com.expedia.www.haystack.trace.reader.readers.utils
 
-import com.expedia.open.tracing.Span
+import com.expedia.open.tracing.{Span, Tag}
+import com.expedia.www.haystack.trace.reader.readers.utils.TagExtractors._
+import com.expedia.www.haystack.trace.reader.readers.utils.TagBuilders.{buildStringTag, _}
 
 import scala.collection.JavaConversions._
 
@@ -32,7 +34,7 @@ object PartialSpanUtils {
         val clientSpan = if(serverSpan == first) second else first
         Some(Span
           .newBuilder(serverSpan)
-          .addAllTags(clientSpan.getTagsList)
+          .addAllTags(clientSpan.getTagsList ++ auxiliaryCommonTags(clientSpan, serverSpan) ++ auxiliaryClientTags(clientSpan) ++ auxiliaryServerTags(serverSpan))
           .clearLogs().addAllLogs(clientSpan.getLogsList ++ serverSpan.getLogsList sortBy (_.getTimestamp))
           .build())
       case _ => None
@@ -82,6 +84,46 @@ object PartialSpanUtils {
     Some(second)
   } else {
     if (containsServerLogTag(first) && containsClientLogTag(second)) Some(first) else None
+  }
+
+  // Network delta - difference between server and client duration
+  // calculate only if serverDuration is smaller then client
+  private def calculateNetworkDelta(clientSpan: Span, serverSpan: Span): Option[Long] = {
+    val clientDuration = PartialSpanUtils.getEventTimestamp(clientSpan, PartialSpanMarkers.CLIENT_RECV_EVENT) - PartialSpanUtils.getEventTimestamp(clientSpan, PartialSpanMarkers.CLIENT_SEND_EVENT)
+    val serverDuration = PartialSpanUtils.getEventTimestamp(serverSpan, PartialSpanMarkers.SERVER_SEND_EVENT) - PartialSpanUtils.getEventTimestamp(serverSpan, PartialSpanMarkers.SERVER_RECV_EVENT)
+
+    if (serverDuration < clientDuration) {
+      Some(clientDuration - serverDuration)
+    } else {
+      None
+    }
+  }
+
+  private def auxiliaryCommonTags(clientSpan: Span, serverSpan: Span): List[Tag]  =
+    List(
+      buildBoolTag(AuxiliaryTags.IS_MERGED_SPAN, tagValue = true),
+      buildLongTag(AuxiliaryTags.NETWORK_DELTA, calculateNetworkDelta(clientSpan, serverSpan).getOrElse(-1))
+    )
+
+  private def auxiliaryClientTags(span: Span): List[Tag] =
+    List(
+      buildStringTag(AuxiliaryTags.CLIENT_SERVICE_NAME, span.getServiceName),
+      buildStringTag(AuxiliaryTags.CLIENT_OPERATION_NAME, span.getOperationName),
+      buildStringTag(AuxiliaryTags.CLIENT_INFRASTRUCTURE_PROVIDER, extractTagStringValue(span, AuxiliaryTags.INFRASTRUCTURE_PROVIDER)),
+      buildStringTag(AuxiliaryTags.CLIENT_INFRASTRUCTURE_LOCATION, extractTagStringValue(span, AuxiliaryTags.INFRASTRUCTURE_LOCATION)),
+      buildLongTag(AuxiliaryTags.CLIENT_START_TIME, span.getStartTime),
+      buildLongTag(AuxiliaryTags.CLIENT_DURATION, span.getDuration)
+    )
+
+  private def auxiliaryServerTags(span: Span): List[Tag] = {
+    List(
+      buildStringTag(AuxiliaryTags.SERVER_SERVICE_NAME, span.getServiceName),
+      buildStringTag(AuxiliaryTags.SERVER_OPERATION_NAME, span.getOperationName),
+      buildStringTag(AuxiliaryTags.SERVER_INFRASTRUCTURE_PROVIDER, extractTagStringValue(span, AuxiliaryTags.INFRASTRUCTURE_PROVIDER)),
+      buildStringTag(AuxiliaryTags.SERVER_INFRASTRUCTURE_LOCATION, extractTagStringValue(span, AuxiliaryTags.INFRASTRUCTURE_LOCATION)),
+      buildLongTag(AuxiliaryTags.SERVER_START_TIME, span.getStartTime),
+      buildLongTag(AuxiliaryTags.SERVER_DURATION, span.getDuration)
+    )
   }
 }
 

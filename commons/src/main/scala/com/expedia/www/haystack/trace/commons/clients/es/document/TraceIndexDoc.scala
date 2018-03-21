@@ -14,7 +14,6 @@ object TraceIndexDoc {
   val OPERATION_KEY_NAME = "operationname"
   val DURATION_KEY_NAME = "duration"
   val START_TIME_KEY_NAME = "starttime"
-  val SPAN_ID_KEY_NAME = "spanid"
 }
 
 case class TraceIndexDoc(traceid: String, rootduration: Long, spans: Seq[mutable.Map[String, Any]]) {

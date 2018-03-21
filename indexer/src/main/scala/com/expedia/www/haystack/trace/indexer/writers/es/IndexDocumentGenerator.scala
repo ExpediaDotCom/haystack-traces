@@ -74,7 +74,6 @@ class IndexDocumentGenerator(config: WhitelistIndexFieldConfiguration) extends M
     }
 
     import com.expedia.www.haystack.trace.commons.clients.es.document.TraceIndexDoc._
-    spanIndexDoc.put(SPAN_ID_KEY_NAME, span.getSpanId)
     spanIndexDoc.put(SERVICE_KEY_NAME, span.getServiceName)
     spanIndexDoc.put(OPERATION_KEY_NAME, span.getOperationName)
     spanIndexDoc.put(DURATION_KEY_NAME, span.getDuration)

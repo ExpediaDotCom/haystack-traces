@@ -10,6 +10,7 @@ JAVA_OPTS="${JAVA_OPTS} \
 -XX:+UseParNewGC \
 -Xmx${JAVA_XMX} \
 -Xms${JAVA_XMS} \
+-XX:+ExitOnOutOfMemoryError \
 -Dapplication.name=${APP_NAME} \
 -Dapplication.home=${APP_HOME}"
 

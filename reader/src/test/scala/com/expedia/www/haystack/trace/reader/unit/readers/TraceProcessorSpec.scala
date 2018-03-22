@@ -31,10 +31,10 @@ class TraceProcessorSpec
       val processedTrace = processedTraceOption.get
 
       processedTrace.getChildSpansList.size() should be(4)
-      getSpan(processedTrace, "a").getStartTime should be(startTimestamp)
-      getSpan(processedTrace, "b").getStartTime should be(startTimestamp + 50)
-      getSpan(processedTrace, "c").getStartTime should be(startTimestamp + 550)
-      getSpan(processedTrace, "d").getStartTime should be(startTimestamp + 750)
+      getSpanById(processedTrace, "a").getStartTime should be(startTimestamp)
+      getSpanById(processedTrace, "b").getStartTime should be(startTimestamp + 50)
+      getSpanById(processedTrace, "c").getStartTime should be(startTimestamp + 550)
+      getSpanById(processedTrace, "d").getStartTime should be(startTimestamp + 750)
     }
 
     it("should reject a multi-root trace") {
@@ -60,20 +60,20 @@ class TraceProcessorSpec
       val processedTrace = processedTraceOption.get
 
       processedTrace.getChildSpansList.size() should be(5)
-      getSpan(processedTrace, "a").getStartTime should be(startTimestamp)
-      getSpan(processedTrace, "a").getServiceName should be("x")
+      getSpanById(processedTrace, "a").getStartTime should be(startTimestamp)
+      getSpanById(processedTrace, "a").getServiceName should be("x")
 
-      getSpan(processedTrace, "b").getStartTime should be(startTimestamp)
-      getSpan(processedTrace, "b").getServiceName should be("y")
+      getSpanById(processedTrace, "b").getStartTime should be(startTimestamp)
+      getSpanById(processedTrace, "b").getServiceName should be("y")
 
-      getSpan(processedTrace, "c").getStartTime should be(startTimestamp + 500)
-      getSpan(processedTrace, "c").getServiceName should be("x")
+      getSpanById(processedTrace, "c").getStartTime should be(startTimestamp + 500)
+      getSpanById(processedTrace, "c").getServiceName should be("x")
 
-      getSpan(processedTrace, "d").getStartTime should be(startTimestamp )
-      getSpan(processedTrace, "d").getServiceName should be("y")
+      getSpanById(processedTrace, "d").getStartTime should be(startTimestamp )
+      getSpanById(processedTrace, "d").getServiceName should be("y")
 
-      getSpan(processedTrace, "e").getStartTime should be(startTimestamp + 200)
-      getSpan(processedTrace, "e").getServiceName should be("y")
+      getSpanById(processedTrace, "e").getStartTime should be(startTimestamp + 200)
+      getSpanById(processedTrace, "e").getServiceName should be("y")
     }
 
     it("should successfully process a valid multi-service trace with positive clock skew") {
@@ -88,20 +88,20 @@ class TraceProcessorSpec
       val processedTrace = processedTraceOption.get
 
       processedTrace.getChildSpansList.size() should be(5)
-      getSpan(processedTrace, "a").getStartTime should be(startTimestamp)
-      getSpan(processedTrace, "a").getServiceName should be("x")
+      getSpanById(processedTrace, "a").getStartTime should be(startTimestamp)
+      getSpanById(processedTrace, "a").getServiceName should be("x")
 
-      getSpan(processedTrace, "b").getStartTime should be(startTimestamp)
-      getSpan(processedTrace, "b").getServiceName should be("y")
+      getSpanById(processedTrace, "b").getStartTime should be(startTimestamp)
+      getSpanById(processedTrace, "b").getServiceName should be("y")
 
-      getSpan(processedTrace, "c").getStartTime should be(startTimestamp + 500)
-      getSpan(processedTrace, "c").getServiceName should be("x")
+      getSpanById(processedTrace, "c").getStartTime should be(startTimestamp + 500)
+      getSpanById(processedTrace, "c").getServiceName should be("x")
 
-      getSpan(processedTrace, "d").getStartTime should be(startTimestamp )
-      getSpan(processedTrace, "d").getServiceName should be("y")
+      getSpanById(processedTrace, "d").getStartTime should be(startTimestamp )
+      getSpanById(processedTrace, "d").getServiceName should be("y")
 
-      getSpan(processedTrace, "e").getStartTime should be(startTimestamp + 200)
-      getSpan(processedTrace, "e").getServiceName should be("y")
+      getSpanById(processedTrace, "e").getStartTime should be(startTimestamp + 200)
+      getSpanById(processedTrace, "e").getServiceName should be("y")
     }
 
     it("should successfully process a valid multi-service trace with negative clock skew") {
@@ -116,20 +116,20 @@ class TraceProcessorSpec
       val processedTrace = processedTraceOption.get
 
       processedTrace.getChildSpansList.size() should be(5)
-      getSpan(processedTrace, "a").getStartTime should be(startTimestamp)
-      getSpan(processedTrace, "a").getServiceName should be("x")
+      getSpanById(processedTrace, "a").getStartTime should be(startTimestamp)
+      getSpanById(processedTrace, "a").getServiceName should be("x")
 
-      getSpan(processedTrace, "b").getStartTime should be(startTimestamp)
-      getSpan(processedTrace, "b").getServiceName should be("y")
+      getSpanById(processedTrace, "b").getStartTime should be(startTimestamp)
+      getSpanById(processedTrace, "b").getServiceName should be("y")
 
-      getSpan(processedTrace, "c").getStartTime should be(startTimestamp + 500)
-      getSpan(processedTrace, "c").getServiceName should be("x")
+      getSpanById(processedTrace, "c").getStartTime should be(startTimestamp + 500)
+      getSpanById(processedTrace, "c").getServiceName should be("x")
 
-      getSpan(processedTrace, "d").getStartTime should be(startTimestamp )
-      getSpan(processedTrace, "d").getServiceName should be("y")
+      getSpanById(processedTrace, "d").getStartTime should be(startTimestamp )
+      getSpanById(processedTrace, "d").getServiceName should be("y")
 
-      getSpan(processedTrace, "e").getStartTime should be(startTimestamp + 200)
-      getSpan(processedTrace, "e").getServiceName should be("y")
+      getSpanById(processedTrace, "e").getStartTime should be(startTimestamp + 200)
+      getSpanById(processedTrace, "e").getServiceName should be("y")
     }
 
     it("should successfully process a valid complex multi-service trace") {
@@ -144,23 +144,23 @@ class TraceProcessorSpec
       val processedTrace = processedTraceOption.get
 
       processedTrace.getChildSpansList.size() should be(6)
-      getSpan(processedTrace, "a").getStartTime should be(startTimestamp)
-      getSpan(processedTrace, "a").getServiceName should be("w")
+      getSpanById(processedTrace, "a").getStartTime should be(startTimestamp)
+      getSpanById(processedTrace, "a").getServiceName should be("w")
 
-      getSpan(processedTrace, "b").getStartTime should be(startTimestamp + 20)
-      getSpan(processedTrace, "b").getServiceName should be("x")
+      getSpanById(processedTrace, "b").getStartTime should be(startTimestamp + 20)
+      getSpanById(processedTrace, "b").getServiceName should be("x")
 
-      getSpan(processedTrace, "c").getStartTime should be(startTimestamp + 520)
-      getSpan(processedTrace, "c").getServiceName should be("y")
+      getSpanById(processedTrace, "c").getStartTime should be(startTimestamp + 520)
+      getSpanById(processedTrace, "c").getServiceName should be("y")
 
-      getSpan(processedTrace, "d").getStartTime should be(startTimestamp + 20)
-      getSpan(processedTrace, "d").getServiceName should be("x")
+      getSpanById(processedTrace, "d").getStartTime should be(startTimestamp + 20)
+      getSpanById(processedTrace, "d").getServiceName should be("x")
 
-      getSpan(processedTrace, "e").getStartTime should be(startTimestamp + 20)
-      getSpan(processedTrace, "e").getServiceName should be("x")
+      getSpanById(processedTrace, "e").getStartTime should be(startTimestamp + 20)
+      getSpanById(processedTrace, "e").getServiceName should be("x")
 
-      getSpan(processedTrace, "f").getStartTime should be(startTimestamp + 540)
-      getSpan(processedTrace, "f").getServiceName should be("z")
+      getSpanById(processedTrace, "f").getStartTime should be(startTimestamp + 540)
+      getSpanById(processedTrace, "f").getServiceName should be("z")
     }
   }
 
@@ -182,10 +182,10 @@ class TraceProcessorSpec
       val processedTrace = processedTraceOption.get
 
       processedTrace.getChildSpansList.size() should be(4)
-      getSpan(processedTrace, "a").getStartTime should be(startTimestamp)
-      getSpan(processedTrace, "b").getStartTime should be(startTimestamp + 50)
-      getSpan(processedTrace, "c").getStartTime should be(startTimestamp + 550)
-      getSpan(processedTrace, "d").getStartTime should be(startTimestamp + 750)
+      getSpanById(processedTrace, "a").getStartTime should be(startTimestamp)
+      getSpanById(processedTrace, "b").getStartTime should be(startTimestamp + 50)
+      getSpanById(processedTrace, "c").getStartTime should be(startTimestamp + 550)
+      getSpanById(processedTrace, "d").getStartTime should be(startTimestamp + 750)
     }
 
     it("should successfully process a multi-root trace") {
@@ -200,10 +200,10 @@ class TraceProcessorSpec
       val processedTrace = processedTraceOption.get
 
       processedTrace.getChildSpansList.size() should be(4)
-      getSpan(processedTrace, "a").getServiceName should be("x")
-      getSpan(processedTrace, "b").getParentSpanId should be("a")
-      getSpan(processedTrace, "c").getParentSpanId should be("b")
-      getSpan(processedTrace, "d").getParentSpanId should be("b")
+      getSpanById(processedTrace, "a").getServiceName should be("x")
+      getSpanById(processedTrace, "b").getParentSpanId should be("a")
+      getSpanById(processedTrace, "c").getParentSpanId should be("b")
+      getSpanById(processedTrace, "d").getParentSpanId should be("b")
     }
 
     it("should successfully process a valid multi-service trace without clock skew") {
@@ -218,20 +218,20 @@ class TraceProcessorSpec
       val processedTrace = processedTraceOption.get
 
       processedTrace.getChildSpansList.size() should be(5)
-      getSpan(processedTrace, "a").getStartTime should be(startTimestamp)
-      getSpan(processedTrace, "a").getServiceName should be("x")
+      getSpanById(processedTrace, "a").getStartTime should be(startTimestamp)
+      getSpanById(processedTrace, "a").getServiceName should be("x")
 
-      getSpan(processedTrace, "b").getStartTime should be(startTimestamp)
-      getSpan(processedTrace, "b").getServiceName should be("y")
+      getSpanById(processedTrace, "b").getStartTime should be(startTimestamp)
+      getSpanById(processedTrace, "b").getServiceName should be("y")
 
-      getSpan(processedTrace, "c").getStartTime should be(startTimestamp + 500)
-      getSpan(processedTrace, "c").getServiceName should be("x")
+      getSpanById(processedTrace, "c").getStartTime should be(startTimestamp + 500)
+      getSpanById(processedTrace, "c").getServiceName should be("x")
 
-      getSpan(processedTrace, "d").getStartTime should be(startTimestamp )
-      getSpan(processedTrace, "d").getServiceName should be("y")
+      getSpanById(processedTrace, "d").getStartTime should be(startTimestamp )
+      getSpanById(processedTrace, "d").getServiceName should be("y")
 
-      getSpan(processedTrace, "e").getStartTime should be(startTimestamp + 200)
-      getSpan(processedTrace, "e").getServiceName should be("y")
+      getSpanById(processedTrace, "e").getStartTime should be(startTimestamp + 200)
+      getSpanById(processedTrace, "e").getServiceName should be("y")
     }
 
     it("should successfully process a valid multi-service trace with positive clock skew") {
@@ -246,20 +246,20 @@ class TraceProcessorSpec
       val processedTrace = processedTraceOption.get
 
       processedTrace.getChildSpansList.size() should be(5)
-      getSpan(processedTrace, "a").getStartTime should be(startTimestamp)
-      getSpan(processedTrace, "a").getServiceName should be("x")
+      getSpanById(processedTrace, "a").getStartTime should be(startTimestamp)
+      getSpanById(processedTrace, "a").getServiceName should be("x")
 
-      getSpan(processedTrace, "b").getStartTime should be(startTimestamp)
-      getSpan(processedTrace, "b").getServiceName should be("y")
+      getSpanById(processedTrace, "b").getStartTime should be(startTimestamp)
+      getSpanById(processedTrace, "b").getServiceName should be("y")
 
-      getSpan(processedTrace, "c").getStartTime should be(startTimestamp + 500)
-      getSpan(processedTrace, "c").getServiceName should be("x")
+      getSpanById(processedTrace, "c").getStartTime should be(startTimestamp + 500)
+      getSpanById(processedTrace, "c").getServiceName should be("x")
 
-      getSpan(processedTrace, "d").getStartTime should be(startTimestamp )
-      getSpan(processedTrace, "d").getServiceName should be("y")
+      getSpanById(processedTrace, "d").getStartTime should be(startTimestamp )
+      getSpanById(processedTrace, "d").getServiceName should be("y")
 
-      getSpan(processedTrace, "e").getStartTime should be(startTimestamp + 200)
-      getSpan(processedTrace, "e").getServiceName should be("y")
+      getSpanById(processedTrace, "e").getStartTime should be(startTimestamp + 200)
+      getSpanById(processedTrace, "e").getServiceName should be("y")
     }
 
     it("should successfully process a valid multi-service trace with negative clock skew") {
@@ -274,20 +274,20 @@ class TraceProcessorSpec
       val processedTrace = processedTraceOption.get
 
       processedTrace.getChildSpansList.size() should be(5)
-      getSpan(processedTrace, "a").getStartTime should be(startTimestamp)
-      getSpan(processedTrace, "a").getServiceName should be("x")
+      getSpanById(processedTrace, "a").getStartTime should be(startTimestamp)
+      getSpanById(processedTrace, "a").getServiceName should be("x")
 
-      getSpan(processedTrace, "b").getStartTime should be(startTimestamp)
-      getSpan(processedTrace, "b").getServiceName should be("y")
+      getSpanById(processedTrace, "b").getStartTime should be(startTimestamp)
+      getSpanById(processedTrace, "b").getServiceName should be("y")
 
-      getSpan(processedTrace, "c").getStartTime should be(startTimestamp + 500)
-      getSpan(processedTrace, "c").getServiceName should be("x")
+      getSpanById(processedTrace, "c").getStartTime should be(startTimestamp + 500)
+      getSpanById(processedTrace, "c").getServiceName should be("x")
 
-      getSpan(processedTrace, "d").getStartTime should be(startTimestamp )
-      getSpan(processedTrace, "d").getServiceName should be("y")
+      getSpanById(processedTrace, "d").getStartTime should be(startTimestamp )
+      getSpanById(processedTrace, "d").getServiceName should be("y")
 
-      getSpan(processedTrace, "e").getStartTime should be(startTimestamp + 200)
-      getSpan(processedTrace, "e").getServiceName should be("y")
+      getSpanById(processedTrace, "e").getStartTime should be(startTimestamp + 200)
+      getSpanById(processedTrace, "e").getServiceName should be("y")
     }
 
     it("should successfully process a valid complex multi-service trace") {
@@ -302,23 +302,23 @@ class TraceProcessorSpec
       val processedTrace = processedTraceOption.get
 
       processedTrace.getChildSpansList.size() should be(6)
-      getSpan(processedTrace, "a").getStartTime should be(startTimestamp)
-      getSpan(processedTrace, "a").getServiceName should be("w")
+      getSpanById(processedTrace, "a").getStartTime should be(startTimestamp)
+      getSpanById(processedTrace, "a").getServiceName should be("w")
 
-      getSpan(processedTrace, "b").getStartTime should be(startTimestamp + 20)
-      getSpan(processedTrace, "b").getServiceName should be("x")
+      getSpanById(processedTrace, "b").getStartTime should be(startTimestamp + 20)
+      getSpanById(processedTrace, "b").getServiceName should be("x")
 
-      getSpan(processedTrace, "c").getStartTime should be(startTimestamp + 520)
-      getSpan(processedTrace, "c").getServiceName should be("y")
+      getSpanById(processedTrace, "c").getStartTime should be(startTimestamp + 520)
+      getSpanById(processedTrace, "c").getServiceName should be("y")
 
-      getSpan(processedTrace, "d").getStartTime should be(startTimestamp + 20)
-      getSpan(processedTrace, "d").getServiceName should be("x")
+      getSpanById(processedTrace, "d").getStartTime should be(startTimestamp + 20)
+      getSpanById(processedTrace, "d").getServiceName should be("x")
 
-      getSpan(processedTrace, "e").getStartTime should be(startTimestamp + 20)
-      getSpan(processedTrace, "e").getServiceName should be("x")
+      getSpanById(processedTrace, "e").getStartTime should be(startTimestamp + 20)
+      getSpanById(processedTrace, "e").getServiceName should be("x")
 
-      getSpan(processedTrace, "f").getStartTime should be(startTimestamp + 540)
-      getSpan(processedTrace, "f").getServiceName should be("z")
+      getSpanById(processedTrace, "f").getStartTime should be(startTimestamp + 540)
+      getSpanById(processedTrace, "f").getServiceName should be("z")
     }
   }
 }

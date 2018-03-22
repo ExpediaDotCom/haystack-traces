@@ -36,6 +36,7 @@ class TraceService(traceStore: TraceStore,
   private val handleSearchResponse = new GrpcHandler(TraceReaderGrpc.METHOD_SEARCH_TRACES.getFullMethodName)
   private val handleFieldNamesResponse = new GrpcHandler(TraceReaderGrpc.METHOD_GET_FIELD_NAMES.getFullMethodName)
   private val handleFieldValuesResponse = new GrpcHandler(TraceReaderGrpc.METHOD_GET_FIELD_VALUES.getFullMethodName)
+  private val handleTraceCallGraphResponse = new GrpcHandler(TraceReaderGrpc.METHOD_GET_TRACE_CALL_GRAPH.getFullMethodName)
   private val traceReader = new TraceReader(traceStore, validatorsConfig, transformersConfig)
 
   /**
@@ -108,6 +109,12 @@ class TraceService(traceStore: TraceStore,
   override def getFieldValues(request: FieldValuesRequest, responseObserver: StreamObserver[FieldValues]): Unit = {
     handleFieldValuesResponse.handle(request, responseObserver) {
       traceReader.getFieldValues(request)
+    }
+  }
+
+  override def getTraceCallGraph(request: TraceRequest, responseObserver: StreamObserver[TraceCallGraph]): Unit = {
+    handleTraceCallGraphResponse.handle(request, responseObserver) {
+      traceReader.getTraceCallGraph(request)
     }
   }
 }

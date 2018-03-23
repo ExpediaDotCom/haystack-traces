@@ -32,7 +32,13 @@ class ConfigurationReloadElasticSearchProvider(reloadConfig: ReloadConfiguration
 
   private val esClient: JestClient = {
     val factory = new JestClientFactory()
-    factory.setHttpClientConfig(new HttpClientConfig.Builder(reloadConfig.configStoreEndpoint).multiThreaded(false).build())
+    val builder = new HttpClientConfig.Builder(reloadConfig.configStoreEndpoint).multiThreaded(false)
+
+    if (reloadConfig.username.isDefined && reloadConfig.password.isDefined){
+      builder.defaultCredentials(reloadConfig.username.get, reloadConfig.password.get)
+    }
+
+    factory.setHttpClientConfig(builder.build())
     factory.getObject
   }
 

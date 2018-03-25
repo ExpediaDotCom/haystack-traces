@@ -23,10 +23,6 @@ prepare_integration_test_env: docker_build
 		node:alpine \
 		/bin/sh -c 'npm install && node create-cassandra-table.js'
 
-clean_docker_compose: docker-compose -f build/integration-tests/docker-compose.yml -p sandbox stop
-	docker rm $(shell docker ps -a -q)
-	docker volume rm $(shell docker volume ls -q)
-
 integration_test: prepare_integration_test_env
 	# run tests in a separate container and join the docker-compose network
 	docker run \
@@ -38,7 +34,9 @@ integration_test: prepare_integration_test_env
 		maven:3.5.0-jdk-8 \
 		mvn scoverage:integration-check -pl reader -am
 
-	clean_docker_compose
+	docker-compose -f build/integration-tests/docker-compose.yml -p sandbox stop
+	docker rm $(shell docker ps -a -q)
+	docker volume rm $(shell docker volume ls -q)
 
 release:
 	../scripts/publish-to-docker-hub.sh

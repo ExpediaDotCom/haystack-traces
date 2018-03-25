@@ -31,5 +31,7 @@ import com.expedia.www.haystack.trace.commons.config.reload.Reloadable
 case class ReloadConfiguration(configStoreEndpoint: String,
                                databaseName: String,
                                reloadIntervalInMillis: Int,
+                               username: Option[String],
+                               password: Option[String],
                                observers: Seq[Reloadable],
                                loadOnStartup: Boolean = true)

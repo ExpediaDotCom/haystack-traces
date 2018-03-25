@@ -18,8 +18,8 @@
 package com.expedia.www.haystack.trace.indexer.config.entities
 
 import com.datastax.driver.core.ConsistencyLevel
+import com.expedia.www.haystack.commons.retries.RetryOperation
 import com.expedia.www.haystack.trace.commons.config.entities.CassandraConfiguration
-import com.expedia.www.haystack.trace.commons.retries.RetryOperation
 
 /**
   * @param consistencyLevel: consistency level of writes

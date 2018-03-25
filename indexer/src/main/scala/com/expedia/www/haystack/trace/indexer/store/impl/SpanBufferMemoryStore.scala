@@ -23,8 +23,8 @@ import java.util.concurrent.atomic.AtomicInteger
 import com.codahale.metrics.Meter
 import com.expedia.open.tracing.Span
 import com.expedia.open.tracing.buffer.SpanBuffer
+import com.expedia.www.haystack.commons.metrics.MetricsSupport
 import com.expedia.www.haystack.trace.indexer.metrics.AppMetricNames._
-import com.expedia.www.haystack.trace.indexer.metrics.MetricsSupport
 import com.expedia.www.haystack.trace.indexer.store.DynamicCacheSizer
 import com.expedia.www.haystack.trace.indexer.store.data.model.SpanBufferWithMetadata
 import com.expedia.www.haystack.trace.indexer.store.traits.{CacheSizeObserver, EldestBufferedSpanEvictionListener, SpanBufferKeyValueStore}

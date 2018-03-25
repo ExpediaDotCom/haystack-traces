@@ -4,7 +4,7 @@ import java.util
 import java.util.Collections
 
 import com.codahale.metrics.Timer
-import com.expedia.www.haystack.trace.commons.retries.RetryOperation
+import com.expedia.www.haystack.commons.retries.RetryOperation
 import com.expedia.www.haystack.trace.indexer.writers.es.TraceIndexResultHandler
 import com.google.gson.Gson
 import io.searchbox.core.BulkResult

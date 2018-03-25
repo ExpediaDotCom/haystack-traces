@@ -17,8 +17,8 @@
 
 package com.expedia.www.haystack.trace.commons.config.reload
 
+import com.expedia.www.haystack.commons.retries.RetryOperation
 import com.expedia.www.haystack.trace.commons.config.entities.ReloadConfiguration
-import com.expedia.www.haystack.trace.commons.retries.RetryOperation
 import io.searchbox.client.config.HttpClientConfig
 import io.searchbox.client.{JestClient, JestClientFactory}
 import io.searchbox.core.Search

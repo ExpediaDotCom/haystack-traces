@@ -21,7 +21,8 @@ import java.util.Properties
 
 import com.codahale.metrics.Meter
 import com.expedia.open.tracing.buffer.SpanBuffer
-import com.expedia.www.haystack.trace.indexer.metrics.{AppMetricNames, MetricsSupport}
+import com.expedia.www.haystack.commons.metrics.MetricsSupport
+import com.expedia.www.haystack.trace.indexer.metrics.AppMetricNames
 import com.expedia.www.haystack.trace.indexer.writers.TraceWriter
 import org.apache.kafka.clients.producer._
 import org.slf4j.LoggerFactory

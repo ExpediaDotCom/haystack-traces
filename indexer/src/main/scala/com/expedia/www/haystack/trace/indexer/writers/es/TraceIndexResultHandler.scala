@@ -18,8 +18,9 @@
 package com.expedia.www.haystack.trace.indexer.writers.es
 
 import com.codahale.metrics.{Meter, Timer}
-import com.expedia.www.haystack.trace.commons.retries.RetryOperation
-import com.expedia.www.haystack.trace.indexer.metrics.{AppMetricNames, MetricsSupport}
+import com.expedia.www.haystack.commons.metrics.MetricsSupport
+import com.expedia.www.haystack.commons.retries.RetryOperation
+import com.expedia.www.haystack.trace.indexer.metrics.AppMetricNames
 import io.searchbox.client.JestResultHandler
 import io.searchbox.core.BulkResult
 import org.slf4j.{Logger, LoggerFactory}

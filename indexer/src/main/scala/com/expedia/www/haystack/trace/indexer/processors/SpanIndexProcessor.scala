@@ -20,9 +20,9 @@ package com.expedia.www.haystack.trace.indexer.processors
 import com.codahale.metrics.{Histogram, Timer}
 import com.expedia.open.tracing.Span
 import com.expedia.open.tracing.buffer.SpanBuffer
+import com.expedia.www.haystack.commons.metrics.MetricsSupport
 import com.expedia.www.haystack.trace.indexer.config.entities.SpanAccumulatorConfiguration
 import com.expedia.www.haystack.trace.indexer.metrics.AppMetricNames.{BUFFERED_SPANS_COUNT, PROCESS_TIMER}
-import com.expedia.www.haystack.trace.indexer.metrics.MetricsSupport
 import com.expedia.www.haystack.trace.indexer.store.SpanBufferMemoryStoreSupplier
 import com.expedia.www.haystack.trace.indexer.store.data.model.SpanBufferWithMetadata
 import com.expedia.www.haystack.trace.indexer.store.traits.{EldestBufferedSpanEvictionListener, SpanBufferKeyValueStore}

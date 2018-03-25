@@ -21,10 +21,11 @@ import java.util.concurrent.Semaphore
 import java.util.{Calendar, Locale}
 
 import com.expedia.open.tracing.buffer.SpanBuffer
+import com.expedia.www.haystack.commons.metrics.MetricsSupport
+import com.expedia.www.haystack.commons.retries.RetryOperation._
 import com.expedia.www.haystack.trace.commons.config.entities.WhitelistIndexFieldConfiguration
-import com.expedia.www.haystack.trace.commons.retries.RetryOperation._
 import com.expedia.www.haystack.trace.indexer.config.entities.ElasticSearchConfiguration
-import com.expedia.www.haystack.trace.indexer.metrics.{AppMetricNames, MetricsSupport}
+import com.expedia.www.haystack.trace.indexer.metrics.AppMetricNames
 import com.expedia.www.haystack.trace.indexer.writers.TraceWriter
 import io.searchbox.client.config.HttpClientConfig
 import io.searchbox.client.{JestClient, JestClientFactory}

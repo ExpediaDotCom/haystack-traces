@@ -20,8 +20,8 @@ package com.expedia.www.haystack.trace.indexer.integration.clients
 import java.text.SimpleDateFormat
 import java.util.Date
 
+import com.expedia.www.haystack.commons.retries.RetryOperation
 import com.expedia.www.haystack.trace.commons.config.entities.{WhiteListIndexFields, WhitelistIndexField, WhitelistIndexFieldConfiguration}
-import com.expedia.www.haystack.trace.commons.retries.RetryOperation
 import com.expedia.www.haystack.trace.indexer.config.entities.ElasticSearchConfiguration
 import io.searchbox.client.config.HttpClientConfig
 import io.searchbox.client.{JestClient, JestClientFactory}

@@ -20,11 +20,10 @@ package com.expedia.www.haystack.trace.indexer.config
 import java.util.Properties
 
 import com.datastax.driver.core.ConsistencyLevel
-import com.datastax.driver.core.exceptions.DriverException
-import com.expedia.www.haystack.trace.commons.config.ConfigurationLoader
+import com.expedia.www.haystack.commons.config.ConfigurationLoader
+import com.expedia.www.haystack.commons.retries.RetryOperation
 import com.expedia.www.haystack.trace.commons.config.entities._
 import com.expedia.www.haystack.trace.commons.config.reload.{ConfigurationReloadElasticSearchProvider, Reloadable}
-import com.expedia.www.haystack.trace.commons.retries.RetryOperation
 import com.expedia.www.haystack.trace.indexer.config.entities._
 import com.expedia.www.haystack.trace.indexer.serde.SpanDeserializer
 import com.typesafe.config.Config
@@ -37,7 +36,7 @@ import scala.collection.JavaConversions._
 import scala.util.Try
 
 class ProjectConfiguration extends AutoCloseable {
-  private val config = ConfigurationLoader.loadAppConfig
+  private val config = ConfigurationLoader.loadConfigFileWithEnvOverrides()
 
   val healthStatusFilePath: String = config.getString("health.status.path")
 

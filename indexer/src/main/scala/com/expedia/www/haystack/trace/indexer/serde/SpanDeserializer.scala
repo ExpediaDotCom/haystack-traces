@@ -20,7 +20,8 @@ package com.expedia.www.haystack.trace.indexer.serde
 import java.util
 
 import com.expedia.open.tracing.Span
-import com.expedia.www.haystack.trace.indexer.metrics.{AppMetricNames, MetricsSupport}
+import com.expedia.www.haystack.commons.metrics.MetricsSupport
+import com.expedia.www.haystack.trace.indexer.metrics.AppMetricNames
 import org.apache.kafka.common.serialization.Deserializer
 
 class SpanDeserializer extends Deserializer[Span] with MetricsSupport {

@@ -19,7 +19,7 @@ package com.expedia.www.haystack.trace.reader
 import java.io.File
 
 import com.codahale.metrics.JmxReporter
-import com.expedia.www.haystack.trace.commons.logger.LoggerUtils
+import com.expedia.www.haystack.commons.logger.LoggerUtils
 import com.expedia.www.haystack.trace.reader.config.ProviderConfiguration
 import com.expedia.www.haystack.trace.reader.metrics.MetricsSupport
 import com.expedia.www.haystack.trace.reader.services.TraceService
@@ -31,7 +31,7 @@ object Service extends MetricsSupport {
   private val LOGGER: Logger = LoggerFactory.getLogger("TraceReader")
 
   // primary executor for service's async tasks
-  implicit private val executor = scala.concurrent.ExecutionContext.Implicits.global
+  implicit private val executor = scala.concurrent.ExecutionContext.global
 
   def main(args: Array[String]): Unit = {
     startJmxReporter()

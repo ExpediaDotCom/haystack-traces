@@ -19,10 +19,10 @@ package com.expedia.www.haystack.trace.indexer.writers.es
 
 import com.expedia.open.tracing.buffer.SpanBuffer
 import com.expedia.open.tracing.{Span, Tag}
+import com.expedia.www.haystack.commons.metrics.MetricsSupport
 import com.expedia.www.haystack.trace.commons.clients.es.document.TraceIndexDoc
 import com.expedia.www.haystack.trace.commons.clients.es.document.TraceIndexDoc.TagValue
 import com.expedia.www.haystack.trace.commons.config.entities.WhitelistIndexFieldConfiguration
-import com.expedia.www.haystack.trace.indexer.metrics.MetricsSupport
 import org.apache.commons.lang3.StringUtils
 
 import scala.collection.JavaConversions._

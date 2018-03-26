@@ -22,7 +22,7 @@ import java.util.Collections
 
 import com.codahale.metrics.Timer
 import com.datastax.driver.core.{ExecutionInfo, ResultSet, ResultSetFuture}
-import com.expedia.www.haystack.trace.commons.retries.RetryOperation
+import com.expedia.www.haystack.commons.retries.RetryOperation
 import com.expedia.www.haystack.trace.indexer.writers.cassandra.CassandraWriteResultListener
 import org.easymock.EasyMock.anyObject
 import org.scalatest.easymock.EasyMockSugar

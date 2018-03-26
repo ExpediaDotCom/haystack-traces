@@ -34,7 +34,7 @@ import org.easymock.EasyMock._
 import scala.collection.mutable
 
 class SpanIndexProcessorSpec extends FunSpec with Matchers with EasyMockSugar {
-  implicit val executor = scala.concurrent.ExecutionContext.Implicits.global
+  implicit val executor = scala.concurrent.ExecutionContext.global
 
   private val TRACE_ID = "traceid"
   private val startRecordTimestamp = System.currentTimeMillis()

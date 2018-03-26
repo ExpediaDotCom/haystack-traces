@@ -24,7 +24,7 @@ integration_test: prepare_integration_test_env
 		maven:3.5.0-jdk-8 \
 		mvn scoverage:integration-check -pl indexer -am
 
-	# stop all the containers
+	# clean up the docker
 	docker-compose -f build/integration-tests/docker-compose.yml -p sandbox stop
 	docker rm $(shell docker ps -a -q)
 	docker volume rm $(shell docker volume ls -q)

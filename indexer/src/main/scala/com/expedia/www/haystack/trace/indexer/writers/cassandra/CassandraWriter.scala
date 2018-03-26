@@ -20,10 +20,11 @@ package com.expedia.www.haystack.trace.indexer.writers.cassandra
 import java.util.concurrent.Semaphore
 
 import com.expedia.open.tracing.buffer.SpanBuffer
+import com.expedia.www.haystack.commons.metrics.MetricsSupport
+import com.expedia.www.haystack.commons.retries.RetryOperation._
 import com.expedia.www.haystack.trace.commons.clients.cassandra.{CassandraClusterFactory, CassandraSession}
-import com.expedia.www.haystack.trace.commons.retries.RetryOperation.withRetryBackoff
 import com.expedia.www.haystack.trace.indexer.config.entities.CassandraWriteConfiguration
-import com.expedia.www.haystack.trace.indexer.metrics.{AppMetricNames, MetricsSupport}
+import com.expedia.www.haystack.trace.indexer.metrics.AppMetricNames
 import com.expedia.www.haystack.trace.indexer.writers.TraceWriter
 import org.slf4j.LoggerFactory
 

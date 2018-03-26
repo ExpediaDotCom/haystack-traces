@@ -18,7 +18,7 @@ package com.expedia.www.haystack.trace.reader.config
 
 import java.util
 
-import com.expedia.www.haystack.trace.commons.config.ConfigurationLoader
+import com.expedia.www.haystack.commons.config.ConfigurationLoader
 import com.expedia.www.haystack.trace.commons.config.entities._
 import com.expedia.www.haystack.trace.commons.config.reload.{ConfigurationReloadElasticSearchProvider, Reloadable}
 import com.expedia.www.haystack.trace.reader.config.entities._
@@ -26,11 +26,11 @@ import com.expedia.www.haystack.trace.reader.readers.transformers.TraceTransform
 import com.expedia.www.haystack.trace.reader.readers.validators.TraceValidator
 import com.typesafe.config.Config
 
-import scala.collection.JavaConversions._
+import scala.collection.JavaConverters._
 import scala.reflect.ClassTag
 
 class ProviderConfiguration {
-  private val config: Config = ConfigurationLoader.loadAppConfig
+  private val config: Config = ConfigurationLoader.loadConfigFileWithEnvOverrides()
 
   val serviceConfig: ServiceConfiguration = {
     val serviceConfig = config.getConfig("service")
@@ -52,6 +52,7 @@ class ProviderConfiguration {
         val aws = cs.getConfig("auto.discovery.aws")
         val tags = aws.getConfig("tags")
           .entrySet()
+          .asScala
           .map(elem => elem.getKey -> elem.getValue.unwrapped().toString)
           .toMap
         Some(AwsNodeDiscoveryConfiguration(aws.getString("region"), tags))
@@ -91,8 +92,8 @@ class ProviderConfiguration {
     val es = config.getConfig("elasticsearch")
     val indexConfig = es.getConfig("index")
 
-    val ausername = if (es.hasPath("username")){Option(es.getString("username"))}else{None}
-    val apassword = if (es.hasPath("password")){Option(es.getString("password"))}else{None}
+    val ausername = if (es.hasPath("username")) { Option(es.getString("username")) } else None
+    val apassword = if (es.hasPath("password")) { Option(es.getString("password")) } else None
 
     ElasticSearchConfiguration(
       endpoint = es.getString("endpoint"),
@@ -105,7 +106,7 @@ class ProviderConfiguration {
   }
 
   private def toInstances[T](classes: util.List[String])(implicit ct: ClassTag[T]): scala.Seq[T] = {
-    classes.map(className => {
+    classes.asScala.map(className => {
       val c = Class.forName(className)
 
       if (c == null) {

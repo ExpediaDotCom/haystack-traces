@@ -18,10 +18,10 @@
 package com.expedia.www.haystack.trace.indexer
 
 import com.codahale.metrics.JmxReporter
-import com.expedia.www.haystack.trace.commons.health.{HealthController, UpdateHealthStatusFile}
-import com.expedia.www.haystack.trace.commons.logger.LoggerUtils
+import com.expedia.www.haystack.commons.health.{HealthController, UpdateHealthStatusFile}
+import com.expedia.www.haystack.commons.logger.LoggerUtils
+import com.expedia.www.haystack.commons.metrics.MetricsSupport
 import com.expedia.www.haystack.trace.indexer.config.ProjectConfiguration
-import com.expedia.www.haystack.trace.indexer.metrics.MetricsSupport
 import org.slf4j.LoggerFactory
 
 object App extends MetricsSupport {

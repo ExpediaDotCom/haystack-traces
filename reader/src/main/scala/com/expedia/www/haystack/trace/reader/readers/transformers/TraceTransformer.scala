@@ -19,5 +19,5 @@ package com.expedia.www.haystack.trace.reader.readers.transformers
 import com.expedia.open.tracing.Span
 
 trait TraceTransformer {
-  def transform(spans: List[Span]): List[Span]
+  def transform(spans: Seq[Span]): Seq[Span]
 }

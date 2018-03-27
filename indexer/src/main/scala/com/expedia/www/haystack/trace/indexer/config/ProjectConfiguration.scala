@@ -32,7 +32,7 @@ import org.apache.kafka.clients.consumer.ConsumerConfig
 import org.apache.kafka.clients.producer.ProducerConfig
 import org.apache.kafka.common.serialization.{ByteArraySerializer, StringDeserializer, StringSerializer}
 
-import scala.collection.JavaConversions._
+import scala.collection.JavaConverters._
 import scala.util.Try
 
 class ProjectConfiguration extends AutoCloseable {
@@ -80,7 +80,7 @@ class ProjectConfiguration extends AutoCloseable {
 
     def addProps(config: Config, props: Properties): Unit = {
       if (config != null) {
-        config.entrySet() foreach {
+        config.entrySet().asScala foreach {
           kv => {
             props.setProperty(kv.getKey, kv.getValue.unwrapped().toString)
           }
@@ -149,6 +149,7 @@ class ProjectConfiguration extends AutoCloseable {
         val aws = cs.getConfig("auto.discovery.aws")
         val tags = aws.getConfig("tags")
           .entrySet()
+          .asScala
           .map(elem => elem.getKey -> elem.getValue.unwrapped().toString)
           .toMap
         Some(AwsNodeDiscoveryConfiguration(aws.getString("region"), tags))
@@ -219,8 +220,8 @@ class ProjectConfiguration extends AutoCloseable {
     } else {
       None
     }
-    val ausername = if (es.hasPath("username")){Option(es.getString("username"))}else{None}
-    val apassword = if (es.hasPath("password")){Option(es.getString("password"))}else{None}
+    val ausername = if (es.hasPath("username")) Option(es.getString("username")) else None
+    val apassword = if (es.hasPath("password")) Option(es.getString("password")) else None
 
     ElasticSearchConfiguration(
       endpoint = es.getString("endpoint"),
@@ -268,8 +269,8 @@ class ProjectConfiguration extends AutoCloseable {
       reload.getString("config.endpoint"),
       reload.getString("config.database.name"),
       reload.getInt("interval.ms"),
-      if(reload.hasPath("config.username")){Option(reload.getString("config.username"))}else{None},
-      if(reload.hasPath("config.password")){Option(reload.getString("config.password"))}else{None},
+      if(reload.hasPath("config.username")) Option(reload.getString("config.username")) else None ,
+      if(reload.hasPath("config.password")) Option(reload.getString("config.password")) else None,
       observers,
       loadOnStartup = reload.getBoolean("startup.load"))
 

@@ -24,7 +24,7 @@ import com.expedia.open.tracing.Span
   * **Apply this transformer only if you are not confident about clients sending in parentIds properly**
   */
 class InvalidParentTransformer extends TraceTransformer {
-  override def transform(spans: List[Span]): List[Span] = {
+  override def transform(spans: Seq[Span]): Seq[Span] = {
     val rootSpan = spans.find(_.getParentSpanId.isEmpty).get
     val spanIdSet = spans.map(_.getSpanId).toSet
 

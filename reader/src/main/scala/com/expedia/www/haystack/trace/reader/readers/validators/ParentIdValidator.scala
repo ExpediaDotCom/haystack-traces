@@ -3,7 +3,7 @@ package com.expedia.www.haystack.trace.reader.readers.validators
 import com.expedia.open.tracing.api.Trace
 import com.expedia.www.haystack.trace.reader.exceptions.InvalidTraceException
 
-import scala.collection.JavaConversions._
+import scala.collection.JavaConverters._
 import scala.util.{Failure, Success, Try}
 
 /**
@@ -12,7 +12,7 @@ import scala.util.{Failure, Success, Try}
   */
 class ParentIdValidator extends TraceValidator {
   override def validate(trace: Trace): Try[Trace] = {
-    val spans = trace.getChildSpansList.toList
+    val spans = trace.getChildSpansList.asScala
     val spanIdSet = spans.map(_.getSpanId).toSet
 
     if (!spans.forall(sp => spanIdSet.contains(sp.getParentSpanId) || sp.getParentSpanId.isEmpty)) {

@@ -22,7 +22,7 @@ import com.expedia.www.haystack.trace.reader.unit.BaseUnitTestSpec
 
 class SortSpanTransformerSpec extends BaseUnitTestSpec {
 
-  def createSpans(timestamp: Long) = {
+  def createSpans(timestamp: Long): List[Span] = {
     val traceId = "traceId"
 
     val spanA = Span.newBuilder()
@@ -74,11 +74,11 @@ class SortSpanTransformerSpec extends BaseUnitTestSpec {
       val spans = createSpans(timestamp)
 
       When("invoking transform")
-      val transformedSpans = new SortSpanTransformer().transform(spans)
+      val transformedSpans = new SortSpanTransformer().transform(spans).toList
 
       Then("return spans in sorted order")
       transformedSpans.length should be(5)
-      transformedSpans(0).getSpanId should be("a")
+      transformedSpans.head.getSpanId should be("a")
       transformedSpans(1).getSpanId should be("b")
       transformedSpans(2).getSpanId should be("c")
       transformedSpans(3).getSpanId should be("d")

@@ -24,7 +24,7 @@ import com.amazonaws.services.ec2.AmazonEC2Client
 import com.amazonaws.services.ec2.model.{DescribeInstancesRequest, Filter, Instance, InstanceStateName}
 import org.slf4j.LoggerFactory
 
-import scala.collection.JavaConversions._
+import scala.collection.JavaConverters._
 
 object AwsNodeDiscoverer {
   private val LOGGER = LoggerFactory.getLogger(AwsNodeDiscoverer.getClass)
@@ -60,12 +60,13 @@ object AwsNodeDiscoverer {
     */
   private[haystack] def discover(client: AmazonEC2Client, tags: Map[String, String]): Seq[String] = {
     val filters = tags.map { case (key, value) => new Filter("tag:" + key, Collections.singletonList(value)) }
-    val request = new DescribeInstancesRequest().withFilters(filters)
+    val request = new DescribeInstancesRequest().withFilters(filters.asJavaCollection)
 
     val result = client.describeInstances(request)
 
     val nodes = result.getReservations
-      .flatMap(_.getInstances)
+      .asScala
+      .flatMap(_.getInstances.asScala)
       .filter(isValidInstance)
       .map(_.getPrivateIpAddress)
 

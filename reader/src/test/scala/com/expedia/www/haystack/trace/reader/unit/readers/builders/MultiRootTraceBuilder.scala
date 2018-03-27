@@ -3,7 +3,7 @@ package com.expedia.www.haystack.trace.reader.unit.readers.builders
 import com.expedia.open.tracing.Span
 import com.expedia.open.tracing.api.Trace
 
-import scala.collection.JavaConversions._
+import scala.collection.JavaConverters._
 
 // helper to create various types of traces for unit testing
 trait MultiRootTraceBuilder extends TraceBuilder {
@@ -24,7 +24,7 @@ trait MultiRootTraceBuilder extends TraceBuilder {
       .setServiceName("x")
       .setStartTime(startTimestamp)
       .setDuration(300)
-      .addAllLogs(createServerSpanTags(startTimestamp, startTimestamp + 300))
+      .addAllLogs(createServerSpanTags(startTimestamp, startTimestamp + 300).asJavaCollection)
       .build()
 
     val bSpan = Span.newBuilder()
@@ -33,7 +33,7 @@ trait MultiRootTraceBuilder extends TraceBuilder {
       .setServiceName("x")
       .setStartTime(startTimestamp + 500)
       .setDuration(500)
-      .addAllLogs(createServerSpanTags(startTimestamp + 500, startTimestamp + 500 + 500))
+      .addAllLogs(createServerSpanTags(startTimestamp + 500, startTimestamp + 500 + 500).asJavaCollection)
       .build()
 
     val cSpan = Span.newBuilder()
@@ -43,7 +43,7 @@ trait MultiRootTraceBuilder extends TraceBuilder {
       .setServiceName("x")
       .setStartTime(startTimestamp + 500)
       .setDuration(500)
-      .addAllLogs(createClientSpanTags(startTimestamp + 500, startTimestamp + 500 + 500))
+      .addAllLogs(createClientSpanTags(startTimestamp + 500, startTimestamp + 500 + 500).asJavaCollection)
       .build()
 
     val dSpan = Span.newBuilder()
@@ -53,7 +53,7 @@ trait MultiRootTraceBuilder extends TraceBuilder {
       .setServiceName("x")
       .setStartTime(startTimestamp + 750)
       .setDuration(200)
-      .addAllLogs(createClientSpanTags(startTimestamp + 750, startTimestamp + 750 + 200))
+      .addAllLogs(createClientSpanTags(startTimestamp + 750, startTimestamp + 750 + 200).asJavaCollection)
       .build()
 
     toTrace(aSpan, bSpan, cSpan, dSpan)

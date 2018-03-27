@@ -29,7 +29,6 @@ import org.apache.kafka.streams.KeyValue
 import org.apache.kafka.streams.integration.utils.IntegrationTestUtils
 import org.scalatest._
 
-import scala.collection.JavaConversions._
 import scala.collection.JavaConverters._
 import scala.concurrent.duration.FiniteDuration
 
@@ -126,7 +125,7 @@ abstract class BaseIntegrationTestSpec extends WordSpec with GivenWhenThen with 
       row.spanBuffer.getChildSpansCount should be >=minSpansPerTrace
       row.spanBuffer.getChildSpansCount should be <=maxSpansPerTrace
 
-      row.spanBuffer.getChildSpansList.zipWithIndex foreach {
+      row.spanBuffer.getChildSpansList.asScala.zipWithIndex foreach {
         case (sp, idx) =>
           sp.getSpanId shouldBe s"${descr.spanIdPrefix}-$idx"
           sp.getServiceName shouldBe s"service$idx"
@@ -145,8 +144,8 @@ abstract class BaseIntegrationTestSpec extends WordSpec with GivenWhenThen with 
 
     var docs = elastic.query(matchAllQuery)
     docs.size shouldBe traceIds.size
-    (0 until docs.size()).toList foreach { idx =>
-      val traceId = docs.get(idx).traceid
+    docs.indices.foreach { idx =>
+      val traceId = docs.apply(idx).traceid
       traceIds should contain(traceId)
     }
 

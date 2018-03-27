@@ -144,7 +144,7 @@ class ClockSkewTransformerSpec extends BaseUnitTestSpec {
       val spans = createTraceWithoutMergedSpans(timestamp)
 
       When("invoking transform")
-      val transformedSpans = new ClockSkewTransformer().transform(spans)
+      val transformedSpans = new ClockSkewTransformer().transform(spans).toList
 
       Then("return spans without fixing skew")
       transformedSpans.length should be(5)
@@ -161,7 +161,7 @@ class ClockSkewTransformerSpec extends BaseUnitTestSpec {
       val spans = createSpansWithClientAndServer(timestamp)
 
       When("invoking transform")
-      val transformedSpans = new ClockSkewTransformer().transform(spans)
+      val transformedSpans = new ClockSkewTransformer().transform(spans).toList
 
       Then("return spans without fixing skew")
       transformedSpans.length should be(4)

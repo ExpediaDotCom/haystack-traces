@@ -28,14 +28,13 @@ import org.json4s.DefaultFormats
 import org.json4s.jackson.JsonMethods._
 import org.slf4j.LoggerFactory
 
-import scala.collection.JavaConversions._
+import scala.collection.JavaConverters._
 import scala.concurrent.{ExecutionContextExecutor, Future}
 import scala.util.{Failure, Success, Try}
 
 class CassandraEsTraceStore(cassandraConfiguration: CassandraConfiguration,
                             esConfiguration: ElasticSearchConfiguration,
-                            indexConfiguration: WhitelistIndexFieldConfiguration)
-                           (implicit val executor: ExecutionContextExecutor)
+                            indexConfiguration: WhitelistIndexFieldConfiguration)(implicit val executor: ExecutionContextExecutor)
   extends TraceStore with MetricsSupport {
   implicit val formats = DefaultFormats
 
@@ -66,6 +65,7 @@ class CassandraEsTraceStore(cassandraConfiguration: CassandraConfiguration,
     val sourceList = result.getSourceAsStringList
     if(sourceList != null && sourceList.size() > 0) {
       val traceFutures = sourceList
+        .asScala
         .map(source => extractTraceIdFromSource(source))
         .filter(!_.isEmpty)
         .toSet[String]
@@ -120,6 +120,7 @@ class CassandraEsTraceStore(cassandraConfiguration: CassandraConfiguration,
       .getAsJsonObject(ES_NESTED_DOC_NAME)
       .getAsJsonObject(fieldName)
       .getAsJsonArray(ES_FIELD_BUCKETS)
+      .asScala
       .map(element => element.getAsJsonObject.get(ES_FIELD_KEY).getAsString)
       .toList
 

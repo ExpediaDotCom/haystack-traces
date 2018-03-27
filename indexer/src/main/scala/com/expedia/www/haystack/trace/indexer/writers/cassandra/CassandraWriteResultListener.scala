@@ -24,7 +24,7 @@ import com.expedia.www.haystack.commons.retries.RetryOperation
 import com.expedia.www.haystack.trace.indexer.metrics.AppMetricNames
 import org.slf4j.{Logger, LoggerFactory}
 
-import scala.collection.JavaConversions._
+import scala.collection.JavaConverters._
 
 object CassandraWriteResultListener extends MetricsSupport {
   protected val LOGGER: Logger = LoggerFactory.getLogger(CassandraWriteResultListener.getClass)
@@ -50,8 +50,8 @@ class CassandraWriteResultListener(asyncResult: ResultSetFuture,
       if (result != null &&
         result.getExecutionInfo != null &&
         result.getExecutionInfo.getWarnings != null &&
-        result.getExecutionInfo.getWarnings.nonEmpty) {
-        LOGGER.warn(s"Warning received in cassandra writes {}", result.getExecutionInfo.getWarnings.toList.mkString(","))
+        !result.getExecutionInfo.getWarnings.isEmpty) {
+        LOGGER.warn(s"Warning received in cassandra writes {}", result.getExecutionInfo.getWarnings.asScala.mkString(","))
         writeWarnings.mark(result.getExecutionInfo.getWarnings.size())
       }
       retryOp.onResult(result)

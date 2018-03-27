@@ -30,7 +30,7 @@ import org.elasticsearch.search.aggregations.bucket.terms.TermsAggregationBuilde
 import org.elasticsearch.search.aggregations.support.ValueType
 import org.elasticsearch.search.builder.SearchSourceBuilder
 
-import scala.collection.JavaConversions._
+import scala.collection.JavaConverters._
 
 class FieldValuesQueryGenerator(indexNamePrefix: String, indexType: String, nestedDocName: String) {
   def generate(request: FieldValuesRequest): Search = {
@@ -64,7 +64,7 @@ class FieldValuesQueryGenerator(indexNamePrefix: String, indexType: String, nest
 
       // add all fields as term sub query
       val subQueries: Seq[QueryBuilder] =
-        for (field <- filters;
+        for (field <- filters.asScala;
              termQuery = buildTermQuery(field.getName.toLowerCase, field.getValue); if termQuery.isDefined) yield termQuery.get
       subQueries.foreach(nestedBoolQueryBuilder.filter)
 
@@ -83,7 +83,5 @@ class FieldValuesQueryGenerator(indexNamePrefix: String, indexType: String, nest
           .field(withBaseDoc(fieldName))
           .size(1000))
 
-  private def withBaseDoc(field: String) = {
-    s"$nestedDocName.$field"
-  }
+  private def withBaseDoc(field: String) = s"$nestedDocName.$field"
 }

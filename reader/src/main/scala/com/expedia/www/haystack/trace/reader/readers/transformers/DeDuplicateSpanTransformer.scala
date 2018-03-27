@@ -9,7 +9,7 @@ import scala.collection.mutable
   */
 class DeDuplicateSpanTransformer extends TraceTransformer {
 
-  override def transform(spans: List[Span]): List[Span] = {
+  override def transform(spans: Seq[Span]): Seq[Span] = {
     val seen = mutable.HashSet[Span]()
     spans.filter {
       span =>

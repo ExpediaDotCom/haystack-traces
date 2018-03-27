@@ -25,7 +25,7 @@ import com.expedia.www.haystack.trace.commons.clients.es.document.TraceIndexDoc.
 import com.expedia.www.haystack.trace.commons.config.entities.WhitelistIndexFieldConfiguration
 import org.apache.commons.lang3.StringUtils
 
-import scala.collection.JavaConversions._
+import scala.collection.JavaConverters._
 import scala.collection.mutable
 import scala.util.{Failure, Success, Try}
 
@@ -39,7 +39,7 @@ class IndexDocumentGenerator(config: WhitelistIndexFieldConfiguration) extends M
     // We maintain a white list of tags that are to be indexed. The whitelist is maintained as a configuration
     // in an external database (outside this app boundary). However, the app periodically reads this whitelist config
     // and applies it to the new spans that are read.
-    val spanIndices = for(sp <- spanBuffer.getChildSpansList; if isValidForIndex(sp)) yield transform(sp)
+    val spanIndices = for(sp <- spanBuffer.getChildSpansList.asScala; if isValidForIndex(sp)) yield transform(sp)
     if (spanIndices.nonEmpty) Some(TraceIndexDoc(traceId, rootDuration(spanBuffer), spanIndices)) else None
   }
 
@@ -51,6 +51,7 @@ class IndexDocumentGenerator(config: WhitelistIndexFieldConfiguration) extends M
   // span buffer contains all the spans for a given TraceId
   private def rootDuration(spanBuffer: SpanBuffer): Long = {
     spanBuffer.getChildSpansList
+      .asScala
       .find(sp => sp.getParentSpanId == null)
       .map(_.getDuration)
       .getOrElse(0L)
@@ -65,7 +66,7 @@ class IndexDocumentGenerator(config: WhitelistIndexFieldConfiguration) extends M
   private def transform(span: Span): mutable.Map[String, Any] = {
     val spanIndexDoc = mutable.Map[String, Any]()
 
-    for (tag <- span.getTagsList;
+    for (tag <- span.getTagsList.asScala;
          normalizedTagKey = tag.getKey.toLowerCase;
          indexField = config.indexFieldMap.get(normalizedTagKey); if indexField != null && indexField.enabled;
          v = readTagValue(tag);

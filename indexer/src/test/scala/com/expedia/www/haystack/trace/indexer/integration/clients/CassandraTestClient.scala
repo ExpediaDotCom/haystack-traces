@@ -24,7 +24,7 @@ import com.expedia.www.haystack.trace.commons.clients.cassandra.CassandraTableSc
 import com.expedia.www.haystack.trace.commons.config.entities.{CassandraConfiguration, SocketConfiguration}
 import com.expedia.www.haystack.trace.indexer.config.entities.CassandraWriteConfiguration
 
-import scala.collection.JavaConversions._
+import scala.collection.JavaConverters._
 
 class CassandraTestClient {
   case class CassandraRow(id: String, timestamp: java.util.Date, spanBuffer: SpanBuffer)
@@ -59,8 +59,8 @@ class CassandraTestClient {
 
   def queryAll(): Seq[CassandraRow] = {
     val rows = cassandraSession.execute(s"SELECT id, ts, spans from $KEYSPACE.$TABLE_NAME")
-    val result = for (row <- rows)
+    val result = for (row <- rows.asScala)
       yield CassandraRow(row.getString("id"), row.getTimestamp("ts"), SpanBuffer.parseFrom(row.getBytes("spans").array()))
-    result.toList
+    result.toSeq
   }
 }

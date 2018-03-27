@@ -32,7 +32,7 @@ import org.apache.kafka.common.errors.WakeupException
 import org.slf4j.LoggerFactory
 
 import scala.annotation.tailrec
-import scala.collection.JavaConversions._
+import scala.collection.JavaConverters._
 import scala.collection.mutable
 import scala.util.Try
 
@@ -53,7 +53,7 @@ class StreamTaskRunnable(taskId: Int, kafkaConfig: KafkaConfiguration, processor
     override def onPartitionsRevoked(revokedPartitions: util.Collection[TopicPartition]): Unit = {
       LOGGER.info("Partitions {} revoked at the beginning of consumer rebalance for taskId={}", revokedPartitions, taskId)
 
-      revokedPartitions.foreach(
+      revokedPartitions.asScala.foreach(
         p => {
           val processor = processors.remove(p)
           if (processor != null) processor.close()
@@ -67,7 +67,7 @@ class StreamTaskRunnable(taskId: Int, kafkaConfig: KafkaConfiguration, processor
     override def onPartitionsAssigned(assignedPartitions: util.Collection[TopicPartition]): Unit = {
       LOGGER.info("Partitions {} assigned at the beginning of consumer rebalance for taskId={}", assignedPartitions, taskId)
 
-      assignedPartitions foreach {
+      assignedPartitions.asScala foreach {
         partition => {
           val processor = processorSupplier.get()
           val previousProcessor = processors.putIfAbsent(partition, processor)
@@ -88,7 +88,7 @@ class StreamTaskRunnable(taskId: Int, kafkaConfig: KafkaConfiguration, processor
 
   private val consumer = {
     val props = new Properties()
-    kafkaConfig.consumerProps.entrySet().foreach(entry => props.put(entry.getKey, entry.getValue))
+    kafkaConfig.consumerProps.entrySet().asScala.foreach(entry => props.put(entry.getKey, entry.getValue))
     props.setProperty(ConsumerConfig.CLIENT_ID_CONFIG, taskId.toString)
     new KafkaConsumer[String, Span](props)
   }
@@ -148,9 +148,9 @@ class StreamTaskRunnable(taskId: Int, kafkaConfig: KafkaConfiguration, processor
   private def runLoop(): Unit = {
     while(!shutdownRequested.get()) {
       poll() match {
-        case Some(records) if records != null && !records.isEmpty && processors.nonEmpty =>
+        case Some(records) if records != null && !records.isEmpty && !processors.isEmpty =>
           val committableOffsets = new util.HashMap[TopicPartition, OffsetAndMetadata]()
-          val groupedByPartition = records.groupBy(_.partition())
+          val groupedByPartition = records.asScala.groupBy(_.partition())
 
           groupedByPartition foreach {
             case (partition, partitionRecords) => invokeProcessor(partition, partitionRecords, committableOffsets)
@@ -212,7 +212,7 @@ class StreamTaskRunnable(taskId: Int, kafkaConfig: KafkaConfiguration, processor
   @tailrec
   private def commit(offsets: util.HashMap[TopicPartition, OffsetAndMetadata], retryAttempt: Int = 0): Unit = {
     try {
-      if(offsets.nonEmpty && retryAttempt <= kafkaConfig.commitOffsetRetries) {
+      if(!offsets.isEmpty && retryAttempt <= kafkaConfig.commitOffsetRetries) {
         consumer.commitSync(offsets)
       }
     } catch {

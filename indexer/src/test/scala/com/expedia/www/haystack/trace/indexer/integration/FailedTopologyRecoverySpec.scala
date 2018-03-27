@@ -24,7 +24,7 @@ import com.expedia.www.haystack.trace.indexer.StreamRunner
 import org.apache.kafka.streams.KeyValue
 import org.apache.kafka.streams.integration.utils.IntegrationTestUtils
 
-import scala.collection.JavaConversions._
+import scala.collection.JavaConverters._
 import scala.concurrent.duration._
 
 class FailedTopologyRecoverySpec extends BaseIntegrationTestSpec {
@@ -77,7 +77,7 @@ class FailedTopologyRecoverySpec extends BaseIntegrationTestSpec {
 
         // wait for the elastic search writes to pass through, i guess refresh time has to be adjusted
         Thread.sleep(5000)
-        validateKafkaOutput(records, MAX_CHILD_SPANS_PER_TRACE)
+        validateKafkaOutput(records.asScala, MAX_CHILD_SPANS_PER_TRACE)
         verifyCassandraWrites(TRACE_DESCRIPTIONS, MAX_CHILD_SPANS_PER_TRACE, MAX_CHILD_SPANS_PER_TRACE + 1) // 1 extra record for trigger
         verifyElasticSearchWrites(Seq(TRACE_ID_1))
       } finally {
@@ -87,9 +87,9 @@ class FailedTopologyRecoverySpec extends BaseIntegrationTestSpec {
   }
 
   // validate the kafka output
-  private def validateKafkaOutput(records: util.List[KeyValue[String, SpanBuffer]], minChildSpanCount: Int) = {
+  private def validateKafkaOutput(records: Iterable[KeyValue[String, SpanBuffer]], minChildSpanCount: Int) = {
     // expect only one span buffer
-    records.size() shouldBe 1
+    records.size shouldBe 1
     records.head.key shouldBe TRACE_ID_1
     records.head.value.getChildSpansCount should be >=minChildSpanCount
   }

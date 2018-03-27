@@ -22,7 +22,7 @@ import com.expedia.open.tracing.api._
 import com.expedia.www.haystack.trace.commons.clients.es.document.TraceIndexDoc
 import io.grpc.{Status, StatusRuntimeException}
 
-import scala.collection.JavaConversions._
+import scala.collection.JavaConverters._
 
 class TraceServiceIntegrationTestSpec extends BaseIntegrationTestSpec {
 
@@ -38,7 +38,7 @@ class TraceServiceIntegrationTestSpec extends BaseIntegrationTestSpec {
 
       Then("should return fieldNames available in index")
       fieldNames.getNamesList.size() should be(2)
-      fieldNames.getNamesList.toList should contain allOf (field1, field2)
+      fieldNames.getNamesList.asScala.toList should contain allOf (field1, field2)
     }
   }
 
@@ -55,7 +55,7 @@ class TraceServiceIntegrationTestSpec extends BaseIntegrationTestSpec {
       val result = client.getFieldValues(request)
 
       Then("should return possible values for given field")
-      result.getValuesList.toList should contain(serviceName)
+      result.getValuesList.asScala should contain(serviceName)
     }
 
     it("should return values of a given fields with filters") {
@@ -78,7 +78,7 @@ class TraceServiceIntegrationTestSpec extends BaseIntegrationTestSpec {
 
       Then("should return filtered values for given field")
       result.getValuesList.size() should be(2)
-      result.getValuesList.toList should contain allOf(op1, op2)
+      result.getValuesList.asScala should contain allOf(op1, op2)
     }
   }
 
@@ -245,8 +245,8 @@ class TraceServiceIntegrationTestSpec extends BaseIntegrationTestSpec {
 
       Then("should return all traces for the service")
       traces.getTracesList.size() should be(2)
-      traces.getTracesList.exists(_.getTraceId == traceId1) shouldBe true
-      traces.getTracesList.exists(_.getTraceId == traceId2) shouldBe true
+      traces.getTracesList.asScala.exists(_.getTraceId == traceId1) shouldBe true
+      traces.getTracesList.asScala.exists(_.getTraceId == traceId2) shouldBe true
     }
 
     it("should not return traces for unavailable searches") {
@@ -287,7 +287,7 @@ class TraceServiceIntegrationTestSpec extends BaseIntegrationTestSpec {
         .build())
 
       Then("should return traces having tags")
-      traces.getTracesList.exists(_.getTraceId == traceId) shouldBe true
+      traces.getTracesList.asScala.exists(_.getTraceId == traceId) shouldBe true
     }
 
     it("should not return traces if tags are not available") {
@@ -312,7 +312,7 @@ class TraceServiceIntegrationTestSpec extends BaseIntegrationTestSpec {
         .build())
 
       Then("should not return traces")
-      traces.getTracesList.exists(_.getTraceId == traceId) shouldBe false
+      traces.getTracesList.asScala.exists(_.getTraceId == traceId) shouldBe false
     }
   }
 

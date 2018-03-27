@@ -3,7 +3,7 @@ package com.expedia.www.haystack.trace.reader.unit.readers.builders
 import com.expedia.open.tracing.Span
 import com.expedia.open.tracing.api.Trace
 
-import scala.collection.JavaConversions._
+import scala.collection.JavaConverters._
 
 // helper to create various types of traces for unit testing
 trait ClockSkewedTraceBuilder extends TraceBuilder {
@@ -29,7 +29,7 @@ trait ClockSkewedTraceBuilder extends TraceBuilder {
       .setServiceName("x")
       .setStartTime(startTimestamp)
       .setDuration(1000)
-      .addAllLogs(createServerSpanTags(startTimestamp, startTimestamp + 1000))
+      .addAllLogs(createServerSpanTags(startTimestamp, startTimestamp + 1000).asJavaCollection)
       .build()
 
     val bSpan = Span.newBuilder()
@@ -39,7 +39,7 @@ trait ClockSkewedTraceBuilder extends TraceBuilder {
       .setServiceName("x")
       .setStartTime(startTimestamp)
       .setDuration(500)
-      .addAllLogs(createClientSpanTags(startTimestamp, startTimestamp + 500))
+      .addAllLogs(createClientSpanTags(startTimestamp, startTimestamp + 500).asJavaCollection)
       .build()
 
     val cSpan = Span.newBuilder()
@@ -49,7 +49,7 @@ trait ClockSkewedTraceBuilder extends TraceBuilder {
       .setServiceName("x")
       .setStartTime(startTimestamp + 500)
       .setDuration(500)
-      .addAllLogs(createClientSpanTags(startTimestamp + 500, startTimestamp + 500 + 500))
+      .addAllLogs(createClientSpanTags(startTimestamp + 500, startTimestamp + 500 + 500).asJavaCollection)
       .build()
 
     val bServerSpan = Span.newBuilder()
@@ -59,7 +59,7 @@ trait ClockSkewedTraceBuilder extends TraceBuilder {
       .setServiceName("y")
       .setStartTime(startTimestamp)
       .setDuration(500)
-      .addAllLogs(createServerSpanTags(startTimestamp, startTimestamp + 500))
+      .addAllLogs(createServerSpanTags(startTimestamp, startTimestamp + 500).asJavaCollection)
       .build()
 
     val dSpan = Span.newBuilder()
@@ -69,7 +69,7 @@ trait ClockSkewedTraceBuilder extends TraceBuilder {
       .setServiceName("y")
       .setStartTime(startTimestamp)
       .setDuration(200)
-      .addAllLogs(createClientSpanTags(startTimestamp, startTimestamp + 200))
+      .addAllLogs(createClientSpanTags(startTimestamp, startTimestamp + 200).asJavaCollection)
       .build()
 
     val eSpan = Span.newBuilder()
@@ -79,7 +79,7 @@ trait ClockSkewedTraceBuilder extends TraceBuilder {
       .setServiceName("y")
       .setStartTime(startTimestamp + 200)
       .setDuration(300)
-      .addAllLogs(createClientSpanTags(startTimestamp + 200, startTimestamp + 200 + 300))
+      .addAllLogs(createClientSpanTags(startTimestamp + 200, startTimestamp + 200 + 300).asJavaCollection)
       .build()
 
     toTrace(aSpan, bSpan, cSpan, bServerSpan, dSpan, eSpan)
@@ -106,7 +106,7 @@ trait ClockSkewedTraceBuilder extends TraceBuilder {
       .setServiceName("x")
       .setStartTime(startTimestamp)
       .setDuration(1000)
-      .addAllLogs(createServerSpanTags(startTimestamp, startTimestamp + 1000))
+      .addAllLogs(createServerSpanTags(startTimestamp, startTimestamp + 1000).asJavaCollection)
       .build()
 
     val bSpan = Span.newBuilder()
@@ -116,7 +116,7 @@ trait ClockSkewedTraceBuilder extends TraceBuilder {
       .setServiceName("x")
       .setStartTime(startTimestamp)
       .setDuration(500)
-      .addAllLogs(createClientSpanTags(startTimestamp, startTimestamp + 500))
+      .addAllLogs(createClientSpanTags(startTimestamp, startTimestamp + 500).asJavaCollection)
       .build()
 
     val cSpan = Span.newBuilder()
@@ -126,7 +126,7 @@ trait ClockSkewedTraceBuilder extends TraceBuilder {
       .setServiceName("x")
       .setStartTime(startTimestamp + 500)
       .setDuration(500)
-      .addAllLogs(createClientSpanTags(startTimestamp + 500, startTimestamp + 500 + 500))
+      .addAllLogs(createClientSpanTags(startTimestamp + 500, startTimestamp + 500 + 500).asJavaCollection)
       .build()
 
     val bServerSpan = Span.newBuilder()
@@ -136,7 +136,7 @@ trait ClockSkewedTraceBuilder extends TraceBuilder {
       .setServiceName("y")
       .setStartTime(startTimestamp + 100)
       .setDuration(500)
-      .addAllLogs(createServerSpanTags(startTimestamp + 100, startTimestamp + 100 + 500))
+      .addAllLogs(createServerSpanTags(startTimestamp + 100, startTimestamp + 100 + 500).asJavaCollection)
       .build()
 
     val dSpan = Span.newBuilder()
@@ -146,7 +146,7 @@ trait ClockSkewedTraceBuilder extends TraceBuilder {
       .setServiceName("y")
       .setStartTime(startTimestamp + 100)
       .setDuration(200)
-      .addAllLogs(createClientSpanTags(startTimestamp + 100, startTimestamp + 100 + 200))
+      .addAllLogs(createClientSpanTags(startTimestamp + 100, startTimestamp + 100 + 200).asJavaCollection)
       .build()
 
     val eSpan = Span.newBuilder()
@@ -156,7 +156,7 @@ trait ClockSkewedTraceBuilder extends TraceBuilder {
       .setServiceName("y")
       .setStartTime(startTimestamp + 300)
       .setDuration(300)
-      .addAllLogs(createClientSpanTags(startTimestamp + 300, startTimestamp + 300 + 300))
+      .addAllLogs(createClientSpanTags(startTimestamp + 300, startTimestamp + 300 + 300).asJavaCollection)
       .build()
 
     toTrace(aSpan, bSpan, cSpan, bServerSpan, dSpan, eSpan)
@@ -183,7 +183,7 @@ trait ClockSkewedTraceBuilder extends TraceBuilder {
       .setServiceName("x")
       .setStartTime(startTimestamp)
       .setDuration(1000)
-      .addAllLogs(createServerSpanTags(startTimestamp, startTimestamp + 1000))
+      .addAllLogs(createServerSpanTags(startTimestamp, startTimestamp + 1000).asJavaCollection)
       .build()
 
     val bSpan = Span.newBuilder()
@@ -193,7 +193,7 @@ trait ClockSkewedTraceBuilder extends TraceBuilder {
       .setServiceName("x")
       .setStartTime(startTimestamp)
       .setDuration(500)
-      .addAllLogs(createClientSpanTags(startTimestamp, startTimestamp + 500))
+      .addAllLogs(createClientSpanTags(startTimestamp, startTimestamp + 500).asJavaCollection)
       .build()
 
     val cSpan = Span.newBuilder()
@@ -203,7 +203,7 @@ trait ClockSkewedTraceBuilder extends TraceBuilder {
       .setServiceName("x")
       .setStartTime(startTimestamp + 500)
       .setDuration(500)
-      .addAllLogs(createClientSpanTags(startTimestamp + 500, startTimestamp + 500 + 500))
+      .addAllLogs(createClientSpanTags(startTimestamp + 500, startTimestamp + 500 + 500).asJavaCollection)
       .build()
 
     val bServerSpan = Span.newBuilder()
@@ -213,7 +213,7 @@ trait ClockSkewedTraceBuilder extends TraceBuilder {
       .setServiceName("y")
       .setStartTime(startTimestamp - 100)
       .setDuration(500)
-      .addAllLogs(createServerSpanTags(startTimestamp - 100, startTimestamp - 100 + 500))
+      .addAllLogs(createServerSpanTags(startTimestamp - 100, startTimestamp - 100 + 500).asJavaCollection)
       .build()
 
     val dSpan = Span.newBuilder()
@@ -223,7 +223,7 @@ trait ClockSkewedTraceBuilder extends TraceBuilder {
       .setServiceName("y")
       .setStartTime(startTimestamp - 100)
       .setDuration(200)
-      .addAllLogs(createClientSpanTags(startTimestamp - 100, startTimestamp - 100 + 200))
+      .addAllLogs(createClientSpanTags(startTimestamp - 100, startTimestamp - 100 + 200).asJavaCollection)
       .build()
 
     val eSpan = Span.newBuilder()
@@ -233,7 +233,7 @@ trait ClockSkewedTraceBuilder extends TraceBuilder {
       .setServiceName("y")
       .setStartTime(startTimestamp + 100)
       .setDuration(300)
-      .addAllLogs(createClientSpanTags(startTimestamp + 100, startTimestamp + 100 + 300))
+      .addAllLogs(createClientSpanTags(startTimestamp + 100, startTimestamp + 100 + 300).asJavaCollection)
       .build()
 
     toTrace(aSpan, bSpan, cSpan, bServerSpan, dSpan, eSpan)
@@ -262,7 +262,7 @@ trait ClockSkewedTraceBuilder extends TraceBuilder {
       .setServiceName("x")
       .setStartTime(startTimestamp)
       .setDuration(1000)
-      .addAllLogs(createServerSpanTags(startTimestamp, startTimestamp + 1000))
+      .addAllLogs(createServerSpanTags(startTimestamp, startTimestamp + 1000).asJavaCollection)
       .build()
 
     val bSpan = Span.newBuilder()
@@ -272,7 +272,7 @@ trait ClockSkewedTraceBuilder extends TraceBuilder {
       .setServiceName("x")
       .setStartTime(startTimestamp)
       .setDuration(1000)
-      .addAllLogs(createClientSpanTags(startTimestamp, startTimestamp + 1000))
+      .addAllLogs(createClientSpanTags(startTimestamp, startTimestamp + 1000).asJavaCollection)
       .build()
 
     val bServerSpan = Span.newBuilder()
@@ -282,7 +282,7 @@ trait ClockSkewedTraceBuilder extends TraceBuilder {
       .setServiceName("y")
       .setStartTime(startTimestamp - 100)
       .setDuration(1000)
-      .addAllLogs(createServerSpanTags(startTimestamp - 100, startTimestamp - 100 + 1000))
+      .addAllLogs(createServerSpanTags(startTimestamp - 100, startTimestamp - 100 + 1000).asJavaCollection)
       .build()
 
     val cSpan = Span.newBuilder()
@@ -292,7 +292,7 @@ trait ClockSkewedTraceBuilder extends TraceBuilder {
       .setServiceName("y")
       .setStartTime(startTimestamp - 100)
       .setDuration(1000)
-      .addAllLogs(createClientSpanTags(startTimestamp - 100, startTimestamp -100 + 1000))
+      .addAllLogs(createClientSpanTags(startTimestamp - 100, startTimestamp -100 + 1000).asJavaCollection)
       .build()
 
     val cServerSpan = Span.newBuilder()
@@ -302,7 +302,7 @@ trait ClockSkewedTraceBuilder extends TraceBuilder {
       .setServiceName("z")
       .setStartTime(startTimestamp + 500)
       .setDuration(1000)
-      .addAllLogs(createServerSpanTags(startTimestamp + 500, startTimestamp + 500 + 1000))
+      .addAllLogs(createServerSpanTags(startTimestamp + 500, startTimestamp + 500 + 1000).asJavaCollection)
       .build()
 
     val dSpan = Span.newBuilder()
@@ -312,7 +312,7 @@ trait ClockSkewedTraceBuilder extends TraceBuilder {
       .setServiceName("z")
       .setStartTime(startTimestamp + 500)
       .setDuration(1000)
-      .addAllLogs(createClientSpanTags(startTimestamp + 500, startTimestamp + 500 + 1000))
+      .addAllLogs(createClientSpanTags(startTimestamp + 500, startTimestamp + 500 + 1000).asJavaCollection)
       .build()
 
     toTrace(aSpan, bSpan, cSpan, bServerSpan, cServerSpan, dSpan)

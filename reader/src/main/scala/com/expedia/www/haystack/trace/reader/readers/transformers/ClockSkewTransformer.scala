@@ -29,11 +29,11 @@ import com.expedia.www.haystack.trace.reader.readers.utils.{PartialSpanMarkers, 
   */
 class ClockSkewTransformer extends TraceTransformer {
 
-  override def transform(spans: List[Span]): List[Span] = {
-    adjustSkew(SpanTree(spans), None)
+  override def transform(spans: Seq[Span]): Seq[Span] = {
+    adjustSkew(SpanTree(spans.toList), None)
   }
 
-  private def adjustSkew(node: SpanTree, previousSkew: Option[Skew]): List[Span] = {
+  private def adjustSkew(node: SpanTree, previousSkew: Option[Skew]): Seq[Span] = {
     val previousSkewAdjustedSpan: Span = previousSkew match {
       case Some(skew) => adjustForASpan(node.span, skew)
       case None => node.span
@@ -41,7 +41,7 @@ class ClockSkewTransformer extends TraceTransformer {
 
     getClockSkew(previousSkewAdjustedSpan) match {
       case Some(skew) =>
-        val selfSkewAdjustedSpan = adjustForASpan(previousSkewAdjustedSpan, skew)
+        val selfSkewAdjustedSpan: Span = adjustForASpan(previousSkewAdjustedSpan, skew)
         selfSkewAdjustedSpan :: node.children.flatMap(adjustSkew(_, Some(skew)))
       case None =>
         previousSkewAdjustedSpan :: node.children.flatMap(adjustSkew(_, None))

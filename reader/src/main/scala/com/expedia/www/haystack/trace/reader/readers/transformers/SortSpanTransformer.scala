@@ -17,7 +17,6 @@
 package com.expedia.www.haystack.trace.reader.readers.transformers
 
 import com.expedia.open.tracing.Span
-import com.expedia.www.haystack.trace.reader.readers.validators.TraceValidationHandler
 
 /**
   *  Orders spans in natural ordering - root followed by other spans ordered by start time
@@ -27,8 +26,8 @@ import com.expedia.www.haystack.trace.reader.readers.validators.TraceValidationH
   *  corresponding transformation are done in [[InvalidRootTransformer]]
   */
 class SortSpanTransformer extends TraceTransformer {
-  override def transform(spans: List[Span]): List[Span] = {
+  override def transform(spans: Seq[Span]): Seq[Span] = {
     val (left, right) = spans.partition(_.getParentSpanId.isEmpty)
-    left.head :: right.sortBy(_.getStartTime)
+    left.toList.head :: right.toList.sortBy(_.getStartTime)
   }
 }

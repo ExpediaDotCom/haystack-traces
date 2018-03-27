@@ -26,7 +26,7 @@ import org.elasticsearch.index.query._
 import org.elasticsearch.search.builder.SearchSourceBuilder
 import org.elasticsearch.search.sort.{FieldSortBuilder, SortOrder}
 
-import scala.collection.JavaConversions._
+import scala.collection.JavaConverters._
 
 class TraceSearchQueryGenerator(indexNamePrefix: String, indexType: String, nestedDocName: String) {
 
@@ -54,7 +54,7 @@ class TraceSearchQueryGenerator(indexNamePrefix: String, indexType: String, nest
 
     // add all fields as term sub query
     val subQueries: Seq[QueryBuilder] =
-      for (field <- request.getFieldsList;
+      for (field <- request.getFieldsList.asScala;
            termQuery = buildTermQuery(field.getName, field.getValue); if termQuery.isDefined) yield termQuery.get
     subQueries.foreach(nestedBoolQuery.filter)
 

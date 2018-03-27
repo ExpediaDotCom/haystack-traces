@@ -22,12 +22,12 @@ import com.expedia.open.tracing.api.{FieldNames, _}
 import com.expedia.www.haystack.trace.reader.config.entities.{TraceTransformersConfiguration, TraceValidatorsConfiguration}
 import com.expedia.www.haystack.trace.reader.exceptions.SpanNotFoundException
 import com.expedia.www.haystack.trace.reader.metrics.MetricsSupport
-import com.expedia.www.haystack.trace.reader.readers.utils.{AuxiliaryTags, PartialSpanUtils}
+import com.expedia.www.haystack.trace.reader.readers.utils.AuxiliaryTags
 import com.expedia.www.haystack.trace.reader.readers.utils.TagExtractors._
 import com.expedia.www.haystack.trace.reader.stores.TraceStore
 import org.slf4j.{Logger, LoggerFactory}
 
-import scala.collection.JavaConversions._
+import scala.collection.JavaConverters._
 import scala.concurrent.{ExecutionContextExecutor, Future}
 import scala.util.{Failure, Success}
 
@@ -57,7 +57,7 @@ class TraceReader(traceStore: TraceStore, validatorsConfig: TraceValidatorsConfi
     traceStore
       .getTrace(request.getTraceId)
       .flatMap(trace => {
-        val spanOption = trace.getChildSpansList
+        val spanOption = trace.getChildSpansList.asScala
           .find(span => span.getSpanId.equals(request.getSpanId))
 
         spanOption match {
@@ -74,7 +74,7 @@ class TraceReader(traceStore: TraceStore, validatorsConfig: TraceValidatorsConfi
         traces => {
           TracesSearchResult
             .newBuilder()
-            .addAllTraces(traces.flatMap(transformTraceIgnoringInvalid))
+            .addAllTraces(traces.flatMap(transformTraceIgnoringInvalid).asJavaCollection)
             .build()
         })
   }
@@ -92,20 +92,20 @@ class TraceReader(traceStore: TraceStore, validatorsConfig: TraceValidatorsConfi
   def getFieldNames: Future[FieldNames] = {
     traceStore
       .getFieldNames()
-      .map(
+      .map(names =>
         FieldNames
           .newBuilder()
-          .addAllNames(_)
+          .addAllNames(names.asJavaCollection)
           .build())
   }
 
   def getFieldValues(request: FieldValuesRequest): Future[FieldValues] = {
     traceStore
       .getFieldValues(request)
-      .map(
+      .map(names =>
         FieldValues
           .newBuilder()
-          .addAllValues(_)
+          .addAllValues(names.asJavaCollection)
           .build())
   }
 
@@ -120,6 +120,7 @@ class TraceReader(traceStore: TraceStore, validatorsConfig: TraceValidatorsConfi
 
   private def buildTraceCallGraph(trace: Trace): TraceCallGraph = {
     val calls = trace.getChildSpansList
+      .asScala
       .filter(containsTag(_, AuxiliaryTags.IS_MERGED_SPAN))
       .map(span => {
         val from = CallNode.newBuilder()
@@ -143,7 +144,7 @@ class TraceReader(traceStore: TraceStore, validatorsConfig: TraceValidatorsConfi
 
     TraceCallGraph
       .newBuilder()
-      .addAllCalls(calls)
+      .addAllCalls(calls.asJavaCollection)
       .build()
   }
 }

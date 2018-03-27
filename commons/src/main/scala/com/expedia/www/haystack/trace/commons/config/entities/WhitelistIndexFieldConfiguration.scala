@@ -26,7 +26,7 @@ import org.json4s.DefaultFormats
 import org.json4s.jackson.Serialization
 import org.slf4j.LoggerFactory
 
-import scala.collection.JavaConversions._
+import scala.collection.JavaConverters._
 
 case class WhitelistIndexField(name: String, `type`: String, enabled: Boolean = true)
 case class WhiteListIndexFields(fields: List[WhitelistIndexField])
@@ -93,5 +93,5 @@ case class WhitelistIndexFieldConfiguration() extends Reloadable {
   /**
     * @return the whitelist index fields
     */
-  def whitelistIndexFields: List[WhitelistIndexField] = indexFieldMap.values().toList
+  def whitelistIndexFields: List[WhitelistIndexField] = indexFieldMap.values().asScala.toList
 }

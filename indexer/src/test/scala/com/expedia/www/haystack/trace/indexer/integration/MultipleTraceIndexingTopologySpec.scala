@@ -24,7 +24,7 @@ import com.expedia.www.haystack.trace.indexer.StreamRunner
 import org.apache.kafka.streams.KeyValue
 import org.apache.kafka.streams.integration.utils.IntegrationTestUtils
 
-import scala.collection.JavaConversions._
+import scala.collection.JavaConverters._
 import scala.concurrent.duration._
 
 class MultipleTraceIndexingTopologySpec extends BaseIntegrationTestSpec {
@@ -59,7 +59,7 @@ class MultipleTraceIndexingTopologySpec extends BaseIntegrationTestSpec {
         val result: util.List[KeyValue[String, SpanBuffer]] =
           IntegrationTestUtils.waitUntilMinKeyValueRecordsReceived(kafka.RESULT_CONSUMER_CONFIG, kafka.OUTPUT_TOPIC, 2, MAX_WAIT_FOR_OUTPUT_MS)
 
-        validateKafkaOutput(result, MAX_CHILD_SPANS_PER_TRACE)
+        validateKafkaOutput(result.asScala, MAX_CHILD_SPANS_PER_TRACE)
 
         Thread.sleep(6000)
         verifyCassandraWrites(traceDescriptions, MAX_CHILD_SPANS_PER_TRACE, MAX_CHILD_SPANS_PER_TRACE)
@@ -71,8 +71,8 @@ class MultipleTraceIndexingTopologySpec extends BaseIntegrationTestSpec {
   }
 
   // validate the kafka output
-  private def validateKafkaOutput(records: util.List[KeyValue[String, SpanBuffer]], childSpanCount: Int) = {
-    records.size() shouldBe 2
+  private def validateKafkaOutput(records: Iterable[KeyValue[String, SpanBuffer]], childSpanCount: Int) = {
+    records.size shouldBe 2
 
     // both traceIds should be present as different span buffer objects
     records.map(_.key) should contain allOf (TRACE_ID_1, TRACE_ID_2)

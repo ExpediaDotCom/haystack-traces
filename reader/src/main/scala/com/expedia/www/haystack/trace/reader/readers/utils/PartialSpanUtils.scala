@@ -17,10 +17,10 @@
 package com.expedia.www.haystack.trace.reader.readers.utils
 
 import com.expedia.open.tracing.{Span, Tag}
-import com.expedia.www.haystack.trace.reader.readers.utils.TagExtractors._
 import com.expedia.www.haystack.trace.reader.readers.utils.TagBuilders.{buildStringTag, _}
+import com.expedia.www.haystack.trace.reader.readers.utils.TagExtractors._
 
-import scala.collection.JavaConversions._
+import scala.collection.JavaConverters._
 
 object PartialSpanUtils {
   // merge sever and client spans to a single merged span, only if corresponding event tags are present
@@ -34,16 +34,16 @@ object PartialSpanUtils {
         val clientSpan = if(serverSpan == first) second else first
         Some(Span
           .newBuilder(serverSpan)
-          .addAllTags(clientSpan.getTagsList ++ auxiliaryCommonTags(clientSpan, serverSpan) ++ auxiliaryClientTags(clientSpan) ++ auxiliaryServerTags(serverSpan))
-          .clearLogs().addAllLogs(clientSpan.getLogsList ++ serverSpan.getLogsList sortBy (_.getTimestamp))
+          .addAllTags((clientSpan.getTagsList.asScala ++ auxiliaryCommonTags(clientSpan, serverSpan) ++ auxiliaryClientTags(clientSpan) ++ auxiliaryServerTags(serverSpan)).asJavaCollection)
+          .clearLogs().addAllLogs((clientSpan.getLogsList.asScala ++ serverSpan.getLogsList.asScala.sortBy(_.getTimestamp)).asJavaCollection)
           .build())
       case _ => None
     }
   }
 
   // merge multiple spans to single merged spans, use first span(based on startTime) as primary
-  def mergeAllSpans(spans: List[Span]): Span = {
-    val serverSpans = spans.filter(containsServerLogTag).sortBy(_.getStartTime)
+  def mergeAllSpans(spans: Seq[Span]): Span = {
+    val serverSpans = spans.filter(containsServerLogTag).sortBy(x => x.getStartTime)
     val clientSpans = spans.filter(containsClientLogTag).sortBy(_.getStartTime)
     val otherSpans = spans.filter(span => !containsClientLogTag(span) && !containsServerLogTag(span)).sortBy(_.getStartTime)
 
@@ -51,29 +51,31 @@ object PartialSpanUtils {
       Span
         .newBuilder(first)
         .addAllTags(second.getTagsList)
-        .clearLogs().addAllLogs(first.getLogsList ++ second.getLogsList sortBy (_.getTimestamp))
+        .clearLogs().addAllLogs((first.getLogsList.asScala ++ second.getLogsList.asScala sortBy (_.getTimestamp)).asJavaCollection)
         .build()
     })
   }
 
   def getEventTimestamp(span: Span, event: String): Long =
-    span.getLogsList.find(log => {
-      log.getFieldsList.exists(tag => {
+    span.getLogsList.asScala.find(log => {
+      log.getFieldsList.asScala.exists(tag => {
         tag.getKey.equalsIgnoreCase("event") && tag.getVStr.equalsIgnoreCase(event)
       })
     }).get.getTimestamp
 
   def isMergedSpan(span: Span): Boolean = containsClientLogTag(span) && containsServerLogTag(span)
 
-  private def containsServerLogTag(span: Span) =
+  private def containsServerLogTag(span: Span) = {
     containsLogTag(span, PartialSpanMarkers.SERVER_RECV_EVENT) && containsLogTag(span, PartialSpanMarkers.SERVER_SEND_EVENT)
+  }
 
-  private def containsClientLogTag(span: Span) =
+  private def containsClientLogTag(span: Span) = {
     containsLogTag(span, PartialSpanMarkers.CLIENT_RECV_EVENT) && containsLogTag(span, PartialSpanMarkers.CLIENT_RECV_EVENT)
+  }
 
   private def containsLogTag(span: Span, event: String) = {
-    span.getLogsList.exists(log => {
-      log.getFieldsList.exists(tag => {
+    span.getLogsList.asScala.exists(log => {
+      log.getFieldsList.asScala.exists(tag => {
         tag.getKey.equalsIgnoreCase("event") && tag.getVStr.equalsIgnoreCase(event)
       })
     })

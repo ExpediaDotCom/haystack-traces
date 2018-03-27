@@ -24,7 +24,7 @@ import org.easymock.EasyMock
 import org.scalatest.easymock.EasyMockSugar
 import org.scalatest.{FunSpec, Matchers}
 
-import scala.collection.JavaConversions._
+import scala.collection.JavaConverters._
 
 class AwsNodeDiscovererSpec extends FunSpec with Matchers with EasyMockSugar {
   describe("AWS node discovery") {
@@ -45,9 +45,9 @@ class AwsNodeDiscovererSpec extends FunSpec with Matchers with EasyMockSugar {
       whenExecuting(client) {
         val ips = AwsNodeDiscoverer.discover(client, ec2Tags)
         ips should contain allOf ("10.0.0.1", "10.0.0.2")
-        capturedRequest.getValue.getFilters.foreach(filter => {
+        capturedRequest.getValue.getFilters.asScala.foreach(filter => {
           filter.getName shouldEqual "tag:name"
-          filter.getValues.head shouldEqual "cassandra"
+          filter.getValues.asScala.head shouldEqual "cassandra"
         })
       }
     }

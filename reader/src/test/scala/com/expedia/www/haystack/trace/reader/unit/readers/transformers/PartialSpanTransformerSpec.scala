@@ -23,7 +23,7 @@ import com.expedia.www.haystack.trace.reader.readers.utils.TagExtractors._
 import com.expedia.www.haystack.trace.reader.unit.BaseUnitTestSpec
 import com.expedia.www.haystack.trace.reader.unit.readers.builders.ValidTraceBuilder
 
-import scala.collection.JavaConversions._
+import scala.collection.JavaConverters._
 
 class PartialSpanTransformerSpec extends BaseUnitTestSpec with ValidTraceBuilder {
 
@@ -244,13 +244,13 @@ class PartialSpanTransformerSpec extends BaseUnitTestSpec with ValidTraceBuilder
 
     it("should add auxiliary tags") {
       Given("trace with partial spans")
-      val spans = buildMultiServiceTrace().getChildSpansList
+      val spans = buildMultiServiceTrace().getChildSpansList.asScala
 
       When("invoking transform")
-      val mergedSpans = new PartialSpanTransformer().transform(spans.toList)
+      val mergedSpans = new PartialSpanTransformer().transform(spans).toList
 
       Then("return partial spans merged with auxiliary tags")
-      mergedSpans.size() should be(6)
+      mergedSpans.size should be(6)
       val bSpan = getSpanById(mergedSpans, "b")
       bSpan.getStartTime should be(startTimestamp + 20)
       bSpan.getServiceName should be("x")

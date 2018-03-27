@@ -85,14 +85,14 @@ class ElasticSearchTestClient {
   }
 
   def query(query: String): List[EsSourceDocument] = {
-    import scala.collection.JavaConversions._
+    import scala.collection.JavaConverters._
     val searchQuery = new Search.Builder(query)
       .addIndex(INDEX_NAME_PREFIX)
       .addType(INDEX_TYPE)
       .build()
     val result = esClient.execute(searchQuery)
     if(result.getSourceAsStringList != null && result.getSourceAsStringList.size() > 0) {
-      result.getSourceAsStringList.map(Serialization.read[EsSourceDocument]).toList
+      result.getSourceAsStringList.asScala.map(Serialization.read[EsSourceDocument]).toList
     }
     else {
       Nil

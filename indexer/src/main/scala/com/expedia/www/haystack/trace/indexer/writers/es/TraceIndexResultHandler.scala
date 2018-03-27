@@ -25,7 +25,7 @@ import io.searchbox.client.JestResultHandler
 import io.searchbox.core.BulkResult
 import org.slf4j.{Logger, LoggerFactory}
 
-import scala.collection.JavaConversions._
+import scala.collection.JavaConverters._
 
 object TraceIndexResultHandler extends MetricsSupport {
   protected val LOGGER: Logger = LoggerFactory.getLogger(TraceIndexResultHandler.getClass)
@@ -49,7 +49,7 @@ class TraceIndexResultHandler(timer: Timer.Context, retryOp: RetryOperation.Call
 
     // group the failed items as per status and log once for such a failed item
     if (result.getFailedItems != null) {
-      result.getFailedItems.groupBy(_.status) foreach {
+      result.getFailedItems.asScala.groupBy(_.status) foreach {
         case (statusCode, failedItems) =>
           esWriteFailureMeter.mark(failedItems.size)
           LOGGER.error(s"Index operation has failed with status=$statusCode, totalFailedItems=${failedItems.size}, " +

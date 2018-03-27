@@ -28,7 +28,7 @@ import com.expedia.open.tracing.Span
   */
 class InvalidRootTransformer extends TraceTransformer {
 
-  override def transform(spans: List[Span]): List[Span] = {
+  override def transform(spans: Seq[Span]): Seq[Span] = {
     val roots = spans.filter(span => span.getParentSpanId.isEmpty)
 
     roots.size match {
@@ -38,8 +38,8 @@ class InvalidRootTransformer extends TraceTransformer {
     }
   }
 
-  private def toTraceWithAssumedRoot(spans: List[Span]) = {
-    val sortedSpans = spans.sortBy(_.getStartTime)
+  private def toTraceWithAssumedRoot(spans: Seq[Span]) = {
+    val sortedSpans = spans.toList.sortBy(_.getStartTime)
 
     // assume either loopback or first span as root
     val assumedRoot = sortedSpans
@@ -49,7 +49,7 @@ class InvalidRootTransformer extends TraceTransformer {
     spans.map(span => if (span == assumedRoot) Span.newBuilder(span).setParentSpanId("").build() else span)
   }
 
-  private def toTraceWithSingleRoot(spans: List[Span], roots: List[Span]) = {
+  private def toTraceWithSingleRoot(spans: Seq[Span], roots: Seq[Span]) = {
     val earliestRoot = roots.minBy(_.getStartTime)
 
     spans.map(span =>

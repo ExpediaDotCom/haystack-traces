@@ -23,18 +23,18 @@ import com.expedia.www.haystack.trace.reader.readers.utils.PartialSpanUtils
   * Merges partial spans and generates a single [[Span]] combining a client and corresponding server span
   */
 class PartialSpanTransformer extends TraceTransformer {
-  override def transform(spans: List[Span]): List[Span] = {
+  override def transform(spans: Seq[Span]): Seq[Span] = {
     spans.groupBy(span => span.getSpanId).map((pair) => pair._2 match {
-      case List(span: Span) => span
+      case Seq(span: Span) => span
 
-      case List(first: Span, second: Span) =>
+      case Seq(first: Span, second: Span) =>
         PartialSpanUtils
           .mergeSpans(first, second)
           .getOrElse(PartialSpanUtils.mergeAllSpans(List(first, second)))
 
-      case list: List[Span] =>
+      case list: Seq[Span] =>
         PartialSpanUtils
           .mergeAllSpans(list)
-    }).toList
+    }).toSeq
   }
 }

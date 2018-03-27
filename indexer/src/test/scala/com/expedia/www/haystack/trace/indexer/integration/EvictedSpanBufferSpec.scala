@@ -7,7 +7,7 @@ import com.expedia.www.haystack.trace.indexer.StreamRunner
 import org.apache.kafka.streams.KeyValue
 import org.apache.kafka.streams.integration.utils.IntegrationTestUtils
 
-import scala.collection.JavaConversions._
+import scala.collection.JavaConverters._
 import scala.concurrent.duration._
 
 class EvictedSpanBufferSpec extends BaseIntegrationTestSpec {
@@ -38,13 +38,13 @@ class EvictedSpanBufferSpec extends BaseIntegrationTestSpec {
       val records: util.List[KeyValue[String, SpanBuffer]] =
         IntegrationTestUtils.waitUntilMinKeyValueRecordsReceived(kafka.RESULT_CONSUMER_CONFIG, kafka.OUTPUT_TOPIC, 10, MAX_WAIT_FOR_OUTPUT_MS)
 
-      validateKafkaOutput(records)
+      validateKafkaOutput(records.asScala)
       topology.close()
     }
   }
 
   // validate the kafka output
-  private def validateKafkaOutput(records: util.List[KeyValue[String, SpanBuffer]]) = {
+  private def validateKafkaOutput(records: Seq[KeyValue[String, SpanBuffer]]) = {
     records.map(_.key).toSet should contain allOf (TRACE_ID_1, TRACE_ID_2)
     records.foreach(rec => rec.value.getChildSpansCount shouldBe 1)
   }

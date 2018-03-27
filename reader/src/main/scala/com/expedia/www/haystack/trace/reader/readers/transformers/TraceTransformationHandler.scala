@@ -19,12 +19,12 @@ package com.expedia.www.haystack.trace.reader.readers.transformers
 import com.expedia.open.tracing.Span
 import com.expedia.open.tracing.api.Trace
 
-import scala.collection.JavaConversions._
+import scala.collection.JavaConverters._
 
 /**
   * takes a sequence of [[TraceTransformer]] and apply transform functions on the chain
   *
-  * transformer functions takes [[List]] of [[Span]]s and generates a [[List]] of [[Span]]s
+  * transformer functions takes [[Seq]] of [[Span]]s and generates a [[Seq]] of [[Span]]s
   * [[TraceTransformationHandler]] takes a [[Seq]] of [[TraceTransformer]] and applies chaining on them,
   * providing response [[List]] of a transformer to the next one
   *
@@ -32,15 +32,15 @@ import scala.collection.JavaConversions._
   */
 class TraceTransformationHandler(transformerSeq: Seq[TraceTransformer]) {
   private val transformerChain =
-    Function.chain(transformerSeq.foldLeft(Seq[List[Span] => List[Span]]())((seq, transformer) => seq :+ transformer.transform _))
+    Function.chain(transformerSeq.foldLeft(Seq[Seq[Span] => Seq[Span]]())((seq, transformer) => seq :+ transformer.transform _))
 
   def transform(trace: Trace): Trace = {
-    val transformedSpans = transformerChain(trace.getChildSpansList.toList)
+    val transformedSpans = transformerChain(trace.getChildSpansList.asScala)
 
     Trace
       .newBuilder()
       .setTraceId(trace.getTraceId)
-      .addAllChildSpans(transformedSpans)
+      .addAllChildSpans(transformedSpans.asJavaCollection)
       .build()
   }
 }

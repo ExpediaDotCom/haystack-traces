@@ -29,7 +29,6 @@ import com.expedia.www.haystack.trace.reader.unit.BaseUnitTestSpec
 import io.grpc.{Status, StatusException}
 import org.easymock.EasyMock
 
-import scala.collection.JavaConversions._
 import scala.collection.JavaConverters._
 import scala.concurrent.Promise
 
@@ -64,7 +63,7 @@ class CassandraReadResultListenerSpec extends BaseUnitTestSpec {
       whenExecuting(mockReadResult, promise, failureMeter, timer,resultSet,  mockSpanBufferRow_1, mockSpanBufferRow_2) {
         val listener = new CassandraReadResultListener(mockReadResult, timer, failureMeter, promise)
         listener.run()
-        capturedTrace.getValue.getChildSpansList.map(_.getSpanId) should contain allOf("SPAN_ID_1", "SPAN_ID_2")
+        capturedTrace.getValue.getChildSpansList.asScala.map(_.getSpanId) should contain allOf("SPAN_ID_1", "SPAN_ID_2")
         capturedTrace.getValue.getTraceId shouldBe "TRACE_ID"
       }
     }

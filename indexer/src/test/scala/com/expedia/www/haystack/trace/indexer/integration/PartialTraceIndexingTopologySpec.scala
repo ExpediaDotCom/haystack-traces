@@ -24,7 +24,7 @@ import com.expedia.www.haystack.trace.indexer.StreamRunner
 import org.apache.kafka.streams.KeyValue
 import org.apache.kafka.streams.integration.utils.IntegrationTestUtils
 
-import scala.collection.JavaConversions._
+import scala.collection.JavaConverters._
 import scala.concurrent.duration._
 
 class PartialTraceIndexingTopologySpec extends BaseIntegrationTestSpec {
@@ -56,7 +56,7 @@ class PartialTraceIndexingTopologySpec extends BaseIntegrationTestSpec {
       try {
         val result: util.List[KeyValue[String, SpanBuffer]] =
           IntegrationTestUtils.waitUntilMinKeyValueRecordsReceived(kafka.RESULT_CONSUMER_CONFIG, kafka.OUTPUT_TOPIC, 1, MAX_WAIT_FOR_OUTPUT_MS)
-        validateKafkaOutput(result, MAX_CHILD_SPANS_PER_TRACE, SPAN_ID_PREFIX)
+        validateKafkaOutput(result.asScala, MAX_CHILD_SPANS_PER_TRACE, SPAN_ID_PREFIX)
 
         // give a sleep to let elastic search results become searchable
         Thread.sleep(6000)
@@ -86,15 +86,15 @@ class PartialTraceIndexingTopologySpec extends BaseIntegrationTestSpec {
     val result: util.List[KeyValue[String, SpanBuffer]] =
       IntegrationTestUtils.waitUntilMinKeyValueRecordsReceived(kafka.RESULT_CONSUMER_CONFIG, kafka.OUTPUT_TOPIC, 1, MAX_WAIT_FOR_OUTPUT_MS)
 
-    validateKafkaOutput(result, MAX_CHILD_SPANS_PER_TRACE, SPAN_ID_2_PREFIX)
+    validateKafkaOutput(result.asScala, MAX_CHILD_SPANS_PER_TRACE, SPAN_ID_2_PREFIX)
   }
 
   // validate the kafka output
-  private def validateKafkaOutput(records: util.List[KeyValue[String, SpanBuffer]],
-                       childSpanCount: Int,
-                       spanIdPrefix: String): Unit = {
+  private def validateKafkaOutput(records: Iterable[KeyValue[String, SpanBuffer]],
+                                  childSpanCount: Int,
+                                  spanIdPrefix: String): Unit = {
     // expect only one span buffer object
-    records.size() shouldBe 1
+    records.size shouldBe 1
     validateChildSpans(records.head.value, TRACE_ID, spanIdPrefix, MAX_CHILD_SPANS_PER_TRACE)
   }
 }

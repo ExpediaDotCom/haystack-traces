@@ -24,7 +24,7 @@ import com.expedia.www.haystack.trace.reader.exceptions.TraceNotFoundException
 import com.expedia.www.haystack.trace.reader.stores.readers.cassandra.CassandraReadResultListener._
 import org.slf4j.{Logger, LoggerFactory}
 
-import scala.collection.JavaConversions._
+import scala.collection.JavaConverters._
 import scala.concurrent.Promise
 import scala.util.{Failure, Success, Try}
 
@@ -54,7 +54,7 @@ class CassandraReadResultListener(asyncResult: ResultSetFuture,
   }
 
   private def tryGetTraceRows(resultSet: ResultSet): Try[Seq[Row]] = {
-    val rows = resultSet.all()
+    val rows = resultSet.all().asScala
     if(rows.isEmpty) Failure(new TraceNotFoundException) else Success(rows)
   }
 

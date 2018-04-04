@@ -25,6 +25,7 @@ import scala.collection.JavaConverters._
 
 /**
   * Merges partial spans and generates a single [[Span]] combining a client and corresponding server span
+  * gracefully fallback to collapse to a single span if there are multiple or missing client/server spans
   */
 class PartialSpanTransformer extends TraceTransformer {
   override def transform(spans: Seq[Span]): Seq[Span] = {
@@ -34,30 +35,41 @@ class PartialSpanTransformer extends TraceTransformer {
     }).toSeq
   }
 
-  def mergeSpans(spans: Seq[Span]): Span = {
-    val serverOptional = collapseSpans(spans.filter(PartialSpanUtils.containsServerLogTag))
-    val clientOptional = collapseSpans(spans.filter(PartialSpanUtils.containsClientLogTag))
+  private def mergeSpans(spans: Seq[Span]): Span = {
+    val serverSpanOptional = collapseSpans(spans.filter(PartialSpanUtils.containsServerLogTag))
+    val clientSpanOptional = collapseSpans(spans.filter(PartialSpanUtils.containsClientLogTag))
 
-    if(clientOptional.isDefined && serverOptional.isEmpty)
-      clientOptional.get
-    else if(serverOptional.isDefined && serverOptional.isEmpty)
-      serverOptional.get
-    else {
-      val serverSpan = serverOptional.get
-      val clientSpan = clientOptional.get
-      Span
-        .newBuilder(serverSpan)
-        .addAllTags((clientSpan.getTagsList.asScala ++ auxiliaryCommonTags(clientSpan, serverSpan) ++ auxiliaryClientTags(clientSpan) ++ auxiliaryServerTags(serverSpan)).asJavaCollection)
-        .clearLogs().addAllLogs((clientSpan.getLogsList.asScala ++ serverSpan.getLogsList.asScala.sortBy(_.getTimestamp)).asJavaCollection)
-        .build()
+    (clientSpanOptional, serverSpanOptional) match {
+      // ideally there should be one server and one client span
+      // merging these partial spans to form a new single span
+      case (Some(clientSpan), Some(serverSpan)) =>
+        Span
+          .newBuilder(serverSpan)
+          .addAllTags((clientSpan.getTagsList.asScala ++ auxiliaryCommonTags(clientSpan, serverSpan) ++ auxiliaryClientTags(clientSpan) ++ auxiliaryServerTags(serverSpan)).asJavaCollection)
+          .clearLogs().addAllLogs((clientSpan.getLogsList.asScala ++ serverSpan.getLogsList.asScala.sortBy(_.getTimestamp)).asJavaCollection)
+          .build()
+
+      // imperfect scenario, fallback to return available server span
+      case (None, Some(serverSpan)) => serverSpan
+
+      // imperfect scenario, fallback to return available client span
+      case (Some(clientSpan), None) => clientSpan
+
+      // imperfect scenario, fallback to collapse all spans
+      case _ => collapseSpans(spans).get
     }
   }
 
-  def collapseSpans(spans: Seq[Span]): Option[Span] = {
+  // collapse all spans of a type(eg. client or server) if needed,
+  // ideally there would be just one span in the list and hence no need of collapsing
+  private def collapseSpans(spans: Seq[Span]): Option[Span] = {
     spans match {
       case Nil => None
-      case List(span) => Some(span)
+      case Seq(span) => Some(span)
       case _ =>
+        // if there are multiple spans fallback to collapse all the spans in a single span
+        // start the collapsed span from startTime of the first and end at ending of last such span
+        // also add an error marker in the collapsed span
         val firstSpan = spans.minBy(_.getStartTime)
         val lastSpan = spans.maxBy(span => span.getStartTime + span.getDuration)
         val allTags = spans.flatMap(span => span.getTagsList.asScala)
@@ -69,7 +81,8 @@ class PartialSpanTransformer extends TraceTransformer {
             .newBuilder(firstSpan)
             .setOperationName(opName)
             .setDuration(lastSpan.getStartTime + lastSpan.getDuration - firstSpan.getStartTime)
-            .clearTags().addAllTags(allTags.asJava).addTags(buildBoolTag(AuxiliaryTags.ERR_IS_MULTI_PARTIAL_SPAN, tagValue = true))
+            .clearTags().addAllTags(allTags.asJava)
+            .addTags(buildBoolTag(AuxiliaryTags.ERR_IS_MULTI_PARTIAL_SPAN, tagValue = true))
             .clearLogs().addAllLogs(allLogs.asJava)
             .build())
     }
@@ -81,6 +94,7 @@ class PartialSpanTransformer extends TraceTransformer {
     val clientDuration = PartialSpanUtils.getEventTimestamp(clientSpan, PartialSpanMarkers.CLIENT_RECV_EVENT) - PartialSpanUtils.getEventTimestamp(clientSpan, PartialSpanMarkers.CLIENT_SEND_EVENT)
     val serverDuration = PartialSpanUtils.getEventTimestamp(serverSpan, PartialSpanMarkers.SERVER_SEND_EVENT) - PartialSpanUtils.getEventTimestamp(serverSpan, PartialSpanMarkers.SERVER_RECV_EVENT)
 
+    // difference of duration of spans
     if (serverDuration < clientDuration) {
       Some(clientDuration - serverDuration)
     } else {

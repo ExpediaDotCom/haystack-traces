@@ -27,15 +27,14 @@ object PartialSpanUtils {
       })
     }).get.getTimestamp
 
-  def isMergedSpan(span: Span): Boolean = containsClientLogTag(span) && containsServerLogTag(span)
+  def isMergedSpan(span: Span): Boolean =
+    containsClientLogTag(span) && containsServerLogTag(span)
 
-  def containsServerLogTag(span: Span): Boolean = {
+  def containsServerLogTag(span: Span): Boolean =
     containsLogTag(span, PartialSpanMarkers.SERVER_RECV_EVENT) && containsLogTag(span, PartialSpanMarkers.SERVER_SEND_EVENT)
-  }
 
-  def containsClientLogTag(span: Span): Boolean = {
+  def containsClientLogTag(span: Span): Boolean =
     containsLogTag(span, PartialSpanMarkers.CLIENT_RECV_EVENT) && containsLogTag(span, PartialSpanMarkers.CLIENT_RECV_EVENT)
-  }
 
   private def containsLogTag(span: Span, event: String) = {
     span.getLogsList.asScala.exists(log => {

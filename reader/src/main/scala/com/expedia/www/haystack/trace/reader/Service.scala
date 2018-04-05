@@ -19,6 +19,7 @@ package com.expedia.www.haystack.trace.reader
 import java.io.File
 
 import com.codahale.metrics.JmxReporter
+import com.expedia.www.haystack.commons.health.{HealthController, UpdateHealthStatusFile}
 import com.expedia.www.haystack.commons.logger.LoggerUtils
 import com.expedia.www.haystack.trace.reader.config.ProviderConfiguration
 import com.expedia.www.haystack.trace.reader.metrics.MetricsSupport
@@ -48,6 +49,8 @@ object Service extends MetricsSupport {
   private def startService(): Unit = {
     try {
       val config = new ProviderConfiguration
+      HealthController.addListener(new UpdateHealthStatusFile(config.healthStatusFilePath))
+
       val store = new CassandraEsTraceStore(config.cassandraConfig, config.elasticSearchConfig, config.indexConfig)(executor)
 
       val serviceConfig = config.serviceConfig
@@ -74,6 +77,9 @@ object Service extends MetricsSupport {
           LOGGER.info("server has been shutdown now")
         }
       })
+
+      // mark the status of app as 'healthy'
+      HealthController.setHealthy()
 
       server.awaitTermination()
     } catch {

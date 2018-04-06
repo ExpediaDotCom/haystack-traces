@@ -47,12 +47,6 @@ class CassandraReader(config: CassandraConfiguration)(implicit val dispatcher: E
       asyncResult.addListener(new CassandraReadResultListener(asyncResult, timer, readFailures, promise), dispatcher)
       promise.future
     } catch {
-      case nhaEx: NoHostAvailableException  =>
-        readFailures.mark()
-        timer.stop()
-        LOGGER.error("No cassandra host available to read, tearing down the app", nhaEx)
-        HealthController.setUnhealthy()
-        Future.failed(nhaEx)
       case ex: Exception =>
         readFailures.mark()
         timer.stop()

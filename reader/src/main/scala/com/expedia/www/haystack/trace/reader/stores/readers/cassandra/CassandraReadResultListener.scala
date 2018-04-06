@@ -17,8 +17,10 @@
 package com.expedia.www.haystack.trace.reader.stores.readers.cassandra
 
 import com.codahale.metrics.{Meter, Timer}
+import com.datastax.driver.core.exceptions.NoHostAvailableException
 import com.datastax.driver.core.{ResultSet, ResultSetFuture, Row}
 import com.expedia.open.tracing.api.Trace
+import com.expedia.www.haystack.commons.health.HealthController
 import com.expedia.www.haystack.trace.commons.clients.cassandra.CassandraTableSchema
 import com.expedia.www.haystack.trace.reader.exceptions.TraceNotFoundException
 import com.expedia.www.haystack.trace.reader.stores.readers.cassandra.CassandraReadResultListener._
@@ -46,11 +48,20 @@ class CassandraReadResultListener(asyncResult: ResultSetFuture,
     match {
       case Success(trace) =>
         promise.success(trace)
+      case Failure(ex) if fatalError(ex) =>
+        LOGGER.error("Fatal error in reading from cassandra, tearing down the app", ex)
+        failure.mark()
+        HealthController.setUnhealthy()
+        promise.failure(ex)
       case Failure(ex) =>
         LOGGER.error("Failed in reading the record from cassandra", ex)
         failure.mark()
         promise.failure(ex)
     }
+  }
+
+  private def fatalError(ex: Throwable): Boolean = {
+    if(ex.isInstanceOf[NoHostAvailableException]) true else ex.getCause != null && fatalError(ex.getCause)
   }
 
   private def tryGetTraceRows(resultSet: ResultSet): Try[Seq[Row]] = {

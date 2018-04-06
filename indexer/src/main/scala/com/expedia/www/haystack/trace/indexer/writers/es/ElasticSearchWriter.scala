@@ -24,6 +24,7 @@ import com.expedia.open.tracing.buffer.SpanBuffer
 import com.expedia.www.haystack.commons.metrics.MetricsSupport
 import com.expedia.www.haystack.commons.retries.RetryOperation._
 import com.expedia.www.haystack.trace.commons.config.entities.WhitelistIndexFieldConfiguration
+import com.expedia.www.haystack.trace.commons.packer.PackedMessage
 import com.expedia.www.haystack.trace.indexer.config.entities.ElasticSearchConfiguration
 import com.expedia.www.haystack.trace.indexer.metrics.AppMetricNames
 import com.expedia.www.haystack.trace.indexer.writers.TraceWriter
@@ -87,16 +88,15 @@ class ElasticSearchWriter(esConfig: ElasticSearchConfiguration, indexConf: White
     * exceed the max inflight requests, then we block and this puts backpressure on upstream
     *
     * @param traceId          trace id
-    * @param spanBuffer       list of spans belonging to this traceId - span buffer
-    * @param spanBufferBytes  list of spans belonging to this traceId - serialized bytes of span buffer
+    * @param packedSpanBuffer  list of spans belonging to this traceId - packed bytes of span buffer
     * @param isLastSpanBuffer tells if this is the last record, so the writer can flush
     * @return
     */
-  override def writeAsync(traceId: String, spanBuffer: SpanBuffer, spanBufferBytes: Array[Byte], isLastSpanBuffer: Boolean): Unit = {
+  override def writeAsync(traceId: String, packedSpanBuffer: PackedMessage[SpanBuffer], isLastSpanBuffer: Boolean): Unit = {
     var isSemaphoreAcquired = false
 
     try {
-      addIndexOperation(traceId, spanBuffer, indexName(), isLastSpanBuffer) match {
+      addIndexOperation(traceId, packedSpanBuffer.protoObj, indexName(), isLastSpanBuffer) match {
         case Some(bulkToDispatch) =>
           inflightRequestsSemaphore.acquire()
           isSemaphoreAcquired = true

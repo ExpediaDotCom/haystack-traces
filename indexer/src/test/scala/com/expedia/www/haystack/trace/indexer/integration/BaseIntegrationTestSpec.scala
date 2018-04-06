@@ -23,6 +23,7 @@ import java.util.concurrent.{Executors, ScheduledExecutorService, ScheduledFutur
 import com.expedia.open.tracing.Tag.TagType
 import com.expedia.open.tracing.buffer.SpanBuffer
 import com.expedia.open.tracing.{Log, Span, Tag}
+import com.expedia.www.haystack.trace.commons.packer.{PackerType, Unpacker}
 import com.expedia.www.haystack.trace.indexer.config.entities.SpanAccumulatorConfiguration
 import com.expedia.www.haystack.trace.indexer.integration.clients.{CassandraTestClient, ElasticSearchTestClient, KafkaTestClient}
 import org.apache.kafka.streams.KeyValue
@@ -41,7 +42,8 @@ abstract class BaseIntegrationTestSpec extends WordSpec with GivenWhenThen with 
     minTracesPerCache = 100,
     maxEntriesAllStores = 500,
     pollIntervalMillis = 2000L,
-    bufferingWindowMillis = 6000L)
+    bufferingWindowMillis = 6000L,
+    PackerType.SNAPPY)
 
   protected var scheduler: ScheduledExecutorService = _
 
@@ -97,26 +99,25 @@ abstract class BaseIntegrationTestSpec extends WordSpec with GivenWhenThen with 
                                   startSpanIdxFrom: Int = 0): ScheduledFuture[_] = {
     var timestamp = startRecordTimestamp
     var cnt = 0
-    scheduler.scheduleWithFixedDelay(new Runnable {
-      override def run(): Unit = {
-        if(cnt < maxSpansPerTrace) {
-          val spans = traceDescription.map(sd => {
-            new KeyValue[String, Span](sd.traceId, randomSpan(sd.traceId, s"${sd.spanIdPrefix}-${startSpanIdxFrom + cnt}", s"service${startSpanIdxFrom + cnt}", s"op${startSpanIdxFrom + cnt}"))
-          }).asJava
-          IntegrationTestUtils.produceKeyValuesSynchronouslyWithTimestamp(
-            kafka.INPUT_TOPIC,
-            spans,
-            kafka.TEST_PRODUCER_CONFIG,
-            timestamp)
-          timestamp = timestamp + (maxRecordTimestamp / (maxSpansPerTrace - 1))
-        }
-        cnt = cnt + 1
+    scheduler.scheduleWithFixedDelay(() => {
+      if (cnt < maxSpansPerTrace) {
+        val spans = traceDescription.map(sd => {
+          new KeyValue[String, Span](sd.traceId, randomSpan(sd.traceId, s"${sd.spanIdPrefix}-${startSpanIdxFrom + cnt}", s"service${startSpanIdxFrom + cnt}", s"op${startSpanIdxFrom + cnt}"))
+        }).asJava
+        IntegrationTestUtils.produceKeyValuesSynchronouslyWithTimestamp(
+          kafka.INPUT_TOPIC,
+          spans,
+          kafka.TEST_PRODUCER_CONFIG,
+          timestamp)
+        timestamp = timestamp + (maxRecordTimestamp / (maxSpansPerTrace - 1))
       }
+      cnt = cnt + 1
     }, 0, produceInterval.toMillis, TimeUnit.MILLISECONDS)
   }
 
   def verifyCassandraWrites(traceDescriptions: Seq[TraceDescription], minSpansPerTrace: Int, maxSpansPerTrace: Int): Unit = {
-    val rows = cassandra.queryAll()
+    val rows = cassandra.queryAll((data) => Unpacker.readSpanBuffer(data))
+
     rows should have size traceDescriptions.size
 
     rows.foreach(row => {

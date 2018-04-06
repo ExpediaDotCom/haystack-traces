@@ -23,6 +23,7 @@ import com.expedia.open.tracing.buffer.SpanBuffer
 import com.expedia.www.haystack.commons.metrics.MetricsSupport
 import com.expedia.www.haystack.commons.retries.RetryOperation._
 import com.expedia.www.haystack.trace.commons.clients.cassandra.{CassandraClusterFactory, CassandraSession}
+import com.expedia.www.haystack.trace.commons.packer.PackedMessage
 import com.expedia.www.haystack.trace.indexer.config.entities.CassandraWriteConfiguration
 import com.expedia.www.haystack.trace.indexer.metrics.AppMetricNames
 import com.expedia.www.haystack.trace.indexer.writers.TraceWriter
@@ -51,12 +52,11 @@ class CassandraWriter(config: CassandraWriteConfiguration)(implicit val dispatch
     * upstream
     *
     * @param traceId: trace id
-    * @param spanBuffer: list of spans belonging to this traceId - span buffer
-    * @param spanBufferBytes: list of spans belonging to this traceId - serialized bytes of span buffer
+    * @param packedSpanBuffer: list of spans belonging to this traceId - span buffer
     * @param isLastSpanBuffer tells if this is the last record, so the writer can flush
     * @return
     */
-  override def writeAsync(traceId: String, spanBuffer: SpanBuffer, spanBufferBytes: Array[Byte], isLastSpanBuffer: Boolean): Unit = {
+  override def writeAsync(traceId: String, packedSpanBuffer: PackedMessage[SpanBuffer], isLastSpanBuffer: Boolean): Unit = {
     var isSemaphoreAcquired = false
 
     try {
@@ -69,7 +69,7 @@ class CassandraWriter(config: CassandraWriteConfiguration)(implicit val dispatch
       withRetryBackoff((retryCallback) => {
         // prepare the statement
         val statement = cassandra.newInsertBoundStatement(traceId,
-          spanBuffer,
+          packedSpanBuffer.packedDataBytes,
           config.writeConsistencyLevel(retryCallback.lastError()),
           insertPreparedStatement)
 

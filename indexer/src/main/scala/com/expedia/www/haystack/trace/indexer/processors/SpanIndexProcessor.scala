@@ -21,6 +21,7 @@ import com.codahale.metrics.{Histogram, Timer}
 import com.expedia.open.tracing.Span
 import com.expedia.open.tracing.buffer.SpanBuffer
 import com.expedia.www.haystack.commons.metrics.MetricsSupport
+import com.expedia.www.haystack.trace.commons.packer.Packer
 import com.expedia.www.haystack.trace.indexer.config.entities.SpanAccumulatorConfiguration
 import com.expedia.www.haystack.trace.indexer.metrics.AppMetricNames.{BUFFERED_SPANS_COUNT, PROCESS_TIMER}
 import com.expedia.www.haystack.trace.indexer.store.SpanBufferMemoryStoreSupplier
@@ -41,7 +42,8 @@ object SpanIndexProcessor extends MetricsSupport {
 
 class SpanIndexProcessor(accumulatorConfig: SpanAccumulatorConfiguration,
                          storeSupplier: SpanBufferMemoryStoreSupplier,
-                         writers: Seq[TraceWriter])(implicit val dispatcher: ExecutionContextExecutor)
+                         writers: Seq[TraceWriter],
+                         spanBufferPacker: Packer[SpanBuffer])(implicit val dispatcher: ExecutionContextExecutor)
   extends StreamProcessor[String, Span] with EldestBufferedSpanEvictionListener {
 
   import com.expedia.www.haystack.trace.indexer.processors.SpanIndexProcessor._
@@ -87,9 +89,10 @@ class SpanIndexProcessor(accumulatorConfig: SpanAccumulatorConfiguration,
     bufferedSpansHistogram.update(spanBuffer.getChildSpansCount)
 
     val traceId = spanBuffer.getTraceId
+    val packedMessage = spanBufferPacker.apply(spanBuffer)
     writers.foreach {
       writer =>
-        writer.writeAsync(traceId, spanBuffer, spanBuffer.toByteArray, isLastSpanBuffer)
+        writer.writeAsync(traceId, packedMessage, isLastSpanBuffer)
     }
   }
 

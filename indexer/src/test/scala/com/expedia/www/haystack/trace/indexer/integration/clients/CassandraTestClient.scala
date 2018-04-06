@@ -57,10 +57,10 @@ class CassandraTestClient {
       None,
       SocketConfiguration(5, keepAlive = true, 5000, 5000)), ConsistencyLevel.ONE, 150, 10, RetryOperation.Config(10, 250, 2), List((Class.forName("com.datastax.driver.core.exceptions.UnavailableException"), ConsistencyLevel.ANY)))
 
-  def queryAll(): Seq[CassandraRow] = {
+  def queryAll(unpack: (Array[Byte] => SpanBuffer)): Seq[CassandraRow] = {
     val rows = cassandraSession.execute(s"SELECT id, ts, spans from $KEYSPACE.$TABLE_NAME")
     val result = for (row <- rows.asScala)
-      yield CassandraRow(row.getString("id"), row.getTimestamp("ts"), SpanBuffer.parseFrom(row.getBytes("spans").array()))
+      yield CassandraRow(row.getString("id"), row.getTimestamp("ts"), unpack(row.getBytes("spans").array()))
     result.toSeq
   }
 }

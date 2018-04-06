@@ -40,6 +40,16 @@
             <artifactId>commons-lang3</artifactId>
         </dependency>
 
+        <dependency>
+            <groupId>org.xerial.snappy</groupId>
+            <artifactId>snappy-java</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>org.json4s</groupId>
+            <artifactId>json4s-ext_${scala.major.minor.version}</artifactId>
+        </dependency>
+
     </dependencies>
     <build>
         <plugins>

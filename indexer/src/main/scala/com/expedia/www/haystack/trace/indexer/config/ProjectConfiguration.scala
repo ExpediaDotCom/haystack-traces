@@ -24,6 +24,7 @@ import com.expedia.www.haystack.commons.config.ConfigurationLoader
 import com.expedia.www.haystack.commons.retries.RetryOperation
 import com.expedia.www.haystack.trace.commons.config.entities._
 import com.expedia.www.haystack.trace.commons.config.reload.{ConfigurationReloadElasticSearchProvider, Reloadable}
+import com.expedia.www.haystack.trace.commons.packer.PackerType
 import com.expedia.www.haystack.trace.indexer.config.entities._
 import com.expedia.www.haystack.trace.indexer.serde.SpanDeserializer
 import com.typesafe.config.Config
@@ -51,7 +52,8 @@ class ProjectConfiguration extends AutoCloseable {
       cfg.getInt("store.min.traces.per.cache"),
       cfg.getInt("store.all.max.entries"),
       cfg.getLong("poll.ms"),
-      cfg.getLong("window.ms"))
+      cfg.getLong("window.ms"),
+      PackerType.withName(cfg.getString("packer").toUpperCase))
   }
 
   /**

@@ -19,6 +19,7 @@ package com.expedia.www.haystack.trace.indexer.unit
 
 import com.datastax.driver.core.ConsistencyLevel
 import com.datastax.driver.core.exceptions.UnavailableException
+import com.expedia.www.haystack.trace.commons.packer.PackerType
 import com.expedia.www.haystack.trace.indexer.config.ProjectConfiguration
 import org.apache.kafka.clients.consumer.ConsumerConfig
 import org.apache.kafka.clients.producer.ProducerConfig
@@ -38,6 +39,7 @@ class ConfigurationLoaderSpec extends FunSpec with Matchers {
       config.pollIntervalMillis shouldBe 2000L
       config.maxEntriesAllStores shouldBe 20000
       config.bufferingWindowMillis shouldBe 10000L
+      config.packerType shouldEqual PackerType.SNAPPY
     }
 
     it("should load the kafka config from base.conf and one stream property from env variable") {

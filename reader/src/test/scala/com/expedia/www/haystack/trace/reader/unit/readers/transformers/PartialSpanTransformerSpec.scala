@@ -103,7 +103,7 @@ class PartialSpanTransformerSpec extends BaseUnitTestSpec with ValidTraceBuilder
       .setTraceId(traceId)
       .setServiceName("serverService")
       .setStartTime(timestamp + 20)
-      .setDuration(980)
+      .setDuration(960)
       .addTags(tag)
       .addLogs(Log.newBuilder()
         .setTimestamp(System.currentTimeMillis)
@@ -225,7 +225,7 @@ class PartialSpanTransformerSpec extends BaseUnitTestSpec with ValidTraceBuilder
       Then("return partial spans merged with first server span as primary")
       mergedSpans.length should be(1)
       mergedSpans.head.getStartTime should be(timestamp + 20)
-      mergedSpans.head.getTagsCount should be(3)
+      mergedSpans.head.getTagsCount should be(18)
       mergedSpans.head.getLogsCount should be(6)
       mergedSpans.head.getServiceName should be("serverService")
     }

@@ -6,6 +6,8 @@ ENV APP_HOME /app/bin
 ENV JMXTRANS_AGENT jmxtrans-agent-1.2.6
 
 RUN mkdir -p ${APP_HOME}
+RUN chmod a+w /app
+RUN chmod a+w ${APP_HOME}
 
 COPY target/${APP_NAME}.jar ${APP_HOME}/
 COPY build/docker/start-app.sh ${APP_HOME}/

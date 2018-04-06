@@ -16,7 +16,9 @@
 
 package com.expedia.www.haystack.trace.reader.stores.readers.cassandra
 
+import com.datastax.driver.core.exceptions.NoHostAvailableException
 import com.expedia.open.tracing.api.Trace
+import com.expedia.www.haystack.commons.health.HealthController
 import com.expedia.www.haystack.trace.commons.clients.cassandra.{CassandraClusterFactory, CassandraSession}
 import com.expedia.www.haystack.trace.commons.config.entities.CassandraConfiguration
 import com.expedia.www.haystack.trace.reader.metrics.{AppMetricNames, MetricsSupport}
@@ -45,6 +47,12 @@ class CassandraReader(config: CassandraConfiguration)(implicit val dispatcher: E
       asyncResult.addListener(new CassandraReadResultListener(asyncResult, timer, readFailures, promise), dispatcher)
       promise.future
     } catch {
+      case nhaEx: NoHostAvailableException  =>
+        readFailures.mark()
+        timer.stop()
+        LOGGER.error("No cassandra host available to read, tearing down the app", nhaEx)
+        HealthController.setUnhealthy()
+        Future.failed(nhaEx)
       case ex: Exception =>
         readFailures.mark()
         timer.stop()

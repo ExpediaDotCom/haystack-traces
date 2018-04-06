@@ -32,6 +32,8 @@ import scala.reflect.ClassTag
 class ProviderConfiguration {
   private val config: Config = ConfigurationLoader.loadConfigFileWithEnvOverrides()
 
+  val healthStatusFilePath: String = config.getString("health.status.path")
+
   val serviceConfig: ServiceConfiguration = {
     val serviceConfig = config.getConfig("service")
 

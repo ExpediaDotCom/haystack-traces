@@ -16,7 +16,9 @@
 
 package com.expedia.www.haystack.trace.reader.stores.readers.cassandra
 
+import com.datastax.driver.core.exceptions.NoHostAvailableException
 import com.expedia.open.tracing.api.Trace
+import com.expedia.www.haystack.commons.health.HealthController
 import com.expedia.www.haystack.trace.commons.clients.cassandra.{CassandraClusterFactory, CassandraSession}
 import com.expedia.www.haystack.trace.commons.config.entities.CassandraConfiguration
 import com.expedia.www.haystack.trace.reader.metrics.{AppMetricNames, MetricsSupport}

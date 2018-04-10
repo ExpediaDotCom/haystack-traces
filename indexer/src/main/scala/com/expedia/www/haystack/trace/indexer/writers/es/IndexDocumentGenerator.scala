@@ -21,7 +21,7 @@ import com.expedia.open.tracing.buffer.SpanBuffer
 import com.expedia.open.tracing.{Span, Tag}
 import com.expedia.www.haystack.commons.metrics.MetricsSupport
 import com.expedia.www.haystack.trace.commons.clients.es.document.TraceIndexDoc
-import com.expedia.www.haystack.trace.commons.clients.es.document.TraceIndexDoc.TagValue
+import com.expedia.www.haystack.trace.commons.clients.es.document.TraceIndexDoc.{OPERATION_KEY_NAME, SERVICE_KEY_NAME, TagValue}
 import com.expedia.www.haystack.trace.commons.config.entities.WhitelistIndexFieldConfiguration
 import org.apache.commons.lang3.StringUtils
 
@@ -39,7 +39,14 @@ class IndexDocumentGenerator(config: WhitelistIndexFieldConfiguration) extends M
     // We maintain a white list of tags that are to be indexed. The whitelist is maintained as a configuration
     // in an external database (outside this app boundary). However, the app periodically reads this whitelist config
     // and applies it to the new spans that are read.
-    val spanIndices = for(sp <- spanBuffer.getChildSpansList.asScala; if isValidForIndex(sp)) yield transform(sp)
+    val spanIndices = mutable.ListBuffer[mutable.Map[String, Any]]()
+    spanBuffer.getChildSpansList.asScala.filter(isValidForIndex).foreach(sp => {
+      val spanIndexDoc = spanIndices
+        .find(doc => doc.get(SERVICE_KEY_NAME).exists(_.equals(sp.getServiceName)) && doc.get(OPERATION_KEY_NAME).exists(_.equals(sp.getOperationName)))
+        .getOrElse(mutable.Map[String, Any]())
+
+      spanIndices.append(transform(sp, spanIndexDoc))
+    })
     if (spanIndices.nonEmpty) Some(TraceIndexDoc(traceId, rootDuration(spanBuffer), spanIndices)) else None
   }
 
@@ -63,23 +70,29 @@ class IndexDocumentGenerator(config: WhitelistIndexFieldConfiguration) extends M
     * @param span a span object
     * @return span index document as a map
     */
-  private def transform(span: Span): mutable.Map[String, Any] = {
-    val spanIndexDoc = mutable.Map[String, Any]()
+  private def transform(span: Span, spanIndexDoc: mutable.Map[String, Any]): mutable.Map[String, Any] = {
+
+    def updateKeyValue[T](spanIndexDoc: mutable.Map[String, Any], keyName: String, value: T) = {
+      val mayBeValueList = spanIndexDoc.get(keyName)
+      mayBeValueList match {
+        case Some(valueList) => valueList.asInstanceOf[mutable.Set[T]].add(value)
+        case _ => spanIndexDoc.put(keyName, mutable.Set(value))
+      }
+    }
 
     for (tag <- span.getTagsList.asScala;
          normalizedTagKey = tag.getKey.toLowerCase;
          indexField = config.indexFieldMap.get(normalizedTagKey); if indexField != null && indexField.enabled;
          v = readTagValue(tag);
          indexableValue = transformValueForIndexing(indexField.`type`, v); if indexableValue.isDefined) {
-      spanIndexDoc.put(normalizedTagKey, indexableValue)
+      updateKeyValue(spanIndexDoc, normalizedTagKey, indexableValue)
     }
 
     import com.expedia.www.haystack.trace.commons.clients.es.document.TraceIndexDoc._
     spanIndexDoc.put(SERVICE_KEY_NAME, span.getServiceName)
     spanIndexDoc.put(OPERATION_KEY_NAME, span.getOperationName)
-    spanIndexDoc.put(DURATION_KEY_NAME, span.getDuration)
-    spanIndexDoc.put(START_TIME_KEY_NAME, span.getStartTime)
-
+    updateKeyValue(spanIndexDoc, DURATION_KEY_NAME, span.getDuration)
+    updateKeyValue(spanIndexDoc, START_TIME_KEY_NAME, span.getStartTime)
     spanIndexDoc
   }
 

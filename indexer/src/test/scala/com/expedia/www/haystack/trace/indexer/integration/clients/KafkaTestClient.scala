@@ -20,7 +20,7 @@ package com.expedia.www.haystack.trace.indexer.integration.clients
 import java.util.Properties
 
 import com.expedia.www.haystack.trace.indexer.config.entities.KafkaConfiguration
-import com.expedia.www.haystack.trace.indexer.integration.serdes.{SpanBufferProtoDeserializer, SpanProtoSerializer}
+import com.expedia.www.haystack.trace.indexer.integration.serdes.{SnappyCompressedSpanBufferProtoDeserializer, SpanProtoSerializer}
 import com.expedia.www.haystack.trace.indexer.serde.SpanDeserializer
 import org.apache.kafka.clients.consumer.ConsumerConfig
 import org.apache.kafka.clients.producer.ProducerConfig
@@ -84,7 +84,7 @@ class KafkaTestClient {
     RESULT_CONSUMER_CONFIG.put(ConsumerConfig.GROUP_ID_CONFIG, appId + "-result-consumer")
     RESULT_CONSUMER_CONFIG.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest")
     RESULT_CONSUMER_CONFIG.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, classOf[StringDeserializer])
-    RESULT_CONSUMER_CONFIG.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, classOf[SpanBufferProtoDeserializer])
+    RESULT_CONSUMER_CONFIG.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, classOf[SnappyCompressedSpanBufferProtoDeserializer])
 
     deleteTopics(INPUT_TOPIC, OUTPUT_TOPIC)
     KAFKA_CLUSTER.createTopic(INPUT_TOPIC, 2, 1)

@@ -15,18 +15,17 @@
  *
  */
 
-package com.expedia.www.haystack.trace.indexer.writers
+package com.expedia.www.haystack.trace.commons.packer
 
 import com.expedia.open.tracing.buffer.SpanBuffer
-import com.expedia.www.haystack.trace.commons.packer.PackedMessage
+import com.expedia.www.haystack.trace.commons.packer.PackerType.PackerType
 
-trait TraceWriter extends AutoCloseable {
-
-  /**
-    * writes the span buffer to external store like cassandra, elastic, or kafka
-    * @param traceId trace id
-    * @param packedSpanBuffer compressed serialized bytes of the span buffer object
-    * @param isLastSpanBuffer tells if this is the last record, so the writer can flush
-    */
-  def writeAsync(traceId: String, packedSpanBuffer: PackedMessage[SpanBuffer], isLastSpanBuffer: Boolean)
+object PackerFactory {
+  def spanBufferPacker(`type`: PackerType): Packer[SpanBuffer] = {
+    `type` match {
+      case PackerType.SNAPPY => new SnappyPacker[SpanBuffer]
+      case PackerType.GZIP => new GzipPacker[SpanBuffer]
+      case _ => new NoopPacker[SpanBuffer]
+    }
+  }
 }

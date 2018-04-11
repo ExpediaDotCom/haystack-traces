@@ -65,7 +65,6 @@ class IndexDocumentGenerator(config: WhitelistIndexFieldConfiguration) extends M
     */
   private def transform(span: Span): mutable.Map[String, Any] = {
     val spanIndexDoc = mutable.Map[String, Any]()
-
     for (tag <- span.getTagsList.asScala;
          normalizedTagKey = tag.getKey.toLowerCase;
          indexField = config.indexFieldMap.get(normalizedTagKey); if indexField != null && indexField.enabled;
@@ -79,7 +78,6 @@ class IndexDocumentGenerator(config: WhitelistIndexFieldConfiguration) extends M
     spanIndexDoc.put(OPERATION_KEY_NAME, span.getOperationName)
     spanIndexDoc.put(DURATION_KEY_NAME, span.getDuration)
     spanIndexDoc.put(START_TIME_KEY_NAME, span.getStartTime)
-
     spanIndexDoc
   }
 

@@ -74,18 +74,17 @@ class CassandraSession(config: CassandraConfiguration, factory: ClusterFactory) 
   /**
     * create bound statement for writing to cassandra table
     * @param traceId trace id
-    * @param spanBuffer array of span objects that belong to the given trace id
+    * @param spanBufferBytes data bytes of spanBuffer that belong to a given trace id
     * @return
     */
   def newInsertBoundStatement(traceId: String,
-                              spanBuffer: SpanBuffer,
+                              spanBufferBytes: Array[Byte],
                               consistencyLevel: ConsistencyLevel,
                               insertTraceStatement: PreparedStatement): Statement = {
-
     new BoundStatement(insertTraceStatement)
       .setString(ID_COLUMN_NAME, traceId)
       .setTimestamp(TIMESTAMP_COLUMN_NAME, new Date())
-      .setBytes(SPANS_COLUMN_NAME, ByteBuffer.wrap(spanBuffer.toByteArray))
+      .setBytes(SPANS_COLUMN_NAME, ByteBuffer.wrap(spanBufferBytes))
       .setConsistencyLevel(consistencyLevel)
   }
 

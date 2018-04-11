@@ -17,6 +17,7 @@ prepare_integration_test_env: docker_build
 	# prepare cassandra table for haystack-trace-reader to run against
 	docker run \
 		-it \
+		--rm \
 		--network=sandbox_default \
 		-v $(PWD)/build/integration-tests:/src \
 		-w /src \

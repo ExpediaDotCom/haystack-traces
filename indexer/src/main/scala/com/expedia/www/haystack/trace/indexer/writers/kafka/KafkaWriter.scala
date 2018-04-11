@@ -22,6 +22,7 @@ import java.util.Properties
 import com.codahale.metrics.Meter
 import com.expedia.open.tracing.buffer.SpanBuffer
 import com.expedia.www.haystack.commons.metrics.MetricsSupport
+import com.expedia.www.haystack.trace.commons.packer.PackedMessage
 import com.expedia.www.haystack.trace.indexer.metrics.AppMetricNames
 import com.expedia.www.haystack.trace.indexer.writers.TraceWriter
 import org.apache.kafka.clients.producer._
@@ -38,14 +39,12 @@ class KafkaWriter(producerConfig: Properties, topic: String) extends TraceWriter
 
   private val producer = new KafkaProducer[String, Array[Byte]](producerConfig)
 
-  override def writeAsync(traceId: String, spanBuffer: SpanBuffer, spanBufferBytes: Array[Byte], isLastSpanBuffer: Boolean): Unit = {
-    val record = new ProducerRecord[String, Array[Byte]](topic, traceId, spanBufferBytes)
-    producer.send(record, new Callback {
-      override def onCompletion(metadata: RecordMetadata, exception: Exception): Unit = {
-        if(exception != null) {
-          LOGGER.error(s"Fail to write the span buffer record to kafka topic=$topic", exception)
-          KafkaWriter.kafkaProducerFailures.mark()
-        }
+  override def writeAsync(traceId: String, packedSpanBuffer: PackedMessage[SpanBuffer], isLastSpanBuffer: Boolean): Unit = {
+    val record = new ProducerRecord[String, Array[Byte]](topic, traceId, packedSpanBuffer.packedDataBytes)
+    producer.send(record, (_: RecordMetadata, exception: Exception) => {
+      if (exception != null) {
+        LOGGER.error(s"Fail to write the span buffer record to kafka topic=$topic", exception)
+        KafkaWriter.kafkaProducerFailures.mark()
       }
     })
   }

@@ -19,6 +19,7 @@ package com.expedia.www.haystack.trace.commons.clients.cassandra
 
 import com.datastax.driver.core._
 import com.expedia.open.tracing.buffer.SpanBuffer
+import com.expedia.www.haystack.trace.commons.packer.Unpacker
 import org.slf4j.LoggerFactory
 
 import scala.util.Try
@@ -36,7 +37,7 @@ object CassandraTableSchema {
     * @return Proto SpanBuffer object or throws an exception if deserialization fails
     */
   def extractSpanBufferFromRow(row: Row): Try[SpanBuffer] = {
-    Try(SpanBuffer.parseFrom(row.getBytes(SPANS_COLUMN_NAME).array()))
+    Try(Unpacker.readSpanBuffer(row.getBytes(SPANS_COLUMN_NAME).array()))
   }
 
   /**

@@ -20,6 +20,7 @@ import java.util
 
 import com.expedia.open.tracing.Span
 import com.expedia.open.tracing.buffer.SpanBuffer
+import com.expedia.www.haystack.trace.commons.packer.Unpacker
 import org.apache.kafka.common.serialization.{Deserializer, Serializer}
 
 class SpanProtoSerializer extends Serializer[Span] {
@@ -30,11 +31,15 @@ class SpanProtoSerializer extends Serializer[Span] {
   override def close(): Unit = ()
 }
 
-class SpanBufferProtoDeserializer extends Deserializer[SpanBuffer] {
+class SnappyCompressedSpanBufferProtoDeserializer extends Deserializer[SpanBuffer] {
   override def configure(configs: util.Map[String, _], isKey: Boolean): Unit = ()
 
   override def deserialize(topic: String, data: Array[Byte]): SpanBuffer = {
-    if(data == null) null else SpanBuffer.parseFrom(data)
+    if(data == null) {
+      null
+    } else {
+      Unpacker.readSpanBuffer(data)
+    }
   }
 
   override def close(): Unit = ()

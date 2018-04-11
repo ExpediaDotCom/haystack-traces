@@ -22,10 +22,11 @@ import java.util.concurrent.{Executors, TimeUnit}
 
 import com.expedia.www.haystack.commons.health.HealthController
 import com.expedia.www.haystack.trace.commons.config.entities.WhitelistIndexFieldConfiguration
+import com.expedia.www.haystack.trace.commons.packer.PackerFactory
 import com.expedia.www.haystack.trace.indexer.config.entities._
 import com.expedia.www.haystack.trace.indexer.processors.StreamTaskState.StreamTaskState
+import com.expedia.www.haystack.trace.indexer.processors._
 import com.expedia.www.haystack.trace.indexer.processors.supplier.SpanIndexProcessorSupplier
-import com.expedia.www.haystack.trace.indexer.processors.{StateListener, StreamTaskRunnable, StreamTaskState}
 import com.expedia.www.haystack.trace.indexer.store.SpanBufferMemoryStoreSupplier
 import com.expedia.www.haystack.trace.indexer.writers.TraceWriter
 import com.expedia.www.haystack.trace.indexer.writers.cassandra.CassandraWriter
@@ -65,7 +66,11 @@ class StreamRunner(kafkaConfig: KafkaConfiguration,
     LOGGER.info("Starting the span indexing stream..")
 
     val storeSupplier = new SpanBufferMemoryStoreSupplier(accumulatorConfig.minTracesPerCache, accumulatorConfig.maxEntriesAllStores)
-    val streamProcessSupplier = new SpanIndexProcessorSupplier(accumulatorConfig, storeSupplier, writers)
+    val streamProcessSupplier = new SpanIndexProcessorSupplier(
+      accumulatorConfig,
+      storeSupplier,
+      writers,
+      PackerFactory.spanBufferPacker(accumulatorConfig.packerType))
 
     for(streamId <- 0 until kafkaConfig.numStreamThreads) {
       val task = new StreamTaskRunnable(streamId, kafkaConfig, streamProcessSupplier)

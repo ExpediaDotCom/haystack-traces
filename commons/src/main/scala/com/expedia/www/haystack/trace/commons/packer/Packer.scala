@@ -17,93 +17,20 @@
 
 package com.expedia.www.haystack.trace.commons.packer
 
-import java.io.{ByteArrayInputStream, ByteArrayOutputStream, InputStream, OutputStream}
-import java.nio.ByteBuffer
-import java.util.zip.{GZIPInputStream, GZIPOutputStream}
+import java.io.{ByteArrayInputStream, ByteArrayOutputStream, OutputStream}
+import java.util.zip.GZIPOutputStream
 
-import com.expedia.open.tracing.buffer.SpanBuffer
 import com.expedia.www.haystack.trace.commons.packer.PackerType.PackerType
 import com.google.protobuf.GeneratedMessageV3
 import org.apache.commons.io.IOUtils
-import org.json4s.jackson.Serialization
-import org.json4s.{DefaultFormats, Formats}
-import org.xerial.snappy.{SnappyInputStream, SnappyOutputStream}
+import org.xerial.snappy.SnappyOutputStream
 
 object PackerType extends Enumeration {
   type PackerType = Value
   val GZIP, SNAPPY, NONE = Value
 }
 
-object PackedMessage {
-  implicit val formats: Formats = DefaultFormats + new org.json4s.ext.EnumSerializer(PackerType)
-  val MAGIC_BYTES: Array[Byte] = "hytc".getBytes("utf-8")
-}
-
-case class PackedMessage[T <: GeneratedMessageV3](protoObj: T,
-                                                  private val pack: (T => Array[Byte]),
-                                                  private val metadata: PackedMetadata) {
-  import PackedMessage._
-  private lazy val metadataBytes: Array[Byte] = Serialization.write(metadata).getBytes("utf-8")
-
-  val packedDataBytes: Array[Byte] = {
-    val packedDataBytes = pack(protoObj)
-    if (PackerType.NONE == metadata.t) {
-      packedDataBytes
-    } else {
-      ByteBuffer
-        .allocate(MAGIC_BYTES.length + 4 + metadataBytes.length + packedDataBytes.length)
-        .put(MAGIC_BYTES)
-        .putInt(metadataBytes.length)
-        .put(metadataBytes)
-        .put(packedDataBytes).array()
-    }
-  }
-}
-
 case class PackedMetadata(t: PackerType)
-
-object Unpacker {
-  import PackedMessage._
-
-  private def readMetadata(packedDataBytes: Array[Byte]): Array[Byte] = {
-    val byteBuffer = ByteBuffer.wrap(packedDataBytes)
-    val magicBytesExist = MAGIC_BYTES.indices forall { idx => byteBuffer.get() == MAGIC_BYTES.apply(idx) }
-    if (magicBytesExist) {
-      val headerLength = byteBuffer.getInt
-      val metadataBytes = new Array[Byte](headerLength)
-      byteBuffer.get(metadataBytes, 0, headerLength)
-      metadataBytes
-    } else {
-      null
-    }
-  }
-
-  private def unpack(compressedStream: InputStream) = {
-    val outputStream = new ByteArrayOutputStream()
-    IOUtils.copy(compressedStream, outputStream)
-    outputStream.toByteArray
-  }
-
-  def readSpanBuffer(packedDataBytes: Array[Byte]): SpanBuffer = {
-    var parsedDataBytes: Array[Byte] = null
-    val metadataBytes = readMetadata(packedDataBytes)
-    if (metadataBytes != null) {
-      val packedMetadata = Serialization.read[PackedMetadata](new String(metadataBytes))
-      val compressedDataOffset = MAGIC_BYTES.length + 4 + metadataBytes.length
-      packedMetadata.t match {
-        case PackerType.SNAPPY =>
-          parsedDataBytes = unpack(new SnappyInputStream(new ByteArrayInputStream(packedDataBytes, compressedDataOffset, packedDataBytes.length - compressedDataOffset)))
-        case PackerType.GZIP =>
-          parsedDataBytes = unpack(new GZIPInputStream(new ByteArrayInputStream(packedDataBytes, compressedDataOffset, packedDataBytes.length - compressedDataOffset)))
-        case _ =>
-          return SpanBuffer.parseFrom(new ByteArrayInputStream(packedDataBytes, compressedDataOffset, packedDataBytes.length - compressedDataOffset))
-      }
-    } else {
-      parsedDataBytes = packedDataBytes
-    }
-    SpanBuffer.parseFrom(parsedDataBytes)
-  }
-}
 
 abstract class Packer[T <: GeneratedMessageV3] {
   val packerType: PackerType
@@ -140,14 +67,4 @@ class SnappyPacker[T <: GeneratedMessageV3] extends Packer[T] {
 class GzipPacker[T <: GeneratedMessageV3] extends Packer[T] {
   override val packerType = PackerType.GZIP
   override protected def compressStream(stream: OutputStream): OutputStream = new GZIPOutputStream(stream)
-}
-
-object PackerFactory {
-  def spanBufferPacker(`type`: PackerType): Packer[SpanBuffer] = {
-    `type` match {
-      case PackerType.SNAPPY => new SnappyPacker[SpanBuffer]
-      case PackerType.GZIP => new GzipPacker[SpanBuffer]
-      case _ => new NoopPacker[SpanBuffer]
-    }
-  }
 }

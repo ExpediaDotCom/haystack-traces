@@ -194,7 +194,7 @@ trait BaseIntegrationTestSpec extends FunSpec with GivenWhenThen with Matchers w
     val fieldMap:mutable.Map[String, Any] = mutable.Map(
       SERVICE_KEY_NAME -> serviceName,
       OPERATION_KEY_NAME -> operationName,
-      START_TIME_KEY_NAME -> mutable.ListBuffer[Long](System.currentTimeMillis() * 1000)
+      START_TIME_KEY_NAME -> (System.currentTimeMillis() * 1000)
     )
     tags.foreach(pair => fieldMap.put(pair._1.toLowerCase(), pair._2))
 

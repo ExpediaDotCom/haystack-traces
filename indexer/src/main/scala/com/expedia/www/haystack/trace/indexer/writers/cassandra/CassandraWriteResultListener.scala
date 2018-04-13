@@ -59,8 +59,7 @@ class CassandraWriteResultListener(asyncResult: ResultSetFuture,
       case ex: Exception =>
         LOGGER.error("Fail to write the record to cassandra with exception", ex)
         writeFailures.mark()
-        val innerException = if(ex.getCause != null) ex.getCause else ex
-        retryOp.onError(innerException, retry = true)
+        retryOp.onError(ex, retry = true)
     }
   }
 }

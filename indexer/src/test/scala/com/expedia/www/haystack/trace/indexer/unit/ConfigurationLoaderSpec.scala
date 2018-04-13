@@ -90,6 +90,7 @@ class ConfigurationLoaderSpec extends FunSpec with Matchers {
       // test consistency level on error
       val writeError = new UnavailableException(ConsistencyLevel.ONE, 0, 0)
       cassandraWriteConfig.writeConsistencyLevel(writeError) shouldEqual ConsistencyLevel.ANY
+      cassandraWriteConfig.writeConsistencyLevel(new RuntimeException(writeError)) shouldEqual ConsistencyLevel.ANY
       cassandraWriteConfig.writeConsistencyLevel(null) shouldEqual ConsistencyLevel.ONE
       cassandraWriteConfig.writeConsistencyLevel(new RuntimeException) shouldEqual ConsistencyLevel.ONE
     }

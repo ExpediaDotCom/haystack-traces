@@ -129,6 +129,9 @@ class ElasticSearchTestClient {
       |                "includes": ["traceid"]
       |            },
       |            "properties": {
+      |                "traceid": {
+      |                   "enabled": false
+      |                },
       |                "spans": {
       |                    "type": "nested",
       |                    "properties": {

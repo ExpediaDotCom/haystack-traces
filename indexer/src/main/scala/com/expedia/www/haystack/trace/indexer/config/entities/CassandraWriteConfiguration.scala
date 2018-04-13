@@ -38,10 +38,9 @@ case class CassandraWriteConfiguration(clientConfig: CassandraConfiguration,
     if (error == null) {
       consistencyLevel
     } else {
-      consistencyLevelOnError
+     consistencyLevelOnError
         .find(errorClass => errorClass._1.isAssignableFrom(error.getClass))
-        .map(_._2)
-        .getOrElse(consistencyLevel)
+        .map(_._2).getOrElse(writeConsistencyLevel(error.getCause))
     }
   }
 }

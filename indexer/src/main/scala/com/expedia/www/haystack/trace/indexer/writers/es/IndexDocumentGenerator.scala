@@ -21,7 +21,7 @@ import com.expedia.open.tracing.buffer.SpanBuffer
 import com.expedia.open.tracing.{Span, Tag}
 import com.expedia.www.haystack.commons.metrics.MetricsSupport
 import com.expedia.www.haystack.trace.commons.clients.es.document.TraceIndexDoc
-import com.expedia.www.haystack.trace.commons.clients.es.document.TraceIndexDoc.TagValue
+import com.expedia.www.haystack.trace.commons.clients.es.document.TraceIndexDoc.{OPERATION_KEY_NAME, SERVICE_KEY_NAME, TagValue}
 import com.expedia.www.haystack.trace.commons.config.entities.WhitelistIndexFieldConfiguration
 import org.apache.commons.lang3.StringUtils
 
@@ -39,7 +39,19 @@ class IndexDocumentGenerator(config: WhitelistIndexFieldConfiguration) extends M
     // We maintain a white list of tags that are to be indexed. The whitelist is maintained as a configuration
     // in an external database (outside this app boundary). However, the app periodically reads this whitelist config
     // and applies it to the new spans that are read.
-    val spanIndices = for(sp <- spanBuffer.getChildSpansList.asScala; if isValidForIndex(sp)) yield transform(sp)
+    val spanIndices = mutable.ListBuffer[mutable.Map[String, Any]]()
+    spanBuffer.getChildSpansList.asScala filter isValidForIndex foreach(span => {
+      val spanIndexDoc = spanIndices
+        .find(sp => sp(OPERATION_KEY_NAME).equals(span.getOperationName) && sp(SERVICE_KEY_NAME).equals(span.getServiceName))
+        .getOrElse({
+          val newSpanIndexDoc = mutable.Map[String, Any](
+            SERVICE_KEY_NAME -> span.getServiceName,
+            OPERATION_KEY_NAME -> span.getOperationName)
+          spanIndices.append(newSpanIndexDoc)
+          newSpanIndexDoc
+        })
+      updateSpanIndexDoc(spanIndexDoc, span)
+    })
     if (spanIndices.nonEmpty) Some(TraceIndexDoc(traceId, rootDuration(spanBuffer), spanIndices)) else None
   }
 
@@ -60,25 +72,28 @@ class IndexDocumentGenerator(config: WhitelistIndexFieldConfiguration) extends M
   /**
     * transforms a span object into a index document. serviceName, operationName, duration and tags(depending upon the
     * configuration) are used to create an index document.
+    * @param spanIndexDoc a span index document
     * @param span a span object
     * @return span index document as a map
     */
-  private def transform(span: Span): mutable.Map[String, Any] = {
-    val spanIndexDoc = mutable.Map[String, Any]()
+  private def updateSpanIndexDoc(spanIndexDoc: mutable.Map[String, Any], span: Span): Unit = {
+    def append(key: String, value: Any): Unit = {
+      spanIndexDoc.getOrElseUpdate(key, mutable.Set[Any]())
+        .asInstanceOf[mutable.Set[Any]]
+        .add(value)
+    }
+
     for (tag <- span.getTagsList.asScala;
          normalizedTagKey = tag.getKey.toLowerCase;
          indexField = config.indexFieldMap.get(normalizedTagKey); if indexField != null && indexField.enabled;
          v = readTagValue(tag);
          indexableValue = transformValueForIndexing(indexField.`type`, v); if indexableValue.isDefined) {
-      spanIndexDoc.put(normalizedTagKey, indexableValue)
+      append(normalizedTagKey, indexableValue)
     }
 
     import com.expedia.www.haystack.trace.commons.clients.es.document.TraceIndexDoc._
-    spanIndexDoc.put(SERVICE_KEY_NAME, span.getServiceName)
-    spanIndexDoc.put(OPERATION_KEY_NAME, span.getOperationName)
-    spanIndexDoc.put(DURATION_KEY_NAME, span.getDuration)
-    spanIndexDoc.put(START_TIME_KEY_NAME, span.getStartTime)
-    spanIndexDoc
+    append(DURATION_KEY_NAME, span.getDuration)
+    append(START_TIME_KEY_NAME, span.getStartTime)
   }
 
 

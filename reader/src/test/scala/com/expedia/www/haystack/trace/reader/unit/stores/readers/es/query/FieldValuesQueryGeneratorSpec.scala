@@ -26,12 +26,13 @@ class FieldValuesQueryGeneratorSpec extends BaseUnitTestSpec {
       Given("a trace search request")
       val `type` = "spans"
       val serviceName = "svcName"
-      val tagName = "tagName"
+      val tagName = "error"
+      val tagValue = "true"
       val request = FieldValuesRequest
         .newBuilder()
-        .setFieldName("operation")
-        .addFilters(Field.newBuilder().setName("service").setValue(serviceName).build())
-        .addFilters(Field.newBuilder().setName("tag").setValue(tagName).build())
+        .setFieldName("operationname")
+        .addFilters(Field.newBuilder().setName("servicename").setValue(serviceName).build())
+        .addFilters(Field.newBuilder().setName(tagName).setValue(tagValue).build())
         .build()
       val queryGenerator = new FieldValuesQueryGenerator("haystack", `type`, "spans")
 

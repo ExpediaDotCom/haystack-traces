@@ -21,10 +21,10 @@ import java.util
 import com.expedia.open.tracing.api.{Field, FieldValuesRequest}
 import io.searchbox.core.Search
 import io.searchbox.strings.StringUtils
-import org.apache.lucene.search.join.ScoreMode
 import org.elasticsearch.index.query.QueryBuilders._
 import org.elasticsearch.index.query._
 import org.elasticsearch.search.aggregations.AggregationBuilder
+import org.elasticsearch.search.aggregations.bucket.filter.FilterAggregationBuilder
 import org.elasticsearch.search.aggregations.bucket.nested.NestedAggregationBuilder
 import org.elasticsearch.search.aggregations.bucket.terms.TermsAggregationBuilder
 import org.elasticsearch.search.aggregations.support.ValueType
@@ -40,48 +40,43 @@ class FieldValuesQueryGenerator(indexNamePrefix: String, indexType: String, nest
       .build()
   }
 
-  private def buildQueryString(request: FieldValuesRequest) = {
-    val filterQuery = createNestedQuery(request.getFiltersList)
-    if (filterQuery.isDefined) {
-      new SearchSourceBuilder()
-        .query(filterQuery.get)
-        .aggregation(createNestedAggregationQuery(request.getFieldName.toLowerCase))
-        .size(0)
-        .toString
-    } else {
-      new SearchSourceBuilder()
-        .aggregation(createNestedAggregationQuery(request.getFieldName.toLowerCase()))
-        .size(0)
-        .toString
-    }
+  private def buildQueryString(request: FieldValuesRequest) =
+    new SearchSourceBuilder()
+      .aggregation(createNestedAggregationQuery(request.getFieldName.toLowerCase(), request.getFiltersList))
+      .size(0)
+      .toString
+
+  private def createNestedAggregationQuery(fieldName: String, filters: util.List[Field]): AggregationBuilder = {
+    val subAggregation =
+      if(filters.size() == 0)
+        new TermsAggregationBuilder(s"$fieldName-terms-agg", ValueType.STRING)
+          .field(withBaseDoc(fieldName))
+          .size(1000)
+      else
+        createQueryAggregation(fieldName, filters)
+
+    new NestedAggregationBuilder(s"$nestedDocName-nested-agg", nestedDocName).subAggregation(subAggregation)
   }
 
-  private def createNestedQuery(filters: util.List[Field]): Option[NestedQueryBuilder] = {
-    if (filters.size() == 0) {
-      None
-    } else {
-      val nestedBoolQueryBuilder = boolQuery()
+  private def createQueryAggregation(fieldName: String, filters: util.List[Field]) = {
+    val boolQueryBuilder = boolQuery()
 
-      // add all fields as term sub query
-      val subQueries: Seq[QueryBuilder] =
-        for (field <- filters.asScala;
-             termQuery = buildTermQuery(field.getName.toLowerCase, field.getValue); if termQuery.isDefined) yield termQuery.get
-      subQueries.foreach(nestedBoolQueryBuilder.filter)
+    // add all fields as term sub query
+    val subQueries: Seq[QueryBuilder] =
+      for (field <- filters.asScala;
+           termQuery = buildTermQuery(field.getName.toLowerCase, field.getValue); if termQuery.isDefined) yield termQuery.get
+    subQueries.foreach(boolQueryBuilder.filter)
 
-      Some(nestedQuery(nestedDocName, nestedBoolQueryBuilder, ScoreMode.None))
-    }
+    // combined filter and aggregation query
+    new FilterAggregationBuilder(s"$fieldName-filter-agg", boolQueryBuilder)
+      .subAggregation(new TermsAggregationBuilder(s"$fieldName-terms-agg", ValueType.STRING)
+        .field(withBaseDoc(fieldName))
+        .size(1000))
   }
 
   private def buildTermQuery(key: String, value: String): Option[TermQueryBuilder] = {
     if (StringUtils.isBlank(value)) None else Some(termQuery(withBaseDoc(key), value))
   }
-
-  private def createNestedAggregationQuery(fieldName: String): AggregationBuilder =
-    new NestedAggregationBuilder(nestedDocName, nestedDocName)
-      .subAggregation(
-        new TermsAggregationBuilder(fieldName, ValueType.STRING)
-          .field(withBaseDoc(fieldName))
-          .size(1000))
 
   private def withBaseDoc(field: String) = s"$nestedDocName.$field"
 }

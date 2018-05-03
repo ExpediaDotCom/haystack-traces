@@ -28,7 +28,7 @@ import org.slf4j.LoggerFactory
 
 import scala.collection.JavaConverters._
 
-case class WhitelistIndexField(name: String, `type`: String, enabled: Boolean = true)
+case class WhitelistIndexField(name: String, `type`: String, searchContext: String = "span", enabled: Boolean = true)
 case class WhiteListIndexFields(fields: List[WhitelistIndexField])
 
 case class WhitelistIndexFieldConfiguration() extends Reloadable {
@@ -65,9 +65,7 @@ case class WhitelistIndexFieldConfiguration() extends Reloadable {
     // remove the fields from the map if they are not present in the newly provided whitelist set
     val fieldNames = newWhitelistFields.fields.map(_.name)
 
-    indexFieldMap.values().removeIf(new Predicate[WhitelistIndexField] {
-      override def test(t: WhitelistIndexField): Boolean = !fieldNames.contains(t.name)
-    })
+    indexFieldMap.values().removeIf((t: WhitelistIndexField) => !fieldNames.contains(t.name))
 
     // add the fields in the map
     for(field <- newWhitelistFields.fields) {
@@ -94,4 +92,6 @@ case class WhitelistIndexFieldConfiguration() extends Reloadable {
     * @return the whitelist index fields
     */
   def whitelistIndexFields: List[WhitelistIndexField] = indexFieldMap.values().asScala.toList
+
+  def globalTraceContextIndexFieldNames: Set[String] = whitelistIndexFields.filter(f => f.searchContext == "trace").map(_.name).toSet
 }

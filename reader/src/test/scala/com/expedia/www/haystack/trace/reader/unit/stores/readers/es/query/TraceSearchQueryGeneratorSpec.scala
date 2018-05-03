@@ -17,6 +17,7 @@ package com.expedia.www.haystack.trace.reader.unit.stores.readers.es.query
 
 import com.expedia.open.tracing.api.{Field, TracesSearchRequest}
 import com.expedia.www.haystack.trace.commons.clients.es.document.TraceIndexDoc
+import com.expedia.www.haystack.trace.commons.config.entities.WhitelistIndexFieldConfiguration
 import com.expedia.www.haystack.trace.reader.stores.readers.es.query.TraceSearchQueryGenerator
 import com.expedia.www.haystack.trace.reader.unit.BaseUnitTestSpec
 import com.google.gson.Gson
@@ -37,7 +38,7 @@ class TraceSearchQueryGeneratorSpec extends BaseUnitTestSpec {
         .setEndTime(System.currentTimeMillis() * 1000)
         .setLimit(10)
         .build()
-      val queryGenerator = new TraceSearchQueryGenerator("haystack", `type`, "spans")
+      val queryGenerator = new TraceSearchQueryGenerator("haystack", `type`, "spans", new WhitelistIndexFieldConfiguration)
 
       When("generating query")
       val query = queryGenerator.generate(request)
@@ -58,7 +59,7 @@ class TraceSearchQueryGeneratorSpec extends BaseUnitTestSpec {
         .setEndTime(System.currentTimeMillis() * 1000)
         .setLimit(10)
         .build()
-      val queryGenerator = new TraceSearchQueryGenerator("haystack", `type`, "spans")
+      val queryGenerator = new TraceSearchQueryGenerator("haystack", `type`, "spans", new WhitelistIndexFieldConfiguration)
 
       When("generating query")
       val query: Search = queryGenerator.generate(request)

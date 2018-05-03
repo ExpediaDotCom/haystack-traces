@@ -16,23 +16,15 @@
 
 package com.expedia.www.haystack.trace.reader.stores.readers.es.query
 
-import java.util
-
-import com.expedia.open.tracing.api.{Field, FieldValuesRequest}
+import com.expedia.open.tracing.api.FieldValuesRequest
+import com.expedia.www.haystack.trace.commons.config.entities.WhitelistIndexFieldConfiguration
 import io.searchbox.core.Search
-import io.searchbox.strings.StringUtils
-import org.apache.lucene.search.join.ScoreMode
-import org.elasticsearch.index.query.QueryBuilders._
-import org.elasticsearch.index.query._
-import org.elasticsearch.search.aggregations.AggregationBuilder
-import org.elasticsearch.search.aggregations.bucket.nested.NestedAggregationBuilder
-import org.elasticsearch.search.aggregations.bucket.terms.TermsAggregationBuilder
-import org.elasticsearch.search.aggregations.support.ValueType
 import org.elasticsearch.search.builder.SearchSourceBuilder
 
-import scala.collection.JavaConverters._
-
-class FieldValuesQueryGenerator(indexNamePrefix: String, indexType: String, nestedDocName: String) {
+class FieldValuesQueryGenerator(indexNamePrefix: String,
+                                indexType: String,
+                                nestedDocName: String,
+                                indexConfiguration: WhitelistIndexFieldConfiguration) extends QueryGenerator(nestedDocName, indexConfiguration) {
   def generate(request: FieldValuesRequest): Search = {
     new Search.Builder(buildQueryString(request))
       .addIndex(s"$indexNamePrefix*")
@@ -40,11 +32,11 @@ class FieldValuesQueryGenerator(indexNamePrefix: String, indexType: String, nest
       .build()
   }
 
-  private def buildQueryString(request: FieldValuesRequest) = {
-    val filterQuery = createNestedQuery(request.getFiltersList)
-    if (filterQuery.isDefined) {
+  private def buildQueryString(request: FieldValuesRequest): String = {
+    val query = createQuery(request.getFiltersList)
+    if (query.filter().size() > 0) {
       new SearchSourceBuilder()
-        .query(filterQuery.get)
+        .query(query)
         .aggregation(createNestedAggregationQuery(request.getFieldName.toLowerCase))
         .size(0)
         .toString
@@ -55,33 +47,4 @@ class FieldValuesQueryGenerator(indexNamePrefix: String, indexType: String, nest
         .toString
     }
   }
-
-  private def createNestedQuery(filters: util.List[Field]): Option[NestedQueryBuilder] = {
-    if (filters.size() == 0) {
-      None
-    } else {
-      val nestedBoolQueryBuilder = boolQuery()
-
-      // add all fields as term sub query
-      val subQueries: Seq[QueryBuilder] =
-        for (field <- filters.asScala;
-             termQuery = buildTermQuery(field.getName.toLowerCase, field.getValue); if termQuery.isDefined) yield termQuery.get
-      subQueries.foreach(nestedBoolQueryBuilder.filter)
-
-      Some(nestedQuery(nestedDocName, nestedBoolQueryBuilder, ScoreMode.None))
-    }
-  }
-
-  private def buildTermQuery(key: String, value: String): Option[TermQueryBuilder] = {
-    if (StringUtils.isBlank(value)) None else Some(termQuery(withBaseDoc(key), value))
-  }
-
-  private def createNestedAggregationQuery(fieldName: String): AggregationBuilder =
-    new NestedAggregationBuilder(nestedDocName, nestedDocName)
-      .subAggregation(
-        new TermsAggregationBuilder(fieldName, ValueType.STRING)
-          .field(withBaseDoc(fieldName))
-          .size(1000))
-
-  private def withBaseDoc(field: String) = s"$nestedDocName.$field"
 }

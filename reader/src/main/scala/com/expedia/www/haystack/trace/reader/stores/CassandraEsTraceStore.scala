@@ -50,8 +50,8 @@ class CassandraEsTraceStore(cassandraConfiguration: CassandraConfiguration,
   private val cassandraReader: CassandraReader = new CassandraReader(cassandraConfiguration)
   private val esReader: ElasticSearchReader = new ElasticSearchReader(esConfiguration)
 
-  private val traceSearchQueryGenerator = new TraceSearchQueryGenerator(esConfiguration.indexNamePrefix, esConfiguration.indexType, ES_NESTED_DOC_NAME)
-  private val fieldValuesQueryGenerator = new FieldValuesQueryGenerator(esConfiguration.indexNamePrefix, esConfiguration.indexType, ES_NESTED_DOC_NAME)
+  private val traceSearchQueryGenerator = new TraceSearchQueryGenerator(esConfiguration.indexNamePrefix, esConfiguration.indexType, ES_NESTED_DOC_NAME, indexConfiguration)
+  private val fieldValuesQueryGenerator = new FieldValuesQueryGenerator(esConfiguration.indexNamePrefix, esConfiguration.indexType, ES_NESTED_DOC_NAME, indexConfiguration)
 
   override def searchTraces(request: TracesSearchRequest): Future[Seq[Trace]] = {
     esReader

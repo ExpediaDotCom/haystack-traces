@@ -18,17 +18,17 @@ package com.expedia.www.haystack.trace.reader.stores.readers.es.query
 
 import com.expedia.open.tracing.api.TracesSearchRequest
 import com.expedia.www.haystack.trace.commons.clients.es.document.TraceIndexDoc._
+import com.expedia.www.haystack.trace.commons.config.entities.WhitelistIndexFieldConfiguration
 import io.searchbox.core.Search
-import io.searchbox.strings.StringUtils
 import org.apache.lucene.search.join.ScoreMode
 import org.elasticsearch.index.query.QueryBuilders._
-import org.elasticsearch.index.query._
 import org.elasticsearch.search.builder.SearchSourceBuilder
 import org.elasticsearch.search.sort.{FieldSortBuilder, SortOrder}
 
-import scala.collection.JavaConverters._
-
-class TraceSearchQueryGenerator(indexNamePrefix: String, indexType: String, nestedDocName: String) {
+class TraceSearchQueryGenerator(indexNamePrefix: String,
+                                indexType: String,
+                                nestedDocName: String,
+                                indexConfiguration: WhitelistIndexFieldConfiguration) extends QueryGenerator(nestedDocName, indexConfiguration) {
 
   def generate(request: TracesSearchRequest): Search = {
     require(request.getStartTime > 0)
@@ -42,34 +42,17 @@ class TraceSearchQueryGenerator(indexNamePrefix: String, indexType: String, nest
   }
 
   private def buildQueryString(request: TracesSearchRequest): String = {
+    val query = createQuery(request.getFieldsList)
+    // set time range window
+    query
+      .filter(nestedQuery(nestedDocName, rangeQuery(withBaseDoc(START_TIME_KEY_NAME))
+        .gte(request.getStartTime)
+        .lte(request.getEndTime), ScoreMode.None))
+
     new SearchSourceBuilder()
-      .query(boolQuery.must(createNestedQuery(request)))
+      .query(query)
       .sort(new FieldSortBuilder(withBaseDoc(START_TIME_KEY_NAME)).order(SortOrder.DESC).setNestedPath(nestedDocName))
       .size(request.getLimit)
       .toString
   }
-
-  private def createNestedQuery(request: TracesSearchRequest): NestedQueryBuilder = {
-    val nestedBoolQuery: BoolQueryBuilder = boolQuery()
-
-    // add all fields as term sub query
-    val subQueries: Seq[QueryBuilder] =
-      for (field <- request.getFieldsList.asScala;
-           termQuery = buildTermQuery(field.getName, field.getValue); if termQuery.isDefined) yield termQuery.get
-    subQueries.foreach(nestedBoolQuery.filter)
-
-    // set time range window
-    nestedBoolQuery
-      .must(rangeQuery(withBaseDoc(START_TIME_KEY_NAME))
-        .gte(request.getStartTime)
-        .lte(request.getEndTime))
-
-    nestedQuery(nestedDocName, nestedBoolQuery, ScoreMode.None)
-  }
-
-  private def buildTermQuery(key: String, value: String): Option[TermQueryBuilder] = {
-    if (StringUtils.isBlank(value)) None else Some(termQuery(withBaseDoc(key), value))
-  }
-
-  private def withBaseDoc(field: String) = s"$nestedDocName.${field.toLowerCase}"
 }

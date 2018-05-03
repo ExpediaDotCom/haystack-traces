@@ -30,10 +30,8 @@ abstract class ConfigurationReloadProvider(config: ReloadConfiguration) extends 
   // schedule the reload process from an external store
   if(config.reloadIntervalInMillis > -1) {
     LOGGER.info("configuration reload scheduler has been started with a delay of {}ms", config.reloadIntervalInMillis)
-    executor.scheduleWithFixedDelay(new Runnable() {
-      override def run(): Unit = {
-        load()
-      }
+    executor.scheduleWithFixedDelay(() => {
+      load()
     }, config.reloadIntervalInMillis, config.reloadIntervalInMillis, TimeUnit.MILLISECONDS)
   }
 

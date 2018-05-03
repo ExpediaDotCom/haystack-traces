@@ -16,6 +16,7 @@
 package com.expedia.www.haystack.trace.reader.unit.stores.readers.es.query
 
 import com.expedia.open.tracing.api.{Field, FieldValuesRequest}
+import com.expedia.www.haystack.trace.commons.config.entities.WhitelistIndexFieldConfiguration
 import com.expedia.www.haystack.trace.reader.stores.readers.es.query.FieldValuesQueryGenerator
 import com.expedia.www.haystack.trace.reader.unit.BaseUnitTestSpec
 import com.google.gson.Gson
@@ -33,7 +34,7 @@ class FieldValuesQueryGeneratorSpec extends BaseUnitTestSpec {
         .addFilters(Field.newBuilder().setName("service").setValue(serviceName).build())
         .addFilters(Field.newBuilder().setName("tag").setValue(tagName).build())
         .build()
-      val queryGenerator = new FieldValuesQueryGenerator("haystack", `type`, "spans")
+      val queryGenerator = new FieldValuesQueryGenerator("haystack", `type`, "spans", new WhitelistIndexFieldConfiguration)
 
       When("generating query")
       val query = queryGenerator.generate(request)
@@ -53,7 +54,7 @@ class FieldValuesQueryGeneratorSpec extends BaseUnitTestSpec {
         .setFieldName(operationField)
         .addFilters(Field.newBuilder().setName(serviceField).setValue(serviceName).build())
         .build()
-      val queryGenerator = new FieldValuesQueryGenerator("haystack", `type`, "spans")
+      val queryGenerator = new FieldValuesQueryGenerator("haystack", `type`, "spans", new WhitelistIndexFieldConfiguration)
 
       When("generating query")
       val query = queryGenerator.generate(request)

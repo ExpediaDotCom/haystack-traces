@@ -155,7 +155,7 @@ class ProviderConfiguration {
   }
 
   // configuration reloader
-  private val reloader = registerReloadableConfigurations(List(indexConfig))
+  registerReloadableConfigurations(List(indexConfig))
 
   /**
     * registers a reloadable config object to reloader instance.

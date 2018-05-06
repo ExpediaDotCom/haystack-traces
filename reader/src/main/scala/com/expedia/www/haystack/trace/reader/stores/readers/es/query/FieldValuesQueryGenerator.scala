@@ -36,8 +36,7 @@ class FieldValuesQueryGenerator(indexNamePrefix: String,
     val query = createQuery(request.getFiltersList)
     if (query.filter().size() > 0) {
       new SearchSourceBuilder()
-        .query(query)
-        .aggregation(createNestedAggregationQuery(request.getFieldName.toLowerCase))
+        .aggregation(createNestedAggregationQueryWithNestedFilters(request.getFieldName.toLowerCase, request.getFiltersList))
         .size(0)
         .toString
     } else {

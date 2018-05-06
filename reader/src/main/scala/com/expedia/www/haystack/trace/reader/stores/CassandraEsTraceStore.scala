@@ -119,6 +119,7 @@ class CassandraEsTraceStore(cassandraConfiguration: CassandraConfiguration,
       .getAsJsonObject(ES_FIELD_AGGREGATIONS)
       .getAsJsonObject(ES_NESTED_DOC_NAME)
       .getAsJsonObject(fieldName)
+      .getAsJsonObject(fieldName)
       .getAsJsonArray(ES_FIELD_BUCKETS)
       .asScala
       .map(element => element.getAsJsonObject.get(ES_FIELD_KEY).getAsString)

@@ -83,8 +83,8 @@ abstract class QueryGenerator(nestedDocName: String, indexConfiguration: Whiteli
 
     new NestedAggregationBuilder(nestedDocName, nestedDocName)
       .subAggregation(
-        new FilterAggregationBuilder(s"$fieldName-filter-agg", boolQueryBuilder)
-          .subAggregation(new TermsAggregationBuilder(s"$fieldName-terms-agg", ValueType.STRING)
+        new FilterAggregationBuilder(s"$fieldName", boolQueryBuilder)
+          .subAggregation(new TermsAggregationBuilder(s"$fieldName", ValueType.STRING)
             .field(withBaseDoc(fieldName))
             .size(1000))
       )

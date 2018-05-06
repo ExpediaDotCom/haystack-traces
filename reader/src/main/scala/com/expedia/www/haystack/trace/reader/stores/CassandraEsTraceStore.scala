@@ -113,16 +113,28 @@ class CassandraEsTraceStore(cassandraConfiguration: CassandraConfiguration,
       .map(extractFieldValues(_, request.getFieldName.toLowerCase))
   }
 
-  private def extractFieldValues(result: SearchResult, fieldName: String): List[String] =
-    result
+  private def extractFieldValues(result: SearchResult, fieldName: String): List[String] = {
+    val aggregations =
+      result
       .getJsonObject
       .getAsJsonObject(ES_FIELD_AGGREGATIONS)
       .getAsJsonObject(ES_NESTED_DOC_NAME)
       .getAsJsonObject(fieldName)
-      .getAsJsonArray(ES_FIELD_BUCKETS)
-      .asScala
-      .map(element => element.getAsJsonObject.get(ES_FIELD_KEY).getAsString)
-      .toList
+
+    if (aggregations.has(ES_FIELD_BUCKETS))
+      aggregations
+        .getAsJsonArray(ES_FIELD_BUCKETS)
+        .asScala
+        .map(element => element.getAsJsonObject.get(ES_FIELD_KEY).getAsString)
+        .toList
+    else
+      aggregations
+        .getAsJsonObject(fieldName)
+        .getAsJsonArray(ES_FIELD_BUCKETS)
+        .asScala
+        .map(element => element.getAsJsonObject.get(ES_FIELD_KEY).getAsString)
+        .toList
+  }
 
   override def close(): Unit = {
     cassandraReader.close()

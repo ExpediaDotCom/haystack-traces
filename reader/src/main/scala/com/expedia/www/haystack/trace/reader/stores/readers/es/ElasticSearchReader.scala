@@ -37,11 +37,11 @@ class ElasticSearchReader(config: ElasticSearchConfiguration)(implicit val dispa
     LOGGER.info("Initializing the http elastic search client with endpoint={}", config.endpoint)
     val factory = new JestClientFactory()
     val builder = new HttpClientConfig.Builder(config.endpoint)
-                      .multiThreaded(true)
-                      .connTimeout(config.connectionTimeoutMillis)
-                      .readTimeout(config.readTimeoutMillis)
+      .multiThreaded(true)
+      .connTimeout(config.connectionTimeoutMillis)
+      .readTimeout(config.readTimeoutMillis)
 
-    if (config.username.isDefined && config.password.isDefined){
+    if (config.username.isDefined && config.password.isDefined) {
       builder.defaultCredentials(config.username.get, config.password.get)
     }
 
@@ -50,6 +50,22 @@ class ElasticSearchReader(config: ElasticSearchConfiguration)(implicit val dispa
   }
 
   def search(request: Search): Future[SearchResult] = {
+    val promise = Promise[SearchResult]()
+    val time = readTimer.time()
+    try {
+      LOGGER.info("elastic search query requested: '{}'", request.toString)
+      esClient.executeAsync(request, new ElasticSearchReadResultListener(request, promise, time, readFailures))
+      promise.future
+    } catch {
+      case ex: Exception =>
+        readFailures.mark()
+        time.stop()
+        LOGGER.error(s"Failed to read from elasticsearch for request=${request.getData(new Gson())} with exception", ex)
+        Future.failed(ex)
+    }
+  }
+
+  def getTraceCounts(request: Search): Future[SearchResult] = {
     val promise = Promise[SearchResult]()
     val time = readTimer.time()
     try {

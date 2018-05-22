@@ -23,6 +23,7 @@ import org.apache.lucene.search.join.ScoreMode
 import org.elasticsearch.index.query.QueryBuilders.{boolQuery, nestedQuery, termQuery}
 import org.elasticsearch.index.query.{BoolQueryBuilder, NestedQueryBuilder, QueryBuilder, TermQueryBuilder}
 import org.elasticsearch.search.aggregations.AggregationBuilder
+import org.elasticsearch.search.aggregations.bucket.filter.FilterAggregationBuilder
 import org.elasticsearch.search.aggregations.bucket.nested.NestedAggregationBuilder
 import org.elasticsearch.search.aggregations.bucket.terms.TermsAggregationBuilder
 import org.elasticsearch.search.aggregations.support.ValueType
@@ -50,15 +51,20 @@ abstract class QueryGenerator(nestedDocName: String, indexConfiguration: Whiteli
     if (fields.isEmpty) {
       None
     } else {
-      val nestedBoolQueryBuilder = boolQuery()
-      // add all fields as term sub query
-      val subQueries: Seq[QueryBuilder] =
-        for (field <- fields;
-             termQuery = buildTermQuery(field.getName.toLowerCase, field.getValue); if termQuery.isDefined) yield termQuery.get
-      subQueries.foreach(nestedBoolQueryBuilder.filter)
-
+      val nestedBoolQueryBuilder = createBoolQuery(fields)
       Some(nestedQuery(nestedDocName, nestedBoolQueryBuilder, ScoreMode.None))
     }
+  }
+
+  private def createBoolQuery(fields: Seq[Field]): BoolQueryBuilder = {
+    val boolQueryBuilder = boolQuery()
+    // add all fields as term sub query
+    val subQueries: Seq[QueryBuilder] =
+      for (field <- fields;
+           termQuery = buildTermQuery(field.getName.toLowerCase, field.getValue); if termQuery.isDefined) yield termQuery.get
+    subQueries.foreach(boolQueryBuilder.filter)
+
+    boolQueryBuilder
   }
 
   private def buildTermQuery(key: String, value: String): Option[TermQueryBuilder] = {
@@ -71,6 +77,18 @@ abstract class QueryGenerator(nestedDocName: String, indexConfiguration: Whiteli
         new TermsAggregationBuilder(fieldName, ValueType.STRING)
           .field(withBaseDoc(fieldName))
           .size(1000))
+
+  protected def createNestedAggregationQueryWithNestedFilters(fieldName: String, filterFields: java.util.List[Field]): AggregationBuilder ={
+    val boolQueryBuilder = createBoolQuery(filterFields.asScala)
+
+    new NestedAggregationBuilder(nestedDocName, nestedDocName)
+      .subAggregation(
+        new FilterAggregationBuilder(s"$fieldName", boolQueryBuilder)
+          .subAggregation(new TermsAggregationBuilder(s"$fieldName", ValueType.STRING)
+            .field(withBaseDoc(fieldName))
+            .size(1000))
+      )
+  }
 
   protected def withBaseDoc(field: String) = s"$nestedDocName.$field"
 }

@@ -127,6 +127,18 @@ class ProjectConfiguration extends AutoCloseable {
     */
   val cassandraWriteConfig: CassandraWriteConfiguration = {
 
+    def keyspaceConfig(kConfig: Config): KeyspaceConfiguration = {
+      val autoCreateSchemaField = "auto.create.schema"
+      val autoCreateSchema = if (kConfig.hasPath(autoCreateSchemaField)
+        && StringUtils.isNotEmpty(kConfig.getString(autoCreateSchemaField))) {
+        Some(kConfig.getString(autoCreateSchemaField))
+      } else {
+        None
+      }
+
+      KeyspaceConfiguration(kConfig.getString("name"), kConfig.getString("table.name"), autoCreateSchema, kConfig.getLong("ttl.sec"))
+    }
+
     def toConsistencyLevel(level: String) = ConsistencyLevel.values().find(_.toString.equalsIgnoreCase(level)).get
 
     def consistencyLevelOnErrors(cs: Config) = {
@@ -176,29 +188,16 @@ class ProjectConfiguration extends AutoCloseable {
 
     val consistencyLevel = toConsistencyLevel(cs.getString("consistency.level"))
 
-    val keyspaceConfig = cs.getConfig("keyspace")
-
-    val autoCreateSchemaField = "auto.create.schema"
-    val autoCreateSchema = if (keyspaceConfig.hasPath(autoCreateSchemaField)
-      && StringUtils.isNotEmpty(keyspaceConfig.getString(autoCreateSchemaField))) {
-      Some(keyspaceConfig.getString(autoCreateSchemaField))
-    } else {
-      None
-    }
-
-
     CassandraWriteConfiguration(
       clientConfig = CassandraConfiguration(
         if (cs.hasPath("endpoints")) cs.getString("endpoints").split(",").toList else Nil,
         cs.getBoolean("auto.discovery.enabled"),
         awsConfig,
         credentialsConfig,
-        keyspaceConfig.getString("name"),
-        keyspaceConfig.getString("table.name"),
-        autoCreateSchema,
+        keyspaceConfig(cs.getConfig("spans.keyspace")),
+        keyspaceConfig(cs.getConfig("service.metadata.keyspace")),
         socket),
       consistencyLevel = consistencyLevel,
-      recordTTLInSec = cs.getInt("ttl.sec"),
       maxInFlightRequests = cs.getInt("max.inflight.requests"),
       retryConfig = RetryOperation.Config(
         cs.getInt("retries.max"),

@@ -50,6 +50,19 @@ class CassandraSession(config: CassandraConfiguration, factory: ClusterFactory) 
           .where(QueryBuilder.eq(ID_COLUMN_NAME, bindMarker(ID_COLUMN_NAME))))
   }
 
+  def createInsertMetadataPreparedStatement(recordTTLInSec: Int): PreparedStatement = {
+    import QueryBuilder.{bindMarker, ttl}
+
+    val insert = QueryBuilder
+      .insertInto(config.tableName)
+      .value(ID_COLUMN_NAME, bindMarker(ID_COLUMN_NAME))
+      .value(TIMESTAMP_COLUMN_NAME, bindMarker(TIMESTAMP_COLUMN_NAME))
+      .value(SPANS_COLUMN_NAME, bindMarker(SPANS_COLUMN_NAME))
+      .using(ttl(recordTTLInSec))
+
+    session.prepare(insert)
+  }
+
   def createInsertPreparedStatement(recordTTLInSec: Int): PreparedStatement = {
     import QueryBuilder.{bindMarker, ttl}
 
@@ -69,6 +82,23 @@ class CassandraSession(config: CassandraConfiguration, factory: ClusterFactory) 
   def close(): Unit = {
     Try(session.close())
     Try(cluster.close())
+  }
+
+  /**
+    * create bound statement for writing to cassandra table
+    * @param traceId trace id
+    * @param spanBufferBytes data bytes of spanBuffer that belong to a given trace id
+    * @return
+    */
+  def newInsertStatement(traceId: String,
+                         spanBufferBytes: Array[Byte],
+                              consistencyLevel: ConsistencyLevel,
+                              insertTraceStatement: PreparedStatement): Statement = {
+    new BoundStatement(insertTraceStatement)
+      .setString(ID_COLUMN_NAME, traceId)
+      .setTimestamp(TIMESTAMP_COLUMN_NAME, new Date())
+      .setBytes(SPANS_COLUMN_NAME, ByteBuffer.wrap(spanBufferBytes))
+      .setConsistencyLevel(consistencyLevel)
   }
 
   /**

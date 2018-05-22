@@ -28,7 +28,8 @@ import org.elasticsearch.search.sort.{FieldSortBuilder, SortOrder}
 class TraceSearchQueryGenerator(indexNamePrefix: String,
                                 indexType: String,
                                 nestedDocName: String,
-                                indexConfiguration: WhitelistIndexFieldConfiguration) extends QueryGenerator(nestedDocName, indexConfiguration) {
+                                indexConfiguration: WhitelistIndexFieldConfiguration)
+  extends QueryGenerator(nestedDocName, indexConfiguration) {
 
   def generate(request: TracesSearchRequest): Search = {
     require(request.getStartTime > 0)

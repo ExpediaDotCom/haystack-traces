@@ -76,14 +76,16 @@ class ProviderConfiguration {
       socketConfig.getInt("conn.timeout.ms"),
       socketConfig.getInt("read.timeout.ms"))
 
+    val spanKeyspace = cs.getConfig("spans.keyspace")
+    val serviceMetadataKeyspace = cs.getConfig("service.metadata.keyspace")
+
     CassandraConfiguration(
       if (cs.hasPath("endpoints")) cs.getString("endpoints").split(",").toList else Nil,
       cs.getBoolean("auto.discovery.enabled"),
       awsConfig,
       credentialsConfig,
-      cs.getString("keyspace.name"),
-      cs.getString("keyspace.table.name"),
-      None,
+      KeyspaceConfiguration(spanKeyspace.getString("name"), spanKeyspace.getString("table.name")),
+      KeyspaceConfiguration(serviceMetadataKeyspace.getString("name"), serviceMetadataKeyspace.getString("table.name")),
       socket)
   }
 
@@ -171,8 +173,8 @@ class ProviderConfiguration {
       reload.getString("config.endpoint"),
       reload.getString("config.database.name"),
       reload.getInt("interval.ms"),
-      if(reload.hasPath("config.username")){Option(reload.getString("config.username"))}else{None},
-      if(reload.hasPath("config.password")){Option(reload.getString("config.password"))}else{None},
+      if(reload.hasPath("config.username")){ Option(reload.getString("config.username")) } else None,
+      if(reload.hasPath("config.password")){ Option(reload.getString("config.password")) } else None,
       observers,
       loadOnStartup = reload.getBoolean("startup.load"))
 

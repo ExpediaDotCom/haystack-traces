@@ -17,22 +17,35 @@
 
 package com.expedia.www.haystack.trace.commons.config.entities
 
+import org.apache.commons.lang3.StringUtils
+
+
+/** define the keyspace and table information in cassandra
+  *
+  * @param name              : name of cassandra keyspace
+  * @param table             : name of cassandra table
+  * @param autoCreateSchema  : apply cql and create keyspace and tables if not exist, optional
+  * @param recordTTLInSec    : ttl of record in sec
+  */
+case class KeyspaceConfiguration(name: String, table: String, autoCreateSchema: Option[String] = None, recordTTLInSec: Long = -1) {
+  require(StringUtils.isNotEmpty(name))
+  require(StringUtils.isNotEmpty(table))
+}
+
 /**
   * defines the configuration parameters for cassandra
   *
-  * @param endpoints           : list of cassandra endpoints
-  * @param autoDiscoverEnabled : if autodiscovery is enabled, then 'endpoints' config parameter will be ignored
-  * @param awsNodeDiscovery    : discovery configuration for aws, optional. This is applied only if autoDiscoverEnabled is true
-  * @param keyspace            : cassandra keyspance
-  * @param tableName           : cassandra table name
-  * @param autoCreateSchema    : apply cql and create keyspace and tables if not exist, optional
-  * @param socket              : socket configuration like maxConnections, timeouts and keepAlive
+  * @param endpoints                : list of cassandra endpoints
+  * @param autoDiscoverEnabled      : if autodiscovery is enabled, then 'endpoints' config parameter will be ignored
+  * @param awsNodeDiscovery         : discovery configuration for aws, optional. This is applied only if autoDiscoverEnabled is true
+  * @param spanKeyspace             : cassandra keyspace for spans
+  * @param serviceMetadataKeyspace  : cassandra keyspace for service metadata
+  * @param socket                   : socket configuration like maxConnections, timeouts and keepAlive
   */
 case class CassandraConfiguration(endpoints: List[String],
                                   autoDiscoverEnabled: Boolean,
                                   awsNodeDiscovery: Option[AwsNodeDiscoveryConfiguration],
                                   plaintextCredentials: Option[CredentialsConfiguration],
-                                  keyspace: String,
-                                  tableName: String,
-                                  autoCreateSchema: Option[String],
+                                  spanKeyspace: KeyspaceConfiguration,
+                                  serviceMetadataKeyspace: KeyspaceConfiguration,
                                   socket: SocketConfiguration)

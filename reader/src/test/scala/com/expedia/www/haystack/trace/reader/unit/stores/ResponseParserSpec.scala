@@ -20,6 +20,7 @@ import com.expedia.www.haystack.trace.reader.stores.ResponseParser
 import com.expedia.www.haystack.trace.reader.unit.BaseUnitTestSpec
 import com.google.gson.{Gson, JsonParser}
 import io.searchbox.core.SearchResult
+import scala.concurrent.ExecutionContext.Implicits.global
 
 class ResponseParserSpec extends BaseUnitTestSpec with ResponseParser {
   describe("ResponseParserSpec") {
@@ -36,6 +37,7 @@ class ResponseParserSpec extends BaseUnitTestSpec with ResponseParser {
 
       Then("generate a valid query")
       traceCounts should not be None
+      traceCounts.map(traceCounts => (traceCounts.getTraceCountCount shouldEqual 11))
     }
   }
 

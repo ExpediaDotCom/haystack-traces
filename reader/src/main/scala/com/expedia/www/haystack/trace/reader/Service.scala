@@ -51,7 +51,11 @@ object Service extends MetricsSupport {
       val config = new ProviderConfiguration
       HealthController.addListener(new UpdateHealthStatusFile(config.healthStatusFilePath))
 
-      val store = new CassandraEsTraceStore(config.cassandraConfig, config.elasticSearchConfig, config.indexConfig)(executor)
+      val store = new CassandraEsTraceStore(
+        config.cassandraConfig,
+        config.serviceMetadataConfig,
+        config.elasticSearchConfig,
+        config.indexConfig)(executor)
 
       val serviceConfig = config.serviceConfig
 

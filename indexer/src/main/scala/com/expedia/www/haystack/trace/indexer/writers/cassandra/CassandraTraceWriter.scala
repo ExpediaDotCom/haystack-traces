@@ -22,7 +22,7 @@ import java.util.concurrent.Semaphore
 import com.expedia.open.tracing.buffer.SpanBuffer
 import com.expedia.www.haystack.commons.metrics.MetricsSupport
 import com.expedia.www.haystack.commons.retries.RetryOperation._
-import com.expedia.www.haystack.trace.commons.clients.cassandra.{CassandraClusterFactory, CassandraSession}
+import com.expedia.www.haystack.trace.commons.clients.cassandra.CassandraSession
 import com.expedia.www.haystack.trace.commons.packer.PackedMessage
 import com.expedia.www.haystack.trace.indexer.config.entities.CassandraWriteConfiguration
 import com.expedia.www.haystack.trace.indexer.metrics.AppMetricNames
@@ -32,27 +32,51 @@ import org.slf4j.LoggerFactory
 import scala.concurrent.ExecutionContextExecutor
 import scala.util.Try
 
-class CassandraWriter(config: CassandraWriteConfiguration)(implicit val dispatcher: ExecutionContextExecutor)
+class CassandraTraceWriter(cassandra: CassandraSession,
+                           config: CassandraWriteConfiguration)(implicit val dispatcher: ExecutionContextExecutor)
   extends TraceWriter with MetricsSupport {
 
-  private val LOGGER = LoggerFactory.getLogger(classOf[CassandraWriter])
+  private val LOGGER = LoggerFactory.getLogger(classOf[CassandraTraceWriter])
 
   private val writeTimer = metricRegistry.timer(AppMetricNames.CASSANDRA_WRITE_TIME)
   private val writeFailures = metricRegistry.meter(AppMetricNames.CASSANDRA_WRITE_FAILURE)
-  private val cassandra = new CassandraSession(config.clientConfig, new CassandraClusterFactory)
 
-  private val insertPreparedStatement = cassandra.createInsertPreparedStatement(config.recordTTLInSec)
+  private val spanInsertPreparedStmt = cassandra.createSpanInsertPreparedStatement(config.clientConfig.tracesKeyspace)
 
   // this semaphore controls the parallel writes to cassandra
   private val inflightRequestsSemaphore = new Semaphore(config.maxInFlightRequests, true)
+
+  cassandra.ensureKeyspace(config.clientConfig.tracesKeyspace)
+
+  private def execute(traceId: String, packedSpanBuffer: PackedMessage[SpanBuffer]): Unit = {
+    // execute the request async with retry
+    withRetryBackoff((retryCallback) => {
+      val timer = writeTimer.time()
+
+      // prepare the statement
+      val statement = cassandra.newTraceInsertBoundStatement(traceId,
+        packedSpanBuffer.packedDataBytes,
+        config.writeConsistencyLevel(retryCallback.lastError()),
+        spanInsertPreparedStmt)
+
+      val asyncResult = cassandra.executeAsync(statement)
+      asyncResult.addListener(new CassandraWriteResultListener(asyncResult, timer, retryCallback), dispatcher)
+    },
+      config.retryConfig,
+      onSuccess = (_: Any) => inflightRequestsSemaphore.release(),
+      onFailure = (ex) => {
+        inflightRequestsSemaphore.release()
+        LOGGER.error("Fail to write to cassandra after {} retry attempts", config.retryConfig.maxRetries, ex)
+      })
+  }
 
   /**
     * writes the traceId and its spans to cassandra. Use the current timestamp as the sort key for the writes to same
     * TraceId. Also if the parallel writes exceed the max inflight requests, then we block and this puts backpressure on
     * upstream
     *
-    * @param traceId: trace id
-    * @param packedSpanBuffer: list of spans belonging to this traceId - span buffer
+    * @param traceId          : trace id
+    * @param packedSpanBuffer : list of spans belonging to this traceId - span buffer
     * @param isLastSpanBuffer tells if this is the last record, so the writer can flush
     * @return
     */
@@ -62,31 +86,13 @@ class CassandraWriter(config: CassandraWriteConfiguration)(implicit val dispatch
     try {
       inflightRequestsSemaphore.acquire()
       isSemaphoreAcquired = true
-
-      val timer = writeTimer.time()
-
-      // execute the request async with retry
-      withRetryBackoff((retryCallback) => {
-        // prepare the statement
-        val statement = cassandra.newInsertBoundStatement(traceId,
-          packedSpanBuffer.packedDataBytes,
-          config.writeConsistencyLevel(retryCallback.lastError()),
-          insertPreparedStatement)
-
-        val asyncResult = cassandra.executeAsync(statement)
-        asyncResult.addListener(new CassandraWriteResultListener(asyncResult, timer, retryCallback), dispatcher)
-      },
-        config.retryConfig,
-        onSuccess = (_: Any) => inflightRequestsSemaphore.release(),
-        onFailure = (ex) => {
-          inflightRequestsSemaphore.release()
-          LOGGER.error("Fail to write to cassandra after {} retry attempts", config.retryConfig.maxRetries, ex)
-        })
+      /* write spanBuffer for a given traceId */
+      execute(traceId, packedSpanBuffer)
     } catch {
       case ex: Exception =>
         LOGGER.error("Fail to write the spans to cassandra with exception", ex)
         writeFailures.mark()
-        if(isSemaphoreAcquired) inflightRequestsSemaphore.release()
+        if (isSemaphoreAcquired) inflightRequestsSemaphore.release()
     }
   }
 

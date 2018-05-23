@@ -49,12 +49,12 @@ class CassandraSession(config: CassandraConfiguration, factory: ClusterFactory) 
   }
 
   private lazy val selectTracePreparedStmt: PreparedStatement = {
-      import QueryBuilder.bindMarker
-      session.prepare(
-        QueryBuilder
-          .select()
-          .from(config.tracesKeyspace.name, config.tracesKeyspace.table)
-          .where(QueryBuilder.eq(ID_COLUMN_NAME, bindMarker(ID_COLUMN_NAME))))
+    import QueryBuilder.bindMarker
+    session.prepare(
+      QueryBuilder
+        .select()
+        .from(config.tracesKeyspace.name, config.tracesKeyspace.table)
+        .where(QueryBuilder.eq(ID_COLUMN_NAME, bindMarker(ID_COLUMN_NAME))))
   }
 
   def createServiceMetadataInsertPreparedStatement(keyspace: KeyspaceConfiguration): PreparedStatement = {
@@ -139,7 +139,7 @@ class CassandraSession(config: CassandraConfiguration, factory: ClusterFactory) 
     * @param traceId trace id
     * @return
     */
-  def newSelectBoundStatement(traceId: String): Statement = {
+  def newSelectTraceBoundStatement(traceId: String): Statement = {
     new BoundStatement(selectTracePreparedStmt).setString(ID_COLUMN_NAME, traceId)
   }
 
@@ -149,4 +149,18 @@ class CassandraSession(config: CassandraConfiguration, factory: ClusterFactory) 
     * @return future object of ResultSet
     */
   def executeAsync(statement: Statement): ResultSetFuture = session.executeAsync(statement)
+
+  def newSelectServicePreparedStatement(keyspace: String, table: String): PreparedStatement = {
+    import QueryBuilder.bindMarker
+
+    val select = QueryBuilder
+      .select()
+      .from(keyspace, table)
+      .where(QueryBuilder.eq(SERVICE_COLUMN_NAME, bindMarker(SERVICE_COLUMN_NAME)))
+    session.prepare(select)
+  }
+
+  def newSelectAllServicesPreparedStatement(keyspace: String, table: String): PreparedStatement = {
+    session.prepare(QueryBuilder.select(SERVICE_COLUMN_NAME).from(keyspace, table))
+  }
 }

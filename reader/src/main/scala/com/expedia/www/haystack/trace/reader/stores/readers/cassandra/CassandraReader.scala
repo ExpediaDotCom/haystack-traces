@@ -17,32 +17,28 @@
 package com.expedia.www.haystack.trace.reader.stores.readers.cassandra
 
 import com.expedia.open.tracing.api.Trace
-import com.expedia.www.haystack.trace.commons.clients.cassandra.{CassandraClusterFactory, CassandraSession}
+import com.expedia.www.haystack.trace.commons.clients.cassandra.CassandraSession
 import com.expedia.www.haystack.trace.commons.config.entities.CassandraConfiguration
 import com.expedia.www.haystack.trace.reader.metrics.{AppMetricNames, MetricsSupport}
 import org.slf4j.LoggerFactory
 
 import scala.concurrent.{ExecutionContextExecutor, Future, Promise}
-import scala.util.Try
 
-class CassandraReader(config: CassandraConfiguration)(implicit val dispatcher: ExecutionContextExecutor)
+class CassandraReader(cassandra: CassandraSession, config: CassandraConfiguration)(implicit val dispatcher: ExecutionContextExecutor)
   extends MetricsSupport with AutoCloseable {
-
   private val LOGGER = LoggerFactory.getLogger(classOf[CassandraReader])
 
   private val readTimer = metricRegistry.timer(AppMetricNames.CASSANDRA_READ_TIME)
   private val readFailures = metricRegistry.meter(AppMetricNames.CASSANDRA_READ_FAILURES)
-
-  private val cassandra = new CassandraSession(config, new CassandraClusterFactory)
 
   def readTrace(traceId: String): Future[Trace] = {
     val timer = readTimer.time()
     val promise = Promise[Trace]
 
     try {
-      val statement = cassandra.newSelectBoundStatement(traceId)
+      val statement = cassandra.newSelectTraceBoundStatement(traceId)
       val asyncResult = cassandra.executeAsync(statement)
-      asyncResult.addListener(new CassandraReadResultListener(asyncResult, timer, readFailures, promise), dispatcher)
+      asyncResult.addListener(new CassandraReadTraceResultListener(asyncResult, timer, readFailures, promise), dispatcher)
       promise.future
     } catch {
       case ex: Exception =>
@@ -53,5 +49,5 @@ class CassandraReader(config: CassandraConfiguration)(implicit val dispatcher: E
     }
   }
 
-  override def close(): Unit = Try(cassandra.close())
+  override def close(): Unit = ()
 }

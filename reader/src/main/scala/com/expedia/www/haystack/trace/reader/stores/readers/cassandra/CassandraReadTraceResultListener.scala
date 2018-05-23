@@ -23,22 +23,21 @@ import com.expedia.open.tracing.api.Trace
 import com.expedia.www.haystack.commons.health.HealthController
 import com.expedia.www.haystack.trace.commons.clients.cassandra.CassandraTableSchema
 import com.expedia.www.haystack.trace.reader.exceptions.TraceNotFoundException
-import com.expedia.www.haystack.trace.reader.stores.readers.cassandra.CassandraReadResultListener._
+import com.expedia.www.haystack.trace.reader.stores.readers.cassandra.CassandraReadTraceResultListener._
 import org.slf4j.{Logger, LoggerFactory}
 
 import scala.collection.JavaConverters._
 import scala.concurrent.Promise
 import scala.util.{Failure, Success, Try}
 
-object CassandraReadResultListener {
-  protected val LOGGER: Logger = LoggerFactory.getLogger(classOf[CassandraReadResultListener])
+object CassandraReadTraceResultListener {
+  protected val LOGGER: Logger = LoggerFactory.getLogger(classOf[CassandraReadTraceResultListener])
 }
 
-class CassandraReadResultListener(asyncResult: ResultSetFuture,
-                                  timer: Timer.Context,
-                                  failure: Meter,
-                                  promise: Promise[Trace]) extends Runnable {
-
+class CassandraReadTraceResultListener(asyncResult: ResultSetFuture,
+                                       timer: Timer.Context,
+                                       failure: Meter,
+                                       promise: Promise[Trace]) extends Runnable {
   override def run(): Unit = {
     timer.close()
 

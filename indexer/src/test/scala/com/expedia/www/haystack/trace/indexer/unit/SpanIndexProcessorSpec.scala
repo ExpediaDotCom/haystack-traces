@@ -41,9 +41,10 @@ class SpanIndexProcessorSpec extends FunSpec with Matchers with EasyMockSugar {
   private val startRecordTimestamp = System.currentTimeMillis()
   private val timestampInterval = 100
   private val maxSpans = 10
-  private val bufferingWindow = 10000
+  private val maxBufferingWindow = 10000
+  private val bufferingWinowAfterRoot = 2000
   private val startRecordOffset = 11
-  private val accumulatorConfig = SpanAccumulatorConfiguration(10, 100, 2000, bufferingWindow, PackerType.NONE)
+  private val accumulatorConfig = SpanAccumulatorConfiguration(10, 100, 2000, maxBufferingWindow, bufferingWinowAfterRoot, PackerType.NONE)
 
   describe("Span Index Processor") {
     it("should process the records for a partition and return the offsets to commit") {
@@ -66,7 +67,7 @@ class SpanIndexProcessorSpec extends FunSpec with Matchers with EasyMockSugar {
       expecting {
         mockStore.addEvictionListener(processor)
         mockStore.init()
-        mockStore.getAndRemoveSpanBuffersOlderThan(finalStreamTimestamp - bufferingWindow).andReturn(mutable.ListBuffer(spanBufferWithMetadata))
+        mockStore.getAndRemoveSpanBuffersOlderThan(finalStreamTimestamp - maxBufferingWindow).andReturn(mutable.ListBuffer(spanBufferWithMetadata))
         mockCassandra.writeAsync(capture(writeTraceIdCapture), capture(packedMessage), capture(writeLastRecordCapture))
         mockStore.close()
       }
@@ -99,7 +100,7 @@ class SpanIndexProcessorSpec extends FunSpec with Matchers with EasyMockSugar {
       expecting {
         mockStore.addEvictionListener(processor)
         mockStore.init()
-        mockStore.getAndRemoveSpanBuffersOlderThan(finalStreamTimestamp - bufferingWindow).andReturn(mutable.ListBuffer())
+        mockStore.getAndRemoveSpanBuffersOlderThan(finalStreamTimestamp - maxBufferingWindow).andReturn(mutable.ListBuffer())
       }
 
       whenExecuting(mockStore, mockCassandra) {
@@ -118,22 +119,22 @@ class SpanIndexProcessorSpec extends FunSpec with Matchers with EasyMockSugar {
   (SpanBufferWithMetadata, Iterable[ConsumerRecord[String, Span]]) = {
 
     val builder = SpanBuffer.newBuilder().setTraceId(TRACE_ID)
-    val spanBufferWithMetadata = SpanBufferWithMetadata(builder, startRecordTimestamp, startRecordOffset)
+    val spanBufferWithMetadata = SpanBufferWithMetadata(builder, startRecordTimestamp, startRecordOffset,rootSpanSeen = false)
 
     val consumerRecords =
-    for (idx <- 0 until maxSpans;
-         span = Span.newBuilder().setTraceId(TRACE_ID).setSpanId(idx.toString).build();
-         timestamp = startRecordTimestamp + (idx * timestampInterval);
-         _ = builder.addChildSpans(span);
-         _ = mockStore.addOrUpdateSpanBuffer(TRACE_ID, span, timestamp, idx + startRecordOffset).andReturn(spanBufferWithMetadata))
-      yield new ConsumerRecord[String, Span]("topic",
-        0,
-        idx + startRecordOffset,
-        timestamp,
-        TimestampType.CREATE_TIME,
-        0, 0, 0,
-        TRACE_ID,
-        span)
+      for (idx <- 0 until maxSpans;
+           span = Span.newBuilder().setTraceId(TRACE_ID).setSpanId(idx.toString).build();
+           timestamp = startRecordTimestamp + (idx * timestampInterval);
+           _ = builder.addChildSpans(span);
+           _ = mockStore.addOrUpdateSpanBuffer(TRACE_ID, span, timestamp, idx + startRecordOffset).andReturn(spanBufferWithMetadata))
+        yield new ConsumerRecord[String, Span]("topic",
+          0,
+          idx + startRecordOffset,
+          timestamp,
+          TimestampType.CREATE_TIME,
+          0, 0, 0,
+          TRACE_ID,
+          span)
 
     (spanBufferWithMetadata, consumerRecords)
   }

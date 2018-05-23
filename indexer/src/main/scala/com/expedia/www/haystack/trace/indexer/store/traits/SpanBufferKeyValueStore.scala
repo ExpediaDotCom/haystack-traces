@@ -28,6 +28,14 @@ import scala.collection.mutable
 trait SpanBufferKeyValueStore {
 
   /**
+    * get all buffered completed traces that are recorded before the given timestamp
+    * @param timestamp timestamp in millis
+    * @return
+    */
+  def getAndRemoveCompletedSpanBuffersOlderThan(timestamp: Long): mutable.ListBuffer[SpanBufferWithMetadata]
+
+
+  /**
     * get all buffered span objects that are recorded before the given timestamp
     * @param timestamp timestamp in millis
     * @return
@@ -37,9 +45,9 @@ trait SpanBufferKeyValueStore {
   /**
     * add a listener to the store, that gets called when the eldest spanBuffer is evicted
     * due to constraints of maxEntries in the store cache
-    * @param l listener object that is called by the store
+    * @param listener listener object that is called by the store
     */
-  def addEvictionListener(l: EldestBufferedSpanEvictionListener): Unit
+  def addEvictionListener(listener: EldestBufferedSpanEvictionListener): Unit
 
   /**
     * adds new spanBuffer for the traceId(if absent)in the store else add the spans

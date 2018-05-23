@@ -52,7 +52,8 @@ class ProjectConfiguration extends AutoCloseable {
       cfg.getInt("store.min.traces.per.cache"),
       cfg.getInt("store.all.max.entries"),
       cfg.getLong("poll.ms"),
-      cfg.getLong("window.ms"),
+      cfg.getLong("max.window.ms"),
+      cfg.getLong("completed.window.ms"),
       PackerType.withName(cfg.getString("packer").toUpperCase))
   }
 

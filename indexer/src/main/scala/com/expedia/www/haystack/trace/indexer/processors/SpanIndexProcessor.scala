@@ -96,12 +96,13 @@ class SpanIndexProcessor(accumulatorConfig: SpanAccumulatorConfiguration,
     }
   }
 
-  private def mayBeEmit(currentTimestamp: Long): Option[OffsetAndMetadata]  = {
+  private def mayBeEmit(currentTimestamp: Long): Option[OffsetAndMetadata] = {
     if ((currentTimestamp - accumulatorConfig.pollIntervalMillis) > lastEmitTimestamp) {
 
       var committableOffset = -1L
 
-      val emittableSpanBuffers = spanBufferMemStore.getAndRemoveSpanBuffersOlderThan(currentTimestamp - accumulatorConfig.bufferingWindowMillis)
+      val emittableSpanBuffers = spanBufferMemStore.getAndRemoveSpanBuffersOlderThan(currentTimestamp - accumulatorConfig.maxBufferingWindowMillis) ++
+        spanBufferMemStore.getAndRemoveCompletedSpanBuffersOlderThan(currentTimestamp - accumulatorConfig.bufferedWindowAfterRootMillis)
 
       emittableSpanBuffers.zipWithIndex foreach {
         case (sb, idx) =>

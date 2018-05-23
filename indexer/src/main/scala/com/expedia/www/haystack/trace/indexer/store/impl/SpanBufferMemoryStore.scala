@@ -28,6 +28,7 @@ import com.expedia.www.haystack.trace.indexer.metrics.AppMetricNames._
 import com.expedia.www.haystack.trace.indexer.store.DynamicCacheSizer
 import com.expedia.www.haystack.trace.indexer.store.data.model.SpanBufferWithMetadata
 import com.expedia.www.haystack.trace.indexer.store.traits.{CacheSizeObserver, EldestBufferedSpanEvictionListener, SpanBufferKeyValueStore}
+import org.apache.commons.lang3.StringUtils
 import org.slf4j.{Logger, LoggerFactory}
 
 import scala.collection.mutable
@@ -38,6 +39,7 @@ object SpanBufferMemoryStore extends MetricsSupport {
 }
 
 class SpanBufferMemoryStore(cacheSizer: DynamicCacheSizer) extends SpanBufferKeyValueStore with CacheSizeObserver {
+
   import SpanBufferMemoryStore._
 
   @volatile protected var open = false
@@ -67,6 +69,35 @@ class SpanBufferMemoryStore(cacheSizer: DynamicCacheSizer) extends SpanBufferKey
     open = true
 
     LOGGER.info("Span buffer memory store has been initialized")
+  }
+
+
+  /**
+    * removes and returns all the span buffers from the map that are recorded before the given timestamp
+    *
+    * @param timestamp timestamp before which all buffered spans should be read and removed
+    * @return
+    */
+  override def getAndRemoveCompletedSpanBuffersOlderThan(timestamp: Long): mutable.ListBuffer[SpanBufferWithMetadata] = {
+    val result = mutable.ListBuffer[SpanBufferWithMetadata]()
+
+    val iterator = this.map.entrySet().iterator()
+    var done = false
+
+    while (!done && iterator.hasNext) {
+      val el = iterator.next()
+      if (el.getValue.rootSpanSeen && el.getValue.firstSpanSeenAt <= timestamp) {
+        iterator.remove()
+        totalSpansInMemStore -= el.getValue.builder.getChildSpansCount
+        result += el.getValue
+      } else {
+        // here we apply a basic optimization and skip further iteration because all following records
+        // in this map will have higher recordTimestamp. When we insert the first span for a unique traceId
+        // in the map, we set the 'firstRecordTimestamp' attribute with record's timestamp
+        done = true
+      }
+    }
+    result
   }
 
   /**
@@ -100,7 +131,7 @@ class SpanBufferMemoryStore(cacheSizer: DynamicCacheSizer) extends SpanBufferKey
   override def addEvictionListener(l: EldestBufferedSpanEvictionListener): Unit = this.listeners += l
 
   override def close(): Unit = {
-    if(open) {
+    if (open) {
       LOGGER.info("Closing the span buffer memory store")
       cacheSizer.removeCacheObserver(this)
       open = false
@@ -112,17 +143,28 @@ class SpanBufferMemoryStore(cacheSizer: DynamicCacheSizer) extends SpanBufferKey
     this.maxEntries.set(maxEntries)
   }
 
+  private def isRootSpan(span: Span): Boolean = {
+    if (StringUtils.isEmpty(span.getParentSpanId)) {
+      true
+    }
+    false
+  }
+
   override def addOrUpdateSpanBuffer(traceId: String, span: Span, spanRecordTimestamp: Long, offset: Long): SpanBufferWithMetadata = {
-    var value = this.map.get(traceId)
-    if (value == null) {
+    val updatedValue = if (this.map.containsKey(traceId)) {
+
+      val currentValue = this.map.get(traceId)
+      val spanBuilder = currentValue.builder.addChildSpans(span)
+      val rootSpanSeen = currentValue.rootSpanSeen || isRootSpan(span)
+      currentValue.copy(builder = spanBuilder, rootSpanSeen = rootSpanSeen)
+    }
+    else {
       val spanBuffer = SpanBuffer.newBuilder().setTraceId(span.getTraceId).addChildSpans(span)
-      value = SpanBufferWithMetadata(spanBuffer, spanRecordTimestamp, offset)
-      this.map.put(traceId, value)
-    } else {
-      value.builder.addChildSpans(span)
+      SpanBufferWithMetadata(spanBuffer, spanRecordTimestamp, offset, isRootSpan(span))
     }
     totalSpansInMemStore += 1
-    value
+    this.map.put(traceId, updatedValue)
+    updatedValue
   }
 
   def totalSpans: Int = totalSpansInMemStore

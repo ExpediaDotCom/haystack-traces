@@ -47,7 +47,7 @@ class FailedTopologyRecoverySpec extends BaseIntegrationTestSpec {
         produceInterval = 1.seconds,
         TRACE_DESCRIPTIONS,
         startTimestamp,
-        spanAccumulatorConfig.bufferingWindowMillis)
+        spanAccumulatorConfig.maxBufferingWindowMillis)
 
       When(s"kafka-streams topology is started and then stopped forcefully after few sec")
       var topology = new StreamRunner(kafkaConfig, accumulatorConfig, esConfig, cassandraConfig, indexTagsConfig)
@@ -67,8 +67,8 @@ class FailedTopologyRecoverySpec extends BaseIntegrationTestSpec {
         1,
         produceInterval = 1.seconds,
         TRACE_DESCRIPTIONS,
-        startTimestamp + spanAccumulatorConfig.bufferingWindowMillis,
-        spanAccumulatorConfig.bufferingWindowMillis,
+        startTimestamp + spanAccumulatorConfig.maxBufferingWindowMillis,
+        spanAccumulatorConfig.maxBufferingWindowMillis,
         startSpanIdxFrom = MAX_CHILD_SPANS_PER_TRACE)
 
       try {

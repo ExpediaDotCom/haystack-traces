@@ -28,7 +28,7 @@ class EvictedSpanBufferSpec extends BaseIntegrationTestSpec {
       produceSpansAsync(MAX_CHILD_SPANS,
         produceInterval = 1.seconds,
         List(TraceDescription(TRACE_ID_1, SPAN_ID_PREFIX), TraceDescription(TRACE_ID_2, SPAN_ID_PREFIX)),
-        0L, accumulatorConfig.bufferingWindowMillis)
+        0L, accumulatorConfig.maxBufferingWindowMillis)
 
       When(s"kafka-streams topology is started")
       val topology = new StreamRunner(kafkaConfig, accumulatorConfig, esConfig, cassandraConfig, indexTagsConfig)

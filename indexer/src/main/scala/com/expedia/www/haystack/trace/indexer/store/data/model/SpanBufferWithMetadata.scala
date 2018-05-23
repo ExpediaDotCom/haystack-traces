@@ -19,7 +19,10 @@ package com.expedia.www.haystack.trace.indexer.store.data.model
 import com.expedia.open.tracing.buffer.SpanBuffer
 
 /**
-  * @param builder protobuf builder for building span buffer.
+  * @param builder         protobuf builder for building span buffer.
   * @param firstSpanSeenAt timestamp when the first span of a given traceId is seen
+  * @param rootSpanSeen    boolean to represent if the root span is seen
   */
-case class SpanBufferWithMetadata(builder: SpanBuffer.Builder, firstSpanSeenAt: Long, firstSeenSpanKafkaOffset: Long)
+case class SpanBufferWithMetadata(builder: SpanBuffer.Builder, firstSpanSeenAt: Long, firstSeenSpanKafkaOffset: Long, rootSpanSeen: Boolean) {
+
+}

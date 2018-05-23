@@ -102,7 +102,7 @@ class SpanIndexProcessor(accumulatorConfig: SpanAccumulatorConfiguration,
       var committableOffset = -1L
 
       val emittableSpanBuffers = spanBufferMemStore.getAndRemoveSpanBuffersOlderThan(currentTimestamp - accumulatorConfig.maxBufferingWindowMillis) ++
-        spanBufferMemStore.getAndRemoveCompletedSpanBuffersOlderThan(currentTimestamp - accumulatorConfig.bufferedWindowAfterRootMillis)
+        spanBufferMemStore.getAndRemoveCompletedSpanBuffersOlderThan(currentTimestamp - accumulatorConfig.bufferingWindowAfterRootMillis)
 
       emittableSpanBuffers.zipWithIndex foreach {
         case (sb, idx) =>

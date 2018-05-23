@@ -42,9 +42,9 @@ class SpanIndexProcessorSpec extends FunSpec with Matchers with EasyMockSugar {
   private val timestampInterval = 100
   private val maxSpans = 10
   private val maxBufferingWindow = 10000
-  private val bufferingWinowAfterRoot = 2000
+  private val bufferingWindowAfterRoot = 2000
   private val startRecordOffset = 11
-  private val accumulatorConfig = SpanAccumulatorConfiguration(10, 100, 2000, maxBufferingWindow, bufferingWinowAfterRoot, PackerType.NONE)
+  private val accumulatorConfig = SpanAccumulatorConfiguration(10, 100, 2000, maxBufferingWindow, bufferingWindowAfterRoot, PackerType.NONE)
 
   describe("Span Index Processor") {
     it("should process the records for a partition and return the offsets to commit") {
@@ -57,7 +57,7 @@ class SpanIndexProcessorSpec extends FunSpec with Matchers with EasyMockSugar {
       val mockCassandra = mock[TraceWriter]
 
       val processor = new SpanIndexProcessor(accumulatorConfig, storeSupplier, Seq(mockCassandra), new NoopPacker[SpanBuffer])(executor)
-      val (spanBufferWithMetadata, records) = createConsumerRecordsAndSetStoreExpectation(maxSpans, startRecordTimestamp, timestampInterval, startRecordOffset, mockStore)
+      val (spanBufferWithMetadata, records) = createConsumerRecordsAndSetStoreExpectation(maxSpans, startRecordTimestamp, timestampInterval, startRecordOffset, false, mockStore)
       val finalStreamTimestamp = startRecordTimestamp + ((maxSpans - 1) * timestampInterval)
 
       val packedMessage = EasyMock.newCapture[PackedMessage[SpanBuffer]]()
@@ -68,6 +68,7 @@ class SpanIndexProcessorSpec extends FunSpec with Matchers with EasyMockSugar {
         mockStore.addEvictionListener(processor)
         mockStore.init()
         mockStore.getAndRemoveSpanBuffersOlderThan(finalStreamTimestamp - maxBufferingWindow).andReturn(mutable.ListBuffer(spanBufferWithMetadata))
+        mockStore.getAndRemoveCompletedSpanBuffersOlderThan(finalStreamTimestamp - bufferingWindowAfterRoot).andReturn(mutable.ListBuffer.empty)
         mockCassandra.writeAsync(capture(writeTraceIdCapture), capture(packedMessage), capture(writeLastRecordCapture))
         mockStore.close()
       }
@@ -84,6 +85,43 @@ class SpanIndexProcessorSpec extends FunSpec with Matchers with EasyMockSugar {
       }
     }
 
+    it("should process the spans for completed spans for a partition and return the offsets to commit") {
+      // mock entities
+      val mockStore = mock[SpanBufferKeyValueStore]
+      val storeSupplier = new SpanBufferMemoryStoreSupplier(10, 100) {
+        override def get(): SpanBufferKeyValueStore = mockStore
+      }
+
+      val mockCassandra = mock[TraceWriter]
+
+      val processor = new SpanIndexProcessor(accumulatorConfig, storeSupplier, Seq(mockCassandra), new NoopPacker[SpanBuffer])(executor)
+      val (spanBufferWithMetadata, records) = createConsumerRecordsAndSetStoreExpectation(maxSpans, startRecordTimestamp, timestampInterval, startRecordOffset,rootSpanSeen = true, mockStore)
+      val finalStreamTimestamp = startRecordTimestamp + ((maxSpans - 1) * timestampInterval)
+
+      val packedMessage = EasyMock.newCapture[PackedMessage[SpanBuffer]]()
+      val writeTraceIdCapture = EasyMock.newCapture[String]()
+      val writeLastRecordCapture = EasyMock.newCapture[Boolean]()
+
+      expecting {
+        mockStore.addEvictionListener(processor)
+        mockStore.init()
+        mockStore.getAndRemoveSpanBuffersOlderThan(finalStreamTimestamp - maxBufferingWindow).andReturn(mutable.ListBuffer.empty)
+        mockStore.getAndRemoveCompletedSpanBuffersOlderThan(finalStreamTimestamp - bufferingWindowAfterRoot).andReturn(mutable.ListBuffer(spanBufferWithMetadata))
+        mockCassandra.writeAsync(capture(writeTraceIdCapture), capture(packedMessage), capture(writeLastRecordCapture))
+        mockStore.close()
+      }
+
+      whenExecuting(mockStore, mockCassandra) {
+        processor.init()
+        val offsets = processor.process(records)
+        SpanBuffer.parseFrom(packedMessage.getValue.packedDataBytes).getChildSpansCount shouldBe maxSpans
+        writeTraceIdCapture.getValue shouldBe TRACE_ID
+        writeLastRecordCapture.getValue shouldBe true
+        offsets.get.offset() shouldBe startRecordOffset
+
+        processor.close()
+      }
+    }
     it("should process the records for a partition, and if store does not emit any 'old' spanBuffers, then writers will not be called and no offsets will be committted") {
       // mock entities
       val mockStore = mock[SpanBufferKeyValueStore]
@@ -94,13 +132,14 @@ class SpanIndexProcessorSpec extends FunSpec with Matchers with EasyMockSugar {
       val mockCassandra = mock[TraceWriter]
 
       val processor = new SpanIndexProcessor(accumulatorConfig, storeSupplier, Seq(mockCassandra), new NoopPacker)(executor)
-      val (_, records) = createConsumerRecordsAndSetStoreExpectation(maxSpans, startRecordTimestamp, timestampInterval, startRecordOffset, mockStore)
+      val (_, records) = createConsumerRecordsAndSetStoreExpectation(maxSpans, startRecordTimestamp, timestampInterval, startRecordOffset,false, mockStore)
       val finalStreamTimestamp = startRecordTimestamp + ((maxSpans - 1) * timestampInterval)
 
       expecting {
         mockStore.addEvictionListener(processor)
         mockStore.init()
         mockStore.getAndRemoveSpanBuffersOlderThan(finalStreamTimestamp - maxBufferingWindow).andReturn(mutable.ListBuffer())
+        mockStore.getAndRemoveCompletedSpanBuffersOlderThan(finalStreamTimestamp - bufferingWindowAfterRoot).andReturn(mutable.ListBuffer.empty)
       }
 
       whenExecuting(mockStore, mockCassandra) {
@@ -115,11 +154,11 @@ class SpanIndexProcessorSpec extends FunSpec with Matchers with EasyMockSugar {
                                                           startRecordTimestamp: Long,
                                                           timestampInterval: Long,
                                                           startRecordOffset: Int,
-                                                          mockStore: SpanBufferKeyValueStore):
-  (SpanBufferWithMetadata, Iterable[ConsumerRecord[String, Span]]) = {
+                                                          rootSpanSeen: Boolean,
+                                                          mockStore: SpanBufferKeyValueStore): (SpanBufferWithMetadata, Iterable[ConsumerRecord[String, Span]]) = {
 
     val builder = SpanBuffer.newBuilder().setTraceId(TRACE_ID)
-    val spanBufferWithMetadata = SpanBufferWithMetadata(builder, startRecordTimestamp, startRecordOffset,rootSpanSeen = false)
+    val spanBufferWithMetadata = SpanBufferWithMetadata(builder, startRecordTimestamp, startRecordOffset, rootSpanSeen)
 
     val consumerRecords =
       for (idx <- 0 until maxSpans;

@@ -17,11 +17,9 @@
 
 package com.expedia.www.haystack.trace.reader.unit.stores.readers.es.query
 
-import java.util
-
 import com.codahale.metrics.{Meter, Timer}
 import com.expedia.open.tracing.api.{Field, TracesSearchRequest}
-import com.expedia.www.haystack.trace.commons.config.entities.{WhiteListIndexFields, WhitelistIndexFieldConfiguration}
+import com.expedia.www.haystack.trace.commons.config.entities.WhitelistIndexFieldConfiguration
 import com.expedia.www.haystack.trace.reader.exceptions.ElasticSearchClientError
 import com.expedia.www.haystack.trace.reader.stores.readers.es.ElasticSearchReadResultListener
 import com.expedia.www.haystack.trace.reader.stores.readers.es.query.TraceSearchQueryGenerator
@@ -29,28 +27,11 @@ import com.expedia.www.haystack.trace.reader.unit.BaseUnitTestSpec
 import io.searchbox.core.SearchResult
 import org.easymock.EasyMock
 import org.json4s.DefaultFormats
-import org.json4s.jackson.Serialization
 
 import scala.concurrent.Promise
 
 class ElasticSearchReadResultListenerSpec extends BaseUnitTestSpec {
   implicit val formats = DefaultFormats
-
-  val f =
-    """
-      |{
-      |        "fields": [{
-      |            "name": "tpid",
-      |            "type": "string",
-      |            "enabled": true
-      |        }, {
-      |            "name": "duaid",
-      |            "type": "string",
-      |            "enabled": true,
-      |            "searchContext": "trace"
-      |        }]
-      |}
-    """.stripMargin
 
   private val searchRequest = {
     val generator = new TraceSearchQueryGenerator("haystack-traces", "spans", "spans", new WhitelistIndexFieldConfiguration)
@@ -60,17 +41,6 @@ class ElasticSearchReadResultListenerSpec extends BaseUnitTestSpec {
 
   describe("ElasticSearch Read Result Listener") {
     it("should invoke successful promise with search result") {
-      val r =  new WhitelistIndexFieldConfiguration
-      r.onReload(f)
-      val ss = r.globalTraceContextIndexFieldNames
-      val kk = new TraceSearchQueryGenerator("haystack-traces", "spans", "spans", r)
-      val f1 = Field.newBuilder().setName("duaid").setValue("xyz").build()
-      val f2 = Field.newBuilder().setName("servicename").setValue("expweb").build()
-
-      val f3 = Field.newBuilder().setName("tpid").setValue("1").build()
-
-      val gg = kk.generate(TracesSearchRequest.newBuilder().addAllFields(util.Arrays.asList(f1, f2, f3)).setEndTime(100).setStartTime(1).setLimit(40).build())
-
       val promise = mock[Promise[SearchResult]]
       val timer = mock[Timer.Context]
       val failureMeter = mock[Meter]

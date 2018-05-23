@@ -76,7 +76,7 @@ class ProviderConfiguration {
       socketConfig.getInt("conn.timeout.ms"),
       socketConfig.getInt("read.timeout.ms"))
 
-    val spanKeyspace = cs.getConfig("spans.keyspace")
+    val spanKeyspace = cs.getConfig("keyspace")
 
     CassandraConfiguration(
       if (cs.hasPath("endpoints")) cs.getString("endpoints").split(",").toList else Nil,

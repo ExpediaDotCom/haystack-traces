@@ -24,9 +24,9 @@ import org.slf4j.LoggerFactory
 
 import scala.concurrent.{ExecutionContextExecutor, Future, Promise}
 
-class CassandraReader(cassandra: CassandraSession, config: CassandraConfiguration)(implicit val dispatcher: ExecutionContextExecutor)
-  extends MetricsSupport with AutoCloseable {
-  private val LOGGER = LoggerFactory.getLogger(classOf[CassandraReader])
+class CassandraTraceReader(cassandra: CassandraSession, config: CassandraConfiguration)
+                          (implicit val dispatcher: ExecutionContextExecutor) extends MetricsSupport with AutoCloseable {
+  private val LOGGER = LoggerFactory.getLogger(classOf[CassandraTraceReader])
 
   private val readTimer = metricRegistry.timer(AppMetricNames.CASSANDRA_READ_TIME)
   private val readFailures = metricRegistry.meter(AppMetricNames.CASSANDRA_READ_FAILURES)

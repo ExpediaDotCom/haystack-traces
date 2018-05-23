@@ -23,7 +23,7 @@ import com.expedia.www.haystack.trace.commons.config.entities.{CassandraConfigur
 import com.expedia.www.haystack.trace.reader.config.entities.{ElasticSearchConfiguration, ServiceMetadataReadConfiguration}
 import com.expedia.www.haystack.trace.reader.metrics.{AppMetricNames, MetricsSupport}
 import com.expedia.www.haystack.trace.reader.stores.readers.ServiceMetadataReader
-import com.expedia.www.haystack.trace.reader.stores.readers.cassandra.CassandraReader
+import com.expedia.www.haystack.trace.reader.stores.readers.cassandra.CassandraTraceReader
 import com.expedia.www.haystack.trace.reader.stores.readers.es.ElasticSearchReader
 import com.expedia.www.haystack.trace.reader.stores.readers.es.query.{FieldValuesQueryGenerator, TraceCountsQueryGenerator, TraceSearchQueryGenerator}
 import io.searchbox.core.SearchResult
@@ -43,7 +43,7 @@ class CassandraEsTraceStore(cassandraConfig: CassandraConfiguration,
   private val traceRejected = metricRegistry.meter(AppMetricNames.SEARCH_TRACE_REJECTED)
 
   private val cassandraSession = new CassandraSession(cassandraConfig, new CassandraClusterFactory)
-  private val cassandraReader: CassandraReader = new CassandraReader(cassandraSession, cassandraConfig)
+  private val cassandraReader: CassandraTraceReader = new CassandraTraceReader(cassandraSession, cassandraConfig)
   private val esReader: ElasticSearchReader = new ElasticSearchReader(esConfig)
   private val serviceMetadataReader: ServiceMetadataReader = new ServiceMetadataReader(cassandraSession, serviceMetadataConfig)
 

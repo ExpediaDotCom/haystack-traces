@@ -42,8 +42,8 @@ class TraceService(traceStore: TraceStore,
   /**
     * endpoint for fetching a trace
     * trace will be validated and transformed
- *
-    * @param request TraceRequest object containing traceId of the trace to fetch
+    *
+    * @param request          TraceRequest object containing traceId of the trace to fetch
     * @param responseObserver response observer will contain Trace object
     *                         or will error out with [[com.expedia.www.haystack.trace.reader.exceptions.TraceNotFoundException]]
     */
@@ -55,8 +55,8 @@ class TraceService(traceStore: TraceStore,
 
   /**
     * endpoint for fetching raw trace logs, trace will returned without validations and transformations
- *
-    * @param request TraceRequest object containing traceId of the trace to fetch
+    *
+    * @param request          TraceRequest object containing traceId of the trace to fetch
     * @param responseObserver response observer will stream out [[Trace]] object
     *                         or will error out with [[com.expedia.www.haystack.trace.reader.exceptions.TraceNotFoundException]]
     */
@@ -68,8 +68,8 @@ class TraceService(traceStore: TraceStore,
 
   /**
     * endpoint for fetching raw span logs, span will returned without validations and transformations
- *
-    * @param request SpanRequest object containing spanId and parent traceId of the span to fetch
+    *
+    * @param request          SpanRequest object containing spanId and parent traceId of the span to fetch
     * @param responseObserver response observer will stream out [[Span]] object
     *                         or will error out with [[com.expedia.www.haystack.trace.reader.exceptions.SpanNotFoundException]]
     */
@@ -81,7 +81,8 @@ class TraceService(traceStore: TraceStore,
 
   /**
     * endpoint for searching traces
-    * @param request TracesSearchRequest object containing criteria and filters for traces to find
+    *
+    * @param request          TracesSearchRequest object containing criteria and filters for traces to find
     * @param responseObserver response observer will stream out [[List[Trace]]
     */
   override def searchTraces(request: TracesSearchRequest, responseObserver: StreamObserver[TracesSearchResult]): Unit = {
@@ -92,7 +93,8 @@ class TraceService(traceStore: TraceStore,
 
   /**
     * get list of field names available in indexing system
-    * @param request empty request object
+    *
+    * @param request          empty request object
     * @param responseObserver response observer will contain list of field names
     */
   override def getFieldNames(request: Empty, responseObserver: StreamObserver[FieldNames]): Unit = {
@@ -103,7 +105,8 @@ class TraceService(traceStore: TraceStore,
 
   /**
     * get list of possible field values for a given field
-    * @param request contains field name and other field name-value pairs to be used as filters
+    *
+    * @param request          contains field name and other field name-value pairs to be used as filters
     * @param responseObserver response observer will contain list of field values for filter condition
     */
   override def getFieldValues(request: FieldValuesRequest, responseObserver: StreamObserver[FieldValues]): Unit = {
@@ -115,6 +118,12 @@ class TraceService(traceStore: TraceStore,
   override def getTraceCallGraph(request: TraceRequest, responseObserver: StreamObserver[TraceCallGraph]): Unit = {
     handleTraceCallGraphResponse.handle(request, responseObserver) {
       traceReader.getTraceCallGraph(request)
+    }
+  }
+
+  override def getTraceCounts(request: TraceCountsRequest, responseObserver: StreamObserver[TraceCounts]): Unit = {
+    handleTraceCallGraphResponse.handle(request, responseObserver) {
+      traceReader.getTraceCounts(request)
     }
   }
 }

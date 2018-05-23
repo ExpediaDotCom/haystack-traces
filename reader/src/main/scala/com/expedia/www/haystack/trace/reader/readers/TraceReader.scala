@@ -36,7 +36,9 @@ object TraceReader extends MetricsSupport {
   private val traceRejectedCounter: Meter = metricRegistry.meter("search.trace.rejection")
 }
 
-class TraceReader(traceStore: TraceStore, validatorsConfig: TraceValidatorsConfiguration, transformersConfig: TraceTransformersConfiguration)
+class TraceReader(traceStore: TraceStore,
+                  validatorsConfig: TraceValidatorsConfiguration,
+                  transformersConfig: TraceTransformersConfiguration)
                  (implicit val executor: ExecutionContextExecutor)
   extends TraceProcessor(validatorsConfig.validators, transformersConfig.preTransformers, transformersConfig.postTransformers) {
 

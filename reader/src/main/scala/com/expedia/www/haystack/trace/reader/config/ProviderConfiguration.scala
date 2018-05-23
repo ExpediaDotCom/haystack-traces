@@ -76,15 +76,24 @@ class ProviderConfiguration {
       socketConfig.getInt("conn.timeout.ms"),
       socketConfig.getInt("read.timeout.ms"))
 
-    val spanKeyspace = cs.getConfig("keyspace")
+    val tracesKeyspace = cs.getConfig("keyspace")
 
     CassandraConfiguration(
       if (cs.hasPath("endpoints")) cs.getString("endpoints").split(",").toList else Nil,
       cs.getBoolean("auto.discovery.enabled"),
       awsConfig,
       credentialsConfig,
-      KeyspaceConfiguration(spanKeyspace.getString("name"), spanKeyspace.getString("table.name"), -1),
+      KeyspaceConfiguration(tracesKeyspace.getString("name"), tracesKeyspace.getString("table.name"), -1),
       socket)
+  }
+
+  val serviceMetadataConfig: ServiceMetadataReadConfiguration = {
+    val metadataCfg = config.getConfig("service.metadata")
+    val keyspace = metadataCfg.getConfig("cassandra.keyspace")
+
+    ServiceMetadataReadConfiguration(
+      metadataCfg.getBoolean("enabled"),
+      KeyspaceConfiguration(keyspace.getString("name"), keyspace.getString("table.name")))
   }
 
   /**

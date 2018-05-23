@@ -120,6 +120,11 @@ class TraceReader(traceStore: TraceStore,
       })
   }
 
+  def getTraceCounts(request: TraceCountsRequest): Future[TraceCounts] = {
+    traceStore
+      .getTraceCounts(request)
+  }
+
   private def buildTraceCallGraph(trace: Trace): TraceCallGraph = {
     val calls = trace.getChildSpansList
       .asScala
@@ -130,7 +135,7 @@ class TraceReader(traceStore: TraceStore,
           .setOperationName(extractTagStringValue(span, AuxiliaryTags.CLIENT_OPERATION_NAME))
           .setInfrastructureProvider(extractTagStringValue(span, AuxiliaryTags.CLIENT_INFRASTRUCTURE_PROVIDER))
           .setInfrastructureLocation(extractTagStringValue(span, AuxiliaryTags.CLIENT_INFRASTRUCTURE_LOCATION))
-          
+
         val to = CallNode.newBuilder()
           .setServiceName(extractTagStringValue(span, AuxiliaryTags.SERVER_SERVICE_NAME))
           .setOperationName(extractTagStringValue(span, AuxiliaryTags.SERVER_OPERATION_NAME))

@@ -22,10 +22,8 @@ import com.expedia.www.haystack.trace.reader.config.entities.ElasticSearchConfig
 import com.expedia.www.haystack.trace.reader.metrics.{AppMetricNames, MetricsSupport}
 import com.expedia.www.haystack.trace.reader.stores.readers.cassandra.CassandraReader
 import com.expedia.www.haystack.trace.reader.stores.readers.es.ElasticSearchReader
-import com.expedia.www.haystack.trace.reader.stores.readers.es.query.{FieldValuesQueryGenerator, TraceSearchQueryGenerator}
+import com.expedia.www.haystack.trace.reader.stores.readers.es.query.{FieldValuesQueryGenerator, TraceCountsQueryGenerator, TraceSearchQueryGenerator}
 import io.searchbox.core.SearchResult
-import org.json4s.DefaultFormats
-import org.json4s.jackson.JsonMethods._
 import org.slf4j.LoggerFactory
 
 import scala.collection.JavaConverters._
@@ -35,14 +33,7 @@ import scala.util.{Failure, Success, Try}
 class CassandraEsTraceStore(cassandraConfiguration: CassandraConfiguration,
                             esConfiguration: ElasticSearchConfiguration,
                             indexConfiguration: WhitelistIndexFieldConfiguration)(implicit val executor: ExecutionContextExecutor)
-  extends TraceStore with MetricsSupport {
-  implicit val formats = DefaultFormats
-
-  private val ES_FIELD_AGGREGATIONS = "aggregations"
-  private val ES_FIELD_BUCKETS = "buckets"
-  private val ES_TRACE_ID_KEY = "traceid"
-  private val ES_FIELD_KEY = "key"
-  private val ES_NESTED_DOC_NAME = "spans"
+  extends TraceStore with MetricsSupport with ResponseParser {
 
   private val LOGGER = LoggerFactory.getLogger(classOf[ElasticSearchReader])
   private val traceRejected = metricRegistry.meter(AppMetricNames.SEARCH_TRACE_REJECTED)
@@ -51,6 +42,7 @@ class CassandraEsTraceStore(cassandraConfiguration: CassandraConfiguration,
   private val esReader: ElasticSearchReader = new ElasticSearchReader(esConfiguration)
 
   private val traceSearchQueryGenerator = new TraceSearchQueryGenerator(esConfiguration.indexNamePrefix, esConfiguration.indexType, ES_NESTED_DOC_NAME, indexConfiguration)
+  private val traceCountsQueryGenerator = new TraceCountsQueryGenerator(esConfiguration.indexNamePrefix, esConfiguration.indexType, ES_NESTED_DOC_NAME, indexConfiguration)
   private val fieldValuesQueryGenerator = new FieldValuesQueryGenerator(esConfiguration.indexNamePrefix, esConfiguration.indexType, ES_NESTED_DOC_NAME, indexConfiguration)
 
   override def searchTraces(request: TracesSearchRequest): Future[Seq[Trace]] = {
@@ -63,7 +55,7 @@ class CassandraEsTraceStore(cassandraConfiguration: CassandraConfiguration,
 
     // go through each hit and fetch trace for parsed traceId
     val sourceList = result.getSourceAsStringList
-    if(sourceList != null && sourceList.size() > 0) {
+    if (sourceList != null && sourceList.size() > 0) {
       val traceFutures = sourceList
         .asScala
         .map(source => extractTraceIdFromSource(source))
@@ -79,10 +71,6 @@ class CassandraEsTraceStore(cassandraConfiguration: CassandraConfiguration,
     } else {
       Future.successful(Nil)
     }
-  }
-
-  private def extractTraceIdFromSource(source: String): String = {
-    (parse(source) \ ES_TRACE_ID_KEY).extract[String]
   }
 
   override def getTrace(traceId: String): Future[Trace] = cassandraReader.readTrace(traceId)
@@ -113,28 +101,12 @@ class CassandraEsTraceStore(cassandraConfiguration: CassandraConfiguration,
       .map(extractFieldValues(_, request.getFieldName.toLowerCase))
   }
 
-  private def extractFieldValues(result: SearchResult, fieldName: String): List[String] = {
-    val aggregations =
-      result
-      .getJsonObject
-      .getAsJsonObject(ES_FIELD_AGGREGATIONS)
-      .getAsJsonObject(ES_NESTED_DOC_NAME)
-      .getAsJsonObject(fieldName)
-
-    if (aggregations.has(ES_FIELD_BUCKETS))
-      aggregations
-        .getAsJsonArray(ES_FIELD_BUCKETS)
-        .asScala
-        .map(element => element.getAsJsonObject.get(ES_FIELD_KEY).getAsString)
-        .toList
-    else
-      aggregations
-        .getAsJsonObject(fieldName)
-        .getAsJsonArray(ES_FIELD_BUCKETS)
-        .asScala
-        .map(element => element.getAsJsonObject.get(ES_FIELD_KEY).getAsString)
-        .toList
+  override def getTraceCounts(request: TraceCountsRequest): Future[TraceCounts] = {
+    esReader
+      .getTraceCounts(traceCountsQueryGenerator.generate(request))
+      .flatMap(mapSearchResultToTraceCounts)
   }
+
 
   override def close(): Unit = {
     cassandraReader.close()

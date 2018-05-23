@@ -25,4 +25,5 @@ trait TraceStore extends AutoCloseable {
   def searchTraces(request: TracesSearchRequest): Future[Seq[Trace]]
   def getFieldNames(): Future[Seq[String]]
   def getFieldValues(request: FieldValuesRequest): Future[Seq[String]]
+  def getTraceCounts(request: TraceCountsRequest): Future[TraceCounts]
 }

@@ -56,7 +56,11 @@ abstract class QueryGenerator(nestedDocName: String, indexConfiguration: Whiteli
     }
   }
 
-  private def createBoolQuery(fields: Seq[Field]): BoolQueryBuilder = {
+  private def buildTermQuery(key: String, value: String): Option[TermQueryBuilder] = {
+    if (StringUtils.isBlank(value)) None else Some(termQuery(withBaseDoc(key), value))
+  }
+
+  protected def createBoolQuery(fields: Seq[Field]): BoolQueryBuilder = {
     val boolQueryBuilder = boolQuery()
     // add all fields as term sub query
     val subQueries: Seq[QueryBuilder] =
@@ -65,10 +69,6 @@ abstract class QueryGenerator(nestedDocName: String, indexConfiguration: Whiteli
     subQueries.foreach(boolQueryBuilder.filter)
 
     boolQueryBuilder
-  }
-
-  private def buildTermQuery(key: String, value: String): Option[TermQueryBuilder] = {
-    if (StringUtils.isBlank(value)) None else Some(termQuery(withBaseDoc(key), value))
   }
 
   protected def createNestedAggregationQuery(fieldName: String): AggregationBuilder =

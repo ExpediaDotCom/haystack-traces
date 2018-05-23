@@ -35,7 +35,7 @@ class TraceCountsQueryGenerator(indexNamePrefix: String,
                                 indexConfiguration: WhitelistIndexFieldConfiguration) extends QueryGenerator(nestedDocName, indexConfiguration) {
   def generate(request: TraceCountsRequest): Search = {
     new Search.Builder(buildQueryString(request))
-      .addIndex(s"__$indexNamePrefix*")
+      .addIndex(s"$indexNamePrefix*")
       .addType(indexType)
       .build()
   }

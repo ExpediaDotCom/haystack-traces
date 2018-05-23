@@ -121,23 +121,23 @@ class ProjectConfiguration extends AutoCloseable {
       wakeupTimeoutInMillis = kafka.getInt("wakeup.timeout.ms"))
   }
 
+  private def keyspaceConfig(kConfig: Config, ttl: Int): KeyspaceConfiguration = {
+    val autoCreateSchemaField = "auto.create.schema"
+    val autoCreateSchema = if (kConfig.hasPath(autoCreateSchemaField)
+      && StringUtils.isNotEmpty(kConfig.getString(autoCreateSchemaField))) {
+      Some(kConfig.getString(autoCreateSchemaField))
+    } else {
+      None
+    }
+
+    KeyspaceConfiguration(kConfig.getString("name"), kConfig.getString("table.name"), ttl, autoCreateSchema)
+  }
+
   /**
     *
     * cassandra configuration object
     */
   val cassandraWriteConfig: CassandraWriteConfiguration = {
-
-    def keyspaceConfig(kConfig: Config): KeyspaceConfiguration = {
-      val autoCreateSchemaField = "auto.create.schema"
-      val autoCreateSchema = if (kConfig.hasPath(autoCreateSchemaField)
-        && StringUtils.isNotEmpty(kConfig.getString(autoCreateSchemaField))) {
-        Some(kConfig.getString(autoCreateSchemaField))
-      } else {
-        None
-      }
-
-      KeyspaceConfiguration(kConfig.getString("name"), kConfig.getString("table.name"), autoCreateSchema, kConfig.getLong("ttl.sec"))
-    }
 
     def toConsistencyLevel(level: String) = ConsistencyLevel.values().find(_.toString.equalsIgnoreCase(level)).get
 
@@ -194,8 +194,7 @@ class ProjectConfiguration extends AutoCloseable {
         cs.getBoolean("auto.discovery.enabled"),
         awsConfig,
         credentialsConfig,
-        keyspaceConfig(cs.getConfig("spans.keyspace")),
-        keyspaceConfig(cs.getConfig("service.metadata.keyspace")),
+        keyspaceConfig(cs.getConfig("keyspace"), cs.getInt("ttl.sec")),
         socket),
       consistencyLevel = consistencyLevel,
       maxInFlightRequests = cs.getInt("max.inflight.requests"),
@@ -204,6 +203,23 @@ class ProjectConfiguration extends AutoCloseable {
         cs.getLong("retries.backoff.initial.ms"),
         cs.getDouble("retries.backoff.factor")),
       consistencyLevelOnErrors(cs))
+  }
+
+  /**
+    * service metadata write configuration
+    */
+  val serviceMetadataWriteConfig: ServiceMetadataWriteConfiguration = {
+    val serviceMetadata = config.getConfig("service.metadata")
+    ServiceMetadataWriteConfiguration(
+      serviceMetadata.getBoolean("enabled"),
+      maxInflight = serviceMetadata.getInt("max.inflight.requests"),
+      flushIntervalInSec = serviceMetadata.getInt("flush.interval.sec"),
+      RetryOperation.Config(
+        serviceMetadata.getInt("retries.max"),
+        serviceMetadata.getLong("retries.backoff.initial.ms"),
+        serviceMetadata.getDouble("retries.backoff.factor")),
+      ConsistencyLevel.ONE,
+      keyspaceConfig(serviceMetadata.getConfig("cassandra.keyspace"), serviceMetadata.getInt("ttl.sec")))
   }
 
   /**

@@ -27,7 +27,10 @@ import org.apache.commons.lang3.StringUtils
   * @param autoCreateSchema  : apply cql and create keyspace and tables if not exist, optional
   * @param recordTTLInSec    : ttl of record in sec
   */
-case class KeyspaceConfiguration(name: String, table: String, autoCreateSchema: Option[String] = None, recordTTLInSec: Long = -1) {
+case class KeyspaceConfiguration(name: String,
+                                 table: String,
+                                 recordTTLInSec: Int,
+                                 autoCreateSchema: Option[String] = None) {
   require(StringUtils.isNotEmpty(name))
   require(StringUtils.isNotEmpty(table))
 }
@@ -38,14 +41,12 @@ case class KeyspaceConfiguration(name: String, table: String, autoCreateSchema: 
   * @param endpoints                : list of cassandra endpoints
   * @param autoDiscoverEnabled      : if autodiscovery is enabled, then 'endpoints' config parameter will be ignored
   * @param awsNodeDiscovery         : discovery configuration for aws, optional. This is applied only if autoDiscoverEnabled is true
-  * @param spanKeyspace             : cassandra keyspace for spans
-  * @param serviceMetadataKeyspace  : cassandra keyspace for service metadata
+  * @param tracesKeyspace           : cassandra keyspace for spans
   * @param socket                   : socket configuration like maxConnections, timeouts and keepAlive
   */
 case class CassandraConfiguration(endpoints: List[String],
                                   autoDiscoverEnabled: Boolean,
                                   awsNodeDiscovery: Option[AwsNodeDiscoveryConfiguration],
                                   plaintextCredentials: Option[CredentialsConfiguration],
-                                  spanKeyspace: KeyspaceConfiguration,
-                                  serviceMetadataKeyspace: KeyspaceConfiguration,
+                                  tracesKeyspace: KeyspaceConfiguration,
                                   socket: SocketConfiguration)

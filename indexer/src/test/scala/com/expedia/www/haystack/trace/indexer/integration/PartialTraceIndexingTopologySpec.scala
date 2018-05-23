@@ -39,6 +39,7 @@ class PartialTraceIndexingTopologySpec extends BaseIntegrationTestSpec {
       val esConfig = elastic.buildConfig
       val indexTagsConfig = elastic.indexingConfig
       val cassandraConfig = cassandra.buildConfig
+      val serviceMetadataConfig = cassandra.buildServiceMetadataConfig
       val traceDescription = List(TraceDescription(TRACE_ID, SPAN_ID_PREFIX))
 
       When(s"spans are produced in '${kafka.INPUT_TOPIC}' topic async, and kafka-streams topology is started")
@@ -49,7 +50,7 @@ class PartialTraceIndexingTopologySpec extends BaseIntegrationTestSpec {
         0L,
         spanAccumulatorConfig.bufferingWindowMillis)
 
-      val topology = new StreamRunner(kafkaConfig, spanAccumulatorConfig, esConfig, cassandraConfig, indexTagsConfig)
+      val topology = new StreamRunner(kafkaConfig, spanAccumulatorConfig, esConfig, cassandraConfig, serviceMetadataConfig, indexTagsConfig)
       topology.start()
 
       Then(s"we should read one span buffer object from '${kafka.OUTPUT_TOPIC}' topic and the same should be searchable in cassandra and elastic search")

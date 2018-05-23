@@ -19,6 +19,8 @@ package com.expedia.www.haystack.trace.indexer.unit
 
 import com.datastax.driver.core.ConsistencyLevel
 import com.datastax.driver.core.exceptions.UnavailableException
+import com.expedia.www.haystack.commons.retries.RetryOperation
+import com.expedia.www.haystack.trace.commons.config.entities.KeyspaceConfiguration
 import com.expedia.www.haystack.trace.commons.packer.PackerType
 import com.expedia.www.haystack.trace.indexer.config.ProjectConfiguration
 import org.apache.kafka.clients.consumer.ConsumerConfig
@@ -67,6 +69,16 @@ class ConfigurationLoaderSpec extends FunSpec with Matchers {
       kafkaConfig.producerProps.getProperty(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG) shouldBe "org.apache.kafka.common.serialization.StringSerializer"
     }
 
+    it("should load the service metadata config from base.conf") {
+      val config = project.serviceMetadataWriteConfig
+      config.maxInflight shouldBe 100
+      config.flushIntervalInSec shouldBe 60
+      config.consistencyLevel shouldBe ConsistencyLevel.ONE
+      config.enabled shouldBe true
+      config.cassandraKeyspace shouldBe KeyspaceConfiguration("haystack_metadata", "services", 259200, Some("cassandra_cql_schema_2"))
+      config.retryConfig shouldBe RetryOperation.Config(10, 100l, 2.0)
+    }
+
     it("should load the cassandra config from base.conf and few properties overridden from env variable") {
       val cassandraWriteConfig = project.cassandraWriteConfig
       val clientConfig = cassandraWriteConfig.clientConfig
@@ -75,13 +87,16 @@ class ConfigurationLoaderSpec extends FunSpec with Matchers {
       clientConfig.autoDiscoverEnabled shouldBe false
       // this will fail if run inside an editor, we override this config using env variable inside pom.xml
       clientConfig.endpoints should contain allOf("cass1", "cass2")
-      clientConfig.autoCreateSchema shouldBe Some("cassandra_cql_schema")
+      clientConfig.tracesKeyspace.autoCreateSchema shouldBe Some("cassandra_cql_schema_1")
+      clientConfig.tracesKeyspace.name shouldBe "haystack"
+      clientConfig.tracesKeyspace.table shouldBe "traces"
+      clientConfig.tracesKeyspace.recordTTLInSec shouldBe 86400
+
       clientConfig.awsNodeDiscovery shouldBe empty
       clientConfig.socket.keepAlive shouldBe true
       clientConfig.socket.maxConnectionPerHost shouldBe 100
       clientConfig.socket.readTimeoutMills shouldBe 5000
       clientConfig.socket.connectionTimeoutMillis shouldBe 10000
-      cassandraWriteConfig.recordTTLInSec shouldBe 86400
       cassandraWriteConfig.maxInFlightRequests shouldBe 100
       cassandraWriteConfig.retryConfig.maxRetries shouldBe 10
       cassandraWriteConfig.retryConfig.backOffInMillis shouldBe 250

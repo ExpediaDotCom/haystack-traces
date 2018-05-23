@@ -20,15 +20,19 @@ package com.expedia.www.haystack.trace.commons.clients.cassandra
 import java.nio.ByteBuffer
 import java.util.Date
 
+import com.datastax.driver.core.BatchStatement.Type
 import com.datastax.driver.core._
 import com.datastax.driver.core.querybuilder.QueryBuilder
-import com.expedia.open.tracing.buffer.SpanBuffer
 import com.expedia.www.haystack.trace.commons.clients.cassandra.CassandraTableSchema._
-import com.expedia.www.haystack.trace.commons.config.entities.CassandraConfiguration
+import com.expedia.www.haystack.trace.commons.config.entities.{CassandraConfiguration, KeyspaceConfiguration}
+import org.slf4j.LoggerFactory
 
+import scala.collection.JavaConverters._
 import scala.util.Try
 
 class CassandraSession(config: CassandraConfiguration, factory: ClusterFactory) {
+  private val LOGGER = LoggerFactory.getLogger(classOf[CassandraSession])
+
   /**
     * builds a session object to interact with cassandra cluster
     * Also ensure that keyspace and table names exists in cassandra.
@@ -36,42 +40,45 @@ class CassandraSession(config: CassandraConfiguration, factory: ClusterFactory) 
   private val (cluster, session) = {
     val cluster = factory.buildCluster(config)
     val newSession = cluster.connect()
-    CassandraTableSchema.ensureExists(config.keyspace, config.tableName, config.autoCreateSchema, newSession)
-    newSession.execute("USE " + config.keyspace)
     (cluster, newSession)
   }
 
-  private val selectTracePreparedStmt: PreparedStatement = {
+  def ensureKeyspace(keyspace: KeyspaceConfiguration): Unit = {
+    LOGGER.info("ensuring kespace exists with {}", keyspace)
+    CassandraTableSchema.ensureExists(keyspace.name, keyspace.table, keyspace.autoCreateSchema, session)
+  }
+
+  private lazy val selectTracePreparedStmt: PreparedStatement = {
       import QueryBuilder.bindMarker
       session.prepare(
         QueryBuilder
           .select()
-          .from(config.tableName)
+          .from(config.tracesKeyspace.name, config.tracesKeyspace.table)
           .where(QueryBuilder.eq(ID_COLUMN_NAME, bindMarker(ID_COLUMN_NAME))))
   }
 
-  def createInsertMetadataPreparedStatement(recordTTLInSec: Int): PreparedStatement = {
+  def createServiceMetadataInsertPreparedStatement(keyspace: KeyspaceConfiguration): PreparedStatement = {
     import QueryBuilder.{bindMarker, ttl}
 
     val insert = QueryBuilder
-      .insertInto(config.tableName)
-      .value(ID_COLUMN_NAME, bindMarker(ID_COLUMN_NAME))
+      .insertInto(keyspace.name, keyspace.table)
+      .value(SERVICE_COLUMN_NAME, bindMarker(SERVICE_COLUMN_NAME))
+      .value(OPERATION_COLUMN_NAME, bindMarker(OPERATION_COLUMN_NAME))
       .value(TIMESTAMP_COLUMN_NAME, bindMarker(TIMESTAMP_COLUMN_NAME))
-      .value(SPANS_COLUMN_NAME, bindMarker(SPANS_COLUMN_NAME))
-      .using(ttl(recordTTLInSec))
+      .using(ttl(keyspace.recordTTLInSec))
 
     session.prepare(insert)
   }
 
-  def createInsertPreparedStatement(recordTTLInSec: Int): PreparedStatement = {
+  def createSpanInsertPreparedStatement(keyspace: KeyspaceConfiguration): PreparedStatement = {
     import QueryBuilder.{bindMarker, ttl}
 
     val insert = QueryBuilder
-      .insertInto(config.tableName)
+      .insertInto(keyspace.name, keyspace.table)
       .value(ID_COLUMN_NAME, bindMarker(ID_COLUMN_NAME))
       .value(TIMESTAMP_COLUMN_NAME, bindMarker(TIMESTAMP_COLUMN_NAME))
       .value(SPANS_COLUMN_NAME, bindMarker(SPANS_COLUMN_NAME))
-      .using(ttl(recordTTLInSec))
+      .using(ttl(keyspace.recordTTLInSec))
 
     session.prepare(insert)
   }
@@ -86,31 +93,40 @@ class CassandraSession(config: CassandraConfiguration, factory: ClusterFactory) 
 
   /**
     * create bound statement for writing to cassandra table
-    * @param traceId trace id
-    * @param spanBufferBytes data bytes of spanBuffer that belong to a given trace id
+    * @param serviceName name of service ie primary key in cassandra
+    * @param operationList name of operation
+    * @param consistencyLevel consistency level for cassandra write
+    * @param insertServiceMetadataStatement prepared statement to use
     * @return
     */
-  def newInsertStatement(traceId: String,
-                         spanBufferBytes: Array[Byte],
-                              consistencyLevel: ConsistencyLevel,
-                              insertTraceStatement: PreparedStatement): Statement = {
-    new BoundStatement(insertTraceStatement)
-      .setString(ID_COLUMN_NAME, traceId)
-      .setTimestamp(TIMESTAMP_COLUMN_NAME, new Date())
-      .setBytes(SPANS_COLUMN_NAME, ByteBuffer.wrap(spanBufferBytes))
-      .setConsistencyLevel(consistencyLevel)
+  def newServiceMetadataInsertStatement(serviceName: String,
+                                        operationList: Iterable[String],
+                                        consistencyLevel: ConsistencyLevel,
+                                        insertServiceMetadataStatement: PreparedStatement): Statement = {
+
+    val statements = operationList.map(operation => {
+      new BoundStatement(insertServiceMetadataStatement)
+        .setString(SERVICE_COLUMN_NAME, serviceName)
+        .setString(OPERATION_COLUMN_NAME, operation)
+        .setTimestamp(TIMESTAMP_COLUMN_NAME, new Date())
+        .setConsistencyLevel(consistencyLevel)
+    })
+
+    new BatchStatement(Type.UNLOGGED).addAll(statements.asJava)
   }
 
   /**
     * create bound statement for writing to cassandra table
     * @param traceId trace id
     * @param spanBufferBytes data bytes of spanBuffer that belong to a given trace id
+    * @param consistencyLevel consistency level for cassandra write
+    * @param insertTraceStatement prepared statement to use
     * @return
     */
-  def newInsertBoundStatement(traceId: String,
-                              spanBufferBytes: Array[Byte],
-                              consistencyLevel: ConsistencyLevel,
-                              insertTraceStatement: PreparedStatement): Statement = {
+  def newTraceInsertBoundStatement(traceId: String,
+                                   spanBufferBytes: Array[Byte],
+                                   consistencyLevel: ConsistencyLevel,
+                                   insertTraceStatement: PreparedStatement): Statement = {
     new BoundStatement(insertTraceStatement)
       .setString(ID_COLUMN_NAME, traceId)
       .setTimestamp(TIMESTAMP_COLUMN_NAME, new Date())

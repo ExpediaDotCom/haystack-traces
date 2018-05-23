@@ -77,15 +77,13 @@ class ProviderConfiguration {
       socketConfig.getInt("read.timeout.ms"))
 
     val spanKeyspace = cs.getConfig("spans.keyspace")
-    val serviceMetadataKeyspace = cs.getConfig("service.metadata.keyspace")
 
     CassandraConfiguration(
       if (cs.hasPath("endpoints")) cs.getString("endpoints").split(",").toList else Nil,
       cs.getBoolean("auto.discovery.enabled"),
       awsConfig,
       credentialsConfig,
-      KeyspaceConfiguration(spanKeyspace.getString("name"), spanKeyspace.getString("table.name")),
-      KeyspaceConfiguration(serviceMetadataKeyspace.getString("name"), serviceMetadataKeyspace.getString("table.name")),
+      KeyspaceConfiguration(spanKeyspace.getString("name"), spanKeyspace.getString("table.name"), -1),
       socket)
   }
 

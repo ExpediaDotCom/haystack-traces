@@ -108,7 +108,7 @@ class SpanIndexProcessor(accumulatorConfig: SpanAccumulatorConfiguration,
         case (sb, idx) =>
           val spanBuffer = sb.builder.build()
           writeTrace(spanBuffer, idx == emittableSpanBuffers.size - 1)
-          if (committableOffset < sb.firstSeenSpanKafkaOffset) committableOffset = sb.firstSeenSpanKafkaOffset
+          if (committableOffset < sb.firstSeenSpanKafkaOffset && !sb.isrootSpanSeen) committableOffset = sb.firstSeenSpanKafkaOffset
       }
 
       lastEmitTimestamp = currentTimestamp

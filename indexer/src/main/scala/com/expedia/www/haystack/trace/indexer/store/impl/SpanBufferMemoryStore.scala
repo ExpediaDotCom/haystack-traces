@@ -73,7 +73,7 @@ class SpanBufferMemoryStore(cacheSizer: DynamicCacheSizer) extends SpanBufferKey
 
 
   /**
-    * removes and returns all the span buffers from the map that are recorded before the given timestamp
+    * removes and returns all the completed span buffers from the map that are recorded before the given timestamp
     *
     * @param timestamp timestamp before which all buffered spans should be read and removed
     * @return
@@ -86,10 +86,12 @@ class SpanBufferMemoryStore(cacheSizer: DynamicCacheSizer) extends SpanBufferKey
 
     while (!done && iterator.hasNext) {
       val el = iterator.next()
-      if (el.getValue.rootSpanSeen && el.getValue.firstSpanSeenAt <= timestamp) {
-        iterator.remove()
-        totalSpansInMemStore -= el.getValue.builder.getChildSpansCount
-        result += el.getValue
+      if (el.getValue.firstSpanSeenAt <= timestamp) {
+        if(el.getValue.isrootSpanSeen) {
+          iterator.remove()
+          totalSpansInMemStore -= el.getValue.builder.getChildSpansCount
+          result += el.getValue
+        }
       } else {
         // here we apply a basic optimization and skip further iteration because all following records
         // in this map will have higher recordTimestamp. When we insert the first span for a unique traceId
@@ -145,7 +147,7 @@ class SpanBufferMemoryStore(cacheSizer: DynamicCacheSizer) extends SpanBufferKey
 
   private def isRootSpan(span: Span): Boolean = {
     if (StringUtils.isEmpty(span.getParentSpanId)) {
-      true
+      return true
     }
     false
   }
@@ -155,8 +157,8 @@ class SpanBufferMemoryStore(cacheSizer: DynamicCacheSizer) extends SpanBufferKey
 
       val currentValue = this.map.get(traceId)
       val spanBuilder = currentValue.builder.addChildSpans(span)
-      val rootSpanSeen = currentValue.rootSpanSeen || isRootSpan(span)
-      currentValue.copy(builder = spanBuilder, rootSpanSeen = rootSpanSeen)
+      val rootSpanSeen = currentValue.isrootSpanSeen || isRootSpan(span)
+      currentValue.copy(builder = spanBuilder, isrootSpanSeen = rootSpanSeen)
     }
     else {
       val spanBuffer = SpanBuffer.newBuilder().setTraceId(span.getTraceId).addChildSpans(span)

@@ -17,22 +17,36 @@
 
 package com.expedia.www.haystack.trace.commons.config.entities
 
+import org.apache.commons.lang3.StringUtils
+
+
+/** define the keyspace and table information in cassandra
+  *
+  * @param name              : name of cassandra keyspace
+  * @param table             : name of cassandra table
+  * @param recordTTLInSec    : ttl of record in sec
+  * @param autoCreateSchema  : apply cql and create keyspace and tables if not exist, optional
+  */
+case class KeyspaceConfiguration(name: String,
+                                 table: String,
+                                 recordTTLInSec: Int = -1,
+                                 autoCreateSchema: Option[String] = None) {
+  require(StringUtils.isNotEmpty(name))
+  require(StringUtils.isNotEmpty(table))
+}
+
 /**
   * defines the configuration parameters for cassandra
   *
-  * @param endpoints           : list of cassandra endpoints
-  * @param autoDiscoverEnabled : if autodiscovery is enabled, then 'endpoints' config parameter will be ignored
-  * @param awsNodeDiscovery    : discovery configuration for aws, optional. This is applied only if autoDiscoverEnabled is true
-  * @param keyspace            : cassandra keyspance
-  * @param tableName           : cassandra table name
-  * @param autoCreateSchema    : apply cql and create keyspace and tables if not exist, optional
-  * @param socket              : socket configuration like maxConnections, timeouts and keepAlive
+  * @param endpoints                : list of cassandra endpoints
+  * @param autoDiscoverEnabled      : if autodiscovery is enabled, then 'endpoints' config parameter will be ignored
+  * @param awsNodeDiscovery         : discovery configuration for aws, optional. This is applied only if autoDiscoverEnabled is true
+  * @param tracesKeyspace           : cassandra keyspace for traces
+  * @param socket                   : socket configuration like maxConnections, timeouts and keepAlive
   */
 case class CassandraConfiguration(endpoints: List[String],
                                   autoDiscoverEnabled: Boolean,
                                   awsNodeDiscovery: Option[AwsNodeDiscoveryConfiguration],
                                   plaintextCredentials: Option[CredentialsConfiguration],
-                                  keyspace: String,
-                                  tableName: String,
-                                  autoCreateSchema: Option[String],
+                                  tracesKeyspace: KeyspaceConfiguration,
                                   socket: SocketConfiguration)

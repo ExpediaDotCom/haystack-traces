@@ -54,12 +54,12 @@ class CassandraWriteResultListener(asyncResult: ResultSetFuture,
         LOGGER.warn(s"Warning received in cassandra writes {}", result.getExecutionInfo.getWarnings.asScala.mkString(","))
         writeWarnings.mark(result.getExecutionInfo.getWarnings.size())
       }
-      retryOp.onResult(result)
+      if (retryOp != null) retryOp.onResult(result)
     } catch {
       case ex: Exception =>
         LOGGER.error("Fail to write the record to cassandra with exception", ex)
         writeFailures.mark()
-        retryOp.onError(ex, retry = true)
+        if (retryOp != null) retryOp.onError(ex, retry = true)
     }
   }
 }

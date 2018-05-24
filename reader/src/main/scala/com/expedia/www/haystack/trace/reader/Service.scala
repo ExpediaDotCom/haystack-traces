@@ -51,7 +51,11 @@ object Service extends MetricsSupport {
       val config = new ProviderConfiguration
       HealthController.addListener(new UpdateHealthStatusFile(config.healthStatusFilePath))
 
-      val store = new CassandraEsTraceStore(config.cassandraConfig, config.elasticSearchConfig, config.indexConfig)(executor)
+      val store = new CassandraEsTraceStore(
+        config.cassandraConfig,
+        config.serviceMetadataConfig,
+        config.elasticSearchConfig,
+        config.indexConfig)(executor)
 
       val serviceConfig = config.serviceConfig
 
@@ -83,7 +87,8 @@ object Service extends MetricsSupport {
 
       server.awaitTermination()
     } catch {
-      case ex: Exception =>
+      case ex: Throwable =>
+        ex.printStackTrace()
         LOGGER.error("Fatal error observed while running the app", ex)
         LoggerUtils.shutdownLogger()
         System.exit(1)

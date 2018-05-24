@@ -76,15 +76,24 @@ class ProviderConfiguration {
       socketConfig.getInt("conn.timeout.ms"),
       socketConfig.getInt("read.timeout.ms"))
 
+    val tracesKeyspace = cs.getConfig("keyspace")
+
     CassandraConfiguration(
       if (cs.hasPath("endpoints")) cs.getString("endpoints").split(",").toList else Nil,
       cs.getBoolean("auto.discovery.enabled"),
       awsConfig,
       credentialsConfig,
-      cs.getString("keyspace.name"),
-      cs.getString("keyspace.table.name"),
-      None,
+      KeyspaceConfiguration(tracesKeyspace.getString("name"), tracesKeyspace.getString("table.name"), -1),
       socket)
+  }
+
+  val serviceMetadataConfig: ServiceMetadataReadConfiguration = {
+    val metadataCfg = config.getConfig("service.metadata")
+    val keyspace = metadataCfg.getConfig("cassandra.keyspace")
+
+    ServiceMetadataReadConfiguration(
+      metadataCfg.getBoolean("enabled"),
+      KeyspaceConfiguration(keyspace.getString("name"), keyspace.getString("table.name")))
   }
 
   /**
@@ -171,8 +180,8 @@ class ProviderConfiguration {
       reload.getString("config.endpoint"),
       reload.getString("config.database.name"),
       reload.getInt("interval.ms"),
-      if(reload.hasPath("config.username")){Option(reload.getString("config.username"))}else{None},
-      if(reload.hasPath("config.password")){Option(reload.getString("config.password"))}else{None},
+      if(reload.hasPath("config.username")){ Option(reload.getString("config.username")) } else None,
+      if(reload.hasPath("config.password")){ Option(reload.getString("config.password")) } else None,
       observers,
       loadOnStartup = reload.getBoolean("startup.load"))
 

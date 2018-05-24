@@ -41,7 +41,7 @@ class FieldValuesQueryGenerator(indexNamePrefix: String,
         .toString
     } else {
       new SearchSourceBuilder()
-        .aggregation(createNestedAggregationQuery(request.getFieldName.toLowerCase()))
+        .aggregation(createNestedAggregationQuery(request.getFieldName.toLowerCase))
         .size(0)
         .toString
     }

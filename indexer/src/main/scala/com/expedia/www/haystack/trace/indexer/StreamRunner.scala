@@ -21,6 +21,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.{Executors, TimeUnit}
 
 import com.expedia.www.haystack.commons.health.HealthController
+import com.expedia.www.haystack.trace.commons.clients.cassandra.{CassandraClusterFactory, CassandraSession}
 import com.expedia.www.haystack.trace.commons.config.entities.WhitelistIndexFieldConfiguration
 import com.expedia.www.haystack.trace.commons.packer.PackerFactory
 import com.expedia.www.haystack.trace.indexer.config.entities._
@@ -28,19 +29,21 @@ import com.expedia.www.haystack.trace.indexer.processors.StreamTaskState.StreamT
 import com.expedia.www.haystack.trace.indexer.processors._
 import com.expedia.www.haystack.trace.indexer.processors.supplier.SpanIndexProcessorSupplier
 import com.expedia.www.haystack.trace.indexer.store.SpanBufferMemoryStoreSupplier
-import com.expedia.www.haystack.trace.indexer.writers.TraceWriter
-import com.expedia.www.haystack.trace.indexer.writers.cassandra.CassandraWriter
+import com.expedia.www.haystack.trace.indexer.writers.cassandra.CassandraTraceWriter
 import com.expedia.www.haystack.trace.indexer.writers.es.ElasticSearchWriter
 import com.expedia.www.haystack.trace.indexer.writers.kafka.KafkaWriter
+import com.expedia.www.haystack.trace.indexer.writers.{ServiceMetadataWriter, TraceWriter}
 import org.apache.commons.lang3.StringUtils
 import org.slf4j.LoggerFactory
 
 import scala.collection.mutable
+import scala.util.Try
 
 class StreamRunner(kafkaConfig: KafkaConfiguration,
                    accumulatorConfig: SpanAccumulatorConfiguration,
                    esConfig: ElasticSearchConfiguration,
                    cassandraConfig: CassandraWriteConfiguration,
+                   serviceMetadataWriteConfig: ServiceMetadataWriteConfiguration,
                    indexConfig: WhitelistIndexFieldConfiguration) extends AutoCloseable with StateListener {
 
   implicit private val executor = scala.concurrent.ExecutionContext.global
@@ -51,10 +54,16 @@ class StreamRunner(kafkaConfig: KafkaConfiguration,
   private val streamThreadExecutor = Executors.newFixedThreadPool(kafkaConfig.numStreamThreads)
   private val taskRunnables = mutable.ListBuffer[StreamTaskRunnable]()
 
+  private val cassandraSession = new CassandraSession(cassandraConfig.clientConfig, new CassandraClusterFactory)
+
   private val writers: Seq[TraceWriter] = {
     val writers = mutable.ListBuffer[TraceWriter]()
-    writers += new CassandraWriter(cassandraConfig)(executor)
+    writers += new CassandraTraceWriter(cassandraSession, cassandraConfig)(executor)
     writers += new ElasticSearchWriter(esConfig, indexConfig)
+
+    if(serviceMetadataWriteConfig.enabled) {
+      writers += new ServiceMetadataWriter(cassandraSession, serviceMetadataWriteConfig)(executor)
+    }
 
     if(StringUtils.isNotEmpty(kafkaConfig.produceTopic)) {
       writers += new KafkaWriter(kafkaConfig.producerProps, kafkaConfig.produceTopic)
@@ -65,7 +74,10 @@ class StreamRunner(kafkaConfig: KafkaConfiguration,
   def start(): Unit = {
     LOGGER.info("Starting the span indexing stream..")
 
-    val storeSupplier = new SpanBufferMemoryStoreSupplier(accumulatorConfig.minTracesPerCache, accumulatorConfig.maxEntriesAllStores)
+    val storeSupplier = new SpanBufferMemoryStoreSupplier(
+      accumulatorConfig.minTracesPerCache,
+      accumulatorConfig.maxEntriesAllStores)
+
     val streamProcessSupplier = new SpanIndexProcessorSupplier(
       accumulatorConfig,
       storeSupplier,
@@ -109,6 +121,7 @@ class StreamRunner(kafkaConfig: KafkaConfiguration,
   private def closeWriters(): Unit = {
     LOGGER.info("Closing all the writers now..")
     writers foreach { _.close }
+    Try(cassandraSession.close())
   }
 
   private def waitAndTerminate(): Unit = {

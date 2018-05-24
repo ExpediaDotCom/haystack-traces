@@ -43,6 +43,7 @@ object App extends MetricsSupport {
         appConfig.spanAccumulateConfig,
         appConfig.elasticSearchConfig,
         appConfig.cassandraWriteConfig,
+        appConfig.serviceMetadataWriteConfig,
         appConfig.indexConfig)
 
       Runtime.getRuntime.addShutdownHook(new Thread {

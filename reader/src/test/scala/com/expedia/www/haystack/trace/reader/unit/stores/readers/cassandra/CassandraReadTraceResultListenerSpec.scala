@@ -24,7 +24,7 @@ import com.expedia.open.tracing.Span
 import com.expedia.open.tracing.api.Trace
 import com.expedia.open.tracing.buffer.SpanBuffer
 import com.expedia.www.haystack.trace.commons.clients.cassandra.CassandraTableSchema
-import com.expedia.www.haystack.trace.reader.stores.readers.cassandra.CassandraReadResultListener
+import com.expedia.www.haystack.trace.reader.stores.readers.cassandra.CassandraReadTraceResultListener
 import com.expedia.www.haystack.trace.reader.unit.BaseUnitTestSpec
 import io.grpc.{Status, StatusException}
 import org.easymock.EasyMock
@@ -32,7 +32,7 @@ import org.easymock.EasyMock
 import scala.collection.JavaConverters._
 import scala.concurrent.Promise
 
-class CassandraReadResultListenerSpec extends BaseUnitTestSpec {
+class CassandraReadTraceResultListenerSpec extends BaseUnitTestSpec {
 
   describe("cassandra write listener") {
     it("should read the rows, deserialized spans column and return the complete trace") {
@@ -61,7 +61,7 @@ class CassandraReadResultListenerSpec extends BaseUnitTestSpec {
       }
 
       whenExecuting(mockReadResult, promise, failureMeter, timer,resultSet,  mockSpanBufferRow_1, mockSpanBufferRow_2) {
-        val listener = new CassandraReadResultListener(mockReadResult, timer, failureMeter, promise)
+        val listener = new CassandraReadTraceResultListener(mockReadResult, timer, failureMeter, promise)
         listener.run()
         capturedTrace.getValue.getChildSpansList.asScala.map(_.getSpanId) should contain allOf("SPAN_ID_1", "SPAN_ID_2")
         capturedTrace.getValue.getTraceId shouldBe "TRACE_ID"
@@ -92,7 +92,7 @@ class CassandraReadResultListenerSpec extends BaseUnitTestSpec {
       }
 
       whenExecuting(mockReadResult, promise, failureMeter, timer,resultSet,  mockSpanBufferRow_1, mockSpanBufferRow_2) {
-        val listener = new CassandraReadResultListener(mockReadResult, timer, failureMeter, promise)
+        val listener = new CassandraReadTraceResultListener(mockReadResult, timer, failureMeter, promise)
         listener.run()
       }
     }
@@ -114,7 +114,7 @@ class CassandraReadResultListenerSpec extends BaseUnitTestSpec {
       }
 
       whenExecuting(mockReadResult, promise, failureMeter, timer,resultSet) {
-        val listener = new CassandraReadResultListener(mockReadResult, timer, failureMeter, promise)
+        val listener = new CassandraReadTraceResultListener(mockReadResult, timer, failureMeter, promise)
         listener.run()
         capturedException.getValue.getStatus.getCode shouldEqual Status.NOT_FOUND.getCode
       }

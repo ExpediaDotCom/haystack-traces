@@ -15,6 +15,7 @@
  */
 package com.expedia.www.haystack.trace.reader.unit.config
 
+import com.expedia.www.haystack.trace.commons.config.entities.KeyspaceConfiguration
 import com.expedia.www.haystack.trace.reader.config.ProviderConfiguration
 import com.expedia.www.haystack.trace.reader.config.entities.{ServiceConfiguration, TraceTransformersConfiguration}
 import com.expedia.www.haystack.trace.reader.readers.transformers.DeDuplicateSpanTransformer
@@ -42,6 +43,12 @@ class ConfigurationLoaderSpec extends BaseUnitTestSpec {
       traceConfig.postTransformers.length shouldBe 3
       traceConfig.preTransformers.length shouldBe 1
       traceConfig.preTransformers.head.isInstanceOf[DeDuplicateSpanTransformer] shouldBe true
+    }
+
+    it("should load service metadata configuration ") {
+      val metadataConfig = new ProviderConfiguration().serviceMetadataConfig
+      metadataConfig.enabled shouldBe false
+      metadataConfig.keyspace shouldEqual KeyspaceConfiguration("haystack_metadata", "services")
     }
   }
 }

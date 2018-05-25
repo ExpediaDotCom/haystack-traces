@@ -43,14 +43,14 @@ class ServiceMetadataWriter(cassandra: CassandraSession,
   private val writeTimer = metricRegistry.timer(AppMetricNames.CASSANDRA_WRITE_TIME)
   private val writeFailures = metricRegistry.meter(AppMetricNames.CASSANDRA_WRITE_FAILURE)
 
+  cassandra.ensureKeyspace(cfg.cassandraKeyspace)
+
   // this semaphore controls the parallel writes to cassandra
   private val inflightRequestsSemaphore = new Semaphore(cfg.maxInflight, true)
 
   private val statementBuilder = new ServiceMetadataStatementBuilder(cassandra, cfg.cassandraKeyspace, cfg.consistencyLevel)
 
   private var lastWriteInstant = Instant.MIN
-
-  cassandra.ensureKeyspace(cfg.cassandraKeyspace)
 
   private def execute(statement: Statement) = {
     inflightRequestsSemaphore.acquire()

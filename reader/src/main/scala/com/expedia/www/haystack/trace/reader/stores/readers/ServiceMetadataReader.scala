@@ -41,8 +41,10 @@ class ServiceMetadataReader(cassandra: CassandraSession, config: ServiceMetadata
   private val readTimer = metricRegistry.timer(AppMetricNames.CASSANDRA_READ_TIME)
   private val readFailures = metricRegistry.meter(AppMetricNames.CASSANDRA_READ_FAILURES)
 
-  private lazy val selectServicePreparedStmt = cassandra.newSelectServicePreparedStatement(config.keyspace.name, config.keyspace.table)
-  private lazy val selectAllServicesPreparedStmt = cassandra.newSelectAllServicesPreparedStatement(config.keyspace.name, config.keyspace.table)
+  private lazy val selectServiceOperationsPreparedStmt =
+    cassandra.newSelectServicePreparedStatement(config.keyspace.name, config.keyspace.table)
+  private lazy val selectAllServicesPreparedStmt =
+    cassandra.newSelectAllServicesPreparedStatement(config.keyspace.name, config.keyspace.table)
 
   /**
     * fetch all operations for a given service name
@@ -54,9 +56,11 @@ class ServiceMetadataReader(cassandra: CassandraSession, config: ServiceMetadata
     val promise = Promise[Seq[String]]
 
     try {
-      val stmt = new BoundStatement(selectServicePreparedStmt).setString(SERVICE_COLUMN_NAME, serviceName)
+      LOGGER.info("Fetching all service operations for serviceName '{}'", serviceName)
+      val stmt = new BoundStatement(selectServiceOperationsPreparedStmt).setString(SERVICE_COLUMN_NAME, serviceName)
       val asyncResult = cassandra.executeAsync(stmt)
       asyncResult.addListener(new ServiceMetadataResultListener(asyncResult, timer, readFailures, promise, (rows) => {
+        LOGGER.info("successfully received operations for serviceName {} with total size - {}", serviceName, rows.size())
         rows.asScala.map(row => row.getString(OPERATION_COLUMN_NAME))
       }), dispatcher)
       promise.future
@@ -64,7 +68,7 @@ class ServiceMetadataReader(cassandra: CassandraSession, config: ServiceMetadata
       case ex: Exception =>
         readFailures.mark()
         timer.stop()
-        LOGGER.error("Failed to read all service names with exception", ex)
+        LOGGER.error(s"Failed to read all service operations for the service $serviceName with exception", ex)
         Future.failed(ex)
     }
   }

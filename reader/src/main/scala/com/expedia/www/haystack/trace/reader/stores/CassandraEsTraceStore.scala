@@ -109,7 +109,7 @@ class CassandraEsTraceStore(cassandraConfig: CassandraConfiguration,
     } else if (request.getFieldName.toLowerCase == TraceIndexDoc.OPERATION_KEY_NAME
       && (request.getFiltersCount == 1)
       && request.getFiltersList.get(0).getName.toLowerCase == TraceIndexDoc.SERVICE_KEY_NAME) {
-      Some(serviceMetadataReader.fetchServiceOperations(request.getFilters(0).getName))
+      Some(serviceMetadataReader.fetchServiceOperations(request.getFilters(0).getValue))
     } else {
       None
     }

@@ -154,13 +154,14 @@ class CassandraSession(config: CassandraConfiguration, factory: ClusterFactory) 
     import QueryBuilder.bindMarker
 
     val select = QueryBuilder
-      .select()
+      .select(OPERATION_COLUMN_NAME)
       .from(keyspace, table)
+      .limit(1000)
       .where(QueryBuilder.eq(SERVICE_COLUMN_NAME, bindMarker(SERVICE_COLUMN_NAME)))
     session.prepare(select)
   }
 
   def newSelectAllServicesPreparedStatement(keyspace: String, table: String): PreparedStatement = {
-    session.prepare(QueryBuilder.select(SERVICE_COLUMN_NAME).from(keyspace, table))
+    session.prepare(QueryBuilder.select(SERVICE_COLUMN_NAME).distinct().from(keyspace, table))
   }
 }

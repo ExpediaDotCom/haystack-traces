@@ -42,10 +42,10 @@ class ServiceMetadataResultListener(asyncResult: ResultSetFuture,
         promise.success(trace)
       case Failure(ex) =>
         if (fatalError(ex)) {
-          LOGGER.error("Fatal error in reading from cassandra, tearing down the app", ex)
+          LOGGER.error("Fatal error in reading service metadata from cassandra, tearing down the app", ex)
           HealthController.setUnhealthy()
         } else {
-          LOGGER.error("Failed in reading the record from cassandra", ex)
+          LOGGER.error("Failed in reading the service metadata from cassandra", ex)
         }
         failure.mark()
         promise.failure(ex)

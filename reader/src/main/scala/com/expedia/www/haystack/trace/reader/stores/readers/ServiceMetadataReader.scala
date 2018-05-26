@@ -56,11 +56,9 @@ class ServiceMetadataReader(cassandra: CassandraSession, config: ServiceMetadata
     val promise = Promise[Seq[String]]
 
     try {
-      LOGGER.info("Fetching all service operations for serviceName '{}'", serviceName)
       val stmt = new BoundStatement(selectServiceOperationsPreparedStmt).setString(SERVICE_COLUMN_NAME, serviceName)
       val asyncResult = cassandra.executeAsync(stmt)
       asyncResult.addListener(new ServiceMetadataResultListener(asyncResult, timer, readFailures, promise, (rows) => {
-        LOGGER.info("successfully received operations for serviceName {} with total size - {}", serviceName, rows.size())
         rows.asScala.map(row => row.getString(OPERATION_COLUMN_NAME))
       }), dispatcher)
       promise.future

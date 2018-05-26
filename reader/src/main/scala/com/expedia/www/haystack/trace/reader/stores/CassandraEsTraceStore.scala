@@ -111,6 +111,7 @@ class CassandraEsTraceStore(cassandraConfig: CassandraConfiguration,
       && request.getFiltersList.get(0).getName.toLowerCase == TraceIndexDoc.SERVICE_KEY_NAME) {
       Some(serviceMetadataReader.fetchServiceOperations(request.getFilters(0).getValue))
     } else {
+      LOGGER.info("read from service metadata request isn't served by cassandra")
       None
     }
   }

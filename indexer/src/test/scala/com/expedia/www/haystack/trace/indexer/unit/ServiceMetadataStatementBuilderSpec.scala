@@ -21,6 +21,7 @@ import com.datastax.driver.core.{ConsistencyLevel, PreparedStatement, Statement}
 import com.expedia.open.tracing.Span
 import com.expedia.www.haystack.trace.commons.clients.cassandra.CassandraSession
 import com.expedia.www.haystack.trace.commons.config.entities.KeyspaceConfiguration
+import com.expedia.www.haystack.trace.indexer.config.entities.ServiceMetadataWriteConfiguration
 import com.expedia.www.haystack.trace.indexer.writers.cassandra.ServiceMetadataStatementBuilder
 import org.easymock.EasyMock
 import org.scalatest.easymock.EasyMockSugar
@@ -43,7 +44,7 @@ class ServiceMetadataStatementBuilderSpec extends FunSpec with Matchers with Eas
       val operationsCapture = EasyMock.newCapture[Iterable[String]]()
       val consistencyLevelCapture = EasyMock.newCapture[ConsistencyLevel]()
       val preparedStmtCapture = EasyMock.newCapture[PreparedStatement]()
-
+      val config = ServiceMetadataWriteConfiguration(enabled = true, 10, 0, 1000, null, ConsistencyLevel.ONE, keyspace)
       expecting {
         session.createServiceMetadataInsertPreparedStatement(keyspace).andReturn(prepStatement)
 
@@ -55,10 +56,10 @@ class ServiceMetadataStatementBuilderSpec extends FunSpec with Matchers with Eas
       }
 
       whenExecuting(session, statement) {
-        val builder = new ServiceMetadataStatementBuilder(session, keyspace, ConsistencyLevel.ONE)
+        val builder = new ServiceMetadataStatementBuilder(session, config)
         val span_1 = Span.newBuilder().setTraceId(TRACE_ID).setServiceName(SERVICE_NAME).setOperationName(OPERATION_1).build()
         val span_2 = Span.newBuilder().setTraceId(TRACE_ID).setServiceName(SERVICE_NAME).setOperationName(OPERATION_2).build()
-        val statements = builder.getAndUpdateServiceMetadata(Seq(span_1, span_2), forceWrite = true)
+        val statements = builder.getAndUpdateServiceMetadata(Seq(span_1, span_2))
         statements.head shouldBe statement
         serviceNameCapture.getValue shouldBe SERVICE_NAME
         operationsCapture.getValue.toSeq should contain allOf (OPERATION_1, OPERATION_2)

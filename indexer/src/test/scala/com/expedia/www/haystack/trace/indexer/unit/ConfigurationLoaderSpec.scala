@@ -73,6 +73,7 @@ class ConfigurationLoaderSpec extends FunSpec with Matchers {
       val config = project.serviceMetadataWriteConfig
       config.maxInflight shouldBe 100
       config.flushIntervalInSec shouldBe 60
+      config.flushOnMaxOperationCount shouldBe 10000
       config.consistencyLevel shouldBe ConsistencyLevel.ONE
       config.enabled shouldBe true
       config.cassandraKeyspace shouldBe KeyspaceConfiguration("haystack_metadata", "services", 259200, Some("cassandra_cql_schema_2"))

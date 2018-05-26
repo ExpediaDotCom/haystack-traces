@@ -48,9 +48,7 @@ class ServiceMetadataWriter(cassandra: CassandraSession,
   // this semaphore controls the parallel writes to cassandra
   private val inflightRequestsSemaphore = new Semaphore(cfg.maxInflight, true)
 
-  private val statementBuilder = new ServiceMetadataStatementBuilder(cassandra, cfg.cassandraKeyspace, cfg.consistencyLevel)
-
-  private var lastWriteInstant = Instant.MIN
+  private val statementBuilder = new ServiceMetadataStatementBuilder(cassandra, cfg)
 
   private def execute(statement: Statement) = {
     inflightRequestsSemaphore.acquire()
@@ -68,11 +66,6 @@ class ServiceMetadataWriter(cassandra: CassandraSession,
       })
   }
 
-
-  private def shouldFlush(): Boolean = {
-    cfg.flushIntervalInSec == 0 || Instant.now().minusSeconds(cfg.flushIntervalInSec).isAfter(lastWriteInstant)
-  }
-
   /**
     * writes the span buffer to external store like cassandra, elastic, or kafka
     *
@@ -82,15 +75,10 @@ class ServiceMetadataWriter(cassandra: CassandraSession,
     */
   override def writeAsync(traceId: String, packedSpanBuffer: PackedMessage[SpanBuffer], isLastSpanBuffer: Boolean): Unit = {
     try {
-      val serviceMetadataStatements = statementBuilder.getAndUpdateServiceMetadata(
-        packedSpanBuffer.protoObj.getChildSpansList.asScala,
-        shouldFlush())
+      val serviceMetadataStatements = statementBuilder.getAndUpdateServiceMetadata(packedSpanBuffer.protoObj.getChildSpansList.asScala)
 
       /* write service metadata in cassandra */
-      if(serviceMetadataStatements.nonEmpty) {
-        serviceMetadataStatements.foreach(execute)
-        lastWriteInstant = Instant.now()
-      }
+      serviceMetadataStatements.foreach(execute)
     } catch {
       case ex: Exception =>
         LOGGER.error("Fail to write the service metadata to cassandra with exception", ex)

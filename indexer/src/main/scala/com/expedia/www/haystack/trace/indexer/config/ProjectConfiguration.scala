@@ -214,6 +214,7 @@ class ProjectConfiguration extends AutoCloseable {
       serviceMetadata.getBoolean("enabled"),
       maxInflight = serviceMetadata.getInt("max.inflight.requests"),
       flushIntervalInSec = serviceMetadata.getInt("flush.interval.sec"),
+      flushOnMaxOperationCount = serviceMetadata.getInt("flush.operation.count"),
       RetryOperation.Config(
         serviceMetadata.getInt("retries.max"),
         serviceMetadata.getLong("retries.backoff.initial.ms"),

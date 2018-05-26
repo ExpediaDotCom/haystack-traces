@@ -20,12 +20,22 @@ import com.datastax.driver.core.ConsistencyLevel
 import com.expedia.www.haystack.commons.retries.RetryOperation
 import com.expedia.www.haystack.trace.commons.config.entities.KeyspaceConfiguration
 
+/**
+  * configuration for service metadata
+  * @param enabled
+  * @param maxInflight
+  * @param flushIntervalInSec
+  * @param flushOnMaxOperationCount
+  * @param retryConfig
+  * @param consistencyLevel
+  * @param cassandraKeyspace
+  */
 case class ServiceMetadataWriteConfiguration(enabled: Boolean,
                                              maxInflight: Int,
                                              flushIntervalInSec: Int,
+                                             flushOnMaxOperationCount: Int,
                                              retryConfig: RetryOperation.Config,
                                              consistencyLevel: ConsistencyLevel,
                                              cassandraKeyspace: KeyspaceConfiguration) {
   require(maxInflight > 0)
-  require(flushIntervalInSec > 0)
 }

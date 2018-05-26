@@ -58,6 +58,7 @@ class CassandraTestClient {
     ServiceMetadataWriteConfiguration(enabled = true,
       10,
       1,
+      1000,
       RetryOperation.Config(10, 250, 2),
       ConsistencyLevel.ONE,
       KeyspaceConfiguration(SERVICES_METADATA_KEYSPACE, SERVICES_TABLE_NAME, 10000))

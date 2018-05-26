@@ -17,10 +17,12 @@
 
 package com.expedia.www.haystack.trace.indexer.writers.cassandra
 
-import com.datastax.driver.core.{ConsistencyLevel, Statement}
+import java.time.Instant
+
+import com.datastax.driver.core.Statement
 import com.expedia.open.tracing.Span
 import com.expedia.www.haystack.trace.commons.clients.cassandra.CassandraSession
-import com.expedia.www.haystack.trace.commons.config.entities.KeyspaceConfiguration
+import com.expedia.www.haystack.trace.indexer.config.entities.ServiceMetadataWriteConfiguration
 import org.apache.commons.lang3.StringUtils
 
 import scala.collection.mutable
@@ -28,43 +30,56 @@ import scala.collection.mutable
 /**
   * builder that generates cassandra statements for writing serviceName and its operations
   * @param cassandra: cassandra session
-  * @param keyspace: cassandra keyspace where the materialized view is stored
-  * @param consistencyLevel: write consistency level
+  * @param cfg: service metadata configuration
   */
 class ServiceMetadataStatementBuilder(cassandra: CassandraSession,
-                                      keyspace: KeyspaceConfiguration,
-                                      consistencyLevel: ConsistencyLevel) {
+                                      cfg: ServiceMetadataWriteConfiguration) {
   private var serviceMetadataMap = new mutable.HashMap[String, mutable.Set[String]]()
-  private val serviceMetadataInsertPreparedStmt = cassandra.createServiceMetadataInsertPreparedStatement(keyspace)
+  private val serviceMetadataInsertPreparedStmt = cassandra.createServiceMetadataInsertPreparedStatement(cfg.cassandraKeyspace)
+  private var allOperationCount: Int = 0
+  private var lastFlushInstant = Instant.MIN
+
+  private def shouldFlush: Boolean = {
+    cfg.flushIntervalInSec == 0 || Instant.now().minusSeconds(cfg.flushIntervalInSec).isAfter(lastFlushInstant)
+  }
+
+  private def areStatementsReadyToBeExecuted(): Seq[Statement] = {
+    if (serviceMetadataMap.nonEmpty && (shouldFlush || allOperationCount > cfg.flushOnMaxOperationCount)) {
+      val statements = serviceMetadataMap.map {
+        case (serviceName, operationList) =>
+          cassandra.newServiceMetadataInsertStatement(
+            serviceName,
+            operationList,
+            cfg.consistencyLevel,
+            serviceMetadataInsertPreparedStmt)
+      }
+
+      lastFlushInstant = Instant.now()
+      serviceMetadataMap = new mutable.HashMap[String, mutable.Set[String]]()
+      allOperationCount = 0
+      statements.toSeq
+    } else {
+      Nil
+    }
+  }
 
   /**
     * get or update the cassandra statements that need to be executed
-    * @param spans
-    * @param forceWrite
+    *
+    * @param spans: list of spans
     * @return
     */
-  def getAndUpdateServiceMetadata(spans: Iterable[Span], forceWrite: Boolean): Seq[Statement] = {
+  def getAndUpdateServiceMetadata(spans: Iterable[Span]): Seq[Statement] = {
     this.synchronized {
       spans.foreach(span => {
         if (StringUtils.isNotEmpty(span.getServiceName) && StringUtils.isNotEmpty(span.getOperationName)) {
           val operationsList = serviceMetadataMap.getOrElseUpdate(span.getServiceName, mutable.Set[String]())
-          operationsList.add(span.getOperationName)
+          if (operationsList.add(span.getOperationName)) {
+            allOperationCount += 1
+          }
         }
       })
-      if (forceWrite) {
-        val statements = serviceMetadataMap.map {
-          case (serviceName, operationList) =>
-            cassandra.newServiceMetadataInsertStatement(
-              serviceName,
-              operationList,
-              consistencyLevel,
-              serviceMetadataInsertPreparedStmt)
-        }
-        serviceMetadataMap = new mutable.HashMap[String, mutable.Set[String]]()
-        statements.toSeq
-      } else {
-        Nil
-      }
+      areStatementsReadyToBeExecuted()
     }
   }
 }

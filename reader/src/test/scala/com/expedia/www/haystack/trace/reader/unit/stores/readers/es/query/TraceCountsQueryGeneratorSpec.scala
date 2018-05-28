@@ -27,8 +27,8 @@ class TraceCountsQueryGeneratorSpec extends BaseUnitTestSpec {
     it("should generate valid search queries") {
       Given("a trace search request")
       val `type` = "spans"
-      val serviceName = "expweb"
-      val operationName = "http.request.stats"
+      val serviceName = "svcName"
+      val operationName = "opName"
       val endTie = System.currentTimeMillis() * 1000
       val startTime = endTie - (600 * 1000 * 1000)
       val request = TraceCountsRequest

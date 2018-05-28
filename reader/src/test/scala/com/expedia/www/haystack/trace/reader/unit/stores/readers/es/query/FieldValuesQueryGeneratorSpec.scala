@@ -30,9 +30,8 @@ class FieldValuesQueryGeneratorSpec extends BaseUnitTestSpec {
       val tagName = "tagName"
       val request = FieldValuesRequest
         .newBuilder()
-        .setFieldName("operation")
-        .addFilters(Field.newBuilder().setName("service").setValue(serviceName).build())
-        .addFilters(Field.newBuilder().setName("tag").setValue(tagName).build())
+        .setFieldName("operationName")
+        .addFilters(Field.newBuilder().setName("serviceName").setValue(serviceName).build())
         .build()
       val queryGenerator = new FieldValuesQueryGenerator("haystack", `type`, "spans", new WhitelistIndexFieldConfiguration)
 

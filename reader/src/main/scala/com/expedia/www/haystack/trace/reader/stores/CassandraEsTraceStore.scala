@@ -41,6 +41,7 @@ class CassandraEsTraceStore(cassandraConfig: CassandraConfiguration,
 
   private val LOGGER = LoggerFactory.getLogger(classOf[ElasticSearchReader])
   private val traceRejected = metricRegistry.meter(AppMetricNames.SEARCH_TRACE_REJECTED)
+  private val countRejected = metricRegistry.meter(AppMetricNames.COUNT_BUCKET_REJECTED)
 
   private val cassandraSession = new CassandraSession(cassandraConfig, new CassandraClusterFactory)
   private val cassandraReader: CassandraTraceReader = new CassandraTraceReader(cassandraSession, cassandraConfig)
@@ -92,11 +93,6 @@ class CassandraEsTraceStore(cassandraConfig: CassandraConfiguration,
     }
   }
 
-  // convert all Futures to Try to make sure they all complete
-  private def liftToTry(traceFutures: Seq[Future[Trace]]): Seq[Future[Try[Trace]]] = traceFutures.map { f =>
-    f.map(Try(_)).recover { case t: Throwable => Failure(t) }
-  }
-
   override def getFieldNames(): Future[Seq[String]] = {
     Future.successful(indexConfig.whitelistIndexFields.map(_.name))
   }
@@ -124,11 +120,45 @@ class CassandraEsTraceStore(cassandraConfig: CassandraConfiguration,
   }
 
   override def getTraceCounts(request: TraceCountsRequest): Future[TraceCounts] = {
-    esReader
-      .getTraceCounts(traceCountsQueryGenerator.generate(request))
-      .flatMap(mapSearchResultToTraceCounts)
+    // loop through all the time buckets
+    // create an ES Count query for all of them
+    // trigger ES Count request for each bucket, it will return CountResult
+    val traceCountFutures: Seq[Future[TraceCount]] =
+      for (startTime <- request.getStartTime to request.getEndTime by request.getInterval)
+      yield esReader
+        .count(traceCountsQueryGenerator.generate(request, startTime))
+        .map(mapCountResultToTraceCount(startTime, _))
+
+    // wait for all Futures to complete
+    // ignore failed once
+    // map successful buckets to pb TraceCounts object
+    Future
+      .sequence(liftToTry(traceCountFutures))
+      .map(_.flatMap(retrieveTriedCount))
+      .map(toTraceCounts)
   }
 
+  private def retrieveTriedCount(maybeCount: Try[TraceCount]): Option[TraceCount] = {
+    maybeCount match {
+      case Success(count) =>
+        Some(count)
+      case Failure(ex) =>
+        LOGGER.warn("count bucket search failed", ex)
+        countRejected.mark()
+        None
+    }
+  }
+  private def toTraceCounts(traceCountList: Seq[TraceCount]): TraceCounts = {
+    TraceCounts
+      .newBuilder()
+      .addAllTraceCount(traceCountList.asJava)
+      .build()
+  }
+
+  // convert all Futures to Try to make sure they all complete
+  private def liftToTry[T](futures: Seq[Future[T]]): Seq[Future[Try[T]]] = futures.map { f =>
+    f.map(Try(_)).recover { case t: Throwable => Failure(t) }
+  }
 
   override def close(): Unit = {
     cassandraReader.close()

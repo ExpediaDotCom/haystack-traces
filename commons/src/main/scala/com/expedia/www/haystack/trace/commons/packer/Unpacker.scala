@@ -56,11 +56,16 @@ object Unpacker {
       val compressedDataOffset = MAGIC_BYTES.length + 4 + metadataBytes.length
       packedMetadata.t match {
         case PackerType.SNAPPY =>
-          parsedDataBytes = unpack(new SnappyInputStream(new ByteArrayInputStream(packedDataBytes, compressedDataOffset, packedDataBytes.length - compressedDataOffset)))
+          parsedDataBytes = unpack(
+            new SnappyInputStream(
+              new ByteArrayInputStream(packedDataBytes, compressedDataOffset, packedDataBytes.length - compressedDataOffset)))
         case PackerType.GZIP =>
-          parsedDataBytes = unpack(new GZIPInputStream(new ByteArrayInputStream(packedDataBytes, compressedDataOffset, packedDataBytes.length - compressedDataOffset)))
+          parsedDataBytes = unpack(
+            new GZIPInputStream(
+              new ByteArrayInputStream(packedDataBytes, compressedDataOffset, packedDataBytes.length - compressedDataOffset)))
         case _ =>
-          return SpanBuffer.parseFrom(new ByteArrayInputStream(packedDataBytes, compressedDataOffset, packedDataBytes.length - compressedDataOffset))
+          return SpanBuffer.parseFrom(
+            new ByteArrayInputStream(packedDataBytes, compressedDataOffset, packedDataBytes.length - compressedDataOffset))
       }
     } else {
       parsedDataBytes = packedDataBytes
@@ -68,4 +73,3 @@ object Unpacker {
     SpanBuffer.parseFrom(parsedDataBytes)
   }
 }
-

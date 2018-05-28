@@ -117,7 +117,7 @@ abstract class BaseIntegrationTestSpec extends WordSpec with GivenWhenThen with 
   }
 
   def verifyCassandraWrites(traceDescriptions: Seq[TraceDescription], minSpansPerTrace: Int, maxSpansPerTrace: Int): Unit = {
-    val rows = cassandra.queryAll((data) => Unpacker.readSpanBuffer(data))
+    val rows = cassandra.queryAllTraces((data) => Unpacker.readSpanBuffer(data))
 
     rows should have size traceDescriptions.size
 
@@ -134,7 +134,11 @@ abstract class BaseIntegrationTestSpec extends WordSpec with GivenWhenThen with 
           sp.getOperationName shouldBe s"op$idx"
       }
     })
+
+    verifyServices()
   }
+
+  def verifyServices(): Unit = cassandra.queryServices().foreach(println)
 
   def verifyElasticSearchWrites(traceIds: Seq[String]): Unit = {
     val matchAllQuery =

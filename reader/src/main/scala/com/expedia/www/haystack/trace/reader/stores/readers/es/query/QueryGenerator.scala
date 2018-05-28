@@ -96,12 +96,17 @@ abstract class QueryGenerator(nestedDocName: String, indexConfiguration: Whiteli
   def getESIndexes(starttimeInSec: Long,
                    endtimeInSec: Long,
                    indexNamePrefix: String,
-                   indexHourBucket: Int): Seq[String] = {
-    val SIX_HOURS_IN_SECS = indexHourBucket * 60 * 60
-    val flooredStarttime = starttimeInSec - (starttimeInSec % SIX_HOURS_IN_SECS)
-    val flooredEndtime = endtimeInSec - (endtimeInSec % SIX_HOURS_IN_SECS)
+                   indexHourBucket: Int,
+                   indexHourTtl: Int): Seq[String] = {
 
-    for (datetime <- flooredStarttime to flooredEndtime by SIX_HOURS_IN_SECS)
+    if (! isValidTimeRange(starttimeInSec, endtimeInSec, indexNamePrefix, indexHourTtl))
+      return Seq(s"$indexNamePrefix")
+
+    val INDEX_BUCKET_TIME_IN_SECONDS = indexHourBucket * 60 * 60
+    val flooredStarttime = starttimeInSec - (starttimeInSec % INDEX_BUCKET_TIME_IN_SECONDS)
+    val flooredEndtime = endtimeInSec - (endtimeInSec % INDEX_BUCKET_TIME_IN_SECONDS)
+
+    for (datetime <- flooredStarttime to flooredEndtime by INDEX_BUCKET_TIME_IN_SECONDS)
       yield {
         val dateObj = new Date(datetime * 1000)
         val date = new SimpleDateFormat("yyyy-MM-dd").format(dateObj)
@@ -110,6 +115,13 @@ abstract class QueryGenerator(nestedDocName: String, indexConfiguration: Whiteli
 
         "%s-%s".format(indexNamePrefix, indexPostfix)
       }
+  }
+
+  private def isValidTimeRange(starttimeInSec: Long,
+                                endtimeInSec: Long,
+                                indexNamePrefix: String,
+                                indexHourTtl: Int): Boolean = {
+    return (endtimeInSec - starttimeInSec) < (indexHourTtl * 60 * 60)
   }
 
   protected def withBaseDoc(field: String) = s"$nestedDocName.$field"

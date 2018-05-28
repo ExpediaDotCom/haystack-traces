@@ -34,8 +34,9 @@ class ElasticSearchReadResultListenerSpec extends BaseUnitTestSpec {
   implicit val formats = DefaultFormats
 
   val ES_INDEX_HOUR_BUCKET = 6
+  val ES_INDEX_HOUR_TTL = 72
   private val searchRequest = {
-    val generator = new TraceSearchQueryGenerator("haystack-traces", "spans", ES_INDEX_HOUR_BUCKET, "spans", new WhitelistIndexFieldConfiguration)
+    val generator = new TraceSearchQueryGenerator("haystack-traces", "spans", ES_INDEX_HOUR_BUCKET, ES_INDEX_HOUR_TTL, "spans", new WhitelistIndexFieldConfiguration)
     val field = Field.newBuilder().setName("serviceName").setValue("expweb").build()
     generator.generate(TracesSearchRequest.newBuilder().setStartTime(1510469157572000l).setEndTime(1510469161172000l).setLimit(40).addFields(field).build())
   }

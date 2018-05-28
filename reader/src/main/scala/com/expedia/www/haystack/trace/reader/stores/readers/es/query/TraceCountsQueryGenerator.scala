@@ -29,6 +29,7 @@ import scala.collection.JavaConverters._
 class TraceCountsQueryGenerator(indexNamePrefix: String,
                                 indexType: String,
                                 indexHourBucket: Int,
+                                indexHourTtl: Int,
                                 nestedDocName: String,
                                 indexConfiguration: WhitelistIndexFieldConfiguration) extends QueryGenerator(nestedDocName, indexConfiguration) {
   def generate(request: TraceCountsRequest, startTime: Long): Count = {
@@ -54,7 +55,7 @@ class TraceCountsQueryGenerator(indexNamePrefix: String,
     // create ES count query
     new Count.Builder()
       .query(countQueryString)
-      .addIndex(getESIndexes(request.getStartTime / (1000 * 1000), request.getEndTime / (1000 * 1000), indexNamePrefix, indexHourBucket).asJava)
+      .addIndex(getESIndexes(request.getStartTime / (1000 * 1000), request.getEndTime / (1000 * 1000), indexNamePrefix, indexHourBucket, indexHourTtl).asJava)
       .addType(indexType)
       .build()
   }

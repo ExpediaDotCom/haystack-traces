@@ -25,6 +25,7 @@ import com.expedia.www.haystack.trace.reader.unit.BaseUnitTestSpec
 class TraceCountsQueryGeneratorSpec extends BaseUnitTestSpec {
   val `type` = "spans"
   val ES_INDEX_HOUR_BUCKET = 6
+  val ES_INDEX_HOUR_TTL = 72
 
   describe("TraceSearchQueryGenerator") {
     it("should generate valid search queries") {
@@ -41,7 +42,7 @@ class TraceCountsQueryGeneratorSpec extends BaseUnitTestSpec {
         .setEndTime(endTie)
         .setInterval(60 * 1000 * 1000)
         .build()
-      val queryGenerator = new TraceCountsQueryGenerator("haystack-traces", `type`, ES_INDEX_HOUR_BUCKET, "spans", new WhitelistIndexFieldConfiguration)
+      val queryGenerator = new TraceCountsQueryGenerator("haystack-traces", `type`, ES_INDEX_HOUR_BUCKET, ES_INDEX_HOUR_TTL, "spans", new WhitelistIndexFieldConfiguration)
 
       When("generating query")
       val query = queryGenerator.generate(request, startTime)
@@ -55,10 +56,10 @@ class TraceCountsQueryGeneratorSpec extends BaseUnitTestSpec {
       val starttimeInSecs = 1527501725L   // Monday, May 28, 2018 10:03:36 AM
       val endtimeInSecs = 1527512524L     // Monday, May 28, 2018 1:02:04 PM
 
-      val queryGenerator = new TraceCountsQueryGenerator("haystack-traces", `type`, ES_INDEX_HOUR_BUCKET, "spans", new WhitelistIndexFieldConfiguration)
+      val queryGenerator = new TraceCountsQueryGenerator("haystack-traces", `type`, ES_INDEX_HOUR_BUCKET, ES_INDEX_HOUR_TTL, "spans", new WhitelistIndexFieldConfiguration)
 
       When("retrieving index names")
-      val indexNames = queryGenerator.getESIndexes(starttimeInSecs, endtimeInSecs, "haystack-traces", ES_INDEX_HOUR_BUCKET)
+      val indexNames = queryGenerator.getESIndexes(starttimeInSecs, endtimeInSecs, "haystack-traces", ES_INDEX_HOUR_BUCKET, ES_INDEX_HOUR_TTL)
 
       Then("should get index names")
       indexNames should not be null
@@ -72,10 +73,10 @@ class TraceCountsQueryGeneratorSpec extends BaseUnitTestSpec {
       val starttimeInSecs = 1527487200L   // Monday, May 28, 2018 6:00:00 AM
       val endtimeInSecs = 1527508800L     // Monday, May 28, 2018 12:00:00 PM
 
-      val queryGenerator = new TraceCountsQueryGenerator("haystack-traces", `type`, ES_INDEX_HOUR_BUCKET, "spans", new WhitelistIndexFieldConfiguration)
+      val queryGenerator = new TraceCountsQueryGenerator("haystack-traces", `type`, ES_INDEX_HOUR_BUCKET, ES_INDEX_HOUR_TTL, "spans", new WhitelistIndexFieldConfiguration)
 
       When("retrieving index names")
-      val indexNames = queryGenerator.getESIndexes(starttimeInSecs, endtimeInSecs, "haystack-traces", ES_INDEX_HOUR_BUCKET)
+      val indexNames = queryGenerator.getESIndexes(starttimeInSecs, endtimeInSecs, "haystack-traces", ES_INDEX_HOUR_BUCKET, ES_INDEX_HOUR_TTL)
 
       Then("should get index names")
       indexNames should not be null
@@ -89,15 +90,31 @@ class TraceCountsQueryGeneratorSpec extends BaseUnitTestSpec {
       val starttimeInSecs = 1527487210L   // Monday, May 28, 2018 6:00:10 AM
       val endtimeInSecs = 1527487220L     // Monday, May 28, 2018 6:00:20 AM
 
-      val queryGenerator = new TraceCountsQueryGenerator("haystack-traces", `type`, ES_INDEX_HOUR_BUCKET, "spans", new WhitelistIndexFieldConfiguration)
+      val queryGenerator = new TraceCountsQueryGenerator("haystack-traces", `type`, ES_INDEX_HOUR_BUCKET, ES_INDEX_HOUR_TTL, "spans", new WhitelistIndexFieldConfiguration)
 
       When("retrieving index names")
-      val indexNames = queryGenerator.getESIndexes(starttimeInSecs, endtimeInSecs, "haystack-traces", ES_INDEX_HOUR_BUCKET)
+      val indexNames = queryGenerator.getESIndexes(starttimeInSecs, endtimeInSecs, "haystack-traces", ES_INDEX_HOUR_BUCKET, ES_INDEX_HOUR_TTL)
 
       Then("should get index names")
       indexNames should not be null
       indexNames.size should be (1)
       indexNames(0) shouldEqual "haystack-traces-2018-05-28-0"
+    }
+
+    it("should return index alias (not return specific index) in case endtime minus starttime exceeds index retention") {
+      Given("starttime and endtime")
+      val starttimeInSecs = 0
+      val endtimeInSecs = 1527487220L     // Monday, May 28, 2018 6:00:20 AM
+
+      val queryGenerator = new TraceCountsQueryGenerator("haystack-traces", `type`, ES_INDEX_HOUR_BUCKET, ES_INDEX_HOUR_TTL, "spans", new WhitelistIndexFieldConfiguration)
+
+      When("retrieving index names")
+      val indexNames = queryGenerator.getESIndexes(starttimeInSecs, endtimeInSecs, "haystack-traces", ES_INDEX_HOUR_BUCKET, ES_INDEX_HOUR_TTL)
+
+      Then("should get index names")
+      indexNames should not be null
+      indexNames.size should be (1)
+      indexNames(0) shouldEqual "haystack-traces"
     }
   }
 }

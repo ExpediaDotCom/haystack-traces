@@ -114,7 +114,8 @@ class ProviderConfiguration {
       indexType = indexConfig.getString("type"),
       es.getInt("conn.timeout.ms"),
       es.getInt("read.timeout.ms"),
-      indexHourBucket = indexConfig.getInt("hour.bucket"))
+      indexHourBucket = indexConfig.getInt("hour.bucket"),
+      indexHourTtl = indexConfig.getInt("hour.ttl"))
   }
 
   private def toInstances[T](classes: util.List[String])(implicit ct: ClassTag[T]): scala.Seq[T] = {

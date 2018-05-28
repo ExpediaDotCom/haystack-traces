@@ -21,7 +21,6 @@ import com.expedia.www.haystack.trace.commons.clients.es.document.TraceIndexDoc.
 import com.expedia.www.haystack.trace.commons.config.entities.WhitelistIndexFieldConfiguration
 import io.searchbox.core.Count
 import org.apache.lucene.search.join.ScoreMode
-import org.elasticsearch.index.query.BoolQueryBuilder
 import org.elasticsearch.index.query.QueryBuilders.{nestedQuery, rangeQuery}
 import org.elasticsearch.search.builder.SearchSourceBuilder
 
@@ -29,26 +28,20 @@ class TraceCountsQueryGenerator(indexNamePrefix: String,
                                 indexType: String,
                                 nestedDocName: String,
                                 indexConfiguration: WhitelistIndexFieldConfiguration) extends QueryGenerator(nestedDocName, indexConfiguration) {
-  def generate(request: TraceCountsRequest): Seq[Count] = {
+  def generate(request: TraceCountsRequest, startTime: Long): Count = {
     require(request.getStartTime > 0)
     require(request.getEndTime > 0)
     require(request.getInterval > 0)
 
-    // base search query being used in all buckets
+    // base search query
     val query = createQuery(request.getFieldsList)
 
-    // loop through all the time buckets and create an ES Count query for all of them
-    for (startTime <- roundTimestampToMinute(request.getStartTime) to roundTimestampToMinute(request.getEndTime) by request.getInterval)
-      yield buildCountQuery(query, startTime, startTime + request.getInterval)
-  }
-
-  private def buildCountQuery(query: BoolQueryBuilder, startTime: Long, endTime: Long) = {
     // add filter for time bucket being searched
-    // TODO filter out of nested query
+    // TODO move filter out of nested query
     query
       .filter(nestedQuery(nestedDocName, rangeQuery(withBaseDoc(START_TIME_KEY_NAME))
         .gte(startTime)
-        .lte(endTime), ScoreMode.None))
+        .lte(startTime + request.getInterval), ScoreMode.None))
 
     // create count query string
     val countQueryString = new SearchSourceBuilder()
@@ -61,10 +54,5 @@ class TraceCountsQueryGenerator(indexNamePrefix: String,
       .addIndex(s"$indexNamePrefix")
       .addType(indexType)
       .build()
-  }
-
-  private def roundTimestampToMinute(timestampInMicro: Long): Long = {
-    val fullMinutes = timestampInMicro / 60000000
-    fullMinutes * 60000000
   }
 }

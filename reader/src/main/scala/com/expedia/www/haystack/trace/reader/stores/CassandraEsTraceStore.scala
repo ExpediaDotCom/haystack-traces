@@ -97,16 +97,18 @@ class CassandraEsTraceStore(cassandraConfiguration: CassandraConfiguration,
   }
 
   override def getTraceCounts(request: TraceCountsRequest): Future[TraceCounts] = {
-    // create list of ES count requests
-    // and invoke ES calls for count
-    val rawEsCountFutures = traceCountsQueryGenerator
-      .generate(request)
-      .map(esReader.count)
+    // loop through all the time buckets
+    // create an ES Count query for all of them
+    // trigger ES Count request for each bucket, it will return CountResult
+    val traceCountFutures: Seq[Future[TraceCount]] =
+      for (startTime <- request.getStartTime to request.getEndTime by request.getInterval)
+      yield esReader
+        .count(traceCountsQueryGenerator.generate(request, startTime))
+        .map(mapCountResultToTraceCount(startTime, _))
 
-    // convert raw ES count futures to pb traceCount object futures
-    val traceCountFutures = rawEsCountFutures.map(_.map(mapSearchResultToTraceCount))
-
-    // wait for all Futures to complete, ignore failed once and then map successful buckets to pb TraceCounts object
+    // wait for all Futures to complete
+    // ignore failed once
+    // map successful buckets to pb TraceCounts object
     Future
       .sequence(liftToTry(traceCountFutures))
       .map(_.flatMap(retrieveTriedCount))

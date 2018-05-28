@@ -19,50 +19,40 @@ package com.expedia.www.haystack.trace.reader.stores.readers.es.query
 import com.expedia.open.tracing.api.TraceCountsRequest
 import com.expedia.www.haystack.trace.commons.clients.es.document.TraceIndexDoc.START_TIME_KEY_NAME
 import com.expedia.www.haystack.trace.commons.config.entities.WhitelistIndexFieldConfiguration
-import io.searchbox.core.Search
-import org.elasticsearch.index.query.QueryBuilders.rangeQuery
-import org.elasticsearch.search.aggregations.AggregationBuilder
-import org.elasticsearch.search.aggregations.bucket.filter.FilterAggregationBuilder
-import org.elasticsearch.search.aggregations.bucket.histogram.HistogramAggregationBuilder
-import org.elasticsearch.search.aggregations.bucket.nested.NestedAggregationBuilder
+import io.searchbox.core.Count
+import org.apache.lucene.search.join.ScoreMode
+import org.elasticsearch.index.query.QueryBuilders.{nestedQuery, rangeQuery}
 import org.elasticsearch.search.builder.SearchSourceBuilder
-
-import scala.collection.JavaConverters._
 
 class TraceCountsQueryGenerator(indexNamePrefix: String,
                                 indexType: String,
                                 nestedDocName: String,
                                 indexConfiguration: WhitelistIndexFieldConfiguration) extends QueryGenerator(nestedDocName, indexConfiguration) {
-  def generate(request: TraceCountsRequest): Search = {
-    new Search.Builder(buildQueryString(request))
-      .addIndex(s"$indexNamePrefix*")
+  def generate(request: TraceCountsRequest, startTime: Long): Count = {
+    require(request.getStartTime > 0)
+    require(request.getEndTime > 0)
+    require(request.getInterval > 0)
+
+    // base search query
+    val query = createQuery(request.getFieldsList)
+
+    // add filter for time bucket being searched
+    // TODO move filter out of nested query
+    query
+      .filter(nestedQuery(nestedDocName, rangeQuery(withBaseDoc(START_TIME_KEY_NAME))
+        .gte(startTime)
+        .lte(startTime + request.getInterval), ScoreMode.None))
+
+    // create count query string
+    val countQueryString = new SearchSourceBuilder()
+      .query(query)
+      .toString
+
+    // create ES count query
+    new Count.Builder()
+      .query(countQueryString)
+      .addIndex(s"$indexNamePrefix")
       .addType(indexType)
       .build()
-  }
-
-  private def buildQueryString(request: TraceCountsRequest): String = {
-    new SearchSourceBuilder()
-      .aggregation(createNestedAggregationQueryWithNestedSearch(request))
-      .size(0)
-      .toString
-  }
-
-  protected def createNestedAggregationQueryWithNestedSearch(request: TraceCountsRequest): AggregationBuilder = {
-    // create search query
-    val query = createBoolQuery(request.getFieldsList.asScala)
-
-    // add range filter for time range
-    query.filter(rangeQuery(withBaseDoc(START_TIME_KEY_NAME))
-      .gte(request.getStartTime)
-      .lte(request.getEndTime))
-
-    // nested aggregation post search
-    new NestedAggregationBuilder(nestedDocName, nestedDocName)
-      .subAggregation(
-        new FilterAggregationBuilder(s"$nestedDocName", query)
-          .subAggregation(
-            new HistogramAggregationBuilder("__count_per_interval").interval(request.getInterval).field(withBaseDoc("starttime"))
-          )
-      )
   }
 }

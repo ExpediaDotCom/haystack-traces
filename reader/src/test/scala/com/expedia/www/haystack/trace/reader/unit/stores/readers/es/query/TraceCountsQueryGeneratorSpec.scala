@@ -27,24 +27,25 @@ class TraceCountsQueryGeneratorSpec extends BaseUnitTestSpec {
     it("should generate valid search queries") {
       Given("a trace search request")
       val `type` = "spans"
-      val serviceName = "svcName"
-      val operationName = "opName"
-      val currentTimeInMicroSec = System.currentTimeMillis() * 1000
+      val serviceName = "expweb"
+      val operationName = "http.request.stats"
+      val endTie = System.currentTimeMillis() * 1000
+      val startTime = endTie - (600 * 1000 * 1000)
       val request = TraceCountsRequest
         .newBuilder()
         .addFields(Field.newBuilder().setName(TraceIndexDoc.SERVICE_KEY_NAME).setValue(serviceName).build())
         .addFields(Field.newBuilder().setName(TraceIndexDoc.OPERATION_KEY_NAME).setValue(operationName).build())
-        .setStartTime(currentTimeInMicroSec - (600 * 1000 * 1000))
-        .setEndTime(currentTimeInMicroSec)
+        .setStartTime(startTime)
+        .setEndTime(endTie)
         .setInterval(60 * 1000 * 1000)
         .build()
       val queryGenerator = new TraceCountsQueryGenerator("haystack", `type`, "spans", new WhitelistIndexFieldConfiguration)
 
       When("generating query")
-      val query = queryGenerator.generate(request)
+      val query = queryGenerator.generate(request, startTime)
 
       Then("generate a valid query")
-      query.getType should be(`type`)
+      query.getURI.isEmpty should be(false)
     }
   }
 }

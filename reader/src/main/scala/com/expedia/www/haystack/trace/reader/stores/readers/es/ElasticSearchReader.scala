@@ -19,9 +19,10 @@ package com.expedia.www.haystack.trace.reader.stores.readers.es
 import com.expedia.www.haystack.trace.reader.config.entities.ElasticSearchConfiguration
 import com.expedia.www.haystack.trace.reader.metrics.{AppMetricNames, MetricsSupport}
 import com.google.gson.Gson
+import io.searchbox.action.AbstractAction
 import io.searchbox.client.config.HttpClientConfig
 import io.searchbox.client.{JestClient, JestClientFactory}
-import io.searchbox.core.{Search, SearchResult}
+import io.searchbox.core.{Count, CountResult, Search, SearchResult}
 import org.slf4j.LoggerFactory
 
 import scala.concurrent.{ExecutionContextExecutor, Future, Promise}
@@ -65,12 +66,12 @@ class ElasticSearchReader(config: ElasticSearchConfiguration)(implicit val dispa
     }
   }
 
-  def getTraceCounts(request: Search): Future[SearchResult] = {
-    val promise = Promise[SearchResult]()
+  def count(request: Count): Future[CountResult] = {
+    val promise = Promise[CountResult]()
     val time = readTimer.time()
     try {
-      LOGGER.info("elastic search query requested: '{}'", request.toString)
-      esClient.executeAsync(request, new ElasticSearchReadResultListener(request, promise, time, readFailures))
+      LOGGER.info("elastic count query requested: '{}'", request.toString)
+      esClient.executeAsync(request, new ElasticSearchCountResultListener(request, promise, time, readFailures))
       promise.future
     } catch {
       case ex: Exception =>

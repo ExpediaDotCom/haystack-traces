@@ -45,7 +45,7 @@ class TraceCountsQueryGeneratorSpec extends BaseUnitTestSpec {
       val query = queryGenerator.generate(request, startTime)
 
       Then("generate a valid query")
-      query
+      query.getURI.isEmpty should be(false)
     }
   }
 }

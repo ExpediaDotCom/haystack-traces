@@ -37,6 +37,7 @@ class CassandraEsTraceStore(cassandraConfiguration: CassandraConfiguration,
 
   private val LOGGER = LoggerFactory.getLogger(classOf[ElasticSearchReader])
   private val traceRejected = metricRegistry.meter(AppMetricNames.SEARCH_TRACE_REJECTED)
+  private val countRejected = metricRegistry.meter(AppMetricNames.COUNT_BUCKET_REJECTED)
 
   private val cassandraReader: CassandraReader = new CassandraReader(cassandraConfiguration)
   private val esReader: ElasticSearchReader = new ElasticSearchReader(esConfiguration)
@@ -120,8 +121,8 @@ class CassandraEsTraceStore(cassandraConfiguration: CassandraConfiguration,
       case Success(count) =>
         Some(count)
       case Failure(ex) =>
-        LOGGER.warn("traceId not found in cassandra, rejected searched trace", ex)
-        traceRejected.mark()
+        LOGGER.warn("count bucket search failed", ex)
+        countRejected.mark()
         None
     }
   }

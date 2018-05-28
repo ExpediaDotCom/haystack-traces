@@ -86,11 +86,6 @@ class CassandraEsTraceStore(cassandraConfiguration: CassandraConfiguration,
     }
   }
 
-  // convert all Futures to Try to make sure they all complete
-  private def liftToTry(traceFutures: Seq[Future[Trace]]): Seq[Future[Try[Trace]]] = traceFutures.map { f =>
-    f.map(Try(_)).recover { case t: Throwable => Failure(t) }
-  }
-
   override def getFieldNames(): Future[Seq[String]] = {
     Future.successful(indexConfiguration.whitelistIndexFields.map(_.name))
   }
@@ -102,11 +97,43 @@ class CassandraEsTraceStore(cassandraConfiguration: CassandraConfiguration,
   }
 
   override def getTraceCounts(request: TraceCountsRequest): Future[TraceCounts] = {
-    esReader
-      .getTraceCounts(traceCountsQueryGenerator.generate(request))
-      .flatMap(mapSearchResultToTraceCounts)
+    // create list of ES count requests
+    // and invoke ES calls for count
+    val rawEsCountFutures = traceCountsQueryGenerator
+      .generate(request)
+      .map(esReader.count)
+
+    // convert raw ES count futures to pb traceCount object futures
+    val traceCountFutures = rawEsCountFutures.map(_.map(mapSearchResultToTraceCount))
+
+    // wait for all Futures to complete, ignore failed once and then map successful buckets to pb TraceCounts object
+    Future
+      .sequence(liftToTry(traceCountFutures))
+      .map(_.flatMap(retrieveTriedCount))
+      .map(toTraceCounts)
   }
 
+  private def retrieveTriedCount(maybeCount: Try[TraceCount]): Option[TraceCount] = {
+    maybeCount match {
+      case Success(count) =>
+        Some(count)
+      case Failure(ex) =>
+        LOGGER.warn("traceId not found in cassandra, rejected searched trace", ex)
+        traceRejected.mark()
+        None
+    }
+  }
+  private def toTraceCounts(traceCountList: Seq[TraceCount]): TraceCounts = {
+    TraceCounts
+      .newBuilder()
+      .addAllTraceCount(traceCountList.asJava)
+      .build()
+  }
+
+  // convert all Futures to Try to make sure they all complete
+  private def liftToTry[T](futures: Seq[Future[T]]): Seq[Future[Try[T]]] = futures.map { f =>
+    f.map(Try(_)).recover { case t: Throwable => Failure(t) }
+  }
 
   override def close(): Unit = {
     cassandraReader.close()

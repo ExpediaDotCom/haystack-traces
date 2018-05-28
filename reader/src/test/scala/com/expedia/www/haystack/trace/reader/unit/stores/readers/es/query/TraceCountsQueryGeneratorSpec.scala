@@ -27,8 +27,8 @@ class TraceCountsQueryGeneratorSpec extends BaseUnitTestSpec {
     it("should generate valid search queries") {
       Given("a trace search request")
       val `type` = "spans"
-      val serviceName = "svcName"
-      val operationName = "opName"
+      val serviceName = "expweb"
+      val operationName = "http.request.stats"
       val currentTimeInMicroSec = System.currentTimeMillis() * 1000
       val request = TraceCountsRequest
         .newBuilder()
@@ -44,7 +44,7 @@ class TraceCountsQueryGeneratorSpec extends BaseUnitTestSpec {
       val query = queryGenerator.generate(request)
 
       Then("generate a valid query")
-      query.getType should be(`type`)
+      query.nonEmpty should be(true)
     }
   }
 }

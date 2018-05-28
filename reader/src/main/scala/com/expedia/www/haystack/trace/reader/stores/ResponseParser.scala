@@ -17,7 +17,7 @@
 package com.expedia.www.haystack.trace.reader.stores
 
 import com.expedia.open.tracing.api.{TraceCount, TraceCounts}
-import io.searchbox.core.SearchResult
+import io.searchbox.core.{CountResult, SearchResult}
 import org.json4s.jackson.JsonMethods.parse
 
 import scala.collection.JavaConverters._
@@ -51,6 +51,11 @@ trait ResponseParser {
     ).asJava
 
     Future.successful(TraceCounts.newBuilder().addAllTraceCount(traceCounts).build())
+  }
+
+  protected def mapSearchResultToTraceCount(result: CountResult): TraceCount = {
+    // TODO implement logic to convert
+    TraceCount.newBuilder().build()
   }
 
   protected def extractFieldValues(result: SearchResult, fieldName: String): List[String] = {

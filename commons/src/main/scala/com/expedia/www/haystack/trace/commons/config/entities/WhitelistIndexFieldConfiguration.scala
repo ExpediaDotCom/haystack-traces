@@ -93,5 +93,5 @@ case class WhitelistIndexFieldConfiguration() extends Reloadable {
     */
   def whitelistIndexFields: List[WhitelistIndexField] = indexFieldMap.values().asScala.toList
 
-  def globalTraceContextIndexFieldNames: Set[String] = whitelistIndexFields.filter(f => f.searchContext == "trace").map(_.name).toSet
+  def globalTraceContextIndexFieldNames: Set[String] = whitelistIndexFields.filter(_.searchContext == "trace").map(_.name).toSet
 }

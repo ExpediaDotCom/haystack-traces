@@ -26,10 +26,13 @@ import com.expedia.www.haystack.trace.reader.stores.readers.es.query.TraceSearch
 import com.expedia.www.haystack.trace.reader.unit.BaseUnitTestSpec
 import io.searchbox.core.SearchResult
 import org.easymock.EasyMock
+import org.json4s.DefaultFormats
 
 import scala.concurrent.Promise
 
 class ElasticSearchReadResultListenerSpec extends BaseUnitTestSpec {
+  implicit val formats = DefaultFormats
+
   private val searchRequest = {
     val generator = new TraceSearchQueryGenerator("haystack-traces", "spans", "spans", new WhitelistIndexFieldConfiguration)
     val field = Field.newBuilder().setName("serviceName").setValue("expweb").build()

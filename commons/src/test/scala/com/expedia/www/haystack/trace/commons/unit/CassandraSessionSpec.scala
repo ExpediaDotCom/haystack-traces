@@ -20,7 +20,7 @@ package com.expedia.www.haystack.trace.commons.unit
 import com.datastax.driver.core._
 import com.datastax.driver.core.querybuilder.Insert
 import com.expedia.www.haystack.trace.commons.clients.cassandra.{CassandraClusterFactory, CassandraSession}
-import com.expedia.www.haystack.trace.commons.config.entities.{CassandraConfiguration, SocketConfiguration}
+import com.expedia.www.haystack.trace.commons.config.entities.{CassandraConfiguration, KeyspaceConfiguration, SocketConfiguration}
 import org.easymock.EasyMock
 import org.scalatest.easymock.EasyMockSugar
 import org.scalatest.{FunSpec, Matchers}
@@ -38,14 +38,13 @@ class CassandraSessionSpec extends FunSpec with Matchers with EasyMockSugar {
       val keyspaceMetadata = mock[KeyspaceMetadata]
       val tableMetadata = mock[TableMetadata]
       val insertPrepStatement = mock[PreparedStatement]
+      val keyspaceConfig =  KeyspaceConfiguration(keyspaceName, tableName, 100, None)
 
       val config = CassandraConfiguration(List("cassandra1"),
         autoDiscoverEnabled = false,
         None,
         None,
-        keyspaceName,
-        tableName,
-        None,
+        keyspaceConfig,
         SocketConfiguration(10, keepAlive = true, 1000, 1000))
 
       val captured = EasyMock.newCapture[Insert.Options]()
@@ -56,7 +55,6 @@ class CassandraSessionSpec extends FunSpec with Matchers with EasyMockSugar {
         metadata.getKeyspace(keyspaceName).andReturn(keyspaceMetadata).once()
         cluster.getMetadata.andReturn(metadata).once()
         session.getCluster.andReturn(cluster).once()
-        session.execute("USE " + config.keyspace).andReturn(null).once
         session.prepare(EasyMock.capture(captured)).andReturn(insertPrepStatement).anyTimes()
         session.close().once()
         cluster.close().once()
@@ -64,9 +62,10 @@ class CassandraSessionSpec extends FunSpec with Matchers with EasyMockSugar {
 
       whenExecuting(factory, cluster, session, metadata, keyspaceMetadata, tableMetadata, insertPrepStatement) {
         val session = new CassandraSession(config, factory)
-        val stmt = session.createInsertPreparedStatement(100)
+        session.ensureKeyspace(config.tracesKeyspace)
+        val stmt = session.createSpanInsertPreparedStatement(keyspaceConfig)
         stmt shouldBe insertPrepStatement
-        captured.getValue.getQueryString() shouldEqual "INSERT INTO \"table-1\" (id,ts,spans) VALUES (:id,:ts,:spans) USING TTL 100;"
+        captured.getValue.getQueryString() shouldEqual "INSERT INTO \"keyspace-1\".\"table-1\" (id,ts,spans) VALUES (:id,:ts,:spans) USING TTL 100;"
         session.close()
       }
     }

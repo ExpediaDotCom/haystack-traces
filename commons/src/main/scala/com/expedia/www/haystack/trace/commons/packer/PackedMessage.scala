@@ -20,8 +20,8 @@ package com.expedia.www.haystack.trace.commons.packer
 import java.nio.ByteBuffer
 
 import com.google.protobuf.GeneratedMessageV3
-import org.json4s.{DefaultFormats, Formats}
 import org.json4s.jackson.Serialization
+import org.json4s.{DefaultFormats, Formats}
 
 
 object PackedMessage {

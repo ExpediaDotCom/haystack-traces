@@ -26,7 +26,7 @@ class FieldValuesQueryGeneratorSpec extends BaseUnitTestSpec {
     it("should generate valid search queries") {
       Given("a trace search request")
       val `type` = "spans"
-      val serviceName = "cloud-gate-proxy"
+      val serviceName = "svcName"
       val tagName = "tagName"
       val request = FieldValuesRequest
         .newBuilder()

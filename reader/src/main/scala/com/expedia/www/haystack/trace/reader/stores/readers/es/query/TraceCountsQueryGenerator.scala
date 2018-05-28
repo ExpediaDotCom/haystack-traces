@@ -20,8 +20,9 @@ import com.expedia.open.tracing.api.TraceCountsRequest
 import com.expedia.www.haystack.trace.commons.clients.es.document.TraceIndexDoc.START_TIME_KEY_NAME
 import com.expedia.www.haystack.trace.commons.config.entities.WhitelistIndexFieldConfiguration
 import io.searchbox.core.Count
+import org.apache.lucene.search.join.ScoreMode
 import org.elasticsearch.index.query.BoolQueryBuilder
-import org.elasticsearch.index.query.QueryBuilders.rangeQuery
+import org.elasticsearch.index.query.QueryBuilders.{nestedQuery, rangeQuery}
 import org.elasticsearch.search.builder.SearchSourceBuilder
 
 class TraceCountsQueryGenerator(indexNamePrefix: String,
@@ -43,10 +44,11 @@ class TraceCountsQueryGenerator(indexNamePrefix: String,
 
   private def buildCountQuery(query: BoolQueryBuilder, startTime: Long, endTime: Long) = {
     // add filter for time bucket being searched
+    // TODO filter out of nested query
     query
-      .filter(rangeQuery(withBaseDoc(START_TIME_KEY_NAME))
+      .filter(nestedQuery(nestedDocName, rangeQuery(withBaseDoc(START_TIME_KEY_NAME))
         .gte(startTime)
-        .lte(endTime))
+        .lte(endTime), ScoreMode.None))
 
     // create count query string
     val countQueryString = new SearchSourceBuilder()

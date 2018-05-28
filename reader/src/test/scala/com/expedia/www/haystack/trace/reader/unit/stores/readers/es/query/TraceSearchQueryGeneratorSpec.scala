@@ -24,6 +24,8 @@ import com.google.gson.Gson
 import io.searchbox.core.Search
 
 class TraceSearchQueryGeneratorSpec extends BaseUnitTestSpec {
+  val ES_INDEX_HOUR_BUCKET = 6
+
   describe("TraceSearchQueryGenerator") {
     it("should generate valid search queries") {
       Given("a trace search request")
@@ -38,7 +40,7 @@ class TraceSearchQueryGeneratorSpec extends BaseUnitTestSpec {
         .setEndTime(System.currentTimeMillis() * 1000)
         .setLimit(10)
         .build()
-      val queryGenerator = new TraceSearchQueryGenerator("haystack", `type`, "spans", new WhitelistIndexFieldConfiguration)
+      val queryGenerator = new TraceSearchQueryGenerator("haystack-traces", `type`, ES_INDEX_HOUR_BUCKET, "spans", new WhitelistIndexFieldConfiguration)
 
       When("generating query")
       val query = queryGenerator.generate(request)
@@ -59,7 +61,7 @@ class TraceSearchQueryGeneratorSpec extends BaseUnitTestSpec {
         .setEndTime(System.currentTimeMillis() * 1000)
         .setLimit(10)
         .build()
-      val queryGenerator = new TraceSearchQueryGenerator("haystack", `type`, "spans", new WhitelistIndexFieldConfiguration)
+      val queryGenerator = new TraceSearchQueryGenerator("haystack-traces", `type`, ES_INDEX_HOUR_BUCKET, "spans", new WhitelistIndexFieldConfiguration)
 
       When("generating query")
       val query: Search = queryGenerator.generate(request)

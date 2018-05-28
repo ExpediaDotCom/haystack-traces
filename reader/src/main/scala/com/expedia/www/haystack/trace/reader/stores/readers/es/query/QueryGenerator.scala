@@ -16,6 +16,9 @@
 
 package com.expedia.www.haystack.trace.reader.stores.readers.es.query
 
+import java.text.SimpleDateFormat
+import java.util.Date
+
 import com.expedia.open.tracing.api.Field
 import com.expedia.www.haystack.trace.commons.config.entities.WhitelistIndexFieldConfiguration
 import io.searchbox.strings.StringUtils
@@ -88,6 +91,25 @@ abstract class QueryGenerator(nestedDocName: String, indexConfiguration: Whiteli
             .field(withBaseDoc(fieldName))
             .size(1000))
       )
+  }
+
+  def getESIndexes(starttimeInSec: Long,
+                   endtimeInSec: Long,
+                   indexNamePrefix: String,
+                   indexHourBucket: Int): Seq[String] = {
+    val SIX_HOURS_IN_SECS = indexHourBucket * 60 * 60
+    val flooredStarttime = starttimeInSec - (starttimeInSec % SIX_HOURS_IN_SECS)
+    val flooredEndtime = endtimeInSec - (endtimeInSec % SIX_HOURS_IN_SECS)
+
+    for (datetime <- flooredStarttime to flooredEndtime by SIX_HOURS_IN_SECS)
+      yield {
+        val dateObj = new Date(datetime * 1000)
+        val date = new SimpleDateFormat("yyyy-MM-dd").format(dateObj)
+        val hourBucket = (new SimpleDateFormat("HH").format(dateObj).toInt / indexHourBucket) - 1
+        val indexPostfix = date + "-" + hourBucket
+
+        "%s-%s".format(indexNamePrefix, indexPostfix)
+      }
   }
 
   protected def withBaseDoc(field: String) = s"$nestedDocName.$field"

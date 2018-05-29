@@ -81,7 +81,7 @@ abstract class QueryGenerator(nestedDocName: String, indexConfiguration: Whiteli
           .field(withBaseDoc(fieldName))
           .size(1000))
 
-  protected def createNestedAggregationQueryWithNestedFilters(fieldName: String, filterFields: java.util.List[Field]): AggregationBuilder ={
+  protected def createNestedAggregationQueryWithNestedFilters(fieldName: String, filterFields: java.util.List[Field]): AggregationBuilder = {
     val boolQueryBuilder = createBoolQuery(filterFields.asScala)
 
     new NestedAggregationBuilder(nestedDocName, nestedDocName)
@@ -93,36 +93,35 @@ abstract class QueryGenerator(nestedDocName: String, indexConfiguration: Whiteli
       )
   }
 
-  def getESIndexes(starttimeInSec: Long,
-                   endtimeInSec: Long,
+  def getESIndexes(starttimeInMicros: Long,
+                   endtimeInMicros: Long,
                    indexNamePrefix: String,
                    indexHourBucket: Int,
                    indexHourTtl: Int): Seq[String] = {
 
-    if (! isValidTimeRange(starttimeInSec, endtimeInSec, indexNamePrefix, indexHourTtl))
-      return Seq(s"$indexNamePrefix")
+    if (!isValidTimeRange(starttimeInMicros, endtimeInMicros, indexHourTtl)) {
+      Seq(s"$indexNamePrefix")
+    } else {
+      val INDEX_BUCKET_TIME_IN_MICROS: Long = indexHourBucket.toLong * 60 * 60 * 1000 * 1000
+      val flooredStarttime = starttimeInMicros - (starttimeInMicros % INDEX_BUCKET_TIME_IN_MICROS)
+      val flooredEndtime = endtimeInMicros - (endtimeInMicros % INDEX_BUCKET_TIME_IN_MICROS)
 
-    val INDEX_BUCKET_TIME_IN_SECONDS = indexHourBucket * 60 * 60
-    val flooredStarttime = starttimeInSec - (starttimeInSec % INDEX_BUCKET_TIME_IN_SECONDS)
-    val flooredEndtime = endtimeInSec - (endtimeInSec % INDEX_BUCKET_TIME_IN_SECONDS)
+      for (datetimeInMicros <- flooredStarttime to flooredEndtime by INDEX_BUCKET_TIME_IN_MICROS)
+        yield {
+          val date = new Date(datetimeInMicros / 1000)
 
-    for (datetime <- flooredStarttime to flooredEndtime by INDEX_BUCKET_TIME_IN_SECONDS)
-      yield {
-        val dateObj = new Date(datetime * 1000)
-        val date = new SimpleDateFormat("yyyy-MM-dd").format(dateObj)
-        val hourBucket = (new SimpleDateFormat("HH").format(dateObj).toInt / indexHourBucket) - 1
-        val indexPostfix = date + "-" + hourBucket
+          val dateBucket = new SimpleDateFormat("yyyy-MM-dd").format(date)
+          val hourBucket = new SimpleDateFormat("HH").format(date).toInt / indexHourBucket
 
-        "%s-%s".format(indexNamePrefix, indexPostfix)
-      }
+          s"$indexNamePrefix-$dateBucket-$hourBucket"
+        }
+    }
   }
 
-  private def isValidTimeRange(starttimeInSec: Long,
-                                endtimeInSec: Long,
-                                indexNamePrefix: String,
-                                indexHourTtl: Int): Boolean = {
-    return (endtimeInSec - starttimeInSec) < (indexHourTtl * 60 * 60)
-  }
+  private def isValidTimeRange(starttimeInMicros: Long,
+                               endtimeInMicros: Long,
+                               indexHourTtl: Int): Boolean =
+    (endtimeInMicros - starttimeInMicros) < (indexHourTtl.toLong * 60 * 60 * 1000 * 1000)
 
   protected def withBaseDoc(field: String) = s"$nestedDocName.$field"
 }

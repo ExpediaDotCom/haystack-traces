@@ -41,7 +41,7 @@ class TraceSearchQueryGenerator(indexNamePrefix: String,
     require(request.getLimit > 0)
 
     new Search.Builder(buildQueryString(request))
-      .addIndex(getESIndexes(request.getStartTime / (1000 * 1000), request.getEndTime / (1000 * 1000), indexNamePrefix, indexHourBucket, indexHourTtl).asJava)
+      .addIndex(getESIndexes(request.getStartTime, request.getEndTime, indexNamePrefix, indexHourBucket, indexHourTtl).asJava)
       .addType(indexType)
       .build()
   }

@@ -25,8 +25,12 @@ import org.elasticsearch.index.query.QueryBuilders._
 import org.elasticsearch.search.builder.SearchSourceBuilder
 import org.elasticsearch.search.sort.{FieldSortBuilder, SortOrder}
 
+import scala.collection.JavaConverters._
+
 class TraceSearchQueryGenerator(indexNamePrefix: String,
                                 indexType: String,
+                                indexHourBucket: Int,
+                                indexHourTtl: Int,
                                 nestedDocName: String,
                                 indexConfiguration: WhitelistIndexFieldConfiguration)
   extends QueryGenerator(nestedDocName, indexConfiguration) {
@@ -37,7 +41,7 @@ class TraceSearchQueryGenerator(indexNamePrefix: String,
     require(request.getLimit > 0)
 
     new Search.Builder(buildQueryString(request))
-      .addIndex(s"$indexNamePrefix")
+      .addIndex(getESIndexes(request.getStartTime, request.getEndTime, indexNamePrefix, indexHourBucket, indexHourTtl).asJava)
       .addType(indexType)
       .build()
   }

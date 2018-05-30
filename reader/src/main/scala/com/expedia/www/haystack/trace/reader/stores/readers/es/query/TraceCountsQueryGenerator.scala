@@ -24,8 +24,12 @@ import org.apache.lucene.search.join.ScoreMode
 import org.elasticsearch.index.query.QueryBuilders.{nestedQuery, rangeQuery}
 import org.elasticsearch.search.builder.SearchSourceBuilder
 
+import scala.collection.JavaConverters._
+
 class TraceCountsQueryGenerator(indexNamePrefix: String,
                                 indexType: String,
+                                indexHourBucket: Int,
+                                indexHourTtl: Int,
                                 nestedDocName: String,
                                 indexConfiguration: WhitelistIndexFieldConfiguration) extends QueryGenerator(nestedDocName, indexConfiguration) {
   def generate(request: TraceCountsRequest, startTime: Long): Count = {
@@ -51,7 +55,7 @@ class TraceCountsQueryGenerator(indexNamePrefix: String,
     // create ES count query
     new Count.Builder()
       .query(countQueryString)
-      .addIndex(s"$indexNamePrefix")
+      .addIndex(getESIndexes(request.getStartTime, request.getEndTime, indexNamePrefix, indexHourBucket, indexHourTtl).asJava)
       .addType(indexType)
       .build()
   }

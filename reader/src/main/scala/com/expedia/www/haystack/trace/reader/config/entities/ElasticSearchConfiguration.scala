@@ -22,4 +22,6 @@ case class ElasticSearchConfiguration(endpoint: String,
                                       indexNamePrefix: String,
                                       indexType: String,
                                       connectionTimeoutMillis: Int,
-                                      readTimeoutMillis: Int)
+                                      readTimeoutMillis: Int,
+                                      indexHourBucket: Int,
+                                      indexHourTtl: Int)

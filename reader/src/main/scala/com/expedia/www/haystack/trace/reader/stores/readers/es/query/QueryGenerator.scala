@@ -16,6 +16,9 @@
 
 package com.expedia.www.haystack.trace.reader.stores.readers.es.query
 
+import java.text.SimpleDateFormat
+import java.util.Date
+
 import com.expedia.open.tracing.api.Field
 import com.expedia.www.haystack.trace.commons.config.entities.WhitelistIndexFieldConfiguration
 import io.searchbox.strings.StringUtils
@@ -78,7 +81,7 @@ abstract class QueryGenerator(nestedDocName: String, indexConfiguration: Whiteli
           .field(withBaseDoc(fieldName))
           .size(1000))
 
-  protected def createNestedAggregationQueryWithNestedFilters(fieldName: String, filterFields: java.util.List[Field]): AggregationBuilder ={
+  protected def createNestedAggregationQueryWithNestedFilters(fieldName: String, filterFields: java.util.List[Field]): AggregationBuilder = {
     val boolQueryBuilder = createBoolQuery(filterFields.asScala)
 
     new NestedAggregationBuilder(nestedDocName, nestedDocName)
@@ -89,6 +92,36 @@ abstract class QueryGenerator(nestedDocName: String, indexConfiguration: Whiteli
             .size(1000))
       )
   }
+
+  def getESIndexes(starttimeInMicros: Long,
+                   endtimeInMicros: Long,
+                   indexNamePrefix: String,
+                   indexHourBucket: Int,
+                   indexHourTtl: Int): Seq[String] = {
+
+    if (!isValidTimeRange(starttimeInMicros, endtimeInMicros, indexHourTtl)) {
+      Seq(s"$indexNamePrefix")
+    } else {
+      val INDEX_BUCKET_TIME_IN_MICROS: Long = indexHourBucket.toLong * 60 * 60 * 1000 * 1000
+      val flooredStarttime = starttimeInMicros - (starttimeInMicros % INDEX_BUCKET_TIME_IN_MICROS)
+      val flooredEndtime = endtimeInMicros - (endtimeInMicros % INDEX_BUCKET_TIME_IN_MICROS)
+
+      for (datetimeInMicros <- flooredStarttime to flooredEndtime by INDEX_BUCKET_TIME_IN_MICROS)
+        yield {
+          val date = new Date(datetimeInMicros / 1000)
+
+          val dateBucket = new SimpleDateFormat("yyyy-MM-dd").format(date)
+          val hourBucket = new SimpleDateFormat("HH").format(date).toInt / indexHourBucket
+
+          s"$indexNamePrefix-$dateBucket-$hourBucket"
+        }
+    }
+  }
+
+  private def isValidTimeRange(starttimeInMicros: Long,
+                               endtimeInMicros: Long,
+                               indexHourTtl: Int): Boolean =
+    (endtimeInMicros - starttimeInMicros) < (indexHourTtl.toLong * 60 * 60 * 1000 * 1000)
 
   protected def withBaseDoc(field: String) = s"$nestedDocName.$field"
 }

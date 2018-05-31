@@ -17,7 +17,7 @@
 package com.expedia.www.haystack.trace.reader.readers.transformers
 
 import com.expedia.open.tracing.Span
-import com.expedia.www.haystack.trace.reader.readers.utils.{PartialSpanMarkers, PartialSpanUtils}
+import com.expedia.www.haystack.trace.reader.readers.utils.{SpanMarkers, SpanUtils}
 
 /**
   * Fixes clock skew between parent and child spans
@@ -62,12 +62,12 @@ class ClockSkewTransformer extends TraceTransformer {
 
   // if span is a merged span of partial spans, calculate corresponding skew
   private def getClockSkew(span: Span): Option[Skew] = {
-    if (PartialSpanUtils.isMergedSpan(span)) {
+    if (SpanUtils.isMergedSpan(span)) {
       calculateClockSkew(
-        PartialSpanUtils.getEventTimestamp(span, PartialSpanMarkers.CLIENT_SEND_EVENT),
-        PartialSpanUtils.getEventTimestamp(span, PartialSpanMarkers.CLIENT_RECV_EVENT),
-        PartialSpanUtils.getEventTimestamp(span, PartialSpanMarkers.SERVER_RECV_EVENT),
-        PartialSpanUtils.getEventTimestamp(span, PartialSpanMarkers.SERVER_SEND_EVENT),
+        SpanUtils.getEventTimestamp(span, SpanMarkers.CLIENT_SEND_EVENT),
+        SpanUtils.getEventTimestamp(span, SpanMarkers.CLIENT_RECV_EVENT),
+        SpanUtils.getEventTimestamp(span, SpanMarkers.SERVER_RECV_EVENT),
+        SpanUtils.getEventTimestamp(span, SpanMarkers.SERVER_SEND_EVENT),
         span.getServiceName
       )
     } else {

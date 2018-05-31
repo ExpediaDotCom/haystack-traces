@@ -18,7 +18,7 @@ package com.expedia.www.haystack.trace.reader.unit.config
 import com.expedia.www.haystack.trace.commons.config.entities.KeyspaceConfiguration
 import com.expedia.www.haystack.trace.reader.config.ProviderConfiguration
 import com.expedia.www.haystack.trace.reader.config.entities.{ServiceConfiguration, TraceTransformersConfiguration}
-import com.expedia.www.haystack.trace.reader.readers.transformers.DeDuplicateSpanTransformer
+import com.expedia.www.haystack.trace.reader.readers.transformers.{ClientServerEventLogTransformer, DeDuplicateSpanTransformer}
 import com.expedia.www.haystack.trace.reader.unit.BaseUnitTestSpec
 
 class ConfigurationLoaderSpec extends BaseUnitTestSpec {
@@ -34,15 +34,17 @@ class ConfigurationLoaderSpec extends BaseUnitTestSpec {
     it("should load the trace transformers") {
       val traceConfig: TraceTransformersConfiguration = new ProviderConfiguration().traceTransformerConfig
       traceConfig.postTransformers.length shouldBe 3
-      traceConfig.preTransformers.length shouldBe 1
+      traceConfig.preTransformers.length shouldBe 2
       traceConfig.preTransformers.head.isInstanceOf[DeDuplicateSpanTransformer] shouldBe true
+      traceConfig.preTransformers(1).isInstanceOf[ClientServerEventLogTransformer] shouldBe true
     }
 
     it("should load the trace validators") {
       val traceConfig: TraceTransformersConfiguration = new ProviderConfiguration().traceTransformerConfig
       traceConfig.postTransformers.length shouldBe 3
-      traceConfig.preTransformers.length shouldBe 1
+      traceConfig.preTransformers.length shouldBe 2
       traceConfig.preTransformers.head.isInstanceOf[DeDuplicateSpanTransformer] shouldBe true
+      traceConfig.preTransformers(1).isInstanceOf[ClientServerEventLogTransformer] shouldBe true
     }
 
     it("should load service metadata configuration ") {

@@ -23,13 +23,12 @@ import java.util.{Date, UUID}
 
 import com.datastax.driver.core.querybuilder.QueryBuilder
 import com.datastax.driver.core.{Cluster, ResultSet, Session, SimpleStatement}
-import com.expedia.open.tracing.Span
+import com.expedia.open.tracing.{Log, Span}
 import com.expedia.open.tracing.api.TraceReaderGrpc
 import com.expedia.open.tracing.api.TraceReaderGrpc.TraceReaderBlockingStub
 import com.expedia.open.tracing.buffer.SpanBuffer
 import com.expedia.www.haystack.trace.commons.clients.cassandra.CassandraTableSchema
 import com.expedia.www.haystack.trace.commons.clients.es.document.TraceIndexDoc
-import com.expedia.www.haystack.trace.commons.clients.es.document.TraceIndexDoc.{OPERATION_KEY_NAME, SERVICE_KEY_NAME, START_TIME_KEY_NAME}
 import com.expedia.www.haystack.trace.commons.config.entities.{WhiteListIndexFields, WhitelistIndexField}
 import com.expedia.www.haystack.trace.reader.Service
 import com.expedia.www.haystack.trace.reader.unit.readers.builders.ValidTraceBuilder
@@ -42,19 +41,24 @@ import org.json4s.DefaultFormats
 import org.json4s.jackson.Serialization
 import org.scalatest._
 
-import scala.collection.JavaConverters._
+import collection.JavaConverters._
 import scala.collection.mutable
 
 trait BaseIntegrationTestSpec extends FunSpec with GivenWhenThen with Matchers with BeforeAndAfterAll with BeforeAndAfterEach with ValidTraceBuilder {
   protected implicit val formats = DefaultFormats
+  protected var client: TraceReaderBlockingStub = _
+
   private val CASSANDRA_ENDPOINT = "cassandra"
   private val CASSANDRA_KEYSPACE = "haystack"
   private val CASSANDRA_TABLE = "traces"
+
   private val ELASTIC_SEARCH_ENDPOINT = "http://elasticsearch:9200"
   private val ELASTIC_SEARCH_WHITELIST_INDEX = "reload-configs"
   private val ELASTIC_SEARCH_WHITELIST_TYPE = "whitelist-index-fields"
   private val SPANS_INDEX_TYPE = "spans"
+
   private val executors = Executors.newSingleThreadExecutor()
+
   private val HAYSTACK_TRACES_INDEX = {
     val date = new Date()
 
@@ -63,83 +67,83 @@ trait BaseIntegrationTestSpec extends FunSpec with GivenWhenThen with Matchers w
 
     s"haystack-traces-$dateBucket-$hourBucket"
   }
-  private val INDEX_TEMPLATE =
-    """{
-      |    "template": "haystack-traces*",
-      |    "settings": {
-      |        "number_of_shards": 1,
-      |        "index.mapping.ignore_malformed": true,
-      |        "analysis": {
-      |            "normalizer": {
-      |                "lowercase_normalizer": {
-      |                    "type": "custom",
-      |                    "filter": ["lowercase"]
-      |                }
-      |            }
-      |        }
-      |    },
-      |    "aliases": {
-      |        "haystack-traces": {}
-      |    },
-      |    "mappings": {
-      |        "spans": {
-      |            "_all": {
-      |                "enabled": false
-      |            },
-      |            "_source": {
-      |                "includes": ["traceid"]
-      |            },
-      |            "properties": {
-      |                "traceid": {
-      |                    "enabled": false
-      |                },
-      |                "spans": {
-      |                    "type": "nested",
-      |                    "properties": {
-      |                        "servicename": {
-      |                            "type": "keyword",
-      |                            "normalizer": "lowercase_normalizer",
-      |                            "doc_values": true,
-      |                            "norms": false
-      |                        },
-      |                        "operationname": {
-      |                            "type": "keyword",
-      |                            "normalizer": "lowercase_normalizer",
-      |                            "doc_values": true,
-      |                            "norms": false
-      |                        },
-      |                        "starttime": {
-      |                            "type": "long",
-      |                            "doc_values": true
-      |                        }
-      |                    }
-      |                }
-      |            },
-      |            "dynamic_templates": [{
-      |                "strings_as_keywords_1": {
-      |                    "match_mapping_type": "string",
-      |                    "mapping": {
-      |                        "type": "keyword",
-      |                        "normalizer": "lowercase_normalizer",
-      |                        "doc_values": false,
-      |                        "norms": false
-      |                    }
-      |                }
-      |            }, {
-      |                "longs_disable_doc_norms": {
-      |                    "match_mapping_type": "long",
-      |                    "mapping": {
-      |                        "type": "long",
-      |                        "doc_values": false,
-      |                        "norms": false
-      |                    }
-      |                }
-      |            }]
-      |        }
-      |    }
-      |}
-      |""".stripMargin
-  protected var client: TraceReaderBlockingStub = _
+  private val INDEX_TEMPLATE = """{
+                                 |    "template": "haystack-traces*",
+                                 |    "settings": {
+                                 |        "number_of_shards": 1,
+                                 |        "index.mapping.ignore_malformed": true,
+                                 |        "analysis": {
+                                 |            "normalizer": {
+                                 |                "lowercase_normalizer": {
+                                 |                    "type": "custom",
+                                 |                    "filter": ["lowercase"]
+                                 |                }
+                                 |            }
+                                 |        }
+                                 |    },
+                                 |    "aliases": {
+                                 |        "haystack-traces": {}
+                                 |    },
+                                 |    "mappings": {
+                                 |        "spans": {
+                                 |            "_all": {
+                                 |                "enabled": false
+                                 |            },
+                                 |            "_source": {
+                                 |                "includes": ["traceid"]
+                                 |            },
+                                 |            "properties": {
+                                 |                "traceid": {
+                                 |                    "enabled": false
+                                 |                },
+                                 |                "spans": {
+                                 |                    "type": "nested",
+                                 |                    "properties": {
+                                 |                        "servicename": {
+                                 |                            "type": "keyword",
+                                 |                            "normalizer": "lowercase_normalizer",
+                                 |                            "doc_values": true,
+                                 |                            "norms": false
+                                 |                        },
+                                 |                        "operationname": {
+                                 |                            "type": "keyword",
+                                 |                            "normalizer": "lowercase_normalizer",
+                                 |                            "doc_values": true,
+                                 |                            "norms": false
+                                 |                        },
+                                 |                        "starttime": {
+                                 |                            "type": "long",
+                                 |                            "doc_values": true
+                                 |                        }
+                                 |                    }
+                                 |                }
+                                 |            },
+                                 |            "dynamic_templates": [{
+                                 |                "strings_as_keywords_1": {
+                                 |                    "match_mapping_type": "string",
+                                 |                    "mapping": {
+                                 |                        "type": "keyword",
+                                 |                        "normalizer": "lowercase_normalizer",
+                                 |                        "doc_values": false,
+                                 |                        "norms": false
+                                 |                    }
+                                 |                }
+                                 |            }, {
+                                 |                "longs_disable_doc_norms": {
+                                 |                    "match_mapping_type": "long",
+                                 |                    "mapping": {
+                                 |                        "type": "long",
+                                 |                        "doc_values": false,
+                                 |                        "norms": false
+                                 |                    }
+                                 |                }
+                                 |            }]
+                                 |        }
+                                 |    }
+                                 |}
+                                 |""".stripMargin
+
+
   private var cassandraSession: Session = _
   private var esClient: JestClient = _
 
@@ -194,7 +198,7 @@ trait BaseIntegrationTestSpec extends FunSpec with GivenWhenThen with Matchers w
                               tags: Map[String, String]) = {
     import TraceIndexDoc._
     // create map using service, operation and tags
-    val fieldMap: mutable.Map[String, Any] = mutable.Map(
+    val fieldMap:mutable.Map[String, Any] = mutable.Map(
       SERVICE_KEY_NAME -> serviceName,
       OPERATION_KEY_NAME -> operationName,
       START_TIME_KEY_NAME -> mutable.Set[Any](System.currentTimeMillis() * 1000)
@@ -207,7 +211,7 @@ trait BaseIntegrationTestSpec extends FunSpec with GivenWhenThen with Matchers w
       .`type`(SPANS_INDEX_TYPE)
       .build)
 
-    if (result.getErrorMessage != null) {
+    if(result.getErrorMessage != null) {
       fail("Fail to execute the indexing request " + result.getErrorMessage)
     }
     // wait for few sec to let ES refresh its index

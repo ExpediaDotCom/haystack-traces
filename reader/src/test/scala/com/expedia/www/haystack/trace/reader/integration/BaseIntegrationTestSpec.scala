@@ -23,12 +23,13 @@ import java.util.{Date, UUID}
 
 import com.datastax.driver.core.querybuilder.QueryBuilder
 import com.datastax.driver.core.{Cluster, ResultSet, Session, SimpleStatement}
-import com.expedia.open.tracing.{Log, Span}
+import com.expedia.open.tracing.Span
 import com.expedia.open.tracing.api.TraceReaderGrpc
 import com.expedia.open.tracing.api.TraceReaderGrpc.TraceReaderBlockingStub
 import com.expedia.open.tracing.buffer.SpanBuffer
 import com.expedia.www.haystack.trace.commons.clients.cassandra.CassandraTableSchema
 import com.expedia.www.haystack.trace.commons.clients.es.document.TraceIndexDoc
+import com.expedia.www.haystack.trace.commons.clients.es.document.TraceIndexDoc.{OPERATION_KEY_NAME, SERVICE_KEY_NAME, START_TIME_KEY_NAME}
 import com.expedia.www.haystack.trace.commons.config.entities.{WhiteListIndexFields, WhitelistIndexField}
 import com.expedia.www.haystack.trace.reader.Service
 import com.expedia.www.haystack.trace.reader.unit.readers.builders.ValidTraceBuilder
@@ -41,105 +42,104 @@ import org.json4s.DefaultFormats
 import org.json4s.jackson.Serialization
 import org.scalatest._
 
-import collection.JavaConverters._
+import scala.collection.JavaConverters._
 import scala.collection.mutable
 
 trait BaseIntegrationTestSpec extends FunSpec with GivenWhenThen with Matchers with BeforeAndAfterAll with BeforeAndAfterEach with ValidTraceBuilder {
   protected implicit val formats = DefaultFormats
-  protected var client: TraceReaderBlockingStub = _
-
   private val CASSANDRA_ENDPOINT = "cassandra"
   private val CASSANDRA_KEYSPACE = "haystack"
   private val CASSANDRA_TABLE = "traces"
-
   private val ELASTIC_SEARCH_ENDPOINT = "http://elasticsearch:9200"
   private val ELASTIC_SEARCH_WHITELIST_INDEX = "reload-configs"
   private val ELASTIC_SEARCH_WHITELIST_TYPE = "whitelist-index-fields"
   private val SPANS_INDEX_TYPE = "spans"
-
   private val executors = Executors.newSingleThreadExecutor()
-
   private val HAYSTACK_TRACES_INDEX = {
-    val formatter = new SimpleDateFormat("yyyy-MM-dd")
-    s"haystack-traces-${formatter.format(new Date())}"
+    val date = new Date()
+
+    val dateBucket = new SimpleDateFormat("yyyy-MM-dd").format(date)
+    val hourBucket = new SimpleDateFormat("HH").format(date).toInt / 6
+
+    s"haystack-traces-$dateBucket-$hourBucket"
   }
-  private val INDEX_TEMPLATE = """{
-                                 |    "template": "haystack-traces*",
-                                 |    "settings": {
-                                 |        "number_of_shards": 1,
-                                 |        "index.mapping.ignore_malformed": true,
-                                 |        "analysis": {
-                                 |            "normalizer": {
-                                 |                "lowercase_normalizer": {
-                                 |                    "type": "custom",
-                                 |                    "filter": ["lowercase"]
-                                 |                }
-                                 |            }
-                                 |        }
-                                 |    },
-                                 |    "aliases": {
-                                 |        "haystack-traces": {}
-                                 |    },
-                                 |    "mappings": {
-                                 |        "spans": {
-                                 |            "_all": {
-                                 |                "enabled": false
-                                 |            },
-                                 |            "_source": {
-                                 |                "includes": ["traceid"]
-                                 |            },
-                                 |            "properties": {
-                                 |                "traceid": {
-                                 |                    "enabled": false
-                                 |                },
-                                 |                "spans": {
-                                 |                    "type": "nested",
-                                 |                    "properties": {
-                                 |                        "servicename": {
-                                 |                            "type": "keyword",
-                                 |                            "normalizer": "lowercase_normalizer",
-                                 |                            "doc_values": true,
-                                 |                            "norms": false
-                                 |                        },
-                                 |                        "operationname": {
-                                 |                            "type": "keyword",
-                                 |                            "normalizer": "lowercase_normalizer",
-                                 |                            "doc_values": true,
-                                 |                            "norms": false
-                                 |                        },
-                                 |                        "starttime": {
-                                 |                            "type": "long",
-                                 |                            "doc_values": true
-                                 |                        }
-                                 |                    }
-                                 |                }
-                                 |            },
-                                 |            "dynamic_templates": [{
-                                 |                "strings_as_keywords_1": {
-                                 |                    "match_mapping_type": "string",
-                                 |                    "mapping": {
-                                 |                        "type": "keyword",
-                                 |                        "normalizer": "lowercase_normalizer",
-                                 |                        "doc_values": false,
-                                 |                        "norms": false
-                                 |                    }
-                                 |                }
-                                 |            }, {
-                                 |                "longs_disable_doc_norms": {
-                                 |                    "match_mapping_type": "long",
-                                 |                    "mapping": {
-                                 |                        "type": "long",
-                                 |                        "doc_values": false,
-                                 |                        "norms": false
-                                 |                    }
-                                 |                }
-                                 |            }]
-                                 |        }
-                                 |    }
-                                 |}
-                                 |""".stripMargin
-
-
+  private val INDEX_TEMPLATE =
+    """{
+      |    "template": "haystack-traces*",
+      |    "settings": {
+      |        "number_of_shards": 1,
+      |        "index.mapping.ignore_malformed": true,
+      |        "analysis": {
+      |            "normalizer": {
+      |                "lowercase_normalizer": {
+      |                    "type": "custom",
+      |                    "filter": ["lowercase"]
+      |                }
+      |            }
+      |        }
+      |    },
+      |    "aliases": {
+      |        "haystack-traces": {}
+      |    },
+      |    "mappings": {
+      |        "spans": {
+      |            "_all": {
+      |                "enabled": false
+      |            },
+      |            "_source": {
+      |                "includes": ["traceid"]
+      |            },
+      |            "properties": {
+      |                "traceid": {
+      |                    "enabled": false
+      |                },
+      |                "spans": {
+      |                    "type": "nested",
+      |                    "properties": {
+      |                        "servicename": {
+      |                            "type": "keyword",
+      |                            "normalizer": "lowercase_normalizer",
+      |                            "doc_values": true,
+      |                            "norms": false
+      |                        },
+      |                        "operationname": {
+      |                            "type": "keyword",
+      |                            "normalizer": "lowercase_normalizer",
+      |                            "doc_values": true,
+      |                            "norms": false
+      |                        },
+      |                        "starttime": {
+      |                            "type": "long",
+      |                            "doc_values": true
+      |                        }
+      |                    }
+      |                }
+      |            },
+      |            "dynamic_templates": [{
+      |                "strings_as_keywords_1": {
+      |                    "match_mapping_type": "string",
+      |                    "mapping": {
+      |                        "type": "keyword",
+      |                        "normalizer": "lowercase_normalizer",
+      |                        "doc_values": false,
+      |                        "norms": false
+      |                    }
+      |                }
+      |            }, {
+      |                "longs_disable_doc_norms": {
+      |                    "match_mapping_type": "long",
+      |                    "mapping": {
+      |                        "type": "long",
+      |                        "doc_values": false,
+      |                        "norms": false
+      |                    }
+      |                }
+      |            }]
+      |        }
+      |    }
+      |}
+      |""".stripMargin
+  protected var client: TraceReaderBlockingStub = _
   private var cassandraSession: Session = _
   private var esClient: JestClient = _
 
@@ -194,7 +194,7 @@ trait BaseIntegrationTestSpec extends FunSpec with GivenWhenThen with Matchers w
                               tags: Map[String, String]) = {
     import TraceIndexDoc._
     // create map using service, operation and tags
-    val fieldMap:mutable.Map[String, Any] = mutable.Map(
+    val fieldMap: mutable.Map[String, Any] = mutable.Map(
       SERVICE_KEY_NAME -> serviceName,
       OPERATION_KEY_NAME -> operationName,
       START_TIME_KEY_NAME -> mutable.Set[Any](System.currentTimeMillis() * 1000)
@@ -207,7 +207,7 @@ trait BaseIntegrationTestSpec extends FunSpec with GivenWhenThen with Matchers w
       .`type`(SPANS_INDEX_TYPE)
       .build)
 
-    if(result.getErrorMessage != null) {
+    if (result.getErrorMessage != null) {
       fail("Fail to execute the indexing request " + result.getErrorMessage)
     }
     // wait for few sec to let ES refresh its index
@@ -232,6 +232,91 @@ trait BaseIntegrationTestSpec extends FunSpec with GivenWhenThen with Matchers w
                                      tags: Map[String, String]): ResultSet = {
     val spanBuffer = createSpanBufferWithSingleSpan(traceId, spanId, serviceName, operationName, tags)
     writeToCassandra(spanBuffer, traceId)
+  }
+
+  /*protected def insertTracesInEsForTimeline(serviceName: String,
+                                            operationName: String,
+                                            tags: Map[String, String],
+                                            startTimeInMicroSec: Long,
+                                            endTimeInMicroSec: Long,
+                                            intervalInMicroSec: Int,
+                                            spansInEachInterval: Int) = {
+    val bucketCount = getBucketCount(startTimeInMicroSec, endTimeInMicroSec, intervalInMicroSec);
+    System.out.println("------- insertTracesInEsForTimeline: bucket count ----------" + bucketCount)
+    for (i <- 0 until bucketCount - 1) {
+      val spanStartTimeInMicroSec = startTimeInMicroSec + (intervalInMicroSec * i)
+      val fieldMap = createESFieldMap(serviceName, operationName, spanStartTimeInMicroSec, tags)
+      for (j <- 0 until spansInEachInterval) {
+        System.out.println("------- insertTracesInEsForTimeline: inserting span ----------" + i + "-------"+j)
+        // index the document
+        val result = esClient.execute(new Index.Builder(TraceIndexDoc(UUID.randomUUID().toString, 0, Seq(fieldMap)).json)
+          .index(HAYSTACK_TRACES_INDEX)
+          .`type`(SPANS_INDEX_TYPE)
+          .build)
+        if (result.getErrorMessage != null) {
+          fail("Failed to execute the indexing request for insertTracesInEsForTimeline with message"
+            + result.getErrorMessage)
+        }
+      }
+    }
+    // wait for few sec to let ES refresh its index
+    Thread.sleep(5000)
+  }
+
+  protected def getBucketCount(startTime: Long, endTime: Long, interval: Int): Int = {
+    val completeBuckets = ((endTime - startTime) / interval).toInt
+    val partialBucket = if ((endTime - startTime) % interval > 0) 1 else 0
+    completeBuckets + partialBucket
+  }
+  */
+
+  protected def putTracesForTimeline(serviceName: String,
+                                     operationName: String,
+                                     starttimes: Seq[String]) = {
+    starttimes.map(
+      starttime => {
+        System.out.println("------- putTracesForTimeline: starttime ----------" + starttime)
+        val traceId = UUID.randomUUID().toString
+        val spanId = UUID.randomUUID().toString
+
+        insertTraceInCassandra(traceId, spanId, serviceName, operationName, Map.empty)
+        System.out.println("------- putTracesForTimeline: inserted in cassandra ----------" + starttime)
+
+        val fieldMap: mutable.Map[String, Any] = mutable.Map(
+          SERVICE_KEY_NAME -> serviceName,
+          OPERATION_KEY_NAME -> operationName,
+          START_TIME_KEY_NAME -> mutable.Set[Any](starttime)
+        )
+
+        val result = esClient.execute(new Index.Builder(TraceIndexDoc(traceId, 0, Seq(fieldMap)).json)
+          .index(HAYSTACK_TRACES_INDEX)
+          .`type`(SPANS_INDEX_TYPE)
+          .build)
+        System.out.println("------- putTracesForTimeline: inserted in ES ----------" + starttime)
+
+        if (result.getErrorMessage != null) {
+          fail("Failed to execute the indexing request " + result.getErrorMessage)
+        }
+      }
+    )
+    // wait for few sec to let ES refresh its index
+    Thread.sleep(5000)
+  }
+
+  // create map using service, operation, startTime and tags
+  private def createESFieldMap(serviceName: String,
+                               operationName: String,
+                               spanStartTimeInMicroSec: Long,
+                               tags: Map[String, String]): mutable.Map[String, Any] = {
+    import TraceIndexDoc._
+    val fieldMap: mutable.Map[String, Any] = mutable.Map(
+      SERVICE_KEY_NAME -> serviceName,
+      OPERATION_KEY_NAME -> operationName,
+      START_TIME_KEY_NAME -> mutable.Set[Any](spanStartTimeInMicroSec)
+    )
+    tags.foreach(pair => fieldMap.put(pair._1.toLowerCase(), pair._2))
+
+    fieldMap
   }
 
   private def writeToCassandra(spanBuffer: SpanBuffer, traceId: String) = {

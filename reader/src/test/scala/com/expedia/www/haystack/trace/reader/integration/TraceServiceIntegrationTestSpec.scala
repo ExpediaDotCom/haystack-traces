@@ -367,7 +367,7 @@ class TraceServiceIntegrationTestSpec extends BaseIntegrationTestSpec {
       traceCounts.getTraceCount(0).getCount shouldEqual randomStartTimes.size
     }
 
-    it("should return trace counts histogram for given time span") {
+    it("should return trace counts histogram for given time span for multiple buckets") {
       Given("traces elasticsearch")
       val serviceName = "dummy-servicename-for-count"
       val operationName = "dummy-operationname-for-count"

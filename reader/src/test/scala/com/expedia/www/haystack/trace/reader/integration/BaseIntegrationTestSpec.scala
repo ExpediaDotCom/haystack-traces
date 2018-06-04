@@ -186,22 +186,28 @@ trait BaseIntegrationTestSpec extends FunSpec with GivenWhenThen with Matchers w
                                          spanId: String = UUID.randomUUID().toString,
                                          serviceName: String = "",
                                          operationName: String = "",
-                                         tags: Map[String, String] = Map.empty): Unit = {
-    insertTraceInCassandra(traceId, spanId, serviceName, operationName, tags)
-    insertTraceInEs(traceId, spanId, serviceName, operationName, tags)
+                                         tags: Map[String, String] = Map.empty,
+                                         startTime: Long = System.currentTimeMillis() * 1000,
+                                         sleep: Boolean = true): Unit = {
+    insertTraceInCassandra(traceId, spanId, serviceName, operationName, tags, startTime)
+    insertTraceInEs(traceId, spanId, serviceName, operationName, tags, startTime)
+
+    // wait for few sec to let ES refresh its index
+    if(sleep) Thread.sleep(5000)
   }
 
   private def insertTraceInEs(traceId: String,
                               spanId: String,
                               serviceName: String,
                               operationName: String,
-                              tags: Map[String, String]) = {
+                              tags: Map[String, String],
+                              startTime: Long) = {
     import TraceIndexDoc._
     // create map using service, operation and tags
     val fieldMap:mutable.Map[String, Any] = mutable.Map(
       SERVICE_KEY_NAME -> serviceName,
       OPERATION_KEY_NAME -> operationName,
-      START_TIME_KEY_NAME -> mutable.Set[Any](System.currentTimeMillis() * 1000)
+      START_TIME_KEY_NAME -> mutable.Set[Any](startTime)
     )
     tags.foreach(pair => fieldMap.put(pair._1.toLowerCase(), pair._2))
 
@@ -214,8 +220,6 @@ trait BaseIntegrationTestSpec extends FunSpec with GivenWhenThen with Matchers w
     if(result.getErrorMessage != null) {
       fail("Fail to execute the indexing request " + result.getErrorMessage)
     }
-    // wait for few sec to let ES refresh its index
-    Thread.sleep(5000)
   }
 
   protected def putWhitelistIndexFieldsInEs(fields: List[String]): Unit = {
@@ -233,94 +237,32 @@ trait BaseIntegrationTestSpec extends FunSpec with GivenWhenThen with Matchers w
                                      spanId: String,
                                      serviceName: String,
                                      operationName: String,
-                                     tags: Map[String, String]): ResultSet = {
-    val spanBuffer = createSpanBufferWithSingleSpan(traceId, spanId, serviceName, operationName, tags)
+                                     tags: Map[String, String],
+                                     startTime: Long): ResultSet = {
+    val spanBuffer = createSpanBufferWithSingleSpan(traceId, spanId, serviceName, operationName, tags, startTime)
     writeToCassandra(spanBuffer, traceId)
   }
 
-  /*protected def insertTracesInEsForTimeline(serviceName: String,
-                                            operationName: String,
-                                            tags: Map[String, String],
-                                            startTimeInMicroSec: Long,
-                                            endTimeInMicroSec: Long,
-                                            intervalInMicroSec: Int,
-                                            spansInEachInterval: Int) = {
-    val bucketCount = getBucketCount(startTimeInMicroSec, endTimeInMicroSec, intervalInMicroSec);
-    System.out.println("------- insertTracesInEsForTimeline: bucket count ----------" + bucketCount)
-    for (i <- 0 until bucketCount - 1) {
-      val spanStartTimeInMicroSec = startTimeInMicroSec + (intervalInMicroSec * i)
-      val fieldMap = createESFieldMap(serviceName, operationName, spanStartTimeInMicroSec, tags)
-      for (j <- 0 until spansInEachInterval) {
-        System.out.println("------- insertTracesInEsForTimeline: inserting span ----------" + i + "-------"+j)
-        // index the document
-        val result = esClient.execute(new Index.Builder(TraceIndexDoc(UUID.randomUUID().toString, 0, Seq(fieldMap)).json)
-          .index(HAYSTACK_TRACES_INDEX)
-          .`type`(SPANS_INDEX_TYPE)
-          .build)
-        if (result.getErrorMessage != null) {
-          fail("Failed to execute the indexing request for insertTracesInEsForTimeline with message"
-            + result.getErrorMessage)
-        }
-      }
-    }
+  protected def putTraceInCassandra(traceId: String,
+                                    spanId: String = UUID.randomUUID().toString,
+                                    serviceName: String = "",
+                                    operationName: String = "",
+                                    tags: Map[String, String] = Map.empty,
+                                    startTime: Long = System.currentTimeMillis() * 1000): Unit = {
+    insertTraceInCassandra(traceId, spanId, serviceName, operationName, tags, startTime)
     // wait for few sec to let ES refresh its index
-    Thread.sleep(5000)
+    Thread.sleep(1000)
   }
 
-  protected def getBucketCount(startTime: Long, endTime: Long, interval: Int): Int = {
-    val completeBuckets = ((endTime - startTime) / interval).toInt
-    val partialBucket = if ((endTime - startTime) % interval > 0) 1 else 0
-    completeBuckets + partialBucket
-  }
-  */
+  protected def putTraceInCassandraWithPartialSpans(traceId: String): ResultSet = {
+    val trace = buildMultiServiceTrace()
+    val spanBuffer = SpanBuffer
+      .newBuilder()
+      .setTraceId(traceId)
+      .addAllChildSpans(trace.getChildSpansList)
+      .build()
 
-  protected def putTracesForTimeline(serviceName: String,
-                                     operationName: String,
-                                     starttimes: Seq[String]) = {
-    starttimes.map(
-      starttime => {
-        System.out.println("------- putTracesForTimeline: starttime ----------" + starttime)
-        val traceId = UUID.randomUUID().toString
-        val spanId = UUID.randomUUID().toString
-
-        insertTraceInCassandra(traceId, spanId, serviceName, operationName, Map.empty)
-        System.out.println("------- putTracesForTimeline: inserted in cassandra ----------" + starttime)
-
-        val fieldMap: mutable.Map[String, Any] = mutable.Map(
-          SERVICE_KEY_NAME -> serviceName,
-          OPERATION_KEY_NAME -> operationName,
-          START_TIME_KEY_NAME -> mutable.Set[Any](starttime)
-        )
-
-        val result = esClient.execute(new Index.Builder(TraceIndexDoc(traceId, 0, Seq(fieldMap)).json)
-          .index(HAYSTACK_TRACES_INDEX)
-          .`type`(SPANS_INDEX_TYPE)
-          .build)
-        System.out.println("------- putTracesForTimeline: inserted in ES ----------" + starttime)
-
-        if (result.getErrorMessage != null) {
-          fail("Failed to execute the indexing request " + result.getErrorMessage)
-        }
-      }
-    )
-    // wait for few sec to let ES refresh its index
-    Thread.sleep(5000)
-  }
-
-  // create map using service, operation, startTime and tags
-  private def createESFieldMap(serviceName: String,
-                               operationName: String,
-                               spanStartTimeInMicroSec: Long,
-                               tags: Map[String, String]): mutable.Map[String, Any] = {
-    import TraceIndexDoc._
-    val fieldMap: mutable.Map[String, Any] = mutable.Map(
-      SERVICE_KEY_NAME -> serviceName,
-      OPERATION_KEY_NAME -> operationName,
-      START_TIME_KEY_NAME -> mutable.Set[Any](spanStartTimeInMicroSec)
-    )
-    tags.foreach(pair => fieldMap.put(pair._1.toLowerCase(), pair._2))
-
-    fieldMap
+    writeToCassandra(spanBuffer, traceId)
   }
 
   private def writeToCassandra(spanBuffer: SpanBuffer, traceId: String) = {
@@ -337,7 +279,8 @@ trait BaseIntegrationTestSpec extends FunSpec with GivenWhenThen with Matchers w
                                              spanId: String,
                                              serviceName: String,
                                              operationName: String,
-                                             tags: Map[String, String]) = {
+                                             tags: Map[String, String],
+                                             startTime: Long) = {
     val spanTags = tags.map(tag => com.expedia.open.tracing.Tag.newBuilder().setKey(tag._1).setVStr(tag._2).build())
 
     SpanBuffer
@@ -349,27 +292,9 @@ trait BaseIntegrationTestSpec extends FunSpec with GivenWhenThen with Matchers w
         .setSpanId(spanId)
         .setOperationName(operationName)
         .setServiceName(serviceName)
+        .setStartTime(startTime)
         .addAllTags(spanTags.asJava)
         .build())
       .build()
-  }
-
-  protected def putTraceInCassandra(traceId: String,
-                                    spanId: String = UUID.randomUUID().toString,
-                                    serviceName: String = "",
-                                    operationName: String = "",
-                                    tags: Map[String, String] = Map.empty): ResultSet = {
-    insertTraceInCassandra(traceId, spanId, serviceName, operationName, tags)
-  }
-
-  protected def putTraceInCassandraWithPartialSpans(traceId: String): ResultSet = {
-    val trace = buildMultiServiceTrace()
-    val spanBuffer = SpanBuffer
-      .newBuilder()
-      .setTraceId(traceId)
-      .addAllChildSpans(trace.getChildSpansList)
-      .build()
-
-    writeToCassandra(spanBuffer, traceId)
   }
 }

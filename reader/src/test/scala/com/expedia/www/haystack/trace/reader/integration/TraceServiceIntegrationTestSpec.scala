@@ -26,7 +26,7 @@ import scala.collection.JavaConverters._
 
 class TraceServiceIntegrationTestSpec extends BaseIntegrationTestSpec {
 
- /* describe("TraceReader.getFieldNames") {
+ describe("TraceReader.getFieldNames") {
     it("should return names of enabled fields") {
       Given("trace in cassandra and elasticsearch")
       val field1 = "abc"
@@ -328,90 +328,80 @@ class TraceServiceIntegrationTestSpec extends BaseIntegrationTestSpec {
       Then("should return the trace call graph")
       traceCallGraph.getCallsCount should be(3)
     }
-  }*/
+  }
 
   describe("TraceReader.getTraceCounts") {
     it("should return trace counts histogram for given time span") {
       Given("traces elasticsearch")
       val serviceName = "dummy-servicename"
       val operationName = "dummy-operationname"
-      val currrentTimeMicros: Long = System.currentTimeMillis() * 1000
-      val randomStartTimes: Seq[String] =
-        Seq(currrentTimeMicros.toString,
-          (currrentTimeMicros - (10 * 1000 * 1000)).toString,
-          (currrentTimeMicros - (20 * 1000 * 1000)).toString,
-          (currrentTimeMicros - (30 * 1000 * 1000)).toString)
-      val startTimeInMicroSec: Long = currrentTimeMicros - (randomStartTimes.size * 10 * 1000 * 1000)
-      val endTimeInMicroSec: Long = currrentTimeMicros
+      val currentTimeMicros: Long = System.currentTimeMillis() * 1000
+      val randomStartTimes: Seq[Long] =
+        Seq(currentTimeMicros,
+          currentTimeMicros - (10 * 1000 * 1000),
+          currentTimeMicros - (20 * 1000 * 1000),
+          currentTimeMicros - (30 * 1000 * 1000))
+      val startTimeInMicroSec: Long = currentTimeMicros - (randomStartTimes.size * 10 * 1000 * 1000)
+      val endTimeInMicroSec: Long = currentTimeMicros
       val intervalInMicroSec = endTimeInMicroSec - startTimeInMicroSec
 
-      System.out.println("------- before ES calls ----------")
-      putTracesForTimeline(serviceName, operationName, randomStartTimes)
-      System.out.println("------- after ES calls ----------")
+      randomStartTimes.foreach(startTime =>
+        putTraceInCassandraAndEs(serviceName = serviceName, operationName = operationName, startTime =  startTime, sleep = false))
+      Thread.sleep(5000)
 
+      When("calling getTraceCounts")
       val traceCountsRequest = TraceCountsRequest
         .newBuilder()
         .addFields(Field.newBuilder().setName(TraceIndexDoc.SERVICE_KEY_NAME).setValue(serviceName).build())
         .addFields(Field.newBuilder().setName(TraceIndexDoc.OPERATION_KEY_NAME).setValue(operationName).build())
-        .setStartTime(1)
+        .setStartTime(startTimeInMicroSec)
         .setEndTime(endTimeInMicroSec)
         .setInterval(intervalInMicroSec)
         .build()
 
-      When("calling getTraceCounts")
       val traceCounts = client.getTraceCounts(traceCountsRequest)
 
       Then("should return possible values for given field")
       traceCounts should not be None
-      System.out.println("------- traceCounts result size ----------" + traceCounts.toString)
       traceCounts.getTraceCountCount shouldEqual 1
-      traceCounts.getTraceCount(0).getCount shouldEqual(randomStartTimes.size)
+      traceCounts.getTraceCount(0).getCount shouldEqual randomStartTimes.size
     }
 
-    /* it("should return trace counts histogram for given time span") {
+    it("should return trace counts histogram for given time span") {
       Given("traces elasticsearch")
-      val serviceName = "dummy-servicename"
-      val operationName = "dummy-operationname"
-      val endTimeInMicroSec: Long = System.currentTimeMillis() * 1000
-      val startTimeInMicroSec: Long = endTimeInMicroSec - (900 * 1000 * 1000) // minus 15 mins
-      val intervalInMicroSec = 60 * 1000 * 1000 // 1 min
-      val spansInEachInterval = 5
+      val serviceName = "dummy-servicename-for-count"
+      val operationName = "dummy-operationname-for-count"
+      val currentTimeMicros: Long = System.currentTimeMillis() * 1000
 
-      System.out.println("------- before ES calls ----------")
-      insertTracesInEsForTimeline(serviceName, operationName, Map(), startTimeInMicroSec, endTimeInMicroSec, intervalInMicroSec, spansInEachInterval)
-      insertTracesInEsForTimeline(serviceName, "some-other-oper", Map(), startTimeInMicroSec, endTimeInMicroSec, intervalInMicroSec, spansInEachInterval)
-      System.out.println("------- after ES calls ----------")
+      val bucketCount = 5
+      val bucketTimeInMicros = 10 * 1000 * 1000
+      val tracesPerBucket = 10
+      val startTimeInMicroSec: Long = currentTimeMicros - bucketCount * bucketTimeInMicros
 
+      (startTimeInMicroSec until currentTimeMicros by bucketTimeInMicros)
+        .foreach(bucketStartTime =>
+          (1 to tracesPerBucket)
+            .foreach((_) =>
+              putTraceInCassandraAndEs(serviceName = serviceName, operationName = operationName, startTime =  bucketStartTime + 1000 * 1000, sleep = false)))
+      Thread.sleep(5000)
+
+      When("calling getTraceCounts")
       val traceCountsRequest = TraceCountsRequest
         .newBuilder()
         .addFields(Field.newBuilder().setName(TraceIndexDoc.SERVICE_KEY_NAME).setValue(serviceName).build())
         .addFields(Field.newBuilder().setName(TraceIndexDoc.OPERATION_KEY_NAME).setValue(operationName).build())
-        .setStartTime(1)
-        .setEndTime(endTimeInMicroSec)
-        .setInterval(intervalInMicroSec)
+        .setStartTime(startTimeInMicroSec)
+        .setEndTime(currentTimeMicros)
+        .setInterval(bucketTimeInMicros)
         .build()
 
-      When("calling getTraceCounts")
       val traceCounts = client.getTraceCounts(traceCountsRequest)
 
       Then("should return possible values for given field")
       traceCounts should not be None
-      System.out.println("------- traceCounts result size ----------" + traceCounts.toString)
-      val bucketCount = getBucketCount(startTimeInMicroSec, endTimeInMicroSec, intervalInMicroSec)
       traceCounts.getTraceCountCount shouldEqual bucketCount
-      for (i <- 1 until bucketCount) {
-        traceCounts.getTraceCountList.asScala.map(
-          traceCount => {
-            if (i == bucketCount) {
-              traceCount.getTimestamp shouldEqual endTimeInMicroSec
-            } else {
-              traceCount.getTimestamp shouldEqual (startTimeInMicroSec + (intervalInMicroSec * i))
-            }
-            traceCount.getCount shouldEqual spansInEachInterval
-          }
-        )
-      }
+      traceCounts.getTraceCount(0).getCount shouldEqual tracesPerBucket
+      traceCounts.getTraceCount(bucketCount - 1).getCount shouldEqual tracesPerBucket
     }
-  }*/
   }
 }

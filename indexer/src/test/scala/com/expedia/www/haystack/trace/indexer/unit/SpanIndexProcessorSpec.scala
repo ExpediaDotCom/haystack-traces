@@ -25,7 +25,7 @@ import com.expedia.www.haystack.trace.indexer.store.SpanBufferMemoryStoreSupplie
 import com.expedia.www.haystack.trace.indexer.store.data.model.SpanBufferWithMetadata
 import com.expedia.www.haystack.trace.indexer.store.traits.SpanBufferKeyValueStore
 import com.expedia.www.haystack.trace.indexer.writers.TraceWriter
-import org.apache.kafka.clients.consumer.ConsumerRecord
+import org.apache.kafka.clients.consumer.{ConsumerRecord, OffsetAndMetadata}
 import org.apache.kafka.common.record.TimestampType
 import org.easymock.EasyMock
 import org.easymock.EasyMock._
@@ -63,12 +63,13 @@ class SpanIndexProcessorSpec extends FunSpec with Matchers with EasyMockSugar {
       val packedMessage = EasyMock.newCapture[PackedMessage[SpanBuffer]]()
       val writeTraceIdCapture = EasyMock.newCapture[String]()
       val writeLastRecordCapture = EasyMock.newCapture[Boolean]()
+      val forceEvictionTimestamp = finalStreamTimestamp - accumulatorConfig.maxSpanBufferEmitWindowMillis
+      val completedSpanBufferEvictionTimeout = finalStreamTimestamp - accumulatorConfig.completedSpanBufferEmitWindow
 
       expecting {
         mockStore.addEvictionListener(processor)
         mockStore.init()
-        mockStore.getAndRemoveSpanBuffersOlderThan(finalStreamTimestamp - maxBufferingWindow).andReturn(mutable.ListBuffer(spanBufferWithMetadata))
-        mockStore.getAndRemoveCompletedSpanBuffersOlderThan(finalStreamTimestamp - bufferingWindowAfterRoot).andReturn(mutable.ListBuffer.empty)
+        mockStore.getAndRemoveSpanBuffersOlderThan(forceEvictionTimestamp, completedSpanBufferEvictionTimeout).andReturn((mutable.ListBuffer(spanBufferWithMetadata), Some(new OffsetAndMetadata(startRecordOffset))))
         mockCassandra.writeAsync(capture(writeTraceIdCapture), capture(packedMessage), capture(writeLastRecordCapture))
         mockStore.close()
       }
@@ -95,18 +96,20 @@ class SpanIndexProcessorSpec extends FunSpec with Matchers with EasyMockSugar {
       val mockCassandra = mock[TraceWriter]
 
       val processor = new SpanIndexProcessor(accumulatorConfig, storeSupplier, Seq(mockCassandra), new NoopPacker[SpanBuffer])(executor)
-      val (spanBufferWithMetadata, records) = createConsumerRecordsAndSetStoreExpectation(maxSpans, startRecordTimestamp, timestampInterval, startRecordOffset,rootSpanSeen = true, mockStore)
+      val (spanBufferWithMetadata, records) = createConsumerRecordsAndSetStoreExpectation(maxSpans, startRecordTimestamp, timestampInterval, startRecordOffset, rootSpanSeen = true, mockStore)
       val finalStreamTimestamp = startRecordTimestamp + ((maxSpans - 1) * timestampInterval)
 
       val packedMessage = EasyMock.newCapture[PackedMessage[SpanBuffer]]()
       val writeTraceIdCapture = EasyMock.newCapture[String]()
       val writeLastRecordCapture = EasyMock.newCapture[Boolean]()
+      val forceEvictionTimestamp = finalStreamTimestamp - accumulatorConfig.maxSpanBufferEmitWindowMillis
+      val completedSpanBufferEvictionTimeout = finalStreamTimestamp - accumulatorConfig.completedSpanBufferEmitWindow
 
       expecting {
         mockStore.addEvictionListener(processor)
         mockStore.init()
-        mockStore.getAndRemoveSpanBuffersOlderThan(finalStreamTimestamp - maxBufferingWindow).andReturn(mutable.ListBuffer.empty)
-        mockStore.getAndRemoveCompletedSpanBuffersOlderThan(finalStreamTimestamp - bufferingWindowAfterRoot).andReturn(mutable.ListBuffer(spanBufferWithMetadata))
+
+        mockStore.getAndRemoveSpanBuffersOlderThan(forceEvictionTimestamp, completedSpanBufferEvictionTimeout).andReturn((mutable.ListBuffer(spanBufferWithMetadata), Some(new OffsetAndMetadata(startRecordOffset))))
         mockCassandra.writeAsync(capture(writeTraceIdCapture), capture(packedMessage), capture(writeLastRecordCapture))
         mockStore.close()
       }
@@ -132,14 +135,15 @@ class SpanIndexProcessorSpec extends FunSpec with Matchers with EasyMockSugar {
       val mockCassandra = mock[TraceWriter]
 
       val processor = new SpanIndexProcessor(accumulatorConfig, storeSupplier, Seq(mockCassandra), new NoopPacker)(executor)
-      val (_, records) = createConsumerRecordsAndSetStoreExpectation(maxSpans, startRecordTimestamp, timestampInterval, startRecordOffset,false, mockStore)
+      val (_, records) = createConsumerRecordsAndSetStoreExpectation(maxSpans, startRecordTimestamp, timestampInterval, startRecordOffset, false, mockStore)
       val finalStreamTimestamp = startRecordTimestamp + ((maxSpans - 1) * timestampInterval)
+      val forceEvictionTimestamp = finalStreamTimestamp - accumulatorConfig.maxSpanBufferEmitWindowMillis
+      val completedSpanBufferEvictionTimeout = finalStreamTimestamp - accumulatorConfig.completedSpanBufferEmitWindow
 
       expecting {
         mockStore.addEvictionListener(processor)
         mockStore.init()
-        mockStore.getAndRemoveSpanBuffersOlderThan(finalStreamTimestamp - maxBufferingWindow).andReturn(mutable.ListBuffer())
-        mockStore.getAndRemoveCompletedSpanBuffersOlderThan(finalStreamTimestamp - bufferingWindowAfterRoot).andReturn(mutable.ListBuffer.empty)
+        mockStore.getAndRemoveSpanBuffersOlderThan(forceEvictionTimestamp, completedSpanBufferEvictionTimeout).andReturn((mutable.ListBuffer.empty, None))
       }
 
       whenExecuting(mockStore, mockCassandra) {

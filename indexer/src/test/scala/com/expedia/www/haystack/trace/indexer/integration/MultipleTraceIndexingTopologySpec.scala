@@ -50,7 +50,7 @@ class MultipleTraceIndexingTopologySpec extends BaseIntegrationTestSpec {
         1.seconds,
         traceDescriptions,
         0,
-        spanAccumulatorConfig.maxBufferingWindowMillis)
+        spanAccumulatorConfig.maxSpanBufferEmitWindowMillis)
 
       val topology = new StreamRunner(kafkaConfig, spanAccumulatorConfig, esConfig, cassandraConfig, serviceMetadataConfig, indexTagsConfig)
       topology.start()

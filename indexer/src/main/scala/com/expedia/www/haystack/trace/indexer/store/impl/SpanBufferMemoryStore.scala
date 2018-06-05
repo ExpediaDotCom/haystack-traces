@@ -29,6 +29,7 @@ import com.expedia.www.haystack.trace.indexer.store.DynamicCacheSizer
 import com.expedia.www.haystack.trace.indexer.store.data.model.SpanBufferWithMetadata
 import com.expedia.www.haystack.trace.indexer.store.traits.{CacheSizeObserver, EldestBufferedSpanEvictionListener, SpanBufferKeyValueStore}
 import org.apache.commons.lang3.StringUtils
+import org.apache.kafka.clients.consumer.OffsetAndMetadata
 import org.slf4j.{Logger, LoggerFactory}
 
 import scala.collection.mutable
@@ -71,23 +72,30 @@ class SpanBufferMemoryStore(cacheSizer: DynamicCacheSizer) extends SpanBufferKey
     LOGGER.info("Span buffer memory store has been initialized")
   }
 
-
   /**
-    * removes and returns all the completed span buffers from the map that are recorded before the given timestamp
+    * get all buffered span objects that are recorded before the given timestamp
     *
-    * @param timestamp timestamp before which all buffered spans should be read and removed
+    * @param forceEvictionTimestamp             forceEvictionTimestamp in millis for spanBuffers even if they are not complete
+    * @param completedSpanBufferEvictionTimeout EvictionTimestamp in millis for completed spanBuffers
     * @return
     */
-  override def getAndRemoveCompletedSpanBuffersOlderThan(timestamp: Long): mutable.ListBuffer[SpanBufferWithMetadata] = {
+  def getAndRemoveSpanBuffersOlderThan(forceEvictionTimestamp: Long, completedSpanBufferEvictionTimeout: Long): (mutable.ListBuffer[SpanBufferWithMetadata], Option[OffsetAndMetadata]) = {
     val result = mutable.ListBuffer[SpanBufferWithMetadata]()
+    var committableOffset = -1L
 
     val iterator = this.map.entrySet().iterator()
     var done = false
 
     while (!done && iterator.hasNext) {
       val el = iterator.next()
-      if (el.getValue.firstSpanSeenAt <= timestamp) {
-        if(el.getValue.isrootSpanSeen) {
+      if (el.getValue.firstSpanSeenAt <= completedSpanBufferEvictionTimeout) {
+        if (el.getValue.firstSpanSeenAt <= forceEvictionTimestamp) {
+          iterator.remove()
+          totalSpansInMemStore -= el.getValue.builder.getChildSpansCount
+          result += el.getValue
+          if (committableOffset < el.getValue.firstSeenSpanKafkaOffset) committableOffset = el.getValue.firstSeenSpanKafkaOffset
+
+        } else if (el.getValue.isrootSpanSeen) {
           iterator.remove()
           totalSpansInMemStore -= el.getValue.builder.getChildSpansCount
           result += el.getValue
@@ -99,35 +107,8 @@ class SpanBufferMemoryStore(cacheSizer: DynamicCacheSizer) extends SpanBufferKey
         done = true
       }
     }
-    result
-  }
-
-  /**
-    * removes and returns all the span buffers from the map that are recorded before the given timestamp
-    *
-    * @param timestamp timestamp before which all buffered spans should be read and removed
-    * @return
-    */
-  override def getAndRemoveSpanBuffersOlderThan(timestamp: Long): mutable.ListBuffer[SpanBufferWithMetadata] = {
-    val result = mutable.ListBuffer[SpanBufferWithMetadata]()
-
-    val iterator = this.map.entrySet().iterator()
-    var done = false
-
-    while (!done && iterator.hasNext) {
-      val el = iterator.next()
-      if (el.getValue.firstSpanSeenAt <= timestamp) {
-        iterator.remove()
-        totalSpansInMemStore -= el.getValue.builder.getChildSpansCount
-        result += el.getValue
-      } else {
-        // here we apply a basic optimization and skip further iteration because all following records
-        // in this map will have higher recordTimestamp. When we insert the first span for a unique traceId
-        // in the map, we set the 'firstRecordTimestamp' attribute with record's timestamp
-        done = true
-      }
-    }
-    result
+    val commitableOffset = if (committableOffset >= 0) Some(new OffsetAndMetadata(committableOffset)) else None
+    (result, commitableOffset)
   }
 
   override def addEvictionListener(l: EldestBufferedSpanEvictionListener): Unit = this.listeners += l

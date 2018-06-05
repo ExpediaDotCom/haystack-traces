@@ -40,7 +40,7 @@ class ConfigurationLoaderSpec extends FunSpec with Matchers {
       val config = project.spanAccumulateConfig
       config.pollIntervalMillis shouldBe 2000L
       config.maxEntriesAllStores shouldBe 20000
-      config.maxBufferingWindowMillis shouldBe 10000L
+      config.maxSpanBufferEmitWindowMillis shouldBe 10000L
       config.packerType shouldEqual PackerType.SNAPPY
     }
 

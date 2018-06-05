@@ -42,8 +42,8 @@ abstract class BaseIntegrationTestSpec extends WordSpec with GivenWhenThen with 
     minTracesPerCache = 100,
     maxEntriesAllStores = 500,
     pollIntervalMillis = 2000L,
-    maxBufferingWindowMillis = 6000L,
-    bufferingWindowAfterRootMillis = 2000L,
+    maxSpanBufferEmitWindowMillis = 6000L,
+    completedSpanBufferEmitWindow = 2000L,
     packerType = PackerType.SNAPPY)
 
   protected var scheduler: ScheduledExecutorService = _

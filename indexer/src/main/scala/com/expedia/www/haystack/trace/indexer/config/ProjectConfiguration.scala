@@ -52,8 +52,8 @@ class ProjectConfiguration extends AutoCloseable {
       cfg.getInt("store.min.traces.per.cache"),
       cfg.getInt("store.all.max.entries"),
       cfg.getLong("poll.ms"),
-      cfg.getLong("max.window.ms"),
-      cfg.getLong("completed.window.ms"),
+      cfg.getLong("max.span.buffer.emit.window.ms"),
+      cfg.getLong("completed.span.buffer.emit.window.ms"),
       PackerType.withName(cfg.getString("packer").toUpperCase))
   }
 
@@ -147,7 +147,7 @@ class ProjectConfiguration extends AutoCloseable {
       val consistencyLevelOnErrorList = scala.collection.mutable.ListBuffer[(Class[_], ConsistencyLevel)]()
 
       var idx = 0
-      while(idx < consistencyLevelOnErrors.size()) {
+      while (idx < consistencyLevelOnErrors.size()) {
         val errorClass = consistencyLevelOnErrors.get(idx)
         val level = consistencyLevelOnErrors.get(idx + 1)
         consistencyLevelOnErrorList.+=((Class.forName(errorClass), toConsistencyLevel(level)))
@@ -288,8 +288,8 @@ class ProjectConfiguration extends AutoCloseable {
       reload.getString("config.endpoint"),
       reload.getString("config.database.name"),
       reload.getInt("interval.ms"),
-      if(reload.hasPath("config.username")) Option(reload.getString("config.username")) else None ,
-      if(reload.hasPath("config.password")) Option(reload.getString("config.password")) else None,
+      if (reload.hasPath("config.username")) Option(reload.getString("config.username")) else None,
+      if (reload.hasPath("config.password")) Option(reload.getString("config.password")) else None,
       observers,
       loadOnStartup = reload.getBoolean("startup.load"))
 

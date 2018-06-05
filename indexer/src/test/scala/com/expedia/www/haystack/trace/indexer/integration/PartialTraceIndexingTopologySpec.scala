@@ -48,7 +48,7 @@ class PartialTraceIndexingTopologySpec extends BaseIntegrationTestSpec {
         1.second,
         traceDescription,
         0L,
-        spanAccumulatorConfig.maxBufferingWindowMillis)
+        spanAccumulatorConfig.maxSpanBufferEmitWindowMillis)
 
       val topology = new StreamRunner(kafkaConfig, spanAccumulatorConfig, esConfig, cassandraConfig, serviceMetadataConfig, indexTagsConfig)
       topology.start()
@@ -80,8 +80,8 @@ class PartialTraceIndexingTopologySpec extends BaseIntegrationTestSpec {
       MAX_CHILD_SPANS_PER_TRACE,
       1.seconds,
       List(TraceDescription(TRACE_ID, SPAN_ID_2_PREFIX)),
-      spanAccumulatorConfig.maxBufferingWindowMillis + 100L,
-      spanAccumulatorConfig.maxBufferingWindowMillis)
+      spanAccumulatorConfig.maxSpanBufferEmitWindowMillis + 100L,
+      spanAccumulatorConfig.maxSpanBufferEmitWindowMillis)
 
     Then(s"we should read see newer spans in the buffered object from '${kafka.OUTPUT_TOPIC}' topic")
     val result: util.List[KeyValue[String, SpanBuffer]] =

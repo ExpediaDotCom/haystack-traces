@@ -99,21 +99,17 @@ class SpanIndexProcessor(accumulatorConfig: SpanAccumulatorConfiguration,
   private def mayBeEmit(currentTimestamp: Long): Option[OffsetAndMetadata] = {
     if ((currentTimestamp - accumulatorConfig.pollIntervalMillis) > lastEmitTimestamp) {
 
-      var committableOffset = -1L
+      val forceEvictionTimestamp = currentTimestamp - accumulatorConfig.maxSpanBufferEmitWindowMillis
+      val completedSpanBufferEvictionTimeout = currentTimestamp - accumulatorConfig.completedSpanBufferEmitWindow
+      val emittableSpanBuffersWithOffset = spanBufferMemStore.getAndRemoveSpanBuffersOlderThan(forceEvictionTimestamp, completedSpanBufferEvictionTimeout)
 
-      val emittableSpanBuffers = spanBufferMemStore.getAndRemoveSpanBuffersOlderThan(currentTimestamp - accumulatorConfig.maxBufferingWindowMillis) ++
-        spanBufferMemStore.getAndRemoveCompletedSpanBuffersOlderThan(currentTimestamp - accumulatorConfig.bufferingWindowAfterRootMillis)
-
-      emittableSpanBuffers.zipWithIndex foreach {
+      emittableSpanBuffersWithOffset._1.zipWithIndex foreach {
         case (sb, idx) =>
           val spanBuffer = sb.builder.build()
-          writeTrace(spanBuffer, idx == emittableSpanBuffers.size - 1)
-          if (committableOffset < sb.firstSeenSpanKafkaOffset && !sb.isrootSpanSeen) committableOffset = sb.firstSeenSpanKafkaOffset
+          writeTrace(spanBuffer, idx == emittableSpanBuffersWithOffset._1.size - 1)
       }
-
       lastEmitTimestamp = currentTimestamp
-
-      if (committableOffset >= 0) Some(new OffsetAndMetadata(committableOffset)) else None
+      emittableSpanBuffersWithOffset._2
     } else {
       None
     }

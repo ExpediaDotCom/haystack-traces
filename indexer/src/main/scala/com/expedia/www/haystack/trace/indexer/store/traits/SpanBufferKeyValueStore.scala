@@ -19,6 +19,7 @@ package com.expedia.www.haystack.trace.indexer.store.traits
 
 import com.expedia.open.tracing.Span
 import com.expedia.www.haystack.trace.indexer.store.data.model.SpanBufferWithMetadata
+import org.apache.kafka.clients.consumer.OffsetAndMetadata
 
 import scala.collection.mutable
 
@@ -27,34 +28,31 @@ import scala.collection.mutable
   */
 trait SpanBufferKeyValueStore {
 
-  /**
-    * get all buffered completed traces that are recorded before the given timestamp
-    * @param timestamp timestamp in millis
-    * @return
-    */
-  def getAndRemoveCompletedSpanBuffersOlderThan(timestamp: Long): mutable.ListBuffer[SpanBufferWithMetadata]
-
 
   /**
     * get all buffered span objects that are recorded before the given timestamp
-    * @param timestamp timestamp in millis
+    *
+    * @param forceEvictionTimestamp             forceEvictionTimestamp in millis for spanBuffers even if they are not complete
+    * @param completedSpanBufferEvictionTimeout EvictionTimestamp in millis for completed spanBuffers
     * @return
     */
-  def getAndRemoveSpanBuffersOlderThan(timestamp: Long): mutable.ListBuffer[SpanBufferWithMetadata]
+  def getAndRemoveSpanBuffersOlderThan(forceEvictionTimestamp: Long, completedSpanBufferEvictionTimeout: Long): (mutable.ListBuffer[SpanBufferWithMetadata], Option[OffsetAndMetadata])
 
   /**
     * add a listener to the store, that gets called when the eldest spanBuffer is evicted
     * due to constraints of maxEntries in the store cache
+    *
     * @param listener listener object that is called by the store
     */
   def addEvictionListener(listener: EldestBufferedSpanEvictionListener): Unit
 
   /**
     * adds new spanBuffer for the traceId(if absent)in the store else add the spans
-    * @param traceId traceId
-    * @param span span object
+    *
+    * @param traceId             traceId
+    * @param span                span object
     * @param spanRecordTimestamp timestamp of the span record
-    * @param offset kafka offset of this span record
+    * @param offset              kafka offset of this span record
     */
   def addOrUpdateSpanBuffer(traceId: String, span: Span, spanRecordTimestamp: Long, offset: Long): SpanBufferWithMetadata
 

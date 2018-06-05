@@ -26,7 +26,7 @@ import scala.collection.JavaConverters._
 
 class TraceServiceIntegrationTestSpec extends BaseIntegrationTestSpec {
 
-  describe("TraceReader.getFieldNames") {
+ describe("TraceReader.getFieldNames") {
     it("should return names of enabled fields") {
       Given("trace in cassandra and elasticsearch")
       val field1 = "abc"
@@ -327,6 +327,81 @@ class TraceServiceIntegrationTestSpec extends BaseIntegrationTestSpec {
 
       Then("should return the trace call graph")
       traceCallGraph.getCallsCount should be(3)
+    }
+  }
+
+  describe("TraceReader.getTraceCounts") {
+    it("should return trace counts histogram for given time span") {
+      Given("traces elasticsearch")
+      val serviceName = "dummy-servicename"
+      val operationName = "dummy-operationname"
+      val currentTimeMicros: Long = System.currentTimeMillis() * 1000
+      val randomStartTimes: Seq[Long] =
+        Seq(currentTimeMicros,
+          currentTimeMicros - (10 * 1000 * 1000),
+          currentTimeMicros - (20 * 1000 * 1000),
+          currentTimeMicros - (30 * 1000 * 1000))
+      val startTimeInMicroSec: Long = currentTimeMicros - (randomStartTimes.size * 10 * 1000 * 1000)
+      val endTimeInMicroSec: Long = currentTimeMicros
+      val intervalInMicroSec = endTimeInMicroSec - startTimeInMicroSec
+
+      randomStartTimes.foreach(startTime =>
+        putTraceInCassandraAndEs(serviceName = serviceName, operationName = operationName, startTime =  startTime, sleep = false))
+      Thread.sleep(5000)
+
+      When("calling getTraceCounts")
+      val traceCountsRequest = TraceCountsRequest
+        .newBuilder()
+        .addFields(Field.newBuilder().setName(TraceIndexDoc.SERVICE_KEY_NAME).setValue(serviceName).build())
+        .addFields(Field.newBuilder().setName(TraceIndexDoc.OPERATION_KEY_NAME).setValue(operationName).build())
+        .setStartTime(startTimeInMicroSec)
+        .setEndTime(endTimeInMicroSec)
+        .setInterval(intervalInMicroSec)
+        .build()
+
+      val traceCounts = client.getTraceCounts(traceCountsRequest)
+
+      Then("should return possible values for given field")
+      traceCounts should not be None
+      traceCounts.getTraceCountCount shouldEqual 1
+      traceCounts.getTraceCount(0).getCount shouldEqual randomStartTimes.size
+    }
+
+    it("should return trace counts histogram for given time span for multiple buckets") {
+      Given("traces elasticsearch")
+      val serviceName = "dummy-servicename-for-count"
+      val operationName = "dummy-operationname-for-count"
+      val currentTimeMicros: Long = System.currentTimeMillis() * 1000
+
+      val bucketCount = 5
+      val bucketTimeInMicros = 10 * 1000 * 1000
+      val tracesPerBucket = 10
+      val startTimeInMicroSec: Long = currentTimeMicros - bucketCount * bucketTimeInMicros
+
+      (startTimeInMicroSec until currentTimeMicros by bucketTimeInMicros)
+        .foreach(bucketStartTime =>
+          (1 to tracesPerBucket)
+            .foreach((_) =>
+              putTraceInCassandraAndEs(serviceName = serviceName, operationName = operationName, startTime =  bucketStartTime + 1000 * 1000, sleep = false)))
+      Thread.sleep(5000)
+
+      When("calling getTraceCounts")
+      val traceCountsRequest = TraceCountsRequest
+        .newBuilder()
+        .addFields(Field.newBuilder().setName(TraceIndexDoc.SERVICE_KEY_NAME).setValue(serviceName).build())
+        .addFields(Field.newBuilder().setName(TraceIndexDoc.OPERATION_KEY_NAME).setValue(operationName).build())
+        .setStartTime(startTimeInMicroSec)
+        .setEndTime(currentTimeMicros)
+        .setInterval(bucketTimeInMicros)
+        .build()
+
+      val traceCounts = client.getTraceCounts(traceCountsRequest)
+
+      Then("should return possible values for given field")
+      traceCounts should not be None
+      traceCounts.getTraceCountCount shouldEqual bucketCount
+      traceCounts.getTraceCount(0).getCount shouldEqual tracesPerBucket
+      traceCounts.getTraceCount(bucketCount - 1).getCount shouldEqual tracesPerBucket
     }
   }
 }

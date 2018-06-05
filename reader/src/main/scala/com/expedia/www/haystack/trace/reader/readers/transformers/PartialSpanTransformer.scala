@@ -17,7 +17,7 @@
 package com.expedia.www.haystack.trace.reader.readers.transformers
 
 import com.expedia.open.tracing.{Span, Tag}
-import com.expedia.www.haystack.trace.reader.readers.utils.{AuxiliaryTags, PartialSpanMarkers, PartialSpanUtils}
+import com.expedia.www.haystack.trace.reader.readers.utils.{AuxiliaryTags, SpanMarkers, SpanUtils}
 import com.expedia.www.haystack.trace.reader.readers.utils.TagBuilders.{buildBoolTag, buildLongTag, buildStringTag}
 import com.expedia.www.haystack.trace.reader.readers.utils.TagExtractors.extractTagStringValue
 
@@ -36,8 +36,8 @@ class PartialSpanTransformer extends TraceTransformer {
   }
 
   private def mergeSpans(spans: Seq[Span]): Span = {
-    val serverSpanOptional = collapseSpans(spans.filter(PartialSpanUtils.containsServerLogTag))
-    val clientSpanOptional = collapseSpans(spans.filter(PartialSpanUtils.containsClientLogTag))
+    val serverSpanOptional = collapseSpans(spans.filter(SpanUtils.containsServerLogTag))
+    val clientSpanOptional = collapseSpans(spans.filter(SpanUtils.containsClientLogTag))
 
     (clientSpanOptional, serverSpanOptional) match {
       // ideally there should be one server and one client span
@@ -91,8 +91,8 @@ class PartialSpanTransformer extends TraceTransformer {
   // Network delta - difference between server and client duration
   // calculate only if serverDuration is smaller then client
   private def calculateNetworkDelta(clientSpan: Span, serverSpan: Span): Option[Long] = {
-    val clientDuration = PartialSpanUtils.getEventTimestamp(clientSpan, PartialSpanMarkers.CLIENT_RECV_EVENT) - PartialSpanUtils.getEventTimestamp(clientSpan, PartialSpanMarkers.CLIENT_SEND_EVENT)
-    val serverDuration = PartialSpanUtils.getEventTimestamp(serverSpan, PartialSpanMarkers.SERVER_SEND_EVENT) - PartialSpanUtils.getEventTimestamp(serverSpan, PartialSpanMarkers.SERVER_RECV_EVENT)
+    val clientDuration = SpanUtils.getEventTimestamp(clientSpan, SpanMarkers.CLIENT_RECV_EVENT) - SpanUtils.getEventTimestamp(clientSpan, SpanMarkers.CLIENT_SEND_EVENT)
+    val serverDuration = SpanUtils.getEventTimestamp(serverSpan, SpanMarkers.SERVER_SEND_EVENT) - SpanUtils.getEventTimestamp(serverSpan, SpanMarkers.SERVER_RECV_EVENT)
 
     // difference of duration of spans
     if (serverDuration < clientDuration) {

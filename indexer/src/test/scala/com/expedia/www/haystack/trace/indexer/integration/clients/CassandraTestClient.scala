@@ -40,8 +40,8 @@ class CassandraTestClient {
   private val metadataSchema = Some("CREATE KEYSPACE IF NOT EXISTS haystack_metadata WITH REPLICATION = { 'class': 'SimpleStrategy', 'replication_factor' : 1} AND durable_writes = false;\n\nCREATE TABLE haystack_metadata.services (\nservice_name varchar,\noperation_name varchar,\nts timestamp,\nPRIMARY KEY ((service_name), operation_name)\n) WITH CLUSTERING ORDER BY (operation_name ASC);\n\nALTER TABLE haystack_metadata.services WITH compaction = { 'class' :  'DateTieredCompactionStrategy'  };")
 
   def prepare(): Unit = {
-    cassandraSession.execute(new SimpleStatement(s"DROP KEYSPACE  $KEYSPACE IF EXISTS"))
-    cassandraSession.execute(new SimpleStatement(s"DROP KEYSPACE $SERVICES_METADATA_KEYSPACE IF EXISTS"))
+    cassandraSession.execute(new SimpleStatement(s"DROP KEYSPACE IF EXISTS $KEYSPACE"))
+    cassandraSession.execute(new SimpleStatement(s"DROP KEYSPACE IF EXISTS $SERVICES_METADATA_KEYSPACE"))
   }
 
   def buildServiceMetadataConfig: ServiceMetadataWriteConfiguration = {

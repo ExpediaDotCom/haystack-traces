@@ -20,7 +20,7 @@ package com.expedia.www.haystack.trace.indexer.integration.clients
 import com.datastax.driver.core.{Cluster, ConsistencyLevel, SimpleStatement}
 import com.expedia.open.tracing.buffer.SpanBuffer
 import com.expedia.www.haystack.commons.retries.RetryOperation
-`import com.expedia.www.haystack.trace.commons.config.entities.{CassandraConfiguration, KeyspaceConfiguration, SocketConfiguration}
+import com.expedia.www.haystack.trace.commons.config.entities.{CassandraConfiguration, KeyspaceConfiguration, SocketConfiguration}
 import com.expedia.www.haystack.trace.indexer.config.entities.{CassandraWriteConfiguration, ServiceMetadataWriteConfiguration}
 
 import scala.collection.JavaConverters._

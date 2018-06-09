@@ -38,6 +38,8 @@ class CassandraTraceWriter(cassandra: CassandraSession,
 
   private val LOGGER = LoggerFactory.getLogger(classOf[CassandraTraceWriter])
 
+  cassandra.ensureKeyspace(config.clientConfig.tracesKeyspace)
+
   private val writeTimer = metricRegistry.timer(AppMetricNames.CASSANDRA_WRITE_TIME)
   private val writeFailures = metricRegistry.meter(AppMetricNames.CASSANDRA_WRITE_FAILURE)
 
@@ -46,7 +48,6 @@ class CassandraTraceWriter(cassandra: CassandraSession,
   // this semaphore controls the parallel writes to cassandra
   private val inflightRequestsSemaphore = new Semaphore(config.maxInFlightRequests, true)
 
-  cassandra.ensureKeyspace(config.clientConfig.tracesKeyspace)
 
   private def execute(traceId: String, packedSpanBuffer: PackedMessage[SpanBuffer]): Unit = {
     // execute the request async with retry

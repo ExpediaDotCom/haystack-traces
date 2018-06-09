@@ -124,7 +124,7 @@ class CassandraEsTraceStore(cassandraConfig: CassandraConfiguration,
     // create an ES Count query for all of them
     // trigger ES Count request for each bucket, it will return CountResult
     val traceCountFutures: Seq[Future[TraceCount]] =
-      for (startTime <- request.getStartTime to request.getEndTime by request.getInterval)
+      for (startTime <- request.getStartTime until request.getEndTime by request.getInterval)
       yield esReader
         .count(traceCountsQueryGenerator.generate(request, startTime))
         .map(mapCountResultToTraceCount(startTime, _))

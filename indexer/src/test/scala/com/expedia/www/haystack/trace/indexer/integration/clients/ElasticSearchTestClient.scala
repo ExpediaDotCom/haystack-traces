@@ -21,19 +21,20 @@ import java.text.SimpleDateFormat
 import java.util.Date
 
 import com.expedia.www.haystack.commons.retries.RetryOperation
-import com.expedia.www.haystack.trace.commons.config.entities.{WhiteListIndexFields, WhitelistIndexField, WhitelistIndexFieldConfiguration}
+import com.expedia.www.haystack.trace.commons.config.entities.{IndexFieldType, WhiteListIndexFields, WhitelistIndexField, WhitelistIndexFieldConfiguration}
 import com.expedia.www.haystack.trace.indexer.config.entities.ElasticSearchConfiguration
 import io.searchbox.client.config.HttpClientConfig
 import io.searchbox.client.{JestClient, JestClientFactory}
 import io.searchbox.core.Search
 import io.searchbox.indices.DeleteIndex
-import org.json4s.DefaultFormats
+import org.json4s.ext.EnumNameSerializer
 import org.json4s.jackson.Serialization
+import org.json4s.{DefaultFormats, Formats}
 
 case class EsSourceDocument(traceid: String)
 
 class ElasticSearchTestClient {
-  implicit val formats = DefaultFormats
+  protected implicit val formats: Formats = DefaultFormats + new EnumNameSerializer(IndexFieldType)
 
   private val ELASTIC_SEARCH_ENDPOINT = "http://elasticsearch:9200"
   private val INDEX_NAME_PREFIX = "haystack-traces"
@@ -79,7 +80,7 @@ class ElasticSearchTestClient {
   def indexingConfig: WhitelistIndexFieldConfiguration = {
     val cfg = WhitelistIndexFieldConfiguration()
     val cfgJsonData = Serialization.write(WhiteListIndexFields(
-      List(WhitelistIndexField(name = "role", `type` = "string"), WhitelistIndexField(name = "errorcode", `type` = "long"))))
+      List(WhitelistIndexField(name = "role", `type` = IndexFieldType.string, aliases = Set("_role")), WhitelistIndexField(name = "errorcode", `type` = IndexFieldType.long))))
     cfg.onReload(cfgJsonData)
     cfg
   }

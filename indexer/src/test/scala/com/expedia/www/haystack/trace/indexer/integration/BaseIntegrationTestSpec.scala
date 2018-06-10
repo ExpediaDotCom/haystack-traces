@@ -86,7 +86,7 @@ abstract class BaseIntegrationTestSpec extends WordSpec with GivenWhenThen with 
       .setOperationName(operationName)
       .setStartTime(System.currentTimeMillis())
       .addTags(Tag.newBuilder().setKey("errorCode").setType(TagType.LONG).setVLong(404))
-      .addTags(Tag.newBuilder().setKey("role").setType(TagType.STRING).setVStr("haystack"))
+      .addTags(Tag.newBuilder().setKey("_role").setType(TagType.STRING).setVStr("haystack"))
       .addLogs(Log.newBuilder().addFields(Tag.newBuilder().setKey("exceptiontype").setType(TagType.STRING).setVStr("external").build()).build())
       .build()
   }
@@ -137,7 +137,14 @@ abstract class BaseIntegrationTestSpec extends WordSpec with GivenWhenThen with 
     verifyServices()
   }
 
-  def verifyServices(): Unit = cassandra.queryServices().foreach(println)
+  def verifyServices(): Unit = {
+    val serviceMetadataRows = cassandra.queryServices()
+    serviceMetadataRows.size should be >=5
+    serviceMetadataRows.indices foreach { idx =>
+      val row = serviceMetadataRows.find(_.serviceName == s"service$idx").get
+      row.operationName shouldEqual s"op$idx"
+    }
+  }
 
   def verifyElasticSearchWrites(traceIds: Seq[String]): Unit = {
     val matchAllQuery =
@@ -255,6 +262,45 @@ abstract class BaseIntegrationTestSpec extends WordSpec with GivenWhenThen with 
                       |}}}
                     """.stripMargin
     docs = elastic.query(tagQuery)
+    docs.size shouldBe traceIds.size
+    docs.map(_.traceid) should contain theSameElementsAs traceIds
+
+
+    val roleTagQuery =  """
+                      |{
+                      |  "query": {
+                      |    "bool": {
+                      |      "must": [
+                      |        {
+                      |          "nested": {
+                      |            "path": "spans",
+                      |            "query": {
+                      |              "bool": {
+                      |                "must": [
+                      |                  {
+                      |                    "match": {
+                      |                      "spans.servicename": "service2"
+                      |                    }
+                      |                  },
+                      |                  {
+                      |                    "match": {
+                      |                      "spans.operationname": "op2"
+                      |                    }
+                      |                  },
+                      |                  {
+                      |                    "match": {
+                      |                      "spans.role": "haystack"
+                      |                    }
+                      |                  }
+                      |                ]
+                      |              }
+                      |            }
+                      |          }
+                      |        }
+                      |      ]
+                      |}}}
+                    """.stripMargin
+    docs = elastic.query(roleTagQuery)
     docs.size shouldBe traceIds.size
     docs.map(_.traceid) should contain theSameElementsAs traceIds
   }

@@ -22,7 +22,8 @@ import com.expedia.open.tracing.{Span, Tag}
 import com.expedia.www.haystack.commons.metrics.MetricsSupport
 import com.expedia.www.haystack.trace.commons.clients.es.document.TraceIndexDoc
 import com.expedia.www.haystack.trace.commons.clients.es.document.TraceIndexDoc.{OPERATION_KEY_NAME, SERVICE_KEY_NAME, TagValue}
-import com.expedia.www.haystack.trace.commons.config.entities.WhitelistIndexFieldConfiguration
+import com.expedia.www.haystack.trace.commons.config.entities.IndexFieldType.IndexFieldType
+import com.expedia.www.haystack.trace.commons.config.entities.{IndexFieldType, WhitelistIndexFieldConfiguration}
 import org.apache.commons.lang3.StringUtils
 
 import scala.collection.JavaConverters._
@@ -88,7 +89,7 @@ class IndexDocumentGenerator(config: WhitelistIndexFieldConfiguration) extends M
          indexField = config.indexFieldMap.get(normalizedTagKey); if indexField != null && indexField.enabled;
          v = readTagValue(tag);
          indexableValue = transformValueForIndexing(indexField.`type`, v); if indexableValue.isDefined) {
-      append(normalizedTagKey, indexableValue)
+      append(indexField.name, indexableValue)
     }
 
     import com.expedia.www.haystack.trace.commons.clients.es.document.TraceIndexDoc._
@@ -106,12 +107,12 @@ class IndexDocumentGenerator(config: WhitelistIndexFieldConfiguration) extends M
     * @param value tag value
     * @return tag value with adjusted(expected) type
     */
-  private def transformValueForIndexing(fieldType: String, value: TagValue): Option[TagValue] = {
+  private def transformValueForIndexing(fieldType: IndexFieldType, value: TagValue): Option[TagValue] = {
     Try (fieldType match {
-      case "string" => value.toString
-      case "long" | "int" => value.toString.toLong
-      case "bool" => value.toString.toBoolean
-      case "double" => value.toString.toDouble
+      case IndexFieldType.string => value.toString
+      case IndexFieldType.long | IndexFieldType.int => value.toString.toLong
+      case IndexFieldType.bool => value.toString.toBoolean
+      case IndexFieldType.double => value.toString.toDouble
       case _ => value
     }) match {
       case Success(result) => Some(result)

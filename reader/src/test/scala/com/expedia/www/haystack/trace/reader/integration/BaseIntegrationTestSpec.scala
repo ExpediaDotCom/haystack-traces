@@ -23,13 +23,13 @@ import java.util.{Date, UUID}
 
 import com.datastax.driver.core.querybuilder.QueryBuilder
 import com.datastax.driver.core.{Cluster, ResultSet, Session, SimpleStatement}
-import com.expedia.open.tracing.{Log, Span}
+import com.expedia.open.tracing.Span
 import com.expedia.open.tracing.api.TraceReaderGrpc
 import com.expedia.open.tracing.api.TraceReaderGrpc.TraceReaderBlockingStub
 import com.expedia.open.tracing.buffer.SpanBuffer
 import com.expedia.www.haystack.trace.commons.clients.cassandra.CassandraTableSchema
 import com.expedia.www.haystack.trace.commons.clients.es.document.TraceIndexDoc
-import com.expedia.www.haystack.trace.commons.config.entities.{WhiteListIndexFields, WhitelistIndexField}
+import com.expedia.www.haystack.trace.commons.config.entities.{IndexFieldType, WhiteListIndexFields, WhitelistIndexField}
 import com.expedia.www.haystack.trace.reader.Service
 import com.expedia.www.haystack.trace.reader.unit.readers.builders.ValidTraceBuilder
 import io.grpc.ManagedChannelBuilder
@@ -37,15 +37,16 @@ import io.searchbox.client.config.HttpClientConfig
 import io.searchbox.client.{JestClient, JestClientFactory}
 import io.searchbox.core.Index
 import io.searchbox.indices.CreateIndex
-import org.json4s.DefaultFormats
+import org.json4s.ext.EnumNameSerializer
 import org.json4s.jackson.Serialization
+import org.json4s.{DefaultFormats, Formats}
 import org.scalatest._
 
-import collection.JavaConverters._
+import scala.collection.JavaConverters._
 import scala.collection.mutable
 
 trait BaseIntegrationTestSpec extends FunSpec with GivenWhenThen with Matchers with BeforeAndAfterAll with BeforeAndAfterEach with ValidTraceBuilder {
-  protected implicit val formats = DefaultFormats
+  protected implicit val formats: Formats = DefaultFormats + new EnumNameSerializer(IndexFieldType)
   protected var client: TraceReaderBlockingStub = _
 
   private val CASSANDRA_ENDPOINT = "cassandra"
@@ -223,7 +224,7 @@ trait BaseIntegrationTestSpec extends FunSpec with GivenWhenThen with Matchers w
   }
 
   protected def putWhitelistIndexFieldsInEs(fields: List[String]): Unit = {
-    val whitelistFields = for(field <- fields) yield WhitelistIndexField(field, "string")
+    val whitelistFields = for(field <- fields) yield WhitelistIndexField(field, IndexFieldType.string)
     esClient.execute(new Index.Builder(Serialization.write(WhiteListIndexFields(whitelistFields)))
       .index(ELASTIC_SEARCH_WHITELIST_INDEX)
       .`type`(ELASTIC_SEARCH_WHITELIST_TYPE)

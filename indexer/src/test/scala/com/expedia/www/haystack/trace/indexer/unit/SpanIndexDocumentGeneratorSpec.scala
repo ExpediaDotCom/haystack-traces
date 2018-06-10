@@ -19,15 +19,16 @@ package com.expedia.www.haystack.trace.indexer.unit
 
 import com.expedia.open.tracing.buffer.SpanBuffer
 import com.expedia.open.tracing.{Log, Span, Tag}
-import com.expedia.www.haystack.trace.commons.config.entities.{WhiteListIndexFields, WhitelistIndexField, WhitelistIndexFieldConfiguration}
+import com.expedia.www.haystack.trace.commons.config.entities.{WhiteListIndexFields, IndexFieldType, WhitelistIndexField, WhitelistIndexFieldConfiguration}
 import com.expedia.www.haystack.trace.indexer.writers.es.IndexDocumentGenerator
 import com.google.protobuf.ByteString
-import org.json4s.DefaultFormats
+import org.json4s.ext.EnumNameSerializer
 import org.json4s.jackson.Serialization
+import org.json4s.{DefaultFormats, Formats}
 import org.scalatest.{FunSpec, Matchers}
 
 class SpanIndexDocumentGeneratorSpec extends FunSpec with Matchers {
-  implicit val formats = DefaultFormats
+  protected implicit val formats: Formats = DefaultFormats + new EnumNameSerializer(IndexFieldType)
 
   val TRACE_ID = "trace_id"
   describe("Span to IndexDocument Generator") {
@@ -77,8 +78,8 @@ class SpanIndexDocumentGeneratorSpec extends FunSpec with Matchers {
 
     it ("should extract tags along with serviceName, operationName and duration and create json document for indexing") {
       val indexableTags = List(
-        WhitelistIndexField(name = "role", `type` = "string"),
-        WhitelistIndexField(name = "errorCode", `type` = "long"))
+        WhitelistIndexField(name = "role", `type` = IndexFieldType.string),
+        WhitelistIndexField(name = "errorCode", `type` = IndexFieldType.long))
 
       val whitelistConfig = WhitelistIndexFieldConfiguration()
       whitelistConfig.onReload(Serialization.write(WhiteListIndexFields(indexableTags)))
@@ -114,13 +115,13 @@ class SpanIndexDocumentGeneratorSpec extends FunSpec with Matchers {
 
       val spanBuffer = SpanBuffer.newBuilder().addChildSpans(span_1).addChildSpans(span_2).addChildSpans(span_3).setTraceId(TRACE_ID).build()
       val doc = generator.createIndexDocument(TRACE_ID, spanBuffer).get
-      doc.json shouldBe "{\"traceid\":\"trace_id\",\"rootduration\":0,\"spans\":[{\"role\":[\"haystack\"],\"servicename\":\"service1\",\"starttime\":[900],\"duration\":[100],\"operationname\":\"op1\"},{\"role\":[\"haystack\"],\"servicename\":\"service1\",\"starttime\":[900],\"errorcode\":[3],\"duration\":[200],\"operationname\":\"op2\"},{\"servicename\":\"service2\",\"starttime\":[100],\"errorcode\":[3],\"duration\":[1000],\"operationname\":\"op3\"}]}"
+      doc.json shouldBe "{\"traceid\":\"trace_id\",\"rootduration\":0,\"spans\":[{\"role\":[\"haystack\"],\"servicename\":\"service1\",\"starttime\":[900],\"duration\":[100],\"operationname\":\"op1\"},{\"role\":[\"haystack\"],\"errorCode\":[3],\"servicename\":\"service1\",\"starttime\":[900],\"duration\":[200],\"operationname\":\"op2\"},{\"errorCode\":[3],\"servicename\":\"service2\",\"starttime\":[100],\"duration\":[1000],\"operationname\":\"op3\"}]}"
     }
 
     it ("should respect enabled flag of tags create right json document for indexing") {
       val indexableTags = List(
-        WhitelistIndexField(name = "role", `type` = "string", enabled = false),
-        WhitelistIndexField(name = "errorCode", `type` = "long"))
+        WhitelistIndexField(name = "role", IndexFieldType.string, enabled = false),
+        WhitelistIndexField(name = "errorCode", `type` = IndexFieldType.long))
       val whitelistConfig = WhitelistIndexFieldConfiguration()
       whitelistConfig.onReload(Serialization.write(WhiteListIndexFields(indexableTags)))
       val generator = new IndexDocumentGenerator(whitelistConfig)
@@ -147,12 +148,12 @@ class SpanIndexDocumentGeneratorSpec extends FunSpec with Matchers {
 
       val spanBuffer = SpanBuffer.newBuilder().addChildSpans(span_1).addChildSpans(span_2).setTraceId(TRACE_ID).build()
       val doc = generator.createIndexDocument(TRACE_ID, spanBuffer).get
-      doc.json shouldBe "{\"traceid\":\"trace_id\",\"rootduration\":0,\"spans\":[{\"servicename\":\"service1\",\"starttime\":[600],\"duration\":[100],\"operationname\":\"op1\"},{\"servicename\":\"service1\",\"starttime\":[600],\"errorcode\":[3],\"duration\":[200],\"operationname\":\"op2\"}]}"
+      doc.json shouldBe "{\"traceid\":\"trace_id\",\"rootduration\":0,\"spans\":[{\"servicename\":\"service1\",\"starttime\":[600],\"duration\":[100],\"operationname\":\"op1\"},{\"errorCode\":[3],\"servicename\":\"service1\",\"starttime\":[600],\"duration\":[200],\"operationname\":\"op2\"}]}"
     }
 
     it ("one more test to verify the tags are indexed") {
       val indexableTags = List(
-        WhitelistIndexField(name = "errorCode", `type` = "long"))
+        WhitelistIndexField(name = "errorCode", `type` = IndexFieldType.long))
       val whitelistConfig = WhitelistIndexFieldConfiguration()
       whitelistConfig.onReload(Serialization.write(WhiteListIndexFields(indexableTags)))
       val generator = new IndexDocumentGenerator(whitelistConfig)
@@ -177,13 +178,13 @@ class SpanIndexDocumentGeneratorSpec extends FunSpec with Matchers {
 
       val spanBuffer = SpanBuffer.newBuilder().addChildSpans(span_1).addChildSpans(span_2).setTraceId(TRACE_ID).build()
       val doc = generator.createIndexDocument(TRACE_ID, spanBuffer).get
-      doc.json shouldBe "{\"traceid\":\"trace_id\",\"rootduration\":0,\"spans\":[{\"servicename\":\"service1\",\"starttime\":[0],\"errorcode\":[5],\"duration\":[100],\"operationname\":\"op1\"},{\"servicename\":\"service1\",\"starttime\":[0],\"errorcode\":[3],\"duration\":[200],\"operationname\":\"op2\"}]}"
+      doc.json shouldBe "{\"traceid\":\"trace_id\",\"rootduration\":0,\"spans\":[{\"errorCode\":[5],\"servicename\":\"service1\",\"starttime\":[0],\"duration\":[100],\"operationname\":\"op1\"},{\"errorCode\":[3],\"servicename\":\"service1\",\"starttime\":[0],\"duration\":[200],\"operationname\":\"op2\"}]}"
     }
 
     it ("should extract unique tag values along with serviceName, operationName and duration and create json document for indexing") {
       val indexableTags = List(
-        WhitelistIndexField(name = "role", `type` = "string"),
-        WhitelistIndexField(name = "errorCode", `type` = "long"))
+        WhitelistIndexField(name = "role", `type` = IndexFieldType.string),
+        WhitelistIndexField(name = "errorCode", `type` = IndexFieldType.long))
       val whitelistConfig = WhitelistIndexFieldConfiguration()
       whitelistConfig.onReload(Serialization.write(WhiteListIndexFields(indexableTags)))
       val generator = new IndexDocumentGenerator(whitelistConfig)
@@ -208,14 +209,14 @@ class SpanIndexDocumentGeneratorSpec extends FunSpec with Matchers {
 
       val spanBuffer = SpanBuffer.newBuilder().addChildSpans(span_1).addChildSpans(span_2).setTraceId(TRACE_ID).build()
       val doc = generator.createIndexDocument(TRACE_ID, spanBuffer).get
-      doc.json shouldBe "{\"traceid\":\"trace_id\",\"rootduration\":0,\"spans\":[{\"role\":[\"haystack\"],\"servicename\":\"service1\",\"starttime\":[0],\"duration\":[100],\"operationname\":\"op1\"},{\"servicename\":\"service1\",\"starttime\":[0],\"errorcode\":[3],\"duration\":[200],\"operationname\":\"op2\"}]}"
+      doc.json shouldBe "{\"traceid\":\"trace_id\",\"rootduration\":0,\"spans\":[{\"role\":[\"haystack\"],\"servicename\":\"service1\",\"starttime\":[0],\"duration\":[100],\"operationname\":\"op1\"},{\"errorCode\":[3],\"servicename\":\"service1\",\"starttime\":[0],\"duration\":[200],\"operationname\":\"op2\"}]}"
     }
 
     it ("should extract tags, log values along with serviceName, operationName and duration and create json document for indexing") {
       val indexableTags = List(
-        WhitelistIndexField(name = "role", `type` = "string"),
-        WhitelistIndexField(name = "errorCode", `type` = "long"),
-        WhitelistIndexField(name = "exception", `type` = "string"))
+        WhitelistIndexField(name = "role", `type` = IndexFieldType.string),
+        WhitelistIndexField(name = "errorCode", `type` = IndexFieldType.long),
+        WhitelistIndexField(name = "exception", `type` = IndexFieldType.string))
 
       val whitelistConfig = WhitelistIndexFieldConfiguration()
       whitelistConfig.onReload(Serialization.write(WhiteListIndexFields(indexableTags)))
@@ -251,14 +252,14 @@ class SpanIndexDocumentGeneratorSpec extends FunSpec with Matchers {
 
       val spanBuffer = SpanBuffer.newBuilder().addChildSpans(span_1).addChildSpans(span_2).setTraceId(TRACE_ID).build()
       val doc = generator.createIndexDocument(TRACE_ID, spanBuffer).get
-      doc.json shouldBe "{\"traceid\":\"trace_id\",\"rootduration\":0,\"spans\":[{\"role\":[\"haystack\"],\"servicename\":\"service1\",\"starttime\":[400],\"duration\":[100],\"operationname\":\"op1\"},{\"servicename\":\"service1\",\"starttime\":[400],\"errorcode\":[3],\"duration\":[200],\"operationname\":\"op2\"}]}"
+      doc.json shouldBe "{\"traceid\":\"trace_id\",\"rootduration\":0,\"spans\":[{\"role\":[\"haystack\"],\"servicename\":\"service1\",\"starttime\":[400],\"duration\":[100],\"operationname\":\"op1\"},{\"errorCode\":[3],\"servicename\":\"service1\",\"starttime\":[400],\"duration\":[200],\"operationname\":\"op2\"}]}"
     }
 
     it("should transform the tags for all data types like bool, long, double to string type") {
       val indexableTags = List(
-        WhitelistIndexField(name = "errorCode", `type` = "string"),
-        WhitelistIndexField(name = "isErrored", `type` = "string"),
-        WhitelistIndexField(name = "exception", `type` = "string"))
+        WhitelistIndexField(name = "errorCode", `type` = IndexFieldType.string),
+        WhitelistIndexField(name = "isErrored", `type` = IndexFieldType.string),
+        WhitelistIndexField(name = "exception", `type` = IndexFieldType.string))
       val whitelistConfig = WhitelistIndexFieldConfiguration()
       whitelistConfig.onReload(Serialization.write(WhiteListIndexFields(indexableTags)))
       val generator = new IndexDocumentGenerator(whitelistConfig)
@@ -281,7 +282,7 @@ class SpanIndexDocumentGeneratorSpec extends FunSpec with Matchers {
       val spanBuffer = SpanBuffer.newBuilder().addChildSpans(span_1).setTraceId(TRACE_ID).build()
 
       val doc = generator.createIndexDocument(TRACE_ID, spanBuffer)
-      doc.get.json shouldEqual "{\"traceid\":\"trace_id\",\"rootduration\":0,\"spans\":[{\"servicename\":\"service1\",\"iserrored\":[\"true\"],\"starttime\":[400],\"errorcode\":[\"500\"],\"duration\":[100],\"operationname\":\"op1\"}]}"
+      doc.get.json shouldEqual "{\"traceid\":\"trace_id\",\"rootduration\":0,\"spans\":[{\"errorCode\":[\"500\"],\"servicename\":\"service1\",\"starttime\":[400],\"isErrored\":[\"true\"],\"duration\":[100],\"operationname\":\"op1\"}]}"
     }
   }
 }

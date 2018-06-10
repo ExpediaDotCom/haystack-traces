@@ -17,15 +17,17 @@
 package com.expedia.www.haystack.trace.reader.stores
 
 import com.expedia.open.tracing.api.{TraceCount, TraceCounts}
-import io.searchbox.core.{Count, CountResult, SearchResult}
+import com.expedia.www.haystack.trace.commons.config.entities.IndexFieldType
+import io.searchbox.core.{CountResult, SearchResult}
+import org.json4s.ext.EnumNameSerializer
 import org.json4s.jackson.JsonMethods.parse
+import org.json4s.{DefaultFormats, Formats}
 
 import scala.collection.JavaConverters._
 import scala.concurrent.Future
-import org.json4s.DefaultFormats
 
 trait ResponseParser {
-  implicit val formats = DefaultFormats
+  protected implicit val formats: Formats = DefaultFormats + new EnumNameSerializer(IndexFieldType)
 
   private val ES_FIELD_AGGREGATIONS = "aggregations"
   private val ES_FIELD_BUCKETS = "buckets"

@@ -19,19 +19,20 @@ package com.expedia.www.haystack.trace.reader.unit.stores.readers.es.query
 
 import com.codahale.metrics.{Meter, Timer}
 import com.expedia.open.tracing.api.{Field, TracesSearchRequest}
-import com.expedia.www.haystack.trace.commons.config.entities.WhitelistIndexFieldConfiguration
+import com.expedia.www.haystack.trace.commons.config.entities.{IndexFieldType, WhitelistIndexFieldConfiguration}
 import com.expedia.www.haystack.trace.reader.exceptions.ElasticSearchClientError
 import com.expedia.www.haystack.trace.reader.stores.readers.es.ElasticSearchReadResultListener
 import com.expedia.www.haystack.trace.reader.stores.readers.es.query.TraceSearchQueryGenerator
 import com.expedia.www.haystack.trace.reader.unit.BaseUnitTestSpec
 import io.searchbox.core.SearchResult
 import org.easymock.EasyMock
-import org.json4s.DefaultFormats
+import org.json4s.ext.EnumNameSerializer
+import org.json4s.{DefaultFormats, Formats}
 
 import scala.concurrent.Promise
 
 class ElasticSearchReadResultListenerSpec extends BaseUnitTestSpec {
-  implicit val formats = DefaultFormats
+  protected implicit val formats: Formats = DefaultFormats + new EnumNameSerializer(IndexFieldType)
 
   val ES_INDEX_HOUR_BUCKET = 6
   val ES_INDEX_HOUR_TTL = 72

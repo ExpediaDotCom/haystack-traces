@@ -47,11 +47,12 @@ class WhitelistIndexFieldConfigurationSpec extends FunSpec with Matchers {
       config.whitelistIndexFields should contain allOf(whitelistField_1, whitelistField_2)
       config.indexFieldMap.size() shouldBe 2
       config.indexFieldMap should contain allOf(Entry(whitelistField_1.name, whitelistField_1), Entry(whitelistField_2.name, whitelistField_2))
+      config.globalTraceContextIndexFieldNames.size shouldBe 0
 
       val whitelistField_3 = WhitelistIndexField(name = "status", `type` = IndexFieldType.string, aliases = Set("_status"))
-      val whitelistField_4 = WhitelistIndexField(name = "something", `type` = IndexFieldType.long)
+      val whitelistField_4 = WhitelistIndexField(name = "something", `type` = IndexFieldType.long, searchContext = "trace")
 
-      val newCfgJsonData = Serialization.write(WhiteListIndexFields(List(whitelistField_4, whitelistField_1, whitelistField_3)))
+      val newCfgJsonData = Serialization.write(WhiteListIndexFields(List(whitelistField_1, whitelistField_3, whitelistField_4)))
       config.onReload(newCfgJsonData)
 
       config.whitelistIndexFields.size shouldBe 4
@@ -64,6 +65,9 @@ class WhitelistIndexFieldConfigurationSpec extends FunSpec with Matchers {
       config.whitelistIndexFields should contain allOf(whitelistField_1, whitelistField_3, whitelistField_4)
       config.indexFieldMap.size() shouldBe 4
       config.indexFieldMap should contain allOf(Entry(whitelistField_1.name, whitelistField_1), Entry(whitelistField_3.name, whitelistField_3), Entry("_status", whitelistField_3), Entry(whitelistField_4.name, whitelistField_4))
+
+      config.globalTraceContextIndexFieldNames.size shouldBe 1
+      config.globalTraceContextIndexFieldNames.head shouldEqual "something"
     }
   }
 }

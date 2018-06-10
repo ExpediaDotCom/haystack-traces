@@ -94,7 +94,7 @@ class CassandraEsTraceStore(cassandraConfig: CassandraConfiguration,
   }
 
   override def getFieldNames(): Future[Seq[String]] = {
-    Future.successful(indexConfig.whitelistIndexFields.map(_.name))
+    Future.successful(indexConfig.whitelistIndexFields.map(_.name).distinct.sorted)
   }
 
   private def readFromServiceMetadata(request: FieldValuesRequest): Option[Future[Seq[String]]] = {

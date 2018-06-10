@@ -224,7 +224,7 @@ trait BaseIntegrationTestSpec extends FunSpec with GivenWhenThen with Matchers w
   }
 
   protected def putWhitelistIndexFieldsInEs(fields: List[String]): Unit = {
-    val whitelistFields = for(field <- fields) yield WhitelistIndexField(field, IndexFieldType.string)
+    val whitelistFields = for(field <- fields) yield WhitelistIndexField(field, IndexFieldType.string, aliases = Set(s"_$field"))
     esClient.execute(new Index.Builder(Serialization.write(WhiteListIndexFields(whitelistFields)))
       .index(ELASTIC_SEARCH_WHITELIST_INDEX)
       .`type`(ELASTIC_SEARCH_WHITELIST_TYPE)

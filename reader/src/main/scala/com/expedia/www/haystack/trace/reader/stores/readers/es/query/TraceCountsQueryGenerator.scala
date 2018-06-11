@@ -55,7 +55,7 @@ class TraceCountsQueryGenerator(indexNamePrefix: String,
     // create ES count query
     new Count.Builder()
       .query(countQueryString)
-      .addIndex(getESIndexes(request.getStartTime, request.getEndTime, indexNamePrefix, indexHourBucket, indexHourTtl).asJava)
+      .addIndex(getESIndexes(startTime, startTime + request.getInterval, indexNamePrefix, indexHourBucket, indexHourTtl).asJava)
       .addType(indexType)
       .build()
   }

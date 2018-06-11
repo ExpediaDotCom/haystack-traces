@@ -135,16 +135,14 @@ class ElasticSearchTestClient {
       |                },
       |                "starttime": {
       |                   "type": "long",
-      |                   "doc_values": true,
-      |                   "norms": false
+      |                   "doc_values": true
       |                },
       |                "spans": {
       |                    "type": "nested",
       |                    "properties": {
       |                        "starttime": {
       |                            "type": "long",
-      |                            "doc_values": true,
-      |                            "norms": false
+      |                            "doc_values": true
       |                        }
       |                    }
       |                }

@@ -16,6 +16,6 @@ object TraceIndexDoc {
   val START_TIME_KEY_NAME = "starttime"
 }
 
-case class TraceIndexDoc(traceid: String, rootduration: Long, spans: Seq[mutable.Map[String, Any]]) {
+case class TraceIndexDoc(traceid: String, rootduration: Long, starttime: Long, spans: Seq[mutable.Map[String, Any]]) {
   val json: String = Serialization.write(this)(TraceIndexDoc.formats)
 }

@@ -55,6 +55,32 @@ class TraceCountsQueryGeneratorSpec extends BaseUnitTestSpec {
       query.getURI.isEmpty should be(false)
     }
 
+    it("should generate valid search queries for bucketed search count") {
+      Given("a trace search request")
+      val serviceName = "svcName"
+      val operationName = "opName"
+      val startTimeInMicros = 1
+      val endTimeInMicros = 1527487220L * 1000 * 1000   // May 28, 2018 6:00:20 AM
+      val bucketStartTime = endTimeInMicros - (4 * 3600 * 1000 * 1000L) // May 28, 2018 4:00:20 AM
+      val interval = 60 * 1000 * 1000
+      val request = TraceCountsRequest
+        .newBuilder()
+        .addFields(Field.newBuilder().setName(TraceIndexDoc.SERVICE_KEY_NAME).setValue(serviceName).build())
+        .addFields(Field.newBuilder().setName(TraceIndexDoc.OPERATION_KEY_NAME).setValue(operationName).build())
+        .setStartTime(startTimeInMicros)
+        .setEndTime(endTimeInMicros)
+        .setInterval(interval)
+        .build()
+      val queryGenerator = new TraceCountsQueryGenerator(INDEX_NAME_PREFIX, `type`, ES_INDEX_HOUR_BUCKET, ES_INDEX_HOUR_TTL, "spans", new WhitelistIndexFieldConfiguration)
+
+      When("generating query")
+      val query = queryGenerator.generate(request, bucketStartTime)
+
+      Then("generate a valid query")
+      query.getURI.isEmpty should be(false)
+      query.getURI.contains("haystack-spans-2018-05-28-0") should be(true)
+    }
+
     it("should return a valid list of indexes for overlapping time range") {
       Given("starttime and endtime")
       val starttimeInMicros = 1527501725L * 1000 * 1000 // Monday, May 28, 2018 10:03:36 AM

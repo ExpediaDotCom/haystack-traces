@@ -84,7 +84,7 @@ abstract class BaseIntegrationTestSpec extends WordSpec with GivenWhenThen with 
       .setSpanId(spanId)
       .setServiceName(serviceName)
       .setOperationName(operationName)
-      .setStartTime(System.currentTimeMillis())
+      .setStartTime(System.currentTimeMillis() * 1000)
       .addTags(Tag.newBuilder().setKey("errorCode").setType(TagType.LONG).setVLong(404))
       .addTags(Tag.newBuilder().setKey("_role").setType(TagType.STRING).setVStr("haystack"))
       .addLogs(Log.newBuilder().addFields(Tag.newBuilder().setKey("exceptiontype").setType(TagType.STRING).setVStr("external").build()).build())

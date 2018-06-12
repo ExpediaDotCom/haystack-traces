@@ -70,7 +70,7 @@ class ElasticSearchReader(config: ElasticSearchConfiguration)(implicit val dispa
     val promise = Promise[CountResult]()
     val time = readTimer.time()
     try {
-      LOGGER.info("elastic count query requested: '{}'", request.toString)
+      LOGGER.info(s"elastic count query requested: ${request.toString}', query: '${request.getData(new Gson())}'")
       esClient.executeAsync(request, new ElasticSearchCountResultListener(request, promise, time, readFailures))
       promise.future
     } catch {

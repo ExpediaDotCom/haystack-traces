@@ -41,7 +41,16 @@ class IndexDocumentGenerator(config: WhitelistIndexFieldConfiguration) extends M
     // in an external database (outside this app boundary). However, the app periodically reads this whitelist config
     // and applies it to the new spans that are read.
     val spanIndices = mutable.ListBuffer[mutable.Map[String, Any]]()
+
+    var traceStartTime = Long.MaxValue
+    var rootDuration = 0l
+
     spanBuffer.getChildSpansList.asScala filter isValidForIndex foreach(span => {
+
+      // calculate the trace starttime based on the minimum starttime observed across all child spans.
+      traceStartTime = Math.min(traceStartTime, span.getStartTime)
+      if(span.getParentSpanId == null) rootDuration = span.getDuration
+
       val spanIndexDoc = spanIndices
         .find(sp => sp(OPERATION_KEY_NAME).equals(span.getOperationName) && sp(SERVICE_KEY_NAME).equals(span.getServiceName))
         .getOrElse({
@@ -53,21 +62,11 @@ class IndexDocumentGenerator(config: WhitelistIndexFieldConfiguration) extends M
         })
       updateSpanIndexDoc(spanIndexDoc, span)
     })
-    if (spanIndices.nonEmpty) Some(TraceIndexDoc(traceId, rootDuration(spanBuffer), spanIndices)) else None
+    if (spanIndices.nonEmpty) Some(TraceIndexDoc(traceId, rootDuration, traceStartTime, spanIndices)) else None
   }
 
   private def isValidForIndex(span: Span): Boolean = {
     StringUtils.isNotEmpty(span.getServiceName) && StringUtils.isNotEmpty(span.getOperationName)
-  }
-
-  // finds the amount of time it takes for one trace(span buffer) to complete.
-  // span buffer contains all the spans for a given TraceId
-  private def rootDuration(spanBuffer: SpanBuffer): Long = {
-    spanBuffer.getChildSpansList
-      .asScala
-      .find(sp => sp.getParentSpanId == null)
-      .map(_.getDuration)
-      .getOrElse(0L)
   }
 
   /**

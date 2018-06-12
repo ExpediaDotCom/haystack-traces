@@ -213,7 +213,7 @@ trait BaseIntegrationTestSpec extends FunSpec with GivenWhenThen with Matchers w
     tags.foreach(pair => fieldMap.put(pair._1.toLowerCase(), pair._2))
 
     // index the document
-    val result = esClient.execute(new Index.Builder(TraceIndexDoc(traceId, 0, Seq(fieldMap)).json)
+    val result = esClient.execute(new Index.Builder(TraceIndexDoc(traceId, 0, startTime, Seq(fieldMap)).json)
       .index(HAYSTACK_TRACES_INDEX)
       .`type`(SPANS_INDEX_TYPE)
       .build)

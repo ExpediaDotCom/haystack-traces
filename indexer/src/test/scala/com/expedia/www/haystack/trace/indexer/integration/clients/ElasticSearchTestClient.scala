@@ -133,20 +133,16 @@ class ElasticSearchTestClient {
       |                "traceid": {
       |                   "enabled": false
       |                },
+      |                "starttime": {
+      |                   "type": "long",
+      |                   "doc_values": true
+      |                },
       |                "spans": {
       |                    "type": "nested",
       |                    "properties": {
-      |                        "servicename": {
-      |                            "type": "keyword",
-      |                            "normalizer": "lowercase_normalizer",
-      |                            "doc_values": true,
-      |                            "norms": false
-      |                        },
-      |                        "operationname": {
-      |                            "type": "keyword",
-      |                            "normalizer": "lowercase_normalizer",
-      |                            "doc_values": true,
-      |                            "norms": false
+      |                        "starttime": {
+      |                            "type": "long",
+      |                            "doc_values": true
       |                        }
       |                    }
       |                }

@@ -43,7 +43,7 @@ class TraceCountsQueryGenerator(indexNamePrefix: String,
     // add filter for time bucket being searched
     // TODO move filter out of nested query
     query
-      .filter(nestedQuery(nestedDocName, rangeQuery(withBaseDoc(START_TIME_KEY_NAME))
+      .must(nestedQuery(nestedDocName, rangeQuery(withBaseDoc(START_TIME_KEY_NAME))
         .gte(startTime)
         .lte(startTime + request.getInterval), ScoreMode.None))
 

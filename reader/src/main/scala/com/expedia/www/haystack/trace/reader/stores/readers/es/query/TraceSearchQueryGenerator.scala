@@ -50,7 +50,7 @@ class TraceSearchQueryGenerator(indexNamePrefix: String,
     val query = createQuery(request.getFieldsList)
     // set time range window
     query
-      .filter(nestedQuery(nestedDocName, rangeQuery(withBaseDoc(START_TIME_KEY_NAME))
+      .must(nestedQuery(nestedDocName, rangeQuery(withBaseDoc(START_TIME_KEY_NAME))
         .gte(request.getStartTime)
         .lte(request.getEndTime), ScoreMode.None))
 

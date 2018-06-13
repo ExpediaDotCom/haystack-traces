@@ -66,11 +66,15 @@ class TraceSearchQueryGenerator(esConfig: ElasticSearchConfiguration,
             .gte(request.getStartTime)
             .lte(request.getEndTime), ScoreMode.None))
     }
-    
-    new SearchSourceBuilder()
-      .query(query)
-      .sort(new FieldSortBuilder(withBaseDoc(START_TIME_KEY_NAME)).order(SortOrder.DESC).setNestedPath(nestedDocName))
-      .size(request.getLimit)
-      .toString
+
+    val sortBuilder =
+      if(esConfig.useRootDocumentStartTime) {
+        new FieldSortBuilder(START_TIME_KEY_NAME).order(SortOrder.DESC)
+      }
+      else {
+        new FieldSortBuilder(withBaseDoc(START_TIME_KEY_NAME)).order(SortOrder.DESC).setNestedPath(nestedDocName)
+      }
+
+    new SearchSourceBuilder().query(query).sort(sortBuilder).size(request.getLimit).toString
   }
 }

@@ -19,6 +19,7 @@ package com.expedia.www.haystack.trace.reader.stores.readers.es.query
 import com.expedia.open.tracing.api.TracesSearchRequest
 import com.expedia.www.haystack.trace.commons.clients.es.document.TraceIndexDoc._
 import com.expedia.www.haystack.trace.commons.config.entities.WhitelistIndexFieldConfiguration
+import com.expedia.www.haystack.trace.reader.config.entities.ElasticSearchConfiguration
 import io.searchbox.core.Search
 import org.apache.lucene.search.join.ScoreMode
 import org.elasticsearch.index.query.QueryBuilders._
@@ -27,10 +28,7 @@ import org.elasticsearch.search.sort.{FieldSortBuilder, SortOrder}
 
 import scala.collection.JavaConverters._
 
-class TraceSearchQueryGenerator(indexNamePrefix: String,
-                                indexType: String,
-                                indexHourBucket: Int,
-                                indexHourTtl: Int,
+class TraceSearchQueryGenerator(esConfig: ElasticSearchConfiguration,
                                 nestedDocName: String,
                                 indexConfiguration: WhitelistIndexFieldConfiguration)
   extends QueryGenerator(nestedDocName, indexConfiguration) {
@@ -40,20 +38,35 @@ class TraceSearchQueryGenerator(indexNamePrefix: String,
     require(request.getEndTime > 0)
     require(request.getLimit > 0)
 
+    val targetIndicesToSearch = getESIndexes(
+      request.getStartTime,
+      request.getEndTime,
+      esConfig.indexNamePrefix,
+      esConfig.indexHourBucket,
+      esConfig.indexHourTtl).asJava
+
     new Search.Builder(buildQueryString(request))
-      .addIndex(getESIndexes(request.getStartTime, request.getEndTime, indexNamePrefix, indexHourBucket, indexHourTtl).asJava)
-      .addType(indexType)
+      .addIndex(targetIndicesToSearch)
+      .addType(esConfig.indexType)
       .build()
   }
 
   private def buildQueryString(request: TracesSearchRequest): String = {
     val query = createQuery(request.getFieldsList)
-    // set time range window
-    query
-      .must(nestedQuery(nestedDocName, rangeQuery(withBaseDoc(START_TIME_KEY_NAME))
-        .gte(request.getStartTime)
-        .lte(request.getEndTime), ScoreMode.None))
 
+    if(esConfig.useRootDocumentStartTime) {
+      query
+        .must(rangeQuery(START_TIME_KEY_NAME)
+          .gte(request.getStartTime)
+          .lte(request.getEndTime))
+    } else {
+      query.must(
+        nestedQuery(nestedDocName,
+          rangeQuery(withBaseDoc(START_TIME_KEY_NAME))
+            .gte(request.getStartTime)
+            .lte(request.getEndTime), ScoreMode.None))
+    }
+    
     new SearchSourceBuilder()
       .query(query)
       .sort(new FieldSortBuilder(withBaseDoc(START_TIME_KEY_NAME)).order(SortOrder.DESC).setNestedPath(nestedDocName))

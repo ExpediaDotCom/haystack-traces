@@ -37,7 +37,7 @@ class ResponseParserSpec extends BaseUnitTestSpec with ResponseParser {
 
       Then("generate a valid query")
       traceCounts should not be None
-      traceCounts.map(traceCounts => (traceCounts.getTraceCountCount shouldEqual 11))
+      traceCounts.map(traceCounts => traceCounts.getTraceCountCount shouldEqual 11)
     }
   }
 

@@ -24,4 +24,5 @@ case class ElasticSearchConfiguration(endpoint: String,
                                       connectionTimeoutMillis: Int,
                                       readTimeoutMillis: Int,
                                       indexHourBucket: Int,
-                                      indexHourTtl: Int)
+                                      indexHourTtl: Int,
+                                      useRootDocumentStartTime: Boolean)

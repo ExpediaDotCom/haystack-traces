@@ -18,8 +18,8 @@ package com.expedia.www.haystack.trace.reader.stores.readers.es
 
 import com.codahale.metrics.{Meter, Timer}
 import com.expedia.www.haystack.trace.reader.exceptions.ElasticSearchClientError
+import com.expedia.www.haystack.trace.reader.stores.readers.es.ESUtils._
 import com.expedia.www.haystack.trace.reader.stores.readers.es.ElasticSearchCountResultListener._
-import com.google.gson.Gson
 import io.searchbox.client.JestResultHandler
 import io.searchbox.core.{Count, CountResult}
 import org.slf4j.{Logger, LoggerFactory}
@@ -42,7 +42,7 @@ class ElasticSearchCountResultListener(request: Count,
 
     if (!is2xx(result.getResponseCode)) {
       val ex = ElasticSearchClientError(result.getResponseCode, result.getJsonString)
-      LOGGER.error(s"Failed in reading from elasticsearch for request='${request.getData(new Gson())}'", ex)
+      LOGGER.error(s"Failed in reading from elasticsearch for request='${request.toJson}'", ex)
       failure.mark()
       promise.failure(ex)
     } else {
@@ -51,7 +51,7 @@ class ElasticSearchCountResultListener(request: Count,
   }
 
   override def failed(ex: Exception): Unit = {
-    LOGGER.error(s"Failed in reading from elasticsearch for request=${request.getData(new Gson())}", ex)
+    LOGGER.error(s"Failed in reading from elasticsearch for request=${request.toJson}", ex)
     failure.mark()
     timer.close()
     promise.failure(ex)

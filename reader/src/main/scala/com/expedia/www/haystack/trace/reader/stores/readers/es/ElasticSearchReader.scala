@@ -18,8 +18,8 @@ package com.expedia.www.haystack.trace.reader.stores.readers.es
 
 import com.expedia.www.haystack.trace.reader.config.entities.ElasticSearchConfiguration
 import com.expedia.www.haystack.trace.reader.metrics.{AppMetricNames, MetricsSupport}
+import com.expedia.www.haystack.trace.reader.stores.readers.es.ESUtils._
 import com.google.gson.Gson
-import io.searchbox.action.AbstractAction
 import io.searchbox.client.config.HttpClientConfig
 import io.searchbox.client.{JestClient, JestClientFactory}
 import io.searchbox.core.{Count, CountResult, Search, SearchResult}
@@ -61,7 +61,7 @@ class ElasticSearchReader(config: ElasticSearchConfiguration)(implicit val dispa
       case ex: Exception =>
         readFailures.mark()
         time.stop()
-        LOGGER.error(s"Failed to read from elasticsearch for request=${request.getData(new Gson())} with exception", ex)
+        LOGGER.error(s"Failed to read from elasticsearch for request=${request.toJson} with exception", ex)
         Future.failed(ex)
     }
   }
@@ -70,7 +70,7 @@ class ElasticSearchReader(config: ElasticSearchConfiguration)(implicit val dispa
     val promise = Promise[CountResult]()
     val time = readTimer.time()
     try {
-      LOGGER.info(s"elastic count query requested: ${request.toString}', query: '${request.getData(new Gson())}'")
+      LOGGER.info(s"elastic count query requested: ${request.toString}', query: '${request.toJson}'")
       esClient.executeAsync(request, new ElasticSearchCountResultListener(request, promise, time, readFailures))
       promise.future
     } catch {

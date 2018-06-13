@@ -115,7 +115,8 @@ class ProviderConfiguration {
       es.getInt("conn.timeout.ms"),
       es.getInt("read.timeout.ms"),
       indexHourBucket = indexConfig.getInt("hour.bucket"),
-      indexHourTtl = indexConfig.getInt("hour.ttl"))
+      indexHourTtl = indexConfig.getInt("hour.ttl"),
+      useRootDocumentStartTime = es.getBoolean("use.root.doc.starttime"))
   }
 
   private def toInstances[T](classes: util.List[String])(implicit ct: ClassTag[T]): scala.Seq[T] = {

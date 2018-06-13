@@ -23,6 +23,8 @@ import org.json4s.jackson.Serialization
 import org.json4s.{DefaultFormats, Formats}
 import org.scalatest.{Entry, FunSpec, Matchers}
 
+import scala.collection.JavaConverters._
+
 class WhitelistIndexFieldConfigurationSpec extends FunSpec with Matchers {
 
   protected implicit val formats: Formats = DefaultFormats + new EnumNameSerializer(IndexFieldType)
@@ -36,7 +38,7 @@ class WhitelistIndexFieldConfigurationSpec extends FunSpec with Matchers {
 
     it("a loaded configuration should return the non empty whitelist fields") {
       val whitelistField_1 = WhitelistIndexField(name = "role", `type` = IndexFieldType.string)
-      val whitelistField_2 = WhitelistIndexField(name = "errorcode", `type` = IndexFieldType.long)
+      val whitelistField_2 = WhitelistIndexField(name = "Errorcode", `type` = IndexFieldType.long)
 
       val config = WhitelistIndexFieldConfiguration()
       val cfgJsonData = Serialization.write(WhiteListIndexFields(List(whitelistField_1, whitelistField_2)))
@@ -44,27 +46,30 @@ class WhitelistIndexFieldConfigurationSpec extends FunSpec with Matchers {
       // reload
       config.onReload(cfgJsonData)
 
-      config.whitelistIndexFields should contain allOf(whitelistField_1, whitelistField_2)
+      config.whitelistIndexFields.map(_.name) should contain allOf("role", "errorcode")
       config.indexFieldMap.size() shouldBe 2
-      config.indexFieldMap should contain allOf(Entry(whitelistField_1.name, whitelistField_1), Entry(whitelistField_2.name, whitelistField_2))
+      config.indexFieldMap.keys().asScala.toList should contain allOf("role", "errorcode")
       config.globalTraceContextIndexFieldNames.size shouldBe 0
 
-      val whitelistField_3 = WhitelistIndexField(name = "status", `type` = IndexFieldType.string, aliases = Set("_status"))
+      val whitelistField_3 = WhitelistIndexField(name = "status", `type` = IndexFieldType.string, aliases = Set("_status", "HTTP-STATUS"))
       val whitelistField_4 = WhitelistIndexField(name = "something", `type` = IndexFieldType.long, searchContext = "trace")
 
       val newCfgJsonData = Serialization.write(WhiteListIndexFields(List(whitelistField_1, whitelistField_3, whitelistField_4)))
       config.onReload(newCfgJsonData)
 
-      config.whitelistIndexFields.size shouldBe 4
-      config.whitelistIndexFields should contain allOf(whitelistField_1, whitelistField_3, whitelistField_4)
-      config.indexFieldMap.size shouldBe 4
-      config.indexFieldMap should contain allOf(Entry(whitelistField_1.name, whitelistField_1), Entry(whitelistField_3.name, whitelistField_3), Entry("_status", whitelistField_3), Entry(whitelistField_4.name, whitelistField_4))
+      config.whitelistIndexFields.size shouldBe 5
+      config.whitelistIndexFields.map(_.name).toSet should contain allOf("status", "something", "role")
+      config.indexFieldMap.size shouldBe 5
+      config.indexFieldMap.keys().asScala.toList should contain allOf("status", "something", "role", "http-status", "_status")
 
       config.onReload(newCfgJsonData)
-      config.whitelistIndexFields.size shouldBe 4
-      config.whitelistIndexFields should contain allOf(whitelistField_1, whitelistField_3, whitelistField_4)
-      config.indexFieldMap.size() shouldBe 4
-      config.indexFieldMap should contain allOf(Entry(whitelistField_1.name, whitelistField_1), Entry(whitelistField_3.name, whitelistField_3), Entry("_status", whitelistField_3), Entry(whitelistField_4.name, whitelistField_4))
+      config.whitelistIndexFields.size shouldBe 5
+      config.whitelistIndexFields.map(_.name).toSet should contain allOf("status", "something", "role")
+      config.indexFieldMap.size() shouldBe 5
+      config.indexFieldMap.keys().asScala.toList should contain allOf("status", "something", "role", "http-status", "_status")
+
+      config.indexFieldMap.get("http-status").name shouldEqual "status"
+      config.indexFieldMap.get("_status").name shouldEqual "status"
 
       config.globalTraceContextIndexFieldNames.size shouldBe 1
       config.globalTraceContextIndexFieldNames.head shouldEqual "something"

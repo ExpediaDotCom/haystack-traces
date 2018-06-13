@@ -18,19 +18,18 @@ package com.expedia.www.haystack.trace.reader.unit.stores.readers.es.query
 import com.expedia.open.tracing.api.{Field, TracesSearchRequest}
 import com.expedia.www.haystack.trace.commons.clients.es.document.TraceIndexDoc
 import com.expedia.www.haystack.trace.commons.config.entities.WhitelistIndexFieldConfiguration
+import com.expedia.www.haystack.trace.reader.config.entities.ElasticSearchConfiguration
+import com.expedia.www.haystack.trace.reader.stores.readers.es.ESUtils._
 import com.expedia.www.haystack.trace.reader.stores.readers.es.query.TraceSearchQueryGenerator
 import com.expedia.www.haystack.trace.reader.unit.BaseUnitTestSpec
-import com.google.gson.Gson
 import io.searchbox.core.Search
 
 class TraceSearchQueryGeneratorSpec extends BaseUnitTestSpec {
-  val ES_INDEX_HOUR_BUCKET = 6
-  val ES_INDEX_HOUR_TTL = 72
+  private val esConfig = ElasticSearchConfiguration("endpoint", None, None, "haystack-traces", "spans", 5000, 5000, 6, 72, false)
 
   describe("TraceSearchQueryGenerator") {
     it("should generate valid search queries") {
       Given("a trace search request")
-      val `type` = "spans"
       val serviceName = "svcName"
       val operationName = "opName"
       val request = TracesSearchRequest
@@ -41,18 +40,17 @@ class TraceSearchQueryGeneratorSpec extends BaseUnitTestSpec {
         .setEndTime(System.currentTimeMillis() * 1000)
         .setLimit(10)
         .build()
-      val queryGenerator = new TraceSearchQueryGenerator("haystack-traces", `type`, ES_INDEX_HOUR_BUCKET, ES_INDEX_HOUR_TTL, "spans", new WhitelistIndexFieldConfiguration)
+      val queryGenerator = new TraceSearchQueryGenerator(esConfig, "spans", new WhitelistIndexFieldConfiguration)
 
       When("generating query")
       val query = queryGenerator.generate(request)
 
       Then("generate a valid query")
-      query.getType should be(`type`)
+      query.getType should be("spans")
     }
 
     it("should generate caption independent search queries") {
       Given("a trace search request")
-      val `type` = "spans"
       val fieldKey = "svcName"
       val fieldValue = "opName"
       val request = TracesSearchRequest
@@ -62,13 +60,13 @@ class TraceSearchQueryGeneratorSpec extends BaseUnitTestSpec {
         .setEndTime(System.currentTimeMillis() * 1000)
         .setLimit(10)
         .build()
-      val queryGenerator = new TraceSearchQueryGenerator("haystack-traces", `type`, ES_INDEX_HOUR_BUCKET, ES_INDEX_HOUR_TTL, "spans", new WhitelistIndexFieldConfiguration)
+      val queryGenerator = new TraceSearchQueryGenerator(esConfig, "spans", new WhitelistIndexFieldConfiguration)
 
       When("generating query")
       val query: Search = queryGenerator.generate(request)
 
       Then("generate a valid query with fields in lowercase")
-      query.getData(new Gson()).contains(fieldKey.toLowerCase()) should be(true)
+      query.toJson.contains(fieldKey.toLowerCase()) should be(true)
     }
   }
 }

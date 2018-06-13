@@ -70,19 +70,21 @@ trait ResponseParser {
         .getAsJsonObject(ES_NESTED_DOC_NAME)
         .getAsJsonObject(fieldName)
 
-    if (aggregations.has(ES_FIELD_BUCKETS))
+    if (aggregations.has(ES_FIELD_BUCKETS)) {
       aggregations
         .getAsJsonArray(ES_FIELD_BUCKETS)
         .asScala
         .map(element => element.getAsJsonObject.get(ES_FIELD_KEY).getAsString)
         .toList
-    else
+    }
+    else {
       aggregations
         .getAsJsonObject(fieldName)
         .getAsJsonArray(ES_FIELD_BUCKETS)
         .asScala
         .map(element => element.getAsJsonObject.get(ES_FIELD_KEY).getAsString)
         .toList
+    }
   }
 
   protected def extractTraceIdFromSource(source: String): String = {

@@ -17,34 +17,35 @@ package com.expedia.www.haystack.trace.reader.unit.stores.readers.es.query
 
 import com.expedia.open.tracing.api.{Field, FieldValuesRequest}
 import com.expedia.www.haystack.trace.commons.config.entities.WhitelistIndexFieldConfiguration
+import com.expedia.www.haystack.trace.reader.config.entities.ElasticSearchConfiguration
+import com.expedia.www.haystack.trace.reader.stores.readers.es.ESUtils._
 import com.expedia.www.haystack.trace.reader.stores.readers.es.query.FieldValuesQueryGenerator
 import com.expedia.www.haystack.trace.reader.unit.BaseUnitTestSpec
-import com.google.gson.Gson
 
 class FieldValuesQueryGeneratorSpec extends BaseUnitTestSpec {
+  private val indexType = "spans"
+  private val esConfig = ElasticSearchConfiguration("endpoint", None, None, "haystack-traces", indexType, 5000, 5000, 6, 72, false)
+
   describe("FieldValuesQueryGenerator") {
     it("should generate valid search queries") {
       Given("a trace search request")
-      val `type` = "spans"
       val serviceName = "svcName"
-      val tagName = "tagName"
       val request = FieldValuesRequest
         .newBuilder()
         .setFieldName("operationName")
         .addFilters(Field.newBuilder().setName("serviceName").setValue(serviceName).build())
         .build()
-      val queryGenerator = new FieldValuesQueryGenerator("haystack", `type`, "spans", new WhitelistIndexFieldConfiguration)
+      val queryGenerator = new FieldValuesQueryGenerator(esConfig, "spans", new WhitelistIndexFieldConfiguration)
 
       When("generating query")
       val query = queryGenerator.generate(request)
 
       Then("generate a valid query")
-      query.getType should be(`type`)
+      query.getType should be(indexType)
     }
 
     it("should generate caption independent search queries") {
       Given("a trace search request")
-      val `type` = "spans"
       val serviceField = "serviceName"
       val operationField = "operationName"
       val serviceName = "svcName"
@@ -53,13 +54,13 @@ class FieldValuesQueryGeneratorSpec extends BaseUnitTestSpec {
         .setFieldName(operationField)
         .addFilters(Field.newBuilder().setName(serviceField).setValue(serviceName).build())
         .build()
-      val queryGenerator = new FieldValuesQueryGenerator("haystack", `type`, "spans", new WhitelistIndexFieldConfiguration)
+      val queryGenerator = new FieldValuesQueryGenerator(esConfig, "spans", new WhitelistIndexFieldConfiguration)
 
       When("generating query")
       val query = queryGenerator.generate(request)
 
       Then("generate a valid query with fields in lowercase")
-      val queryString = query.getData(new Gson())
+      val queryString = query.toJson
       queryString.contains(serviceField.toLowerCase()) should be(true)
       queryString.contains(operationField.toLowerCase()) should be(true)
     }

@@ -97,6 +97,10 @@ trait BaseIntegrationTestSpec extends FunSpec with GivenWhenThen with Matchers w
                                  |                "traceid": {
                                  |                    "enabled": false
                                  |                },
+                                 |                "starttime": {
+                                 |                   "type": "long",
+                                 |                   "doc_values": true
+                                 |                },
                                  |                "spans": {
                                  |                    "type": "nested",
                                  |                    "properties": {

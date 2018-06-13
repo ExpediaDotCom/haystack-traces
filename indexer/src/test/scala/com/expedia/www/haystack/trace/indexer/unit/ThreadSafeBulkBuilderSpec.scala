@@ -23,7 +23,7 @@ import io.searchbox.core.Index
 import org.scalatest.{FunSpec, Matchers}
 
 class ThreadSafeBulkBuilderSpec extends FunSpec with Matchers {
-  val gson = new Gson()
+  private val gson = new Gson()
 
   describe("Thread safe bulk builder") {
     it("should return the bulk object when index operations exceeds the configured maxDocument count") {

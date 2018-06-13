@@ -67,7 +67,12 @@ case class WhitelistIndexFieldConfiguration() extends Reloadable {
     if(StringUtils.isNotEmpty(configData) && hasConfigChanged(configData)) {
       LOGGER.info("new indexing fields have been detected: " + configData)
       val fieldsToIndex = Serialization.read[WhiteListIndexFields](configData)
-      updateIndexFieldMap(fieldsToIndex)
+
+      val lowercaseFieldNames = fieldsToIndex
+        .fields
+        .map(field => field.copy(name = field.name.toLowerCase, aliases = field.aliases.map(_.toLowerCase)))
+
+      updateIndexFieldMap(WhiteListIndexFields(lowercaseFieldNames))
       // set the current version to newer one
       currentVersion = configData.hashCode
     }
@@ -81,8 +86,8 @@ case class WhitelistIndexFieldConfiguration() extends Reloadable {
 
     // add the fields in the map
     for(field <- fList.fields) {
-      indexFieldMap.put(field.name.toLowerCase, field)
-      field.aliases.foreach(alias => indexFieldMap.put(alias.toLowerCase, field))
+      indexFieldMap.put(field.name, field)
+      field.aliases.foreach(alias => indexFieldMap.put(alias, field))
     }
   }
 

@@ -30,7 +30,6 @@ class TraceSearchQueryGeneratorSpec extends BaseUnitTestSpec {
   describe("TraceSearchQueryGenerator") {
     it("should generate valid search queries") {
       Given("a trace search request")
-      val `type` = "spans"
       val serviceName = "svcName"
       val operationName = "opName"
       val request = TracesSearchRequest
@@ -52,7 +51,6 @@ class TraceSearchQueryGeneratorSpec extends BaseUnitTestSpec {
 
     it("should generate caption independent search queries") {
       Given("a trace search request")
-      val `type` = "spans"
       val fieldKey = "svcName"
       val fieldValue = "opName"
       val request = TracesSearchRequest

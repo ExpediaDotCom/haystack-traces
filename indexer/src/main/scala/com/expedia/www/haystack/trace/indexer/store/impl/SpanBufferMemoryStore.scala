@@ -26,7 +26,7 @@ import com.expedia.open.tracing.buffer.SpanBuffer
 import com.expedia.www.haystack.commons.metrics.MetricsSupport
 import com.expedia.www.haystack.trace.indexer.metrics.AppMetricNames._
 import com.expedia.www.haystack.trace.indexer.store.DynamicCacheSizer
-import com.expedia.www.haystack.trace.indexer.store.data.model.SpanBufferWithMetadata
+import com.expedia.www.haystack.trace.indexer.store.data.model.{EmitableSpanBuffersWithOffset, SpanBufferWithMetadata}
 import com.expedia.www.haystack.trace.indexer.store.traits.{CacheSizeObserver, EldestBufferedSpanEvictionListener, SpanBufferKeyValueStore}
 import org.apache.commons.lang3.StringUtils
 import org.apache.kafka.clients.consumer.OffsetAndMetadata
@@ -75,27 +75,30 @@ class SpanBufferMemoryStore(cacheSizer: DynamicCacheSizer) extends SpanBufferKey
   /**
     * get all buffered span objects that are recorded before the given timestamp
     *
-    * @param forceEvictionTimestamp             forceEvictionTimestamp in millis for spanBuffers even if they are not complete
-    * @param completedSpanBufferEvictionTimeout EvictionTimestamp in millis for completed spanBuffers
+    * @param forceEvictionTimestamp               forceEvictionTimestamp in millis for spanBuffers even if they are not complete
+    * @param completedSpanBufferEvictionTimestamp EvictionTimestamp in millis for completed spanBuffers
     * @return
     */
-  def getAndRemoveSpanBuffersOlderThan(forceEvictionTimestamp: Long, completedSpanBufferEvictionTimeout: Long): (mutable.ListBuffer[SpanBufferWithMetadata], Option[OffsetAndMetadata]) = {
+  def getAndRemoveSpanBuffersOlderThan(forceEvictionTimestamp: Long, completedSpanBufferEvictionTimestamp: Long): EmitableSpanBuffersWithOffset = {
     val result = mutable.ListBuffer[SpanBufferWithMetadata]()
     var committableOffset = -1L
-
+    var canCommitHigherOffset = true
     val iterator = this.map.entrySet().iterator()
     var done = false
 
     while (!done && iterator.hasNext) {
       val el = iterator.next()
-      if (el.getValue.firstSpanSeenAt <= completedSpanBufferEvictionTimeout) {
-        if (el.getValue.firstSpanSeenAt <= forceEvictionTimestamp) {
-          iterator.remove()
-          totalSpansInMemStore -= el.getValue.builder.getChildSpansCount
-          result += el.getValue
-          if (committableOffset < el.getValue.firstSeenSpanKafkaOffset) committableOffset = el.getValue.firstSeenSpanKafkaOffset
+      if (el.getValue.firstSpanSeenAt <= completedSpanBufferEvictionTimestamp) {
 
-        } else if (el.getValue.isrootSpanSeen) {
+        canCommitHigherOffset = canCommitHigherOffset && (el.getValue.isrootSpanSeen ||el.getValue.firstSpanSeenAt <= forceEvictionTimestamp)
+        //This ensures that we commit offsets only is either the forceEvictionTimestamp is reached or we have a contiguous set of completed span_buffers
+        if (canCommitHigherOffset) {
+          if (committableOffset < el.getValue.firstSeenSpanKafkaOffset) committableOffset = el.getValue.firstSeenSpanKafkaOffset
+        }
+
+
+        //This ensures that we evict all spans which are either complete or has passed the forced eviction timeout
+        if (el.getValue.firstSpanSeenAt <= forceEvictionTimestamp || el.getValue.isrootSpanSeen) {
           iterator.remove()
           totalSpansInMemStore -= el.getValue.builder.getChildSpansCount
           result += el.getValue
@@ -108,7 +111,7 @@ class SpanBufferMemoryStore(cacheSizer: DynamicCacheSizer) extends SpanBufferKey
       }
     }
     val commitableOffset = if (committableOffset >= 0) Some(new OffsetAndMetadata(committableOffset)) else None
-    (result, commitableOffset)
+    EmitableSpanBuffersWithOffset(result, commitableOffset)
   }
 
   override def addEvictionListener(l: EldestBufferedSpanEvictionListener): Unit = this.listeners += l

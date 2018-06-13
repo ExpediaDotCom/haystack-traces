@@ -103,13 +103,13 @@ class SpanIndexProcessor(accumulatorConfig: SpanAccumulatorConfiguration,
       val completedSpanBufferEvictionTimeout = currentTimestamp - accumulatorConfig.completedSpanBufferEmitWindow
       val emittableSpanBuffersWithOffset = spanBufferMemStore.getAndRemoveSpanBuffersOlderThan(forceEvictionTimestamp, completedSpanBufferEvictionTimeout)
 
-      emittableSpanBuffersWithOffset._1.zipWithIndex foreach {
+      emittableSpanBuffersWithOffset.spanBuffers.zipWithIndex foreach {
         case (sb, idx) =>
           val spanBuffer = sb.builder.build()
-          writeTrace(spanBuffer, idx == emittableSpanBuffersWithOffset._1.size - 1)
+          writeTrace(spanBuffer, idx == emittableSpanBuffersWithOffset.spanBuffers.size - 1)
       }
       lastEmitTimestamp = currentTimestamp
-      emittableSpanBuffersWithOffset._2
+      emittableSpanBuffersWithOffset.kafkaOffset
     } else {
       None
     }

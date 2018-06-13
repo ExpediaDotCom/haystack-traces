@@ -46,7 +46,7 @@ class SpanBufferMemoryStoreSpec extends FunSpec with Matchers with EasyMockSugar
         spanBufferStore.totalSpans shouldBe 2
 
         val result = spanBufferStore.getAndRemoveSpanBuffersOlderThan(13000L,15000L)
-        val spanBuffers = result._1
+        val spanBuffers = result.spanBuffers
         spanBuffers.size shouldBe 1
         spanBuffers.foreach {
           spanBufferWithMetadata =>
@@ -74,7 +74,7 @@ class SpanBufferMemoryStoreSpec extends FunSpec with Matchers with EasyMockSugar
         spanBufferStore.totalSpans shouldBe 3
 
         var result = spanBufferStore.getAndRemoveSpanBuffersOlderThan(11500L,15000L)
-        var spanBuffers = result._1
+        var spanBuffers = result.spanBuffers
         spanBuffers.size shouldBe 1
         spanBuffers.foreach {
           spanBufferWithMetadata =>
@@ -86,11 +86,11 @@ class SpanBufferMemoryStoreSpec extends FunSpec with Matchers with EasyMockSugar
         spanBufferStore.totalSpans shouldBe 2
 
         result = spanBufferStore.getAndRemoveSpanBuffersOlderThan(11500L,15000L)
-        spanBuffers = result._1
+        spanBuffers = result.spanBuffers
         spanBuffers.size shouldBe 0
 
         result = spanBufferStore.getAndRemoveSpanBuffersOlderThan(13000L,15000L)
-        spanBuffers = result._1
+        spanBuffers = result.spanBuffers
 
         spanBuffers.size shouldBe 1
         spanBuffers.foreach {

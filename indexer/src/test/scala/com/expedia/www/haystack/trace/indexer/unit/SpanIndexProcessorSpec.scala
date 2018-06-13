@@ -22,7 +22,7 @@ import com.expedia.www.haystack.trace.commons.packer.{NoopPacker, PackedMessage,
 import com.expedia.www.haystack.trace.indexer.config.entities.SpanAccumulatorConfiguration
 import com.expedia.www.haystack.trace.indexer.processors.SpanIndexProcessor
 import com.expedia.www.haystack.trace.indexer.store.SpanBufferMemoryStoreSupplier
-import com.expedia.www.haystack.trace.indexer.store.data.model.SpanBufferWithMetadata
+import com.expedia.www.haystack.trace.indexer.store.data.model.{EmitableSpanBuffersWithOffset, SpanBufferWithMetadata}
 import com.expedia.www.haystack.trace.indexer.store.traits.SpanBufferKeyValueStore
 import com.expedia.www.haystack.trace.indexer.writers.TraceWriter
 import org.apache.kafka.clients.consumer.{ConsumerRecord, OffsetAndMetadata}
@@ -69,7 +69,7 @@ class SpanIndexProcessorSpec extends FunSpec with Matchers with EasyMockSugar {
       expecting {
         mockStore.addEvictionListener(processor)
         mockStore.init()
-        mockStore.getAndRemoveSpanBuffersOlderThan(forceEvictionTimestamp, completedSpanBufferEvictionTimeout).andReturn((mutable.ListBuffer(spanBufferWithMetadata), Some(new OffsetAndMetadata(startRecordOffset))))
+        mockStore.getAndRemoveSpanBuffersOlderThan(forceEvictionTimestamp, completedSpanBufferEvictionTimeout).andReturn(EmitableSpanBuffersWithOffset(mutable.ListBuffer(spanBufferWithMetadata), Some(new OffsetAndMetadata(startRecordOffset))))
         mockCassandra.writeAsync(capture(writeTraceIdCapture), capture(packedMessage), capture(writeLastRecordCapture))
         mockStore.close()
       }
@@ -109,7 +109,7 @@ class SpanIndexProcessorSpec extends FunSpec with Matchers with EasyMockSugar {
         mockStore.addEvictionListener(processor)
         mockStore.init()
 
-        mockStore.getAndRemoveSpanBuffersOlderThan(forceEvictionTimestamp, completedSpanBufferEvictionTimeout).andReturn((mutable.ListBuffer(spanBufferWithMetadata), Some(new OffsetAndMetadata(startRecordOffset))))
+        mockStore.getAndRemoveSpanBuffersOlderThan(forceEvictionTimestamp, completedSpanBufferEvictionTimeout).andReturn(EmitableSpanBuffersWithOffset(mutable.ListBuffer(spanBufferWithMetadata), Some(new OffsetAndMetadata(startRecordOffset))))
         mockCassandra.writeAsync(capture(writeTraceIdCapture), capture(packedMessage), capture(writeLastRecordCapture))
         mockStore.close()
       }
@@ -143,7 +143,7 @@ class SpanIndexProcessorSpec extends FunSpec with Matchers with EasyMockSugar {
       expecting {
         mockStore.addEvictionListener(processor)
         mockStore.init()
-        mockStore.getAndRemoveSpanBuffersOlderThan(forceEvictionTimestamp, completedSpanBufferEvictionTimeout).andReturn((mutable.ListBuffer.empty, None))
+        mockStore.getAndRemoveSpanBuffersOlderThan(forceEvictionTimestamp, completedSpanBufferEvictionTimeout).andReturn(EmitableSpanBuffersWithOffset(mutable.ListBuffer.empty, None))
       }
 
       whenExecuting(mockStore, mockCassandra) {

@@ -18,10 +18,7 @@
 package com.expedia.www.haystack.trace.indexer.store.traits
 
 import com.expedia.open.tracing.Span
-import com.expedia.www.haystack.trace.indexer.store.data.model.SpanBufferWithMetadata
-import org.apache.kafka.clients.consumer.OffsetAndMetadata
-
-import scala.collection.mutable
+import com.expedia.www.haystack.trace.indexer.store.data.model.{EmitableSpanBuffersWithOffset, SpanBufferWithMetadata}
 
 /**
   * this interface extends KeyValueStore to provide span buffering operations
@@ -36,7 +33,7 @@ trait SpanBufferKeyValueStore {
     * @param completedSpanBufferEvictionTimeout EvictionTimestamp in millis for completed spanBuffers
     * @return
     */
-  def getAndRemoveSpanBuffersOlderThan(forceEvictionTimestamp: Long, completedSpanBufferEvictionTimeout: Long): (mutable.ListBuffer[SpanBufferWithMetadata], Option[OffsetAndMetadata])
+  def getAndRemoveSpanBuffersOlderThan(forceEvictionTimestamp: Long, completedSpanBufferEvictionTimeout: Long): EmitableSpanBuffersWithOffset
 
   /**
     * add a listener to the store, that gets called when the eldest spanBuffer is evicted

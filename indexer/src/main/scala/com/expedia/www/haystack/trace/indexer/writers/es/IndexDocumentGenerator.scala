@@ -17,6 +17,8 @@
 
 package com.expedia.www.haystack.trace.indexer.writers.es
 
+import java.util.concurrent.TimeUnit
+
 import com.expedia.open.tracing.buffer.SpanBuffer
 import com.expedia.open.tracing.{Span, Tag}
 import com.expedia.www.haystack.commons.metrics.MetricsSupport
@@ -48,7 +50,7 @@ class IndexDocumentGenerator(config: WhitelistIndexFieldConfiguration) extends M
     spanBuffer.getChildSpansList.asScala filter isValidForIndex foreach(span => {
 
       // calculate the trace starttime based on the minimum starttime observed across all child spans.
-      traceStartTime = Math.min(traceStartTime, span.getStartTime)
+      traceStartTime = Math.min(traceStartTime, microsToSecondGranularity(span.getStartTime))
       if(span.getParentSpanId == null) rootDuration = span.getDuration
 
       val spanIndexDoc = spanIndices
@@ -93,7 +95,7 @@ class IndexDocumentGenerator(config: WhitelistIndexFieldConfiguration) extends M
 
     import com.expedia.www.haystack.trace.commons.clients.es.document.TraceIndexDoc._
     append(DURATION_KEY_NAME, span.getDuration)
-    append(START_TIME_KEY_NAME, span.getStartTime)
+    append(START_TIME_KEY_NAME, microsToSecondGranularity(span.getStartTime))
   }
 
 
@@ -137,5 +139,9 @@ class IndexDocumentGenerator(config: WhitelistIndexFieldConfiguration) extends M
       case BINARY => tag.getVBytes.toStringUtf8
       case _ => throw new RuntimeException(s"Fail to understand the span tag type ${tag.getType} !!!")
     }
+  }
+
+  private def microsToSecondGranularity(value: Long): Long = {
+    TimeUnit.SECONDS.toMicros(TimeUnit.MICROSECONDS.toSeconds(value))
   }
 }

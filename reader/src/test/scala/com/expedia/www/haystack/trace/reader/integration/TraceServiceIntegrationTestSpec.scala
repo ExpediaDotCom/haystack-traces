@@ -379,8 +379,8 @@ class TraceServiceIntegrationTestSpec extends BaseIntegrationTestSpec {
 
       randomStartTimes.foreach {
         startTime => {
-          0 until tracesPerBucket foreach { idx =>
-            putTraceInCassandraAndEs(serviceName = serviceName, operationName = operationName, startTime =  startTime, sleep = false))
+          0 until tracesPerBucket foreach { _ =>
+            putTraceInCassandraAndEs(serviceName = serviceName, operationName = operationName, startTime =  startTime, sleep = false)
           }
         }
       }

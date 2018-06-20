@@ -370,34 +370,37 @@ class TraceServiceIntegrationTestSpec extends BaseIntegrationTestSpec {
       val operationName = "dummy-operationname-for-count"
       val currentTimeMicros: Long = System.currentTimeMillis() * 1000
 
-      val bucketCount = 5
-      val bucketTimeInMicros = 10 * 1000 * 1000
+      val bucketIntervalInMicros = 10l * 1000 * 10000
+      val bucketCount = 4
+      val randomStartTimes = 0 until bucketCount map(idx => currentTimeMicros - (bucketIntervalInMicros * idx))
+      val startTimeInMicroSec = currentTimeMicros - (bucketIntervalInMicros * bucketCount)
+      val endTimeInMicroSec = currentTimeMicros
       val tracesPerBucket = 10
-      val startTimeInMicroSec: Long = currentTimeMicros - bucketCount * bucketTimeInMicros
 
-      (startTimeInMicroSec until currentTimeMicros by bucketTimeInMicros)
-        .foreach(bucketStartTime =>
-          (1 to tracesPerBucket)
-            .foreach((_) =>
-              putTraceInCassandraAndEs(serviceName = serviceName, operationName = operationName, startTime =  bucketStartTime + 1000 * 1000, sleep = false)))
+      randomStartTimes.foreach {
+        startTime => {
+          0 until tracesPerBucket foreach { idx =>
+            putTraceInCassandraAndEs(serviceName = serviceName, operationName = operationName, startTime =  startTime, sleep = false))
+          }
+        }
+      }
       Thread.sleep(5000)
 
       When("calling getTraceCounts")
       val traceCountsRequest = TraceCountsRequest
         .newBuilder()
-        .addFields(Field.newBuilder().setName(TraceIndexDoc.SERVICE_KEY_NAME).setValue(serviceName).build())
-        .addFields(Field.newBuilder().setName(TraceIndexDoc.OPERATION_KEY_NAME).setValue(operationName).build())
+        .addFields(Field.newBuilder().setName(serviceName).setValue(serviceName).build())
+        .addFields(Field.newBuilder().setName(operationName).setValue(operationName).build())
         .setStartTime(startTimeInMicroSec)
-        .setEndTime(currentTimeMicros)
-        .setInterval(bucketTimeInMicros)
+        .setEndTime(endTimeInMicroSec)
+        .setInterval(bucketIntervalInMicros)
         .build()
 
       val traceCounts = client.getTraceCounts(traceCountsRequest)
 
       Then("should return possible values for given field")
       traceCounts.getTraceCountCount shouldEqual bucketCount
-      traceCounts.getTraceCount(0).getCount shouldEqual tracesPerBucket
-      traceCounts.getTraceCount(bucketCount - 1).getCount shouldEqual tracesPerBucket
+      traceCounts.getTraceCountList.asScala.foreach(_.getCount shouldBe tracesPerBucket)
     }
   }
 }

@@ -22,7 +22,7 @@ import com.expedia.www.haystack.trace.reader.stores.readers.es.ESUtils._
 import com.google.gson.Gson
 import io.searchbox.client.config.HttpClientConfig
 import io.searchbox.client.{JestClient, JestClientFactory}
-import io.searchbox.core.{Count, CountResult, Search, SearchResult}
+import io.searchbox.core.{Search, SearchResult}
 import org.slf4j.LoggerFactory
 
 import scala.concurrent.{ExecutionContextExecutor, Future, Promise}
@@ -66,8 +66,8 @@ class ElasticSearchReader(config: ElasticSearchConfiguration)(implicit val dispa
     }
   }
 
-  def count(request: Count): Future[CountResult] = {
-    val promise = Promise[CountResult]()
+  def count(request: Search): Future[SearchResult] = {
+    val promise = Promise[SearchResult]()
     val time = readTimer.time()
     try {
       LOGGER.info(s"elastic count query requested: ${request.toString}', query: '${request.toJson}'")

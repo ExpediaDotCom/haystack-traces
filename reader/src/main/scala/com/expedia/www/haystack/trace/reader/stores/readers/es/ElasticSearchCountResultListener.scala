@@ -21,7 +21,7 @@ import com.expedia.www.haystack.trace.reader.exceptions.ElasticSearchClientError
 import com.expedia.www.haystack.trace.reader.stores.readers.es.ESUtils._
 import com.expedia.www.haystack.trace.reader.stores.readers.es.ElasticSearchCountResultListener._
 import io.searchbox.client.JestResultHandler
-import io.searchbox.core.{Count, CountResult}
+import io.searchbox.core.{Search, SearchResult}
 import org.slf4j.{Logger, LoggerFactory}
 
 import scala.concurrent.Promise
@@ -32,12 +32,12 @@ object ElasticSearchCountResultListener {
   protected def is2xx(code: Int): Boolean = (code / 100) == 2
 }
 
-class ElasticSearchCountResultListener(request: Count,
-                                       promise: Promise[CountResult],
+class ElasticSearchCountResultListener(request: Search,
+                                       promise: Promise[SearchResult],
                                        timer: Timer.Context,
-                                       failure: Meter) extends JestResultHandler[CountResult] {
+                                       failure: Meter) extends JestResultHandler[SearchResult] {
 
-  override def completed(result: CountResult): Unit = {
+  override def completed(result: SearchResult): Unit = {
     timer.close()
 
     if (!is2xx(result.getResponseCode)) {

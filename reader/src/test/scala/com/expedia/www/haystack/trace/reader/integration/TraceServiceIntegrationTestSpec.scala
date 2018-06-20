@@ -335,15 +335,13 @@ class TraceServiceIntegrationTestSpec extends BaseIntegrationTestSpec {
       Given("traces elasticsearch")
       val serviceName = "dummy-servicename"
       val operationName = "dummy-operationname"
-      val currentTimeMicros: Long = System.currentTimeMillis() * 1000
-      val randomStartTimes: Seq[Long] =
-        Seq(currentTimeMicros,
-          currentTimeMicros - (10 * 1000 * 1000),
-          currentTimeMicros - (20 * 1000 * 1000),
-          currentTimeMicros - (30 * 1000 * 1000))
-      val startTimeInMicroSec: Long = currentTimeMicros - (randomStartTimes.size * 10 * 1000 * 1000)
-      val endTimeInMicroSec: Long = currentTimeMicros
-      val intervalInMicroSec = endTimeInMicroSec - startTimeInMicroSec
+      val currentTimeMicros = System.currentTimeMillis() * 1000l
+
+      val bucketIntervalInMicros = 10l * 1000 * 10000
+      val bucketCount = 4
+      val randomStartTimes = 0 until bucketCount map(idx => currentTimeMicros - (bucketIntervalInMicros * idx))
+      val startTimeInMicroSec = currentTimeMicros - (bucketIntervalInMicros * bucketCount)
+      val endTimeInMicroSec = currentTimeMicros
 
       randomStartTimes.foreach(startTime =>
         putTraceInCassandraAndEs(serviceName = serviceName, operationName = operationName, startTime =  startTime, sleep = false))
@@ -356,15 +354,14 @@ class TraceServiceIntegrationTestSpec extends BaseIntegrationTestSpec {
         .addFields(Field.newBuilder().setName(TraceIndexDoc.OPERATION_KEY_NAME).setValue(operationName).build())
         .setStartTime(startTimeInMicroSec)
         .setEndTime(endTimeInMicroSec)
-        .setInterval(intervalInMicroSec)
+        .setInterval(bucketIntervalInMicros)
         .build()
 
       val traceCounts = client.getTraceCounts(traceCountsRequest)
 
       Then("should return possible values for given field")
-      traceCounts should not be None
-      traceCounts.getTraceCountCount shouldEqual 1
-      traceCounts.getTraceCount(0).getCount shouldEqual randomStartTimes.size
+      traceCounts.getTraceCountCount shouldEqual bucketCount
+      traceCounts.getTraceCountList.asScala.foreach(_.getCount shouldBe 1)
     }
 
     it("should return trace counts histogram for given time span for multiple buckets") {
@@ -398,7 +395,6 @@ class TraceServiceIntegrationTestSpec extends BaseIntegrationTestSpec {
       val traceCounts = client.getTraceCounts(traceCountsRequest)
 
       Then("should return possible values for given field")
-      traceCounts should not be None
       traceCounts.getTraceCountCount shouldEqual bucketCount
       traceCounts.getTraceCount(0).getCount shouldEqual tracesPerBucket
       traceCounts.getTraceCount(bucketCount - 1).getCount shouldEqual tracesPerBucket

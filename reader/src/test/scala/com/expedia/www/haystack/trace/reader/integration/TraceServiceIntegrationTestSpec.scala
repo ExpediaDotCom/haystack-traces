@@ -26,7 +26,7 @@ import scala.collection.JavaConverters._
 
 class TraceServiceIntegrationTestSpec extends BaseIntegrationTestSpec {
 
- describe("TraceReader.getFieldNames") {
+  describe("TraceReader.getFieldNames") {
     it("should return names of enabled fields") {
       Given("trace in cassandra and elasticsearch")
       val field1 = "abc"
@@ -38,7 +38,7 @@ class TraceServiceIntegrationTestSpec extends BaseIntegrationTestSpec {
 
       Then("should return fieldNames available in index")
       fieldNames.getNamesList.size() should be(2)
-      fieldNames.getNamesList.asScala.toList should contain allOf (field1, field2)
+      fieldNames.getNamesList.asScala.toList should contain allOf(field1, field2)
     }
   }
 
@@ -339,12 +339,12 @@ class TraceServiceIntegrationTestSpec extends BaseIntegrationTestSpec {
 
       val bucketIntervalInMicros = 10l * 1000 * 10000
       val bucketCount = 4
-      val randomStartTimes = 0 until bucketCount map(idx => currentTimeMicros - (bucketIntervalInMicros * idx))
+      val randomStartTimes = 0 until bucketCount map (idx => currentTimeMicros - (bucketIntervalInMicros * idx))
       val startTimeInMicroSec = currentTimeMicros - (bucketIntervalInMicros * bucketCount)
       val endTimeInMicroSec = currentTimeMicros
 
       randomStartTimes.foreach(startTime =>
-        putTraceInCassandraAndEs(serviceName = serviceName, operationName = operationName, startTime =  startTime, sleep = false))
+        putTraceInCassandraAndEs(serviceName = serviceName, operationName = operationName, startTime = startTime, sleep = false))
       Thread.sleep(5000)
 
       When("calling getTraceCounts")
@@ -362,45 +362,6 @@ class TraceServiceIntegrationTestSpec extends BaseIntegrationTestSpec {
       Then("should return possible values for given field")
       traceCounts.getTraceCountCount shouldEqual bucketCount
       traceCounts.getTraceCountList.asScala.foreach(_.getCount shouldBe 1)
-    }
-
-    it("should return trace counts histogram for given time span for multiple buckets") {
-      Given("traces elasticsearch")
-      val serviceName = "dummy-servicename-for-count"
-      val operationName = "dummy-operationname-for-count"
-      val currentTimeMicros: Long = System.currentTimeMillis() * 1000
-
-      val bucketIntervalInMicros = 10l * 1000 * 10000
-      val bucketCount = 4
-      val randomStartTimes = 0 until bucketCount map(idx => currentTimeMicros - (bucketIntervalInMicros * idx))
-      val startTimeInMicroSec = currentTimeMicros - (bucketIntervalInMicros * bucketCount)
-      val endTimeInMicroSec = currentTimeMicros
-      val tracesPerBucket = 10
-
-      randomStartTimes.foreach {
-        startTime => {
-          0 until tracesPerBucket foreach { _ =>
-            putTraceInCassandraAndEs(serviceName = serviceName, operationName = operationName, startTime =  startTime, sleep = false)
-          }
-        }
-      }
-      Thread.sleep(5000)
-
-      When("calling getTraceCounts")
-      val traceCountsRequest = TraceCountsRequest
-        .newBuilder()
-        .addFields(Field.newBuilder().setName(serviceName).setValue(serviceName).build())
-        .addFields(Field.newBuilder().setName(operationName).setValue(operationName).build())
-        .setStartTime(startTimeInMicroSec)
-        .setEndTime(endTimeInMicroSec)
-        .setInterval(bucketIntervalInMicros)
-        .build()
-
-      val traceCounts = client.getTraceCounts(traceCountsRequest)
-
-      Then("should return possible values for given field")
-      traceCounts.getTraceCountCount shouldEqual bucketCount
-      traceCounts.getTraceCountList.asScala.foreach(_.getCount shouldBe tracesPerBucket)
     }
   }
 }

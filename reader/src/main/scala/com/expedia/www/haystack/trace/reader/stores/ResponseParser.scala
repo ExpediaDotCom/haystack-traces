@@ -18,7 +18,8 @@ package com.expedia.www.haystack.trace.reader.stores
 
 import com.expedia.open.tracing.api.{TraceCount, TraceCounts}
 import com.expedia.www.haystack.trace.commons.config.entities.IndexFieldType
-import io.searchbox.core.{CountResult, SearchResult}
+import com.expedia.www.haystack.trace.reader.stores.readers.es.query.TraceCountsQueryGenerator
+import io.searchbox.core.SearchResult
 import org.json4s.ext.EnumNameSerializer
 import org.json4s.jackson.JsonMethods.parse
 import org.json4s.{DefaultFormats, Formats}
@@ -55,11 +56,17 @@ trait ResponseParser {
     Future.successful(TraceCounts.newBuilder().addAllTraceCount(traceCounts).build())
   }
 
-  protected def mapCountResultToTraceCount(startTime: Long, result: CountResult): TraceCount = {
-    TraceCount.newBuilder()
-      .setCount(Math.round(result.getCount))
-      .setTimestamp(startTime)
-      .build()
+  protected def mapSearchResultToTraceCount(startTime: Long, endTime: Long, result: SearchResult): TraceCounts = {
+    val traceCountsBuilder = TraceCounts.newBuilder()
+
+    result.getAggregations.getHistogramAggregation(TraceCountsQueryGenerator.COUNT_HISTOGRAM_NAME)
+      .getBuckets.asScala
+      .filter(bucket => startTime <= bucket.getKey && bucket.getKey <= endTime)
+      .foreach(bucket => {
+        val traceCount = TraceCount.newBuilder().setCount(bucket.getCount).setTimestamp(bucket.getKey)
+        traceCountsBuilder.addTraceCount(traceCount)
+      })
+    traceCountsBuilder.build()
   }
 
   protected def extractFieldValues(result: SearchResult, fieldName: String): List[String] = {

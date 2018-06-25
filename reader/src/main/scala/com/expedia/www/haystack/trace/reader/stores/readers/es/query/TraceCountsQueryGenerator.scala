@@ -17,57 +17,58 @@
 package com.expedia.www.haystack.trace.reader.stores.readers.es.query
 
 import com.expedia.open.tracing.api.TraceCountsRequest
-import com.expedia.www.haystack.trace.commons.clients.es.document.TraceIndexDoc.START_TIME_KEY_NAME
+import com.expedia.www.haystack.trace.commons.clients.es.document.TraceIndexDoc
 import com.expedia.www.haystack.trace.commons.config.entities.WhitelistIndexFieldConfiguration
 import com.expedia.www.haystack.trace.reader.config.entities.ElasticSearchConfiguration
-import io.searchbox.core.Count
-import org.apache.lucene.search.join.ScoreMode
-import org.elasticsearch.index.query.QueryBuilders.{nestedQuery, rangeQuery}
+import io.searchbox.core.Search
+import org.elasticsearch.search.aggregations.AggregationBuilders
 import org.elasticsearch.search.builder.SearchSourceBuilder
 
 import scala.collection.JavaConverters._
+
+
+object TraceCountsQueryGenerator {
+  val COUNT_HISTOGRAM_NAME = "countagg"
+}
 
 class TraceCountsQueryGenerator(esConfig: ElasticSearchConfiguration,
                                 nestedDocName: String,
                                 indexConfiguration: WhitelistIndexFieldConfiguration)
   extends QueryGenerator(nestedDocName, indexConfiguration) {
 
-  def generate(request: TraceCountsRequest, startTime: Long): Count = {
+  import TraceCountsQueryGenerator._
+
+  def generate(request: TraceCountsRequest): Search = {
     require(request.getStartTime > 0)
     require(request.getEndTime > 0)
     require(request.getInterval > 0)
 
-    // base search query
-    val query = createQuery(request.getFieldsList)
-    if(esConfig.useRootDocumentStartTime) {
-      query
-        .must(rangeQuery(START_TIME_KEY_NAME)
-          .gte(startTime)
-          .lte(startTime + request.getInterval))
-    } else {
-      query.must(
-        nestedQuery(nestedDocName,
-          rangeQuery(withBaseDoc(START_TIME_KEY_NAME))
-            .gte(startTime)
-            .lte(startTime + request.getInterval), ScoreMode.None))
-    }
-
-    // create count query string
-    val countQueryString = new SearchSourceBuilder()
-      .query(query)
-      .toString
-
     // create ES count query
-    val targetIndicesToSearch = getESIndexes(startTime,
-      startTime + request.getInterval,
+    val targetIndicesToSearch = getESIndexes(
+      request.getStartTime,
+      request.getEndTime,
       esConfig.indexNamePrefix,
       esConfig.indexHourBucket,
       esConfig.indexHourTtl).asJava
 
-    new Count.Builder()
-      .query(countQueryString)
+    new Search.Builder(buildQueryString(request))
       .addIndex(targetIndicesToSearch)
       .addType(esConfig.indexType)
       .build()
+  }
+
+  private def buildQueryString(request: TraceCountsRequest): String = {
+    val query = createQuery(request.getFieldsList)
+    val aggregation = AggregationBuilders
+      .histogram(COUNT_HISTOGRAM_NAME)
+      .field(TraceIndexDoc.START_TIME_KEY_NAME)
+      .interval(request.getInterval)
+      .extendedBounds(request.getStartTime, request.getEndTime)
+
+    new SearchSourceBuilder()
+      .query(query)
+      .aggregation(aggregation)
+      .size(0)
+      .toString
   }
 }

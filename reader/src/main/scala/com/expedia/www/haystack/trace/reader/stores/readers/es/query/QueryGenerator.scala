@@ -93,18 +93,18 @@ abstract class QueryGenerator(nestedDocName: String, indexConfiguration: Whiteli
       )
   }
 
-  def getESIndexes(starttimeInMicros: Long,
-                   endtimeInMicros: Long,
+  def getESIndexes(startTimeInMicros: Long,
+                   endTimeInMicros: Long,
                    indexNamePrefix: String,
                    indexHourBucket: Int,
                    indexHourTtl: Int): Seq[String] = {
 
-    if (!isValidTimeRange(starttimeInMicros, endtimeInMicros, indexHourTtl)) {
+    if (!isValidTimeRange(startTimeInMicros, endTimeInMicros, indexHourTtl)) {
       Seq(s"$indexNamePrefix")
     } else {
       val INDEX_BUCKET_TIME_IN_MICROS: Long = indexHourBucket.toLong * 60 * 60 * 1000 * 1000
-      val flooredStarttime = starttimeInMicros - (starttimeInMicros % INDEX_BUCKET_TIME_IN_MICROS)
-      val flooredEndtime = endtimeInMicros - (endtimeInMicros % INDEX_BUCKET_TIME_IN_MICROS)
+      val flooredStarttime = startTimeInMicros - (startTimeInMicros % INDEX_BUCKET_TIME_IN_MICROS)
+      val flooredEndtime = endTimeInMicros - (endTimeInMicros % INDEX_BUCKET_TIME_IN_MICROS)
 
       for (datetimeInMicros <- flooredStarttime to flooredEndtime by INDEX_BUCKET_TIME_IN_MICROS)
         yield {
@@ -118,10 +118,11 @@ abstract class QueryGenerator(nestedDocName: String, indexConfiguration: Whiteli
     }
   }
 
-  private def isValidTimeRange(starttimeInMicros: Long,
-                               endtimeInMicros: Long,
-                               indexHourTtl: Int): Boolean =
-    (endtimeInMicros - starttimeInMicros) < (indexHourTtl.toLong * 60 * 60 * 1000 * 1000)
-
+  private def isValidTimeRange(startTimeInMicros: Long,
+                               endTimeInMicros: Long,
+                               indexHourTtl: Int): Boolean = {
+    (endTimeInMicros - startTimeInMicros) < (indexHourTtl.toLong * 60 * 60 * 1000 * 1000)
+  }
+  
   protected def withBaseDoc(field: String) = s"$nestedDocName.$field"
 }

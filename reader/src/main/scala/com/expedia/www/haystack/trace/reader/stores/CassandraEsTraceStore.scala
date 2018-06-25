@@ -120,39 +120,11 @@ class CassandraEsTraceStore(cassandraConfig: CassandraConfiguration,
   }
 
   override def getTraceCounts(request: TraceCountsRequest): Future[TraceCounts] = {
-    // loop through all the time buckets
-    // create an ES Count query for all of them
-    // trigger ES Count request for each bucket, it will return CountResult
-    val traceCountFutures: Seq[Future[TraceCount]] =
-      for (startTime <- request.getStartTime until request.getEndTime by request.getInterval)
-      yield esReader
-        .count(traceCountsQueryGenerator.generate(request, startTime))
-        .map(mapCountResultToTraceCount(startTime, _))
-
-    // wait for all Futures to complete
-    // ignore failed once
-    // map successful buckets to pb TraceCounts object
-    Future
-      .sequence(liftToTry(traceCountFutures))
-      .map(_.flatMap(retrieveTriedCount))
-      .map(toTraceCounts)
-  }
-
-  private def retrieveTriedCount(maybeCount: Try[TraceCount]): Option[TraceCount] = {
-    maybeCount match {
-      case Success(count) =>
-        Some(count)
-      case Failure(ex) =>
-        LOGGER.warn("count bucket search failed", ex)
-        countRejected.mark()
-        None
-    }
-  }
-  private def toTraceCounts(traceCountList: Seq[TraceCount]): TraceCounts = {
-    TraceCounts
-      .newBuilder()
-      .addAllTraceCount(traceCountList.asJava)
-      .build()
+    val countSearchRequest = traceCountsQueryGenerator.generate(request)
+    esReader
+      .count(countSearchRequest)
+      .map(result =>
+        mapSearchResultToTraceCount(request.getStartTime, request.getEndTime, result))
   }
 
   // convert all Futures to Try to make sure they all complete

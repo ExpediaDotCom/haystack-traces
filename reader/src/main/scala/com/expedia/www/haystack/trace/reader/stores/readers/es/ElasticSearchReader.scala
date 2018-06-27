@@ -54,7 +54,7 @@ class ElasticSearchReader(config: ElasticSearchConfiguration)(implicit val dispa
     val promise = Promise[SearchResult]()
     val time = readTimer.time()
     try {
-      LOGGER.info("elastic search query requested: '{}'", request.toString)
+      LOGGER.info(s"elastic search query requested: ${request.toString}', query: '${request.toJson}'")
       esClient.executeAsync(request, new ElasticSearchReadResultListener(request, promise, time, readFailures))
       promise.future
     } catch {

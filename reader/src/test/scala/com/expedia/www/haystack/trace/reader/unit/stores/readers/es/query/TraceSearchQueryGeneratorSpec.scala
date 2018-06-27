@@ -15,7 +15,8 @@
  */
 package com.expedia.www.haystack.trace.reader.unit.stores.readers.es.query
 
-import com.expedia.open.tracing.api.{Field, TracesSearchRequest}
+import com.expedia.open.tracing.api.ExpressionTree.Operator
+import com.expedia.open.tracing.api.{ExpressionTree, Field, Operand, TracesSearchRequest}
 import com.expedia.www.haystack.trace.commons.clients.es.document.TraceIndexDoc
 import com.expedia.www.haystack.trace.commons.config.entities.WhitelistIndexFieldConfiguration
 import com.expedia.www.haystack.trace.reader.config.entities.ElasticSearchConfiguration
@@ -60,6 +61,84 @@ class TraceSearchQueryGeneratorSpec extends BaseUnitTestSpec {
         .setEndTime(System.currentTimeMillis() * 1000)
         .setLimit(10)
         .build()
+      val queryGenerator = new TraceSearchQueryGenerator(esConfig, "spans", new WhitelistIndexFieldConfiguration)
+
+      When("generating query")
+      val query: Search = queryGenerator.generate(request)
+
+      Then("generate a valid query with fields in lowercase")
+      query.toJson.contains(fieldKey.toLowerCase()) should be(true)
+    }
+
+    it("should generate valid search queries for expression tree based searches") {
+      Given("a trace search request")
+      val fieldKey = "svcName"
+      val fieldValue = "svcValue"
+      val expression = ExpressionTree
+        .newBuilder()
+        .setOperator(Operator.AND)
+        .addOperands(Operand.newBuilder().setField(Field.newBuilder().setName(fieldKey).setValue(fieldValue)))
+        .addOperands(Operand.newBuilder().setField(Field.newBuilder().setName("1").setValue("1")))
+        .addOperands(Operand.newBuilder().setField(Field.newBuilder().setName("2").setValue("2")))
+        .addOperands(Operand.newBuilder().setField(Field.newBuilder().setName("3").setValue("3")))
+        .build()
+
+      val request = TracesSearchRequest
+        .newBuilder()
+        .setFilterExpression(expression)
+        .setStartTime(1)
+        .setEndTime(System.currentTimeMillis() * 1000)
+        .setLimit(10)
+        .build()
+
+      val queryGenerator = new TraceSearchQueryGenerator(esConfig, "spans", new WhitelistIndexFieldConfiguration)
+
+      When("generating query")
+      val query: Search = queryGenerator.generate(request)
+
+      Then("generate a valid query with fields in lowercase")
+      query.toJson.contains(fieldKey.toLowerCase()) should be(true)
+    }
+
+    it("should generate valid search queries for expression tree based searches with span level searches") {
+      Given("a trace search request")
+      val fieldKey = "svcName"
+      val fieldValue = "svcValue"
+      val spanLevelTreeFirst = ExpressionTree
+        .newBuilder()
+        .setOperator(Operator.AND)
+        .setIsSpanLevelExpression(true)
+        .addOperands(Operand.newBuilder().setField(Field.newBuilder().setName("1").setValue("1")))
+        .addOperands(Operand.newBuilder().setField(Field.newBuilder().setName("2").setValue("2")))
+        .addOperands(Operand.newBuilder().setField(Field.newBuilder().setName("3").setValue("3")))
+        .build()
+
+      val spanLevelTreeSecond = ExpressionTree
+        .newBuilder()
+        .setOperator(Operator.AND)
+        .setIsSpanLevelExpression(true)
+        .addOperands(Operand.newBuilder().setField(Field.newBuilder().setName("4").setValue("4")))
+        .addOperands(Operand.newBuilder().setField(Field.newBuilder().setName("5").setValue("5")))
+        .build()
+
+      val expression = ExpressionTree
+        .newBuilder()
+        .setOperator(Operator.AND)
+        .setIsSpanLevelExpression(true)
+        .addOperands(Operand.newBuilder().setField(Field.newBuilder().setName(fieldKey).setValue(fieldValue)))
+        .addOperands(Operand.newBuilder().setField(Field.newBuilder().setName("0").setValue("0")))
+        .addOperands(Operand.newBuilder().setExpression(spanLevelTreeFirst))
+        .addOperands(Operand.newBuilder().setExpression(spanLevelTreeSecond))
+        .build()
+
+      val request = TracesSearchRequest
+        .newBuilder()
+        .setFilterExpression(expression)
+        .setStartTime(1)
+        .setEndTime(System.currentTimeMillis() * 1000)
+        .setLimit(10)
+        .build()
+
       val queryGenerator = new TraceSearchQueryGenerator(esConfig, "spans", new WhitelistIndexFieldConfiguration)
 
       When("generating query")

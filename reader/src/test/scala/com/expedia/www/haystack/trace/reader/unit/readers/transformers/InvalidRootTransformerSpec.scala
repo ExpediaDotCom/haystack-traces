@@ -27,14 +27,17 @@ class InvalidRootTransformerSpec extends BaseUnitTestSpec {
       val spans = List(
         Span.newBuilder()
           .setSpanId("a")
+          .setServiceName("sa")
           .setStartTime(150000000000l + 300)
           .build(),
         Span.newBuilder()
           .setSpanId("b")
+          .setServiceName("sb")
           .setStartTime(150000000000l)
           .build(),
         Span.newBuilder()
           .setSpanId("c")
+          .setServiceName("sc")
           .setStartTime(150000000000l + 150)
           .build()
       )
@@ -47,7 +50,7 @@ class InvalidRootTransformerSpec extends BaseUnitTestSpec {
 
       val root = transformedSpans.filter(_.getParentSpanId.isEmpty)
       root.size should be(1)
-      root.head.getServiceName shouldEqual "auto-generated"
+      root.head.getServiceName shouldEqual "sb"
       root.head.getOperationName shouldEqual "auto-generated"
       root.head.getStartTime shouldBe 150000000000l
       root.head.getDuration shouldBe 300l

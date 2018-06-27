@@ -43,15 +43,17 @@ class InvalidRootTransformerSpec extends BaseUnitTestSpec {
       val transformedSpans = new InvalidRootTransformer().transform(spans)
 
       Then("pick first span as root and mark second's parent to be root")
-      transformedSpans.length should be(3)
+      transformedSpans.length should be(4)
 
       val root = transformedSpans.filter(_.getParentSpanId.isEmpty)
       root.size should be(1)
-      root.head.getSpanId should be("b")
+      root.head.getServiceName shouldEqual "auto-generated"
+      root.head.getOperationName shouldEqual "auto-generated"
+      root.head.getStartTime shouldBe 150000000000l
+      root.head.getDuration shouldBe 300l
 
       val others = transformedSpans.filter(!_.getParentSpanId.isEmpty)
-      others.head.getParentSpanId should be("b")
-      others.tail.head.getParentSpanId should be("b")
+      others.foreach(span => span.getParentSpanId should be(root.head.getSpanId))
     }
 
     it("should mark first span as root when there are no roots") {

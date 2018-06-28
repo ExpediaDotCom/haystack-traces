@@ -19,7 +19,8 @@ package com.expedia.www.haystack.trace.reader.stores.readers.es.query
 import java.text.SimpleDateFormat
 import java.util.Date
 
-import com.expedia.open.tracing.api.Field
+import com.expedia.open.tracing.api.Operand.OperandCase
+import com.expedia.open.tracing.api.{ExpressionTree, Field}
 import com.expedia.www.haystack.trace.commons.config.entities.WhitelistIndexFieldConfiguration
 import io.searchbox.strings.StringUtils
 import org.apache.lucene.search.join.ScoreMode
@@ -34,8 +35,8 @@ import org.elasticsearch.search.aggregations.support.ValueType
 import scala.collection.JavaConverters._
 
 abstract class QueryGenerator(nestedDocName: String, indexConfiguration: WhitelistIndexFieldConfiguration) {
-
-  protected def createQuery(filterFields: java.util.List[Field]): BoolQueryBuilder = {
+  // create search query by using filters list
+  protected def createFilterFieldBasedQuery(filterFields: java.util.List[Field]): BoolQueryBuilder = {
     val traceContextWhitelistFields = indexConfiguration.globalTraceContextIndexFieldNames
     val (traceContextFields, serviceContextFields) = filterFields
       .asScala
@@ -48,6 +49,35 @@ abstract class QueryGenerator(nestedDocName: String, indexConfiguration: Whiteli
     })
 
     query
+  }
+
+  // create search query by using filters expression tree
+  protected def createExpressionTreeBasedQuery(expression: ExpressionTree): BoolQueryBuilder = {
+    val perContextFields = toListOfFilters(expression)
+    val query = boolQuery()
+
+    // create a nested boolean query per
+    perContextFields.foreach(fields => {
+      query.filter(createNestedQuery(fields).get)
+    })
+
+    query
+  }
+
+  // create list of fields, one for each trace level query and one for each span level groups
+  // assuming that first level is trace level filters
+  // and second level are span level filter groups
+  private def toListOfFilters(expression: ExpressionTree): List[List[Field]] = {
+    val (spanLevel, traceLevel) = expression.getOperandsList.asScala.partition(operand => operand.getOperandCase == OperandCase.EXPRESSION)
+
+    val traceLevelFilters = traceLevel.map(field => List(field.getField))
+    val spanLevelFilters = spanLevel.map(tree => toListOfSpanLevelFilters(tree.getExpression))
+
+    (spanLevelFilters ++ traceLevelFilters).toList
+  }
+
+  private def toListOfSpanLevelFilters(expression: ExpressionTree): List[Field] = {
+    expression.getOperandsList.asScala.map(field => field.getField).toList
   }
 
   private def createNestedQuery(fields: Seq[Field]): Option[NestedQueryBuilder] = {

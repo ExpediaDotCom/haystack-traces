@@ -52,7 +52,11 @@ class TraceSearchQueryGenerator(esConfig: ElasticSearchConfiguration,
   }
 
   private def buildQueryString(request: TracesSearchRequest): String = {
-    val query = createQuery(request.getFieldsList)
+    val query =
+      if(request.hasFilterExpression)
+        createExpressionTreeBasedQuery(request.getFilterExpression)
+      else
+        createFilterFieldBasedQuery(request.getFieldsList)
 
     if(esConfig.useRootDocumentStartTime) {
       query

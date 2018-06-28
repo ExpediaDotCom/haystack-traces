@@ -35,7 +35,7 @@ class FieldValuesQueryGenerator(esConfig: ElasticSearchConfiguration,
   }
 
   private def buildQueryString(request: FieldValuesRequest): String = {
-    val query = createQuery(request.getFiltersList)
+    val query = createFilterFieldBasedQuery(request.getFiltersList)
     if (query.filter().size() > 0) {
       new SearchSourceBuilder()
         .aggregation(createNestedAggregationQueryWithNestedFilters(request.getFieldName.toLowerCase, request.getFiltersList))

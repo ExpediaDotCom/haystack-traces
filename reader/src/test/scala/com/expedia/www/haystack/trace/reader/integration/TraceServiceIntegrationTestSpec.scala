@@ -18,6 +18,7 @@ package com.expedia.www.haystack.trace.reader.integration
 
 import java.util.UUID
 
+import com.expedia.open.tracing.api.ExpressionTree.Operator
 import com.expedia.open.tracing.api._
 import com.expedia.www.haystack.trace.commons.clients.es.document.TraceIndexDoc
 import io.grpc.{Status, StatusRuntimeException}
@@ -313,6 +314,34 @@ class TraceServiceIntegrationTestSpec extends BaseIntegrationTestSpec {
 
       Then("should not return traces")
       traces.getTracesList.asScala.exists(_.getTraceId == traceId) shouldBe false
+    }
+
+    it("should return traces for expression tree based search targeting ") {
+      Given("traces with tags in cassandra and elasticsearch")
+      val traceId = UUID.randomUUID().toString
+      val serviceName = "expressionTraceSvc"
+      val operationName = "expressionTraceOp"
+      val tags = Map("uKey" -> "uValue", "vKey" -> "vValue")
+      val startTime = 1
+      val endTime = (System.currentTimeMillis() + 10000000) * 1000
+      putTraceInCassandraAndEs(traceId, UUID.randomUUID().toString, serviceName, operationName, tags)
+
+      When("searching traces for tags using expression tree")
+      val expression = ExpressionTree
+        .newBuilder()
+        .setOperator(Operator.AND)
+        .addOperands(Operand.newBuilder().setField(Field.newBuilder().setName(TraceIndexDoc.SERVICE_KEY_NAME).setValue(serviceName)))
+
+      val traces = client.searchTraces(TracesSearchRequest
+        .newBuilder()
+        .setFilterExpression(expression)
+        .setStartTime(startTime)
+        .setEndTime(endTime)
+        .setLimit(10)
+        .build())
+
+      Then("should return traces")
+      traces.getTracesList.asScala.exists(_.getTraceId == traceId) shouldBe true
     }
   }
 

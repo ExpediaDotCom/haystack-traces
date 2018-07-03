@@ -25,18 +25,15 @@ fi
 
 if [ ! -z "${TRAVIS_TAG}" ]
 then
-    SKIP_GPG_SIGN=false
     echo "travis tag is set -> updating pom.xml <version> attribute to ${TRAVIS_TAG}"
-    chmod 777 pom.xml indexer/pom.xml reader/pom.xml commons/pom.xml
-    mvn --settings .travis/settings.xml org.codehaus.mojo:versions-maven-plugin:2.1:set -DnewVersion=${TRAVIS_TAG}
-    cat pom.xml
+    mvn clean -Drelease.version=${TRAVIS_TAG} deploy --settings .travis/settings.xml -Dgpg.skip=false -DskipTests=true -B -U
+    SUCCESS=$?
 else
-    SKIP_GPG_SIGN=true
     echo "no travis tag is set, hence keeping the snapshot version in pom.xml"
+    mvn clean deploy --settings .travis/settings.xml -Dgpg.skip=true -DskipTests=true -B -U
+    SUCCESS=$?
 fi
 
-mvn clean deploy --settings .travis/settings.xml -Dgpg.skip=${SKIP_GPG_SIGN} -DskipTests=true -B -U
-SUCCESS=$?
 
 if [ ${SUCCESS} -eq 0 ]
 then

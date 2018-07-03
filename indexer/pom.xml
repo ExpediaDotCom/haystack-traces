@@ -15,6 +15,7 @@
     <properties>
         <kafka-version>0.11.0.0</kafka-version>
         <mainClass>com.expedia.www.haystack.trace.indexer.App</mainClass>
+        <finalName>${project.artifactId}-${project.version}</finalName>
     </properties>
 
     <dependencies>
@@ -128,7 +129,7 @@
     </dependencies>
 
     <build>
-        <finalName>haystack-trace-indexer</finalName>
+       <finalName>${finalName}</finalName>
         <plugins>
             <plugin>
                 <groupId>org.scalatest</groupId>

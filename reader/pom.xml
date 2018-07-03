@@ -15,6 +15,7 @@
 
     <properties>
         <mainClass>com.expedia.www.haystack.trace.reader.Service</mainClass>
+        <finalName>${project.artifactId}-${project.version}</finalName>
     </properties>
 
     <dependencies>
@@ -88,7 +89,7 @@
     </dependencies>
 
     <build>
-        <finalName>haystack-trace-reader</finalName>
+        <finalName>${finalName}</finalName>
         <plugins>
             <plugin>
                 <groupId>org.scalatest</groupId>

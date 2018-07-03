@@ -53,10 +53,7 @@ class DynamicCacheSizer(val minTracesPerCache: Int, maxEntriesAcrossCaches: Int)
     * @param observers list of changed observers
     */
   private def evaluateNewCacheSizeAndNotify(observers: mutable.HashSet[CacheSizeObserver]): Unit = {
-    /**
-      * notify the observers with a change in their cache size
-      * @param newMaxEntriesPerCache new cache size
-      */
+    //notify the observers with a change in their cache size
     def notifyObservers(newMaxEntriesPerCache: Int): Unit = {
       observers.foreach(obs => obs.onCacheSizeChange(newMaxEntriesPerCache))
     }

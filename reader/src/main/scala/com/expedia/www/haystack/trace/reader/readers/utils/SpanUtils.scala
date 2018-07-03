@@ -22,10 +22,6 @@ import com.expedia.www.haystack.trace.reader.readers.utils.SpanMarkers._
 import scala.collection.JavaConverters._
 
 object SpanUtils {
-  val AUTOGEN_OPERATION_NAME = "auto-generated"
-  val AUTOGEN_REASON_TAG = "X-HAYSTACK-AUTOGEN-REASON"
-  val AUTOGEN_SPAN_ID_TAG = "X-HAYSTACK-AUTOGEN-SPAN-ID"
-  val AUTOGEN_FLAG_TAG = "X-HAYSTACK-AUTOGEN"
 
   def getEventTimestamp(span: Span, event: String): Long = {
     span.getLogsList.asScala.find(log => {
@@ -113,6 +109,11 @@ object SpanUtils {
 }
 
 object SpanMarkers {
+  val AUTOGEN_OPERATION_NAME = "auto-generated"
+  val AUTOGEN_REASON_TAG = "X-HAYSTACK-AUTOGEN-REASON"
+  val AUTOGEN_SPAN_ID_TAG = "X-HAYSTACK-AUTOGEN-SPAN-ID"
+  val AUTOGEN_FLAG_TAG = "X-HAYSTACK-AUTOGEN"
+
   val LOG_EVENT_TAG_KEY = "event"
   val SERVER_SEND_EVENT = "ss"
   val SERVER_RECV_EVENT = "sr"

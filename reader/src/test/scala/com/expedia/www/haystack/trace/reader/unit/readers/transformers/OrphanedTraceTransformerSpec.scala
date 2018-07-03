@@ -2,7 +2,7 @@ package com.expedia.www.haystack.trace.reader.unit.readers.transformers
 
 import com.expedia.open.tracing.{Span, Tag}
 import com.expedia.www.haystack.trace.reader.readers.transformers.{OrphanedTraceTransformer, OrphanedTraceTransformerConstants}
-import com.expedia.www.haystack.trace.reader.readers.utils.SpanUtils
+import com.expedia.www.haystack.trace.reader.readers.utils.SpanMarkers
 import com.expedia.www.haystack.trace.reader.unit.BaseUnitTestSpec
 
 class OrphanedTraceTransformerSpec extends BaseUnitTestSpec {
@@ -21,11 +21,11 @@ class OrphanedTraceTransformerSpec extends BaseUnitTestSpec {
     }
 
     it("should return the full list of spans plus a generated root span if there is no root span already") {
-      val span_1 = Span.newBuilder().setTraceId("traceId").setOperationName(SpanUtils.AUTOGEN_OPERATION_NAME).setServiceName("test-service")
+      val span_1 = Span.newBuilder().setTraceId("traceId").setOperationName(SpanMarkers.AUTOGEN_OPERATION_NAME).setServiceName("test-service")
         .setSpanId("traceId").setStartTime(10000).setDuration(10100)
-        .addTags(Tag.newBuilder().setKey(SpanUtils.AUTOGEN_REASON_TAG).setVStr(OrphanedTraceTransformerConstants.AUTO_GEN_REASON))
-        .addTags(Tag.newBuilder().setKey(SpanUtils.AUTOGEN_SPAN_ID_TAG).setVStr("traceId"))
-        .addTags(Tag.newBuilder().setKey(SpanUtils.AUTOGEN_FLAG_TAG).setVBool(true).setType(Tag.TagType.BOOL)).build()
+        .addTags(Tag.newBuilder().setKey(SpanMarkers.AUTOGEN_REASON_TAG).setVStr(OrphanedTraceTransformerConstants.AUTO_GEN_REASON))
+        .addTags(Tag.newBuilder().setKey(SpanMarkers.AUTOGEN_SPAN_ID_TAG).setVStr("traceId"))
+        .addTags(Tag.newBuilder().setKey(SpanMarkers.AUTOGEN_FLAG_TAG).setVBool(true).setType(Tag.TagType.BOOL)).build()
       val span_2 = Span.newBuilder().setTraceId("traceId").setSpanId("span_2").setParentSpanId(span_1.getSpanId).setStartTime(10000).setDuration(10).setServiceName("test-service").build()
       val span_3 = Span.newBuilder().setTraceId("traceId").setSpanId("span_3").setParentSpanId(span_1.getSpanId).setStartTime(20000).setDuration(100).setServiceName("another-service").build()
 

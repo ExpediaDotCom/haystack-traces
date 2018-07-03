@@ -27,7 +27,10 @@ if [ -n "${TRAVIS_TAG}" ]
 then
     echo "travis tag is set, applying gpg signing"
     GPG_SKIP=false
-    mvn org.codehaus.mojo:versions-maven-plugin:2.5:set -DnewVersion=$TRAVIS_TAG
+    sed -i "s/<version>${TRAVIS_TAG}-SNAPSHOT/<version>${TRAVIS_TAG}/" pom.xml
+    sed -i "s/<version>${TRAVIS_TAG}-SNAPSHOT/<version>${TRAVIS_TAG}/" commons/pom.xml
+    sed -i "s/<version>${TRAVIS_TAG}-SNAPSHOT/<version>${TRAVIS_TAG}/" reader/pom.xml
+    sed -i "s/<version>${TRAVIS_TAG}-SNAPSHOT/<version>${TRAVIS_TAG}/" indexer/pom.xml
 else
     echo "no travis tag is set, skipping gpg signing"
     GPG_SKIP=true

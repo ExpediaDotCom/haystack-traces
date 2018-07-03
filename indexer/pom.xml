@@ -4,25 +4,24 @@
     <parent>
         <artifactId>haystack-traces</artifactId>
         <groupId>com.expedia.www</groupId>
-        <version>${release.version}</version>
+        <version>1.0.0-SNAPSHOT</version>
     </parent>
 
     <modelVersion>4.0.0</modelVersion>
     <artifactId>haystack-trace-indexer</artifactId>
-    <version>${release.version}</version>
     <packaging>jar</packaging>
 
     <properties>
         <kafka-version>0.11.0.0</kafka-version>
         <mainClass>com.expedia.www.haystack.trace.indexer.App</mainClass>
-        <finalName>${project.artifactId}-${release.version}</finalName>
+        <finalName>${project.artifactId}-${project.version}</finalName>
     </properties>
 
     <dependencies>
         <dependency>
             <groupId>com.expedia.www</groupId>
             <artifactId>haystack-trace-commons</artifactId>
-            <version>${release.version}</version>
+            <version>${project.version}</version>
         </dependency>
 
         <dependency>
@@ -207,11 +206,6 @@
             <plugin>
                 <groupId>org.scalastyle</groupId>
                 <artifactId>scalastyle-maven-plugin</artifactId>
-            </plugin>
-
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-jar-plugin</artifactId>
             </plugin>
 
             <plugin>

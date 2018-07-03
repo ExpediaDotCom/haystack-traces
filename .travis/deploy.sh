@@ -23,17 +23,18 @@ then
     echo ${GPG_OWNERTRUST} | base64 --decode | ${GPG_EXECUTABLE} --import-ownertrust
 fi
 
-if [ ! -z "${TRAVIS_TAG}" ]
+if [ -n "${TRAVIS_TAG}" ]
 then
-    echo "travis tag is set -> updating pom.xml <version> attribute to ${TRAVIS_TAG}"
-    mvn clean -Drelease.version=${TRAVIS_TAG} deploy --settings .travis/settings.xml -Dgpg.skip=false -DskipTests=true -B -U
-    SUCCESS=$?
+    echo "travis tag is set, applying gpg signing"
+    GPG_SKIP=false
+    mvn org.codehaus.mojo:versions-maven-plugin:2.5:set -DnewVersion=$TRAVIS_TAG
 else
-    echo "no travis tag is set, hence keeping the snapshot version in pom.xml"
-    mvn clean deploy --settings .travis/settings.xml -Dgpg.skip=true -DskipTests=true -B -U
-    SUCCESS=$?
+    echo "no travis tag is set, skipping gpg signing"
+    GPG_SKIP=true
 fi
 
+mvn clean deploy --settings .travis/settings.xml -Dgpg.skip=${GPG_SKIP} -DskipTests=true -B -U
+SUCCESS=$?
 
 if [ ${SUCCESS} -eq 0 ]
 then

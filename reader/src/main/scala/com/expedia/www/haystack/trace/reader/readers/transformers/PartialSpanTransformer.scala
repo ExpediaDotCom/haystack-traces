@@ -24,7 +24,7 @@ import com.expedia.www.haystack.trace.reader.readers.utils.TagExtractors.extract
 import scala.collection.JavaConverters._
 
 /**
-  * Merges partial spans and generates a single [[Span]] combining a client and corresponding server span
+  * Merges partial spans and generates a single Span combining a client and corresponding server span
   * gracefully fallback to collapse to a single span if there are multiple or missing client/server spans
   */
 class PartialSpanTransformer extends TraceTransformer {

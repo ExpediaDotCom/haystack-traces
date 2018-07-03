@@ -22,7 +22,7 @@ import scala.util.{Success, Try}
 
 /**
   * takes a sequence of [[TraceValidator]] and apply validations on the trace
-  * will either return [[Success]] or Failure with the first failed validation as exception
+  * will either return Success or Failure with the first failed validation as exception
   *
   * @param validatorSeq sequence of validations to apply on the trace
   */

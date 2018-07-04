@@ -16,18 +16,21 @@
 
 package com.expedia.www.haystack.trace.reader.unit.stores.readers.es.query
 
-import com.expedia.open.tracing.api.{Field, TraceCountsRequest}
+import com.expedia.open.tracing.api._
 import com.expedia.www.haystack.trace.commons.clients.es.document.TraceIndexDoc
 import com.expedia.www.haystack.trace.commons.config.entities.WhitelistIndexFieldConfiguration
 import com.expedia.www.haystack.trace.reader.config.entities.ElasticSearchConfiguration
 import com.expedia.www.haystack.trace.reader.stores.readers.es.query.TraceCountsQueryGenerator
 import com.expedia.www.haystack.trace.reader.unit.BaseUnitTestSpec
+import com.expedia.www.haystack.trace.reader.unit.stores.readers.es.query.helper.ExpressionTreeBuilder.{fieldKey, operandLevelExpressionTree, spanLevelExpressionTree}
 import com.google.gson.Gson
+import io.searchbox.core.Search
 
 class TraceCountsQueryGeneratorSpec extends BaseUnitTestSpec {
   val ES_INDEX_HOUR_BUCKET = 6
   val ES_INDEX_HOUR_TTL = 72
   val INDEX_NAME_PREFIX = "haystack-spans"
+
   private val esConfig = ElasticSearchConfiguration("endpoint", None, None, INDEX_NAME_PREFIX, "spans", 5000, 5000, ES_INDEX_HOUR_BUCKET, ES_INDEX_HOUR_TTL, true)
 
   describe("TraceSearchQueryGenerator") {
@@ -59,7 +62,7 @@ class TraceCountsQueryGeneratorSpec extends BaseUnitTestSpec {
       val serviceName = "svcName"
       val operationName = "opName"
       val startTimeInMicros = 1
-      val endTimeInMicros = 1527487220L * 1000 * 1000   // May 28, 2018 6:00:20 AM
+      val endTimeInMicros = 1527487220L * 1000 * 1000 // May 28, 2018 6:00:20 AM
       val interval = 60 * 1000 * 1000
       val request = TraceCountsRequest
         .newBuilder()
@@ -81,7 +84,7 @@ class TraceCountsQueryGeneratorSpec extends BaseUnitTestSpec {
     it("should return a valid list of indexes for overlapping time range") {
       Given("starttime and endtime")
       val startTimeInMicros = 1527501725L * 1000 * 1000 // Monday, May 28, 2018 10:03:36 AM
-      val endTimeInMicros = 1527512524L * 1000 * 1000   // Monday, May 28, 2018 1:02:04 PM
+      val endTimeInMicros = 1527512524L * 1000 * 1000 // Monday, May 28, 2018 1:02:04 PM
       val queryGenerator = new TraceCountsQueryGenerator(esConfig, "spans", new WhitelistIndexFieldConfiguration)
 
       When("retrieving index names")
@@ -96,7 +99,7 @@ class TraceCountsQueryGeneratorSpec extends BaseUnitTestSpec {
     it("should return a valid list of indexes") {
       Given("starttime and endtime")
       val startTimeInMicros = 1527487200L * 1000 * 1000 // May 28, 2018 6:00:00 AM
-      val endTimeInMicros = 1527508800L * 1000 * 1000   // May 28, 2018 12:00:00 PM
+      val endTimeInMicros = 1527508800L * 1000 * 1000 // May 28, 2018 12:00:00 PM
       val queryGenerator = new TraceCountsQueryGenerator(esConfig, "spans", new WhitelistIndexFieldConfiguration)
 
       When("retrieving index names")
@@ -111,7 +114,7 @@ class TraceCountsQueryGeneratorSpec extends BaseUnitTestSpec {
     it("should return only a single index name for time range within same bucket") {
       Given("starttime and endtime")
       val starttimeInMicros = 1527487100L * 1000 * 1000 // May 28, 2018 5:58:20 AM
-      val endtimeInMicros = 1527487120L * 1000 * 1000   // May 28, 2018 5:58:40 AM
+      val endtimeInMicros = 1527487120L * 1000 * 1000 // May 28, 2018 5:58:40 AM
       val queryGenerator = new TraceCountsQueryGenerator(esConfig, "spans", new WhitelistIndexFieldConfiguration)
 
       When("retrieving index names")
@@ -126,7 +129,7 @@ class TraceCountsQueryGeneratorSpec extends BaseUnitTestSpec {
     it("should return index alias (not return specific index) in case endtime minus starttime exceeds index retention") {
       Given("starttime and endtime")
       val startTimeInMicros = 0
-      val endTimeInMicros = 1527487220L * 1000 * 1000   // May 28, 2018 6:00:20 AM
+      val endTimeInMicros = 1527487220L * 1000 * 1000 // May 28, 2018 6:00:20 AM
       val queryGenerator = new TraceCountsQueryGenerator(esConfig, "spans", new WhitelistIndexFieldConfiguration)
 
       When("retrieving index names")
@@ -137,5 +140,56 @@ class TraceCountsQueryGeneratorSpec extends BaseUnitTestSpec {
       indexNames.size shouldEqual 1
       indexNames.head shouldEqual INDEX_NAME_PREFIX
     }
+
+    it("should generate valid count queries for expression tree based search counts") {
+      Given("a trace count request")
+      val startTime = 1529418475791000l // Tuesday, June 19, 2018 2:27:55.791 PM
+      val endTime = 1529419075791000l
+      val request = TraceCountsRequest
+        .newBuilder()
+        .setFilterExpression(operandLevelExpressionTree)
+        .setStartTime(startTime)
+        .setEndTime(endTime)
+        .setInterval(60 * 1000 * 1000l)
+        .build()
+
+      val queryGenerator = new TraceCountsQueryGenerator(esConfig, "spans", new WhitelistIndexFieldConfiguration)
+
+      When("generating query")
+      val query: Search = queryGenerator.generate(request)
+
+      Then("generate a valid query with fields in lowercase")
+      query.getData(new Gson()).replaceAll("\n", "").replaceAll(" ", "") shouldEqual
+        "{\"size\":0,\"query\":{\"bool\":{\"filter\":[{\"nested\":{\"query\":{\"bool\":{\"filter\":[{\"term\":{\"spans.svcname\":{\"value\":\"svcValue\",\"boost\":1.0}}}],\"adjust_pure_negative\":true,\"boost\":1.0}},\"path\":\"spans\",\"ignore_unmapped\":false,\"score_mode\":\"none\",\"boost\":1.0}},{\"nested\":{\"query\":{\"bool\":{\"filter\":[{\"term\":{\"spans.1\":{\"value\":\"1\",\"boost\":1.0}}}],\"adjust_pure_negative\":true,\"boost\":1.0}},\"path\":\"spans\",\"ignore_unmapped\":false,\"score_mode\":\"none\",\"boost\":1.0}},{\"nested\":{\"query\":{\"bool\":{\"filter\":[{\"term\":{\"spans.2\":{\"value\":\"2\",\"boost\":1.0}}}],\"adjust_pure_negative\":true,\"boost\":1.0}},\"path\":\"spans\",\"ignore_unmapped\":false,\"score_mode\":\"none\",\"boost\":1.0}},{\"nested\":{\"query\":{\"bool\":{\"filter\":[{\"term\":{\"spans.3\":{\"value\":\"3\",\"boost\":1.0}}}],\"adjust_pure_negative\":true,\"boost\":1.0}},\"path\":\"spans\",\"ignore_unmapped\":false,\"score_mode\":\"none\",\"boost\":1.0}}],\"adjust_pure_negative\":true,\"boost\":1.0}},\"aggregations\":{\"countagg\":{\"histogram\":{\"field\":\"starttime\",\"interval\":6.0E7,\"offset\":0.0,\"order\":{\"_key\":\"asc\"},\"keyed\":false,\"min_doc_count\":0,\"extended_bounds\":{\"min\":1.529418475791E15,\"max\":1.529419075791E15}}}}}"
+
+      query.getURI shouldEqual "haystack-spans-2018-06-19-2/spans/_search"
+    }
+
+
+    it("should generate valid count query for expression tree based searches with span level searches") {
+      Given("a trace count request")
+      val startTime = 1529418475791000l // Tuesday, June 19, 2018 2:27:55.791 PM
+      val endTime = 1529419075791000l
+      val request = TraceCountsRequest
+        .newBuilder()
+        .setFilterExpression(spanLevelExpressionTree)
+        .setStartTime(startTime)
+        .setEndTime(endTime)
+        .setInterval(60 * 1000 * 1000l)
+        .build()
+
+      val queryGenerator = new TraceCountsQueryGenerator(esConfig, "spans", new WhitelistIndexFieldConfiguration)
+
+      When("generating query")
+      val query: Search = queryGenerator.generate(request)
+
+      Then("generate a valid query")
+      query.getData(new Gson()).replaceAll("\n", "").replaceAll(" ", "") shouldEqual
+        "{\"size\":0,\"query\":{\"bool\":{\"filter\":[{\"nested\":{\"query\":{\"bool\":{\"filter\":[{\"term\":{\"spans.1\":{\"value\":\"1\",\"boost\":1.0}}},{\"term\":{\"spans.2\":{\"value\":\"2\",\"boost\":1.0}}},{\"term\":{\"spans.3\":{\"value\":\"3\",\"boost\":1.0}}}],\"adjust_pure_negative\":true,\"boost\":1.0}},\"path\":\"spans\",\"ignore_unmapped\":false,\"score_mode\":\"none\",\"boost\":1.0}},{\"nested\":{\"query\":{\"bool\":{\"filter\":[{\"term\":{\"spans.4\":{\"value\":\"4\",\"boost\":1.0}}},{\"term\":{\"spans.5\":{\"value\":\"5\",\"boost\":1.0}}}],\"adjust_pure_negative\":true,\"boost\":1.0}},\"path\":\"spans\",\"ignore_unmapped\":false,\"score_mode\":\"none\",\"boost\":1.0}},{\"nested\":{\"query\":{\"bool\":{\"filter\":[{\"term\":{\"spans.svcname\":{\"value\":\"svcValue\",\"boost\":1.0}}}],\"adjust_pure_negative\":true,\"boost\":1.0}},\"path\":\"spans\",\"ignore_unmapped\":false,\"score_mode\":\"none\",\"boost\":1.0}},{\"nested\":{\"query\":{\"bool\":{\"filter\":[{\"term\":{\"spans.0\":{\"value\":\"0\",\"boost\":1.0}}}],\"adjust_pure_negative\":true,\"boost\":1.0}},\"path\":\"spans\",\"ignore_unmapped\":false,\"score_mode\":\"none\",\"boost\":1.0}}],\"adjust_pure_negative\":true,\"boost\":1.0}},\"aggregations\":{\"countagg\":{\"histogram\":{\"field\":\"starttime\",\"interval\":6.0E7,\"offset\":0.0,\"order\":{\"_key\":\"asc\"},\"keyed\":false,\"min_doc_count\":0,\"extended_bounds\":{\"min\":1.529418475791E15,\"max\":1.529419075791E15}}}}}"
+
+      query.getURI shouldEqual "haystack-spans-2018-06-19-2/spans/_search"
+    }
+
+
   }
 }

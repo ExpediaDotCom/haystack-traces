@@ -20,10 +20,10 @@ reader: build_reader
 	cd reader && $(MAKE) integration_test
 
 build_reader:
-	mvn package -DfinalName=haystack-trace-reader -pl reader -am
+	mvn package -Dgpg.skip=true -DfinalName=haystack-trace-reader -pl reader -am
 
 build_indexer:
-	mvn package -DfinalName=haystack-trace-indexer -pl indexer -am
+	mvn package -Dgpg.skip=true -DfinalName=haystack-trace-indexer -pl indexer -am
 
 # build all and release
 release: clean build_indexer build_reader

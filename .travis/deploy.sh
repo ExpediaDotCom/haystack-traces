@@ -33,7 +33,7 @@ else
     GPG_SKIP=true
 fi
 
-mvn clean deploy --settings .travis/settings.xml -DskipGpg=${GPG_SKIP} -DskipTests=true -B -U
+mvn deploy --settings .travis/settings.xml -DskipGpg=${GPG_SKIP} -DskipTests=true -B -U
 SUCCESS=$?
 
 if [ ${SUCCESS} -eq 0 ]

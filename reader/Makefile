@@ -1,4 +1,4 @@
-.PHONY: prepare_integration_test_env integration_test release
+.PHONY: docker_build prepare_integration_test_env integration_test release
 
 export DOCKER_ORG := expediadotcom
 export DOCKER_IMAGE_NAME := haystack-trace-reader

@@ -58,7 +58,12 @@ class TraceCountsQueryGenerator(esConfig: ElasticSearchConfiguration,
   }
 
   private def buildQueryString(request: TraceCountsRequest): String = {
-    val query = createFilterFieldBasedQuery(request.getFieldsList)
+    val query =
+      if(request.hasFilterExpression)
+        createExpressionTreeBasedQuery(request.getFilterExpression)
+      else
+        createFilterFieldBasedQuery(request.getFieldsList)
+
     val aggregation = AggregationBuilders
       .histogram(COUNT_HISTOGRAM_NAME)
       .field(TraceIndexDoc.START_TIME_KEY_NAME)

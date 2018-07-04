@@ -23,6 +23,8 @@ import com.expedia.www.haystack.trace.reader.config.entities.ElasticSearchConfig
 import com.expedia.www.haystack.trace.reader.stores.readers.es.ESUtils._
 import com.expedia.www.haystack.trace.reader.stores.readers.es.query.TraceSearchQueryGenerator
 import com.expedia.www.haystack.trace.reader.unit.BaseUnitTestSpec
+import com.expedia.www.haystack.trace.reader.unit.stores.readers.es.query.helper.ExpressionTreeBuilder
+import com.expedia.www.haystack.trace.reader.unit.stores.readers.es.query.helper.ExpressionTreeBuilder._
 import io.searchbox.core.Search
 
 class TraceSearchQueryGeneratorSpec extends BaseUnitTestSpec {
@@ -72,20 +74,10 @@ class TraceSearchQueryGeneratorSpec extends BaseUnitTestSpec {
 
     it("should generate valid search queries for expression tree based searches") {
       Given("a trace search request")
-      val fieldKey = "svcName"
-      val fieldValue = "svcValue"
-      val expression = ExpressionTree
-        .newBuilder()
-        .setOperator(Operator.AND)
-        .addOperands(Operand.newBuilder().setField(Field.newBuilder().setName(fieldKey).setValue(fieldValue)))
-        .addOperands(Operand.newBuilder().setField(Field.newBuilder().setName("1").setValue("1")))
-        .addOperands(Operand.newBuilder().setField(Field.newBuilder().setName("2").setValue("2")))
-        .addOperands(Operand.newBuilder().setField(Field.newBuilder().setName("3").setValue("3")))
-        .build()
 
       val request = TracesSearchRequest
         .newBuilder()
-        .setFilterExpression(expression)
+        .setFilterExpression(operandLevelExpressionTree)
         .setStartTime(1)
         .setEndTime(System.currentTimeMillis() * 1000)
         .setLimit(10)
@@ -102,38 +94,10 @@ class TraceSearchQueryGeneratorSpec extends BaseUnitTestSpec {
 
     it("should generate valid search queries for expression tree based searches with span level searches") {
       Given("a trace search request")
-      val fieldKey = "svcName"
-      val fieldValue = "svcValue"
-      val spanLevelTreeFirst = ExpressionTree
-        .newBuilder()
-        .setOperator(Operator.AND)
-        .setIsSpanLevelExpression(true)
-        .addOperands(Operand.newBuilder().setField(Field.newBuilder().setName("1").setValue("1")))
-        .addOperands(Operand.newBuilder().setField(Field.newBuilder().setName("2").setValue("2")))
-        .addOperands(Operand.newBuilder().setField(Field.newBuilder().setName("3").setValue("3")))
-        .build()
-
-      val spanLevelTreeSecond = ExpressionTree
-        .newBuilder()
-        .setOperator(Operator.AND)
-        .setIsSpanLevelExpression(true)
-        .addOperands(Operand.newBuilder().setField(Field.newBuilder().setName("4").setValue("4")))
-        .addOperands(Operand.newBuilder().setField(Field.newBuilder().setName("5").setValue("5")))
-        .build()
-
-      val expression = ExpressionTree
-        .newBuilder()
-        .setOperator(Operator.AND)
-        .setIsSpanLevelExpression(true)
-        .addOperands(Operand.newBuilder().setField(Field.newBuilder().setName(fieldKey).setValue(fieldValue)))
-        .addOperands(Operand.newBuilder().setField(Field.newBuilder().setName("0").setValue("0")))
-        .addOperands(Operand.newBuilder().setExpression(spanLevelTreeFirst))
-        .addOperands(Operand.newBuilder().setExpression(spanLevelTreeSecond))
-        .build()
 
       val request = TracesSearchRequest
         .newBuilder()
-        .setFilterExpression(expression)
+        .setFilterExpression(spanLevelExpressionTree)
         .setStartTime(1)
         .setEndTime(System.currentTimeMillis() * 1000)
         .setLimit(10)

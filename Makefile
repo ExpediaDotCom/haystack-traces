@@ -26,8 +26,8 @@ build_indexer:
 	mvn package -DfinalName=haystack-trace-indexer -pl indexer -am
 
 # build all and release
-release: all
-	cd indexer && $(MAKE) release
-	cd reader && $(MAKE) release
+release: clean build_indexer build_reader
+	cd indexer && $(MAKE) docker_build && $(MAKE) release
+	cd reader && $(MAKE) docker_build && $(MAKE) release
 	./.travis/deploy.sh
 

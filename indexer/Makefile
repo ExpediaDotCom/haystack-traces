@@ -1,4 +1,4 @@
-.PHONY: integration_test release
+.PHONY: docker_build integration_test release
 
 export DOCKER_ORG := expediadotcom
 export DOCKER_IMAGE_NAME := haystack-trace-indexer

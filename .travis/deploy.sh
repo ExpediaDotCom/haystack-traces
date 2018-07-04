@@ -26,14 +26,12 @@ fi
 if [ -n "${TRAVIS_TAG}" ]
 then
     echo "travis tag is set, applying gpg signing"
-    GPG_SKIP=false
     mvn org.codehaus.mojo:versions-maven-plugin:2.5:set -DnewVersion=$TRAVIS_TAG
 else
-    echo "no travis tag is set, skipping gpg signing"
-    GPG_SKIP=true
+    echo "no travis tag is set, releasing just the snapshots"
 fi
 
-mvn clean deploy --settings .travis/settings.xml -Dgpg.skip=${GPG_SKIP} -DskipTests=true -B -U
+mvn clean deploy --settings .travis/settings.xml -DskipTests=true -B -U
 SUCCESS=$?
 
 if [ ${SUCCESS} -eq 0 ]

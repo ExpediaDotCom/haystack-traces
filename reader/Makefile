@@ -32,7 +32,7 @@ integration_test: prepare_integration_test_env
 		-v $(PWD)/..:/src \
 		-w /src \
 		maven:3.5.0-jdk-8 \
-		mvn scoverage:integration-check -pl reader -am
+		mvn install -pl commons && mvn scoverage:integration-check -pl reader -am
 
 	docker-compose -f build/integration-tests/docker-compose.yml -p sandbox stop
 	docker rm $(shell docker ps -a -q)

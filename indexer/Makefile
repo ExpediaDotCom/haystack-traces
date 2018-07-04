@@ -20,10 +20,9 @@ integration_test: prepare_integration_test_env
 		--rm \
 		--network=sandbox_default \
 		-v $(PWD)/..:/src \
-		-v ~/.m2:/root/.m2 \
 		-w /src \
 		maven:3.5.0-jdk-8 \
-		mvn scoverage:integration-check -pl indexer -am
+		mvn install -pl commons && mvn scoverage:integration-check -pl indexer -am
 
 	# clean up the docker
 	docker-compose -f build/integration-tests/docker-compose.yml -p sandbox stop

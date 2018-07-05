@@ -18,7 +18,7 @@
 package com.expedia.www.haystack.trace.indexer.writers.es
 
 import java.util.concurrent.Semaphore
-import java.util.{Calendar, Locale}
+import java.util.{Calendar, Locale, TimeZone}
 
 import com.expedia.open.tracing.buffer.SpanBuffer
 import com.expedia.www.haystack.commons.metrics.MetricsSupport
@@ -38,6 +38,20 @@ import org.slf4j.LoggerFactory
 
 import scala.util.Try
 
+object ElasticSearchWriterUtils {
+
+  private val format = FastDateFormat.getInstance("yyyy-MM-dd", Locale.US)
+  private val timezone = TimeZone.getTimeZone("UTC")
+
+  // creates an index name based on current date. following example illustrates the naming convention of
+  // elastic search indices:
+  // haystack-span-2017-08-30
+  def indexName(prefix: String, indexHourBucket: Int): String = {
+    val currentTime = Calendar.getInstance(timezone)
+    val bucket: Int = currentTime.get(Calendar.HOUR_OF_DAY) / indexHourBucket
+    s"$prefix-${format.format(currentTime.getTime)}-$bucket"
+  }
+}
 class ElasticSearchWriter(esConfig: ElasticSearchConfiguration, indexConf: WhitelistIndexFieldConfiguration)
   extends TraceWriter with MetricsSupport {
 
@@ -54,8 +68,6 @@ class ElasticSearchWriter(esConfig: ElasticSearchConfiguration, indexConf: White
 
   // this semaphore controls the parallel writes to cassandra
   private val inflightRequestsSemaphore = new Semaphore(esConfig.maxInFlightBulkRequests, true)
-
-  private val format = FastDateFormat.getInstance("yyyy-MM-dd", Locale.US)
 
   // initialize the elastic search client
   private val esClient: JestClient = {
@@ -96,7 +108,7 @@ class ElasticSearchWriter(esConfig: ElasticSearchConfiguration, indexConf: White
     var isSemaphoreAcquired = false
 
     try {
-      addIndexOperation(traceId, packedSpanBuffer.protoObj, indexName(), isLastSpanBuffer) match {
+      addIndexOperation(traceId, packedSpanBuffer.protoObj, ElasticSearchWriterUtils.indexName(esConfig.indexNamePrefix, esConfig.indexHourBucket), isLastSpanBuffer) match {
         case Some(bulkToDispatch) =>
           inflightRequestsSemaphore.acquire()
           isSemaphoreAcquired = true
@@ -145,14 +157,5 @@ class ElasticSearchWriter(esConfig: ElasticSearchConfiguration, indexConf: White
     if (!result.isSucceeded) {
       throw new RuntimeException(s"Fail to apply the following template to elastic search with reason=${result.getErrorMessage}")
     }
-  }
-
-  // creates an index name based on current date. following example illustrates the naming convention of
-  // elastic search indices:
-  // haystack-span-2017-08-30
-  private def indexName(): String = {
-    val currentTime = Calendar.getInstance
-    val bucket: Int = currentTime.get(Calendar.HOUR_OF_DAY) / esConfig.indexHourBucket
-    s"${esConfig.indexNamePrefix}-${format.format(currentTime.getTime)}-$bucket"
   }
 }

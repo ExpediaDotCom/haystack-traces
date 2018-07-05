@@ -40,8 +40,8 @@ import scala.util.Try
 
 object ElasticSearchWriterUtils {
 
-  private val format = FastDateFormat.getInstance("yyyy-MM-dd", Locale.US)
   private val timezone = TimeZone.getTimeZone("UTC")
+  private val format = FastDateFormat.getInstance("yyyy-MM-dd", timezone, Locale.US)
 
   // creates an index name based on current date. following example illustrates the naming convention of
   // elastic search indices:

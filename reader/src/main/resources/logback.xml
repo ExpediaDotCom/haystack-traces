@@ -23,6 +23,7 @@
 
     <appender name="EmitToGraphiteLogbackAppender"
               class="com.expedia.www.haystack.metrics.appenders.logback.EmitToGraphiteLogbackAppender">
+        <enabled>${HAYSTACK_GRAPHITE_ENABLED:-true}</enabled>
         <host>${HAYSTACK_GRAPHITE_HOST}</host>
         <port>${HAYSTACK_GRAPHITE_PORT}</port>
         <subsystem>trace-reader</subsystem>

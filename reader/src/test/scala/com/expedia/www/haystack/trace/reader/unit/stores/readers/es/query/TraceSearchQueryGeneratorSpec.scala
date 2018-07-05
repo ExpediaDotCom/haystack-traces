@@ -29,7 +29,7 @@ import org.scalatest.BeforeAndAfterEach
 class TraceSearchQueryGeneratorSpec extends BaseUnitTestSpec with BeforeAndAfterEach {
   private val esConfig = ElasticSearchConfiguration("endpoint", None, None, "haystack-traces", "spans", 5000, 5000, 6, 72, false)
 
-  var timezone = "UCT"
+  var timezone = "UTC"
 
   override def beforeEach() {
     timezone = System.getProperty("user.timezone")

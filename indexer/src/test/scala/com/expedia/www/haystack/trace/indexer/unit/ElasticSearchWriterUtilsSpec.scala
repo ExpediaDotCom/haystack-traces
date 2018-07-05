@@ -19,7 +19,7 @@ import com.expedia.www.haystack.trace.indexer.writers.es.ElasticSearchWriterUtil
 import org.scalatest.{BeforeAndAfterEach, FunSpec, GivenWhenThen, Matchers}
 
 class ElasticSearchWriterUtilsSpec extends FunSpec with Matchers with GivenWhenThen with BeforeAndAfterEach {
-  var timezone = "UTC"
+  var timezone: String = _
 
   override def beforeEach() {
     timezone = System.getProperty("user.timezone")

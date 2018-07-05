@@ -17,7 +17,7 @@
 package com.expedia.www.haystack.trace.reader.stores.readers.es.query
 
 import java.text.SimpleDateFormat
-import java.util.Date
+import java.util.{Date, TimeZone}
 
 import com.expedia.open.tracing.api.Operand.OperandCase
 import com.expedia.open.tracing.api.{ExpressionTree, Field}
@@ -35,6 +35,8 @@ import org.elasticsearch.search.aggregations.support.ValueType
 import scala.collection.JavaConverters._
 
 abstract class QueryGenerator(nestedDocName: String, indexConfiguration: WhitelistIndexFieldConfiguration) {
+  private final val TIME_ZONE = TimeZone.getTimeZone("UTC")
+
   // create search query by using filters list
   protected def createFilterFieldBasedQuery(filterFields: java.util.List[Field]): BoolQueryBuilder = {
     val traceContextWhitelistFields = indexConfiguration.globalTraceContextIndexFieldNames
@@ -139,13 +141,18 @@ abstract class QueryGenerator(nestedDocName: String, indexConfiguration: Whiteli
       for (datetimeInMicros <- flooredStarttime to flooredEndtime by INDEX_BUCKET_TIME_IN_MICROS)
         yield {
           val date = new Date(datetimeInMicros / 1000)
-
-          val dateBucket = new SimpleDateFormat("yyyy-MM-dd").format(date)
-          val hourBucket = new SimpleDateFormat("HH").format(date).toInt / indexHourBucket
+          val dateBucket = createSimpleDateFormat("yyyy-MM-dd").format(date)
+          val hourBucket = createSimpleDateFormat("HH").format(date).toInt / indexHourBucket
 
           s"$indexNamePrefix-$dateBucket-$hourBucket"
         }
     }
+  }
+
+  private def createSimpleDateFormat(pattern: String): SimpleDateFormat = {
+    val sdf = new SimpleDateFormat(pattern)
+    sdf.setTimeZone(TIME_ZONE)
+    sdf
   }
 
   private def isValidTimeRange(startTimeInMicros: Long,

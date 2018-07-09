@@ -2,6 +2,7 @@ package com.expedia.www.haystack.trace.reader.unit.readers.builders
 
 import com.expedia.open.tracing.Span
 import com.expedia.open.tracing.api.Trace
+import com.expedia.www.haystack.trace.reader.readers.utils.SpanTree
 
 import scala.collection.JavaConverters._
 

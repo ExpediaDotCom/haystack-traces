@@ -36,5 +36,5 @@ trait TraceBuilder {
 
   protected def getSpanById(trace: Trace, spanId: String): Span = trace.getChildSpansList.asScala.find(_.getSpanId == spanId).get
 
-  protected def getSpanById(spans: List[Span], spanId: String): Span = spans.find(_.getSpanId == spanId).get
+  protected def getSpanById(spans: Seq[Span], spanId: String): Span = spans.find(_.getSpanId == spanId).get
 }

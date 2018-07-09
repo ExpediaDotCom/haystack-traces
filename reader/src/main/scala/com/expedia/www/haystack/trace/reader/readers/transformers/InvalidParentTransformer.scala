@@ -16,31 +16,19 @@
 
 package com.expedia.www.haystack.trace.reader.readers.transformers
 
-import com.expedia.open.tracing.Span
+import com.expedia.www.haystack.trace.reader.readers.utils.MutableSpanForest
 
 /**
   * If there are spans with invalid parentId in the trace, mark root to be their parentId
   *
   * **Apply this transformer only if you are not confident about clients sending in parentIds properly**
   */
-class InvalidParentTransformer extends TraceTransformer {
-  override def transform(spans: Seq[Span]): Seq[Span] = {
-    val rootSpan = spans.find(_.getParentSpanId.isEmpty).get
-    val spanIdSet = spans.map(_.getSpanId).toSet
+class InvalidParentTransformer extends SpanTreeTransformer {
+  override def transform(spanForest: MutableSpanForest): MutableSpanForest = {
+    val rootTrees = spanForest.getAllTrees.filter(_.span.getParentSpanId.isEmpty)
 
-    spans.map(span =>
-      if (span != rootSpan && isInvalidSpanId(span, spanIdSet)) {
-        Span.newBuilder(span).setParentSpanId(rootSpan.getSpanId).build()
-      }
-      else {
-        span
-      }
-    )
-  }
+    require(rootTrees.size == 1)
 
-  private def isInvalidSpanId(span: Span, spanIdSet: Set[String]) = {
-    span.getParentSpanId == span.getSpanId ||
-      span.getParentSpanId == span.getTraceId ||
-      !spanIdSet.contains(span.getParentSpanId)
+    spanForest.mergeTreesUnder(rootTrees.head)
   }
 }

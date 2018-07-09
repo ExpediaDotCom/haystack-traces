@@ -45,7 +45,7 @@ object ElasticSearchWriterUtils {
 
   // creates an index name based on current date. following example illustrates the naming convention of
   // elastic search indices:
-  // haystack-span-2017-08-30
+  // haystack-span-2017-08-30-1
   def indexName(prefix: String, indexHourBucket: Int): String = {
     val currentTime = Calendar.getInstance(timezone)
     val bucket: Int = currentTime.get(Calendar.HOUR_OF_DAY) / indexHourBucket

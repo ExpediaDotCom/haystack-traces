@@ -26,7 +26,7 @@ case class MutableSpanForest(private var spans: Seq[Span]) {
   private var needForestUpdate = true
 
   def getAllTrees: Seq[SpanTree] = {
-    if (needForestUpdate) recreateForest()
+    if (needForestUpdate) reCreateForest()
     forest
   }
 
@@ -85,20 +85,23 @@ case class MutableSpanForest(private var spans: Seq[Span]) {
     this
   }
 
-  private def recreateForest() = {
+  private def reCreateForest() = {
     this.forest = mutable.ListBuffer[SpanTree]()
     if (this.spans.nonEmpty) {
       val spanIdTreeMap = mutable.HashMap[String, SpanTree]()
-      spans.foreach(span => spanIdTreeMap.put(span.getSpanId, SpanTree(span)))
-
       val possibleRoots = mutable.HashSet[String]()
-      spans.foreach(span => possibleRoots.add(span.getSpanId))
+
+      spans.foreach {
+        span =>
+          spanIdTreeMap.put(span.getSpanId, SpanTree(span))
+          possibleRoots.add(span.getSpanId)
+      }
 
       for (span <- spans;
            parentTree <- spanIdTreeMap.get(span.getParentSpanId)) {
-        val spanIdTree = spanIdTreeMap(span.getSpanId)
-        if (parentTree != spanIdTree ) {
-          parentTree.children += spanIdTree
+        val self = spanIdTreeMap(span.getSpanId)
+        if (parentTree != self) {
+          parentTree.children += self
           possibleRoots.remove(span.getSpanId)
         }
       }

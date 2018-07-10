@@ -16,10 +16,12 @@
 
 package com.expedia.www.haystack.trace.reader.unit.readers.transformers
 
-import com.expedia.open.tracing.Span
+import com.expedia.open.tracing.{Span, Tag}
 import com.expedia.www.haystack.trace.reader.readers.transformers.InvalidRootTransformer
-import com.expedia.www.haystack.trace.reader.readers.utils.MutableSpanForest
+import com.expedia.www.haystack.trace.reader.readers.utils.{MutableSpanForest, SpanUtils}
 import com.expedia.www.haystack.trace.reader.unit.BaseUnitTestSpec
+
+import scala.collection.JavaConverters._
 
 class InvalidRootTransformerSpec extends BaseUnitTestSpec {
   describe("InvalidRootTransformer") {
@@ -167,17 +169,20 @@ class InvalidRootTransformerSpec extends BaseUnitTestSpec {
           .setSpanId("a")
           .setServiceName("aService")
           .setParentSpanId("")
+          .addTags(Tag.newBuilder().setKey(SpanUtils.URL_TAG_KEY).setVStr("/anotherurl").setType(Tag.TagType.STRING))
           .setStartTime(150000000000l + 300)
           .build(),
         Span.newBuilder()
           .setSpanId("b")
           .setParentSpanId("")
           .setServiceName("bService")
+          .addTags(Tag.newBuilder().setKey(SpanUtils.URL_TAG_KEY).setVStr("/someurl").setType(Tag.TagType.STRING))
           .setStartTime(150000000000l)
           .build(),
         Span.newBuilder()
           .setSpanId("c")
           .setServiceName("cService")
+          .addTags(Tag.newBuilder().setKey(SpanUtils.URL_TAG_KEY).setVStr("/anotherurl").setType(Tag.TagType.STRING))
           .setParentSpanId("")
           .setStartTime(150000000000l + 150)
           .build()
@@ -195,6 +200,9 @@ class InvalidRootTransformerSpec extends BaseUnitTestSpec {
       root.head.getStartTime shouldBe 150000000000l
       root.head.getOperationName shouldEqual "auto-generated"
       root.head.getServiceName shouldEqual "bService"
+      val urlTag = root.head.getTagsList.asScala.find(_.getKey == SpanUtils.URL_TAG_KEY)
+      urlTag.isEmpty shouldBe false
+      urlTag.get.getVStr shouldEqual "/someurl"
     }
   }
 }

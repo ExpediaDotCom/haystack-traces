@@ -32,6 +32,10 @@ object SpanUtils {
     }).get.getTimestamp
   }
 
+  def getEndTime(span: Span): Long = {
+    span.getStartTime + span.getDuration
+  }
+
   def isMergedSpan(span: Span): Boolean = {
     containsClientLogTag(span) && containsServerLogTag(span)
   }

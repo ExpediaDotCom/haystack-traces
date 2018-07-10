@@ -17,7 +17,7 @@ package com.expedia.www.haystack.trace.reader.unit.readers.transformers
 
 import com.expedia.open.tracing.Span
 import com.expedia.www.haystack.trace.reader.readers.transformers.ClockSkewFromParentTransformer
-import com.expedia.www.haystack.trace.reader.readers.utils.{SpanTree, SpanUtils}
+import com.expedia.www.haystack.trace.reader.readers.utils.{MutableSpanForest, SpanTree, SpanUtils}
 import com.expedia.www.haystack.trace.reader.unit.BaseUnitTestSpec
 
 class ClockSkewFromParentTransformerSpec extends BaseUnitTestSpec {
@@ -27,7 +27,7 @@ class ClockSkewFromParentTransformerSpec extends BaseUnitTestSpec {
       val span_2 = createSpan(span_1.getSpanId, "span_2", 125L, 175L)
 
       val transformer = new ClockSkewFromParentTransformer()
-      val spans = transformer.transform(List(span_1, span_2))
+      val spans = transformer.transform(MutableSpanForest(List(span_1, span_2)))
       validateSpans(spans)
     }
 
@@ -36,7 +36,7 @@ class ClockSkewFromParentTransformerSpec extends BaseUnitTestSpec {
       val span_2 = createSpan(span_1.getSpanId, "span_2", 175L, 225L)
 
       val transformer = new ClockSkewFromParentTransformer()
-      val spans = transformer.transform(List(span_1, span_2))
+      val spans = transformer.transform(MutableSpanForest(List(span_1, span_2)))
       validateSpans(spans)
     }
 
@@ -45,7 +45,7 @@ class ClockSkewFromParentTransformerSpec extends BaseUnitTestSpec {
       val span_2 = createSpan(span_1.getSpanId, "span_2", 75L, 125L)
 
       val transformer = new ClockSkewFromParentTransformer()
-      val spans = transformer.transform(List(span_1, span_2))
+      val spans = transformer.transform(MutableSpanForest(List(span_1, span_2)))
       validateSpans(spans)
     }
 
@@ -54,7 +54,7 @@ class ClockSkewFromParentTransformerSpec extends BaseUnitTestSpec {
       val span_2 = createSpan(span_1.getSpanId, "span_2", 275L, 325L)
 
       val transformer = new ClockSkewFromParentTransformer()
-      val spans = transformer.transform(List(span_1, span_2))
+      val spans = transformer.transform(MutableSpanForest(List(span_1, span_2)))
       validateSpans(spans)
     }
 
@@ -62,16 +62,15 @@ class ClockSkewFromParentTransformerSpec extends BaseUnitTestSpec {
       val span_1 = createSpan("", "span_1", 100L, 200L)
 
       val transformer = new ClockSkewFromParentTransformer()
-      val spans = transformer.transform(List(span_1))
-      spans.size shouldBe 1
-      spans.head.getStartTime shouldBe 100L
-      spans.head.getDuration shouldBe 100L
+      val spans = transformer.transform(MutableSpanForest(List(span_1)))
+      spans.getUnderlyingSpans.size shouldBe 1
+      spans.getUnderlyingSpans.head.getStartTime shouldBe 100L
+      spans.getUnderlyingSpans.head.getDuration shouldBe 100L
     }
   }
 
-  def validateSpans(spans: Seq[Span]): Unit = {
-    val spanTree = SpanTree(spans.toList)
-    validateSpanTree(spanTree)
+  def validateSpans(spans: MutableSpanForest): Unit = {
+    spans.getAllTrees.foreach(spanTree => validateSpanTree(spanTree))
   }
 
   def validateSpanTree(spanTree: SpanTree): Unit = {

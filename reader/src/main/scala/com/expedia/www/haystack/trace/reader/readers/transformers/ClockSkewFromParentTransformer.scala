@@ -17,7 +17,7 @@
 package com.expedia.www.haystack.trace.reader.readers.transformers
 
 import com.expedia.open.tracing.Span
-import com.expedia.www.haystack.trace.reader.readers.utils.{SpanTree, SpanUtils}
+import com.expedia.www.haystack.trace.reader.readers.utils.{MutableSpanForest, SpanTree, SpanUtils}
 
 import scala.collection.Seq
 
@@ -28,10 +28,11 @@ import scala.collection.Seq
   * addSkewInSubtree looks into each child of given subtreeRoot, calculates delta,
   * and recursively applies delta in its subtree
   */
-class ClockSkewFromParentTransformer extends TraceTransformer {
+class ClockSkewFromParentTransformer extends SpanTreeTransformer {
 
-  override def transform(spans: Seq[Span]): Seq[Span] = {
-    adjustSkew(SpanTree(spans.toList))
+  override def transform(forest: MutableSpanForest): MutableSpanForest = {
+    val underlyingSpans = forest.getAllTrees.flatMap(tree => adjustSkew(tree))
+    forest.updateUnderlyingSpans(underlyingSpans)
   }
 
   private def adjustSkew(node: SpanTree): Seq[Span] = {

@@ -28,7 +28,7 @@ class ClockSkewFromParentTransformerSpec extends BaseUnitTestSpec {
 
       val transformer = new ClockSkewFromParentTransformer()
       val spans = transformer.transform(MutableSpanForest(List(span_1, span_2)))
-      validateSpans(spans)
+      validateSpans(spans, 2)
     }
 
     it("should shift child span's startTime if the endTime exceeds the parent span") {
@@ -37,7 +37,7 @@ class ClockSkewFromParentTransformerSpec extends BaseUnitTestSpec {
 
       val transformer = new ClockSkewFromParentTransformer()
       val spans = transformer.transform(MutableSpanForest(List(span_1, span_2)))
-      validateSpans(spans)
+      validateSpans(spans, 2)
     }
 
     it("should shift child span's startTime if the startTime precedes the parent span") {
@@ -46,7 +46,7 @@ class ClockSkewFromParentTransformerSpec extends BaseUnitTestSpec {
 
       val transformer = new ClockSkewFromParentTransformer()
       val spans = transformer.transform(MutableSpanForest(List(span_1, span_2)))
-      validateSpans(spans)
+      validateSpans(spans, 2)
     }
 
     it("should shift both the startTime and the endTime if the child span is completely outside of the parent spans timeframe") {
@@ -55,7 +55,17 @@ class ClockSkewFromParentTransformerSpec extends BaseUnitTestSpec {
 
       val transformer = new ClockSkewFromParentTransformer()
       val spans = transformer.transform(MutableSpanForest(List(span_1, span_2)))
-      validateSpans(spans)
+      validateSpans(spans, 2)
+    }
+
+    it("should shift multiple children correctly") {
+      val span_1 = createSpan("", "span_1", 100L, 200L)
+      val span_2 = createSpan(span_1.getSpanId, "span_2", 275L, 325L)
+      val span_3 = createSpan(span_2.getSpanId, "span_3", 375, 400L)
+
+      val transformer = new ClockSkewFromParentTransformer()
+      val spans = transformer.transform(MutableSpanForest(List(span_1, span_2, span_3)))
+      validateSpans(spans, 3)
     }
 
     it("should handle a single span with no shift") {
@@ -69,7 +79,8 @@ class ClockSkewFromParentTransformerSpec extends BaseUnitTestSpec {
     }
   }
 
-  def validateSpans(spans: MutableSpanForest): Unit = {
+  def validateSpans(spans: MutableSpanForest, size: Int): Unit = {
+    spans.getUnderlyingSpans.size shouldBe size
     spans.getAllTrees.foreach(spanTree => validateSpanTree(spanTree))
   }
 

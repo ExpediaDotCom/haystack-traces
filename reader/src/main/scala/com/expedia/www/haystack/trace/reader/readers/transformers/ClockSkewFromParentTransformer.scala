@@ -32,17 +32,28 @@ import scala.collection.{Seq, mutable}
 class ClockSkewFromParentTransformer extends SpanTreeTransformer {
 
   override def transform(forest: MutableSpanForest): MutableSpanForest = {
-    var underlyingSpans = new mutable.ListBuffer[Span]
+    val underlyingSpans = new mutable.ListBuffer[Span]
     forest.getAllTrees.foreach(tree => {
-      underlyingSpans += tree.span
-      adjustSkew(tree.children, tree.span, underlyingSpans)
+      correctTreeClockSkew(underlyingSpans, tree)
     })
     forest.updateUnderlyingSpans(underlyingSpans)
   }
 
-  private def adjustSkew(childrenTrees: Seq[SpanTree], parent: Span, fixedSpans: ListBuffer[Span]): Unit = {
-    fixedSpans ++ childrenTrees.map(child => adjustSpan(child.span, parent))
-    childrenTrees.foreach(tree => adjustSkew(tree.children, tree.span, fixedSpans))
+  private def correctTreeClockSkew(underlyingSpans: ListBuffer[Span], tree: SpanTree): Unit = {
+    underlyingSpans += tree.span
+    val remainingNodes = mutable.Queue(SpanTree(tree.span, tree.children))
+    while (remainingNodes.nonEmpty) {
+      val tree = remainingNodes.dequeue()
+      adjustSkew(tree.children, tree.span, underlyingSpans, remainingNodes)
+    }
+  }
+
+  final def adjustSkew(childrenTrees: Seq[SpanTree], parent: Span, fixedSpans: ListBuffer[Span], remainingNodes: mutable.Queue[SpanTree]): Unit = {
+    for (tree <- childrenTrees) {
+      var adjustedSpan = adjustSpan(tree.span, parent)
+      fixedSpans += adjustedSpan
+      remainingNodes.enqueue(SpanTree(adjustedSpan, tree.children))
+    }
   }
 
   private def adjustSpan(child: Span, parent: Span): Span = {

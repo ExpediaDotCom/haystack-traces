@@ -2,7 +2,7 @@ package com.expedia.www.haystack.trace.reader.unit.readers.transformers
 
 import com.expedia.open.tracing.{Span, Tag}
 import com.expedia.www.haystack.trace.reader.readers.transformers.{OrphanedTraceTransformer, OrphanedTraceTransformerConstants}
-import com.expedia.www.haystack.trace.reader.readers.utils.SpanMarkers
+import com.expedia.www.haystack.trace.reader.readers.utils.{MutableSpanForest, SpanMarkers}
 import com.expedia.www.haystack.trace.reader.unit.BaseUnitTestSpec
 
 class OrphanedTraceTransformerSpec extends BaseUnitTestSpec {
@@ -13,7 +13,8 @@ class OrphanedTraceTransformerSpec extends BaseUnitTestSpec {
       val span_3 = Span.newBuilder().setTraceId("traceId").setSpanId("span_3").setParentSpanId(span_1.getSpanId).setServiceName("another-service").build()
 
       val transformer = new OrphanedTraceTransformer()
-      val spans = transformer.transform(List(span_1, span_2, span_3))
+      val spanForest = MutableSpanForest(Seq(span_1, span_2, span_3))
+      val spans = transformer.transform(spanForest).getUnderlyingSpans
       spans.size shouldBe 3
       spans should contain(span_1)
       spans should contain(span_2)
@@ -30,7 +31,8 @@ class OrphanedTraceTransformerSpec extends BaseUnitTestSpec {
       val span_3 = Span.newBuilder().setTraceId("traceId").setSpanId("span_3").setParentSpanId(span_1.getSpanId).setStartTime(20000).setDuration(100).setServiceName("another-service").build()
 
       val transformer = new OrphanedTraceTransformer()
-      val spans = transformer.transform(List(span_2, span_3))
+      val spanForest = MutableSpanForest(Seq(span_2, span_3))
+      val spans = transformer.transform(spanForest).getUnderlyingSpans
       spans.size shouldBe 3
       spans should contain(span_2)
       spans should contain(span_3)
@@ -45,7 +47,8 @@ class OrphanedTraceTransformerSpec extends BaseUnitTestSpec {
       val span_5 = Span.newBuilder().setTraceId("traceId").setSpanId("span_5").setParentSpanId(span_4.getSpanId).setServiceName("another-service").build()
 
       val transformer = new OrphanedTraceTransformer()
-      val spans = transformer.transform(List(span_2, span_3, span_5))
+      val spanForest = MutableSpanForest(Seq(span_2, span_3, span_5))
+      val spans = transformer.transform(spanForest).getUnderlyingSpans
       spans.size shouldBe 0
     }
 
@@ -55,7 +58,8 @@ class OrphanedTraceTransformerSpec extends BaseUnitTestSpec {
       val span_5 = Span.newBuilder().setTraceId("traceId").setSpanId("span_5").setParentSpanId(span_4.getSpanId).setServiceName("another-service").build()
 
       val transformer = new OrphanedTraceTransformer()
-      val spans = transformer.transform(List(span_5))
+      val spanForest = MutableSpanForest(Seq(span_5))
+      val spans = transformer.transform(spanForest).getUnderlyingSpans
       spans.size shouldBe 0
     }
   }

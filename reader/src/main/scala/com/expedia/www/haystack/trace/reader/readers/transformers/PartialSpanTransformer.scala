@@ -17,9 +17,9 @@
 package com.expedia.www.haystack.trace.reader.readers.transformers
 
 import com.expedia.open.tracing.{Span, Tag}
-import com.expedia.www.haystack.trace.reader.readers.utils.{AuxiliaryTags, SpanMarkers, SpanUtils}
 import com.expedia.www.haystack.trace.reader.readers.utils.TagBuilders.{buildBoolTag, buildLongTag, buildStringTag}
 import com.expedia.www.haystack.trace.reader.readers.utils.TagExtractors.extractTagStringValue
+import com.expedia.www.haystack.trace.reader.readers.utils.{AuxiliaryTags, MutableSpanForest, SpanMarkers, SpanUtils}
 
 import scala.collection.JavaConverters._
 
@@ -27,12 +27,18 @@ import scala.collection.JavaConverters._
   * Merges partial spans and generates a single Span combining a client and corresponding server span
   * gracefully fallback to collapse to a single span if there are multiple or missing client/server spans
   */
-class PartialSpanTransformer extends TraceTransformer {
-  override def transform(spans: Seq[Span]): Seq[Span] = {
-    spans.groupBy(span => span.getSpanId).map((pair) => pair._2 match {
+class PartialSpanTransformer extends SpanTreeTransformer {
+  override def transform(spanForest: MutableSpanForest): MutableSpanForest = {
+    var hasAnySpanMerged = false
+
+    val mergedSpans: Seq[Span] = spanForest.getUnderlyingSpans.groupBy(_.getSpanId).map((pair) => pair._2 match {
       case Seq(span: Span) => span
-      case list: Seq[Span] => mergeSpans(list)
+      case list: Seq[Span] =>
+        hasAnySpanMerged = true
+        mergeSpans(list)
     }).toSeq
+
+    spanForest.updateUnderlyingSpans(mergedSpans, hasAnySpanMerged)
   }
 
   private def mergeSpans(spans: Seq[Span]): Span = {

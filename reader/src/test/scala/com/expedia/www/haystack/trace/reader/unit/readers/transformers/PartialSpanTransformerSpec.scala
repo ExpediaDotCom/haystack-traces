@@ -18,8 +18,8 @@ package com.expedia.www.haystack.trace.reader.unit.readers.transformers
 
 import com.expedia.open.tracing.{Log, Span, Tag}
 import com.expedia.www.haystack.trace.reader.readers.transformers.PartialSpanTransformer
-import com.expedia.www.haystack.trace.reader.readers.utils.AuxiliaryTags
 import com.expedia.www.haystack.trace.reader.readers.utils.TagExtractors._
+import com.expedia.www.haystack.trace.reader.readers.utils.{AuxiliaryTags, MutableSpanForest}
 import com.expedia.www.haystack.trace.reader.unit.BaseUnitTestSpec
 import com.expedia.www.haystack.trace.reader.unit.readers.builders.ValidTraceBuilder
 
@@ -32,7 +32,6 @@ class PartialSpanTransformerSpec extends BaseUnitTestSpec with ValidTraceBuilder
     val partialSpanId = "partialSpanId"
     val parentSpanId = "parentSpanId"
     val tag = Tag.newBuilder().setKey("tag").setVBool(true).build()
-    val log = Log.newBuilder().setTimestamp(System.currentTimeMillis).addFields(tag).build()
 
     val partialClientSpan = Span.newBuilder()
       .setSpanId(partialSpanId)
@@ -204,7 +203,7 @@ class PartialSpanTransformerSpec extends BaseUnitTestSpec with ValidTraceBuilder
       val spans = createSpansWithClientAndServer(timestamp)
 
       When("invoking transform")
-      val mergedSpans = new PartialSpanTransformer().transform(spans)
+      val mergedSpans = new PartialSpanTransformer().transform(MutableSpanForest(spans)).getUnderlyingSpans
 
       Then("return partial spans merged with server span being primary")
       mergedSpans.length should be(1)
@@ -220,7 +219,7 @@ class PartialSpanTransformerSpec extends BaseUnitTestSpec with ValidTraceBuilder
       val spans = createMultiplePartialSpans(timestamp)
 
       When("invoking transform")
-      val mergedSpans = new PartialSpanTransformer().transform(spans)
+      val mergedSpans = new PartialSpanTransformer().transform(MutableSpanForest(spans)).getUnderlyingSpans
 
       Then("return partial spans merged with first server span as primary")
       mergedSpans.length should be(1)
@@ -236,7 +235,7 @@ class PartialSpanTransformerSpec extends BaseUnitTestSpec with ValidTraceBuilder
       val spans = createNonPartialSpans(timestamp)
 
       When("invoking transform")
-      val mergedSpans = new PartialSpanTransformer().transform(spans)
+      val mergedSpans = new PartialSpanTransformer().transform(MutableSpanForest(spans)).getUnderlyingSpans
 
       Then("return partial spans merged")
       mergedSpans.length should be(3)
@@ -247,7 +246,7 @@ class PartialSpanTransformerSpec extends BaseUnitTestSpec with ValidTraceBuilder
       val spans = buildMultiServiceTrace().getChildSpansList.asScala
 
       When("invoking transform")
-      val mergedSpans = new PartialSpanTransformer().transform(spans).toList
+      val mergedSpans = new PartialSpanTransformer().transform(MutableSpanForest(spans)).getUnderlyingSpans
 
       Then("return partial spans merged with auxiliary tags")
       mergedSpans.size should be(6)

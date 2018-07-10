@@ -18,6 +18,7 @@ package com.expedia.www.haystack.trace.reader.unit.readers.transformers
 
 import com.expedia.open.tracing.Span
 import com.expedia.www.haystack.trace.reader.readers.transformers.InvalidParentTransformer
+import com.expedia.www.haystack.trace.reader.readers.utils.MutableSpanForest
 import com.expedia.www.haystack.trace.reader.unit.BaseUnitTestSpec
 
 class InvalidParentTransformerSpec extends BaseUnitTestSpec {
@@ -40,7 +41,7 @@ class InvalidParentTransformerSpec extends BaseUnitTestSpec {
       )
 
       When("invoking transform")
-      val transformedSpans = new InvalidParentTransformer().transform(spans)
+      val transformedSpans = new InvalidParentTransformer().transform(MutableSpanForest(spans)).getUnderlyingSpans
 
       Then("mark root to be parent of spans with invalid parent id")
       transformedSpans.length should be(3)
@@ -72,7 +73,7 @@ class InvalidParentTransformerSpec extends BaseUnitTestSpec {
       )
 
       When("invoking transform")
-      val transformedSpans = new InvalidParentTransformer().transform(spans)
+      val transformedSpans = new InvalidParentTransformer().transform(MutableSpanForest(spans)).getUnderlyingSpans
 
       Then("mark root to be parent of spans with invalid parent id")
       transformedSpans.length should be(3)

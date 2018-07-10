@@ -17,7 +17,7 @@
 package com.expedia.www.haystack.trace.reader.readers.transformers
 
 import com.expedia.open.tracing.Span
-import com.expedia.www.haystack.trace.reader.readers.utils.{SpanMarkers, SpanUtils}
+import com.expedia.www.haystack.trace.reader.readers.utils.{MutableSpanForest, SpanMarkers, SpanTree, SpanUtils}
 
 /**
   * Fixes clock skew between parent and child spans
@@ -27,10 +27,11 @@ import com.expedia.www.haystack.trace.reader.readers.utils.{SpanMarkers, SpanUti
   * addSkewInSubtree looks into each child of given subtreeRoot, calculates delta,
   * and recursively applies delta in its subtree
   */
-class ClockSkewTransformer extends TraceTransformer {
+class ClockSkewTransformer extends SpanTreeTransformer {
 
-  override def transform(spans: Seq[Span]): Seq[Span] = {
-    adjustSkew(SpanTree(spans.toList), None)
+  override def transform(forest: MutableSpanForest): MutableSpanForest = {
+    val clockedSkewAdjusted = adjustSkew(forest.getAllTrees.head, None)
+    forest.updateUnderlyingSpans(clockedSkewAdjusted)
   }
 
   private def adjustSkew(node: SpanTree, previousSkew: Option[Skew]): Seq[Span] = {
@@ -42,9 +43,13 @@ class ClockSkewTransformer extends TraceTransformer {
     getClockSkew(previousSkewAdjustedSpan) match {
       case Some(skew) =>
         val selfSkewAdjustedSpan: Span = adjustForASpan(previousSkewAdjustedSpan, skew)
-        selfSkewAdjustedSpan :: node.children.flatMap(adjustSkew(_, Some(skew)))
+        val children = node.children.flatMap(adjustSkew(_, Some(skew)))
+        children.prepend(selfSkewAdjustedSpan)
+        children
       case None =>
-        previousSkewAdjustedSpan :: node.children.flatMap(adjustSkew(_, None))
+        val children = node.children.flatMap(adjustSkew(_, None))
+        children.prepend(previousSkewAdjustedSpan)
+        children
     }
   }
 
@@ -84,13 +89,11 @@ class ClockSkewTransformer extends TraceTransformer {
     * Special case: if the server (child) span is longer than the client (parent), then do not
     * adjust for clock skew.
     */
-  private def calculateClockSkew(
-                            clientSend: Long,
-                            clientRecv: Long,
-                            serverRecv: Long,
-                            serverSend: Long,
-                            serviceName: String
-                          ): Option[Skew] = {
+  private def calculateClockSkew(clientSend: Long,
+                                 clientRecv: Long,
+                                 serverRecv: Long,
+                                 serverSend: Long,
+                                 serviceName: String): Option[Skew] = {
     val clientDuration = clientRecv - clientSend
     val serverDuration = serverSend - serverRecv
 
@@ -109,20 +112,4 @@ class ClockSkewTransformer extends TraceTransformer {
   }
 
   case class Skew(serviceName: String, delta: Long)
-
-  object SpanTree {
-    def apply(spans: List[Span]): SpanTree = {
-      build(spans.find(_.getParentSpanId.isEmpty).get, spans)
-    }
-
-    private def build(root: Span, spans: List[Span]): SpanTree = {
-      val childTrees = spans.
-        filter(span => span.getParentSpanId == root.getSpanId)
-        .map(build(_, spans))
-
-      SpanTree(root, childTrees)
-    }
-  }
-
-  case class SpanTree(span: Span, children: List[SpanTree])
 }

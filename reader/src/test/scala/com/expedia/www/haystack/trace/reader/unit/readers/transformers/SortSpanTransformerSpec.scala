@@ -18,6 +18,7 @@ package com.expedia.www.haystack.trace.reader.unit.readers.transformers
 
 import com.expedia.open.tracing.Span
 import com.expedia.www.haystack.trace.reader.readers.transformers.SortSpanTransformer
+import com.expedia.www.haystack.trace.reader.readers.utils.MutableSpanForest
 import com.expedia.www.haystack.trace.reader.unit.BaseUnitTestSpec
 
 class SortSpanTransformerSpec extends BaseUnitTestSpec {
@@ -74,7 +75,7 @@ class SortSpanTransformerSpec extends BaseUnitTestSpec {
       val spans = createSpans(timestamp)
 
       When("invoking transform")
-      val transformedSpans = new SortSpanTransformer().transform(spans).toList
+      val transformedSpans = new SortSpanTransformer().transform(MutableSpanForest(spans)).getUnderlyingSpans
 
       Then("return spans in sorted order")
       transformedSpans.length should be(5)

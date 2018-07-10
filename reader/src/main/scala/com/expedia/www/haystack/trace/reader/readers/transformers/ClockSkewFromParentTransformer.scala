@@ -19,27 +19,30 @@ package com.expedia.www.haystack.trace.reader.readers.transformers
 import com.expedia.open.tracing.Span
 import com.expedia.www.haystack.trace.reader.readers.utils.{MutableSpanForest, SpanTree, SpanUtils}
 
-import scala.collection.Seq
+import scala.collection.mutable.ListBuffer
+import scala.collection.{Seq, mutable}
 
 /**
   * Fixes clock skew between parent and child spans
-  * If any child spans reports a startTime earlier then parent span's startTime,
-  * corresponding delta will be added in the subtree with child span as root
-  * addSkewInSubtree looks into each child of given subtreeRoot, calculates delta,
-  * and recursively applies delta in its subtree
+  * If any child spans reports a startTime earlier then parent span's startTime or
+  * an endTime later then the parent span's endTime, then
+  * the child span's startTime or endTime will be shifted. Where the shift is
+  * set equal to the parent's startTime or endTime depending on which is off.
   */
 class ClockSkewFromParentTransformer extends SpanTreeTransformer {
 
   override def transform(forest: MutableSpanForest): MutableSpanForest = {
-    val underlyingSpans = forest.getAllTrees.flatMap(tree => adjustSkew(tree))
+    var underlyingSpans = new mutable.ListBuffer[Span]
+    forest.getAllTrees.foreach(tree => {
+      underlyingSpans += tree.span
+      adjustSkew(tree.children, tree.span, underlyingSpans)
+    })
     forest.updateUnderlyingSpans(underlyingSpans)
   }
 
-  private def adjustSkew(node: SpanTree): Seq[Span] = {
-    val children = node.children.map(child => adjustSpan(child.span, node.span))
-    val childrensChildren = node.children.flatMap(child => child.children.flatMap(child => adjustSkew(child)))
-
-    List(node.span) ++ children ++ childrensChildren
+  private def adjustSkew(childrenTrees: Seq[SpanTree], parent: Span, fixedSpans: ListBuffer[Span]): Unit = {
+    fixedSpans ++ childrenTrees.map(child => adjustSpan(child.span, parent))
+    childrenTrees.foreach(tree => adjustSkew(tree.children, tree.span, fixedSpans))
   }
 
   private def adjustSpan(child: Span, parent: Span): Span = {

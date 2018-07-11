@@ -19,6 +19,7 @@ package com.expedia.www.haystack.trace.reader.readers.transformers
 import com.expedia.open.tracing.Span
 import com.expedia.www.haystack.trace.reader.readers.utils.{MutableSpanForest, SpanTree, SpanUtils}
 
+import scala.annotation.tailrec
 import scala.collection.mutable.ListBuffer
 import scala.collection.{Seq, mutable}
 
@@ -31,29 +32,36 @@ import scala.collection.{Seq, mutable}
   */
 class ClockSkewFromParentTransformer extends SpanTreeTransformer {
 
+  case class SpanTreeWithParent(spanTree: SpanTree, parent: Option[Span])
+
   override def transform(forest: MutableSpanForest): MutableSpanForest = {
     val underlyingSpans = new mutable.ListBuffer[Span]
     forest.getAllTrees.foreach(tree => {
-      correctTreeClockSkew(underlyingSpans, tree)
+      adjustSkew(underlyingSpans, List(SpanTreeWithParent(tree, None)))
     })
     forest.updateUnderlyingSpans(underlyingSpans)
   }
 
-  private def correctTreeClockSkew(underlyingSpans: ListBuffer[Span], tree: SpanTree): Unit = {
-    underlyingSpans += tree.span
-    val remainingNodes = mutable.Queue(SpanTree(tree.span, tree.children))
-    while (remainingNodes.nonEmpty) {
-      val tree = remainingNodes.dequeue()
-      adjustSkew(tree.children, tree.span, underlyingSpans, remainingNodes)
-    }
-  }
+  @tailrec
+  private def adjustSkew(fixedSpans: ListBuffer[Span], spanTrees: Seq[SpanTreeWithParent]): Unit = {
+    if (spanTrees.isEmpty) return
 
-  final def adjustSkew(childrenTrees: Seq[SpanTree], parent: Span, fixedSpans: ListBuffer[Span], remainingNodes: mutable.Queue[SpanTree]): Unit = {
-    for (tree <- childrenTrees) {
-      var adjustedSpan = adjustSpan(tree.span, parent)
-      fixedSpans += adjustedSpan
-      remainingNodes.enqueue(SpanTree(adjustedSpan, tree.children))
-    }
+    // collect the child trees that need to be corrected for clockskew
+    val childTrees = mutable.ListBuffer[SpanTreeWithParent]()
+
+    spanTrees.foreach(e => {
+      val rootSpan = e.spanTree.span
+      var adjustedSpan = rootSpan
+      e.parent match {
+        case Some(parentSpan) =>
+          adjustedSpan = adjustSpan(rootSpan, parentSpan)
+          fixedSpans += adjustedSpan
+        case _ => fixedSpans += rootSpan
+      }
+      childTrees ++= e.spanTree.children.map(tree => SpanTreeWithParent(tree, Some(adjustedSpan)))
+    })
+
+    adjustSkew(fixedSpans, childTrees)
   }
 
   private def adjustSpan(child: Span, parent: Span): Span = {

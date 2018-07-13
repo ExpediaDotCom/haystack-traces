@@ -22,7 +22,7 @@ import com.expedia.www.haystack.commons.config.ConfigurationLoader
 import com.expedia.www.haystack.trace.commons.config.entities._
 import com.expedia.www.haystack.trace.commons.config.reload.{ConfigurationReloadElasticSearchProvider, Reloadable}
 import com.expedia.www.haystack.trace.reader.config.entities._
-import com.expedia.www.haystack.trace.reader.readers.transformers.TraceTransformer
+import com.expedia.www.haystack.trace.reader.readers.transformers.{PartialSpanTransformer, SpanTreeTransformer, TraceTransformer}
 import com.expedia.www.haystack.trace.reader.readers.validators.TraceValidator
 import com.typesafe.config.Config
 
@@ -144,9 +144,11 @@ class ProviderConfiguration {
     val preTransformers = config.getStringList("trace.transformers.pre.sequence")
     val postTransformers = config.getStringList("trace.transformers.post.sequence")
 
-    TraceTransformersConfiguration(
-      toInstances[TraceTransformer](preTransformers),
-      toInstances[TraceTransformer](postTransformers))
+    val preTransformerInstances = toInstances[TraceTransformer](preTransformers)
+    var postTransformerInstances = toInstances[SpanTreeTransformer](postTransformers).filterNot(_.isInstanceOf[PartialSpanTransformer])
+    postTransformerInstances = new PartialSpanTransformer +: postTransformerInstances
+
+    TraceTransformersConfiguration(preTransformerInstances, postTransformerInstances)
   }
 
   /**

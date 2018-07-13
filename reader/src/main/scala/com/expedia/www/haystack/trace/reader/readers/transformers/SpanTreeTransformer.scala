@@ -13,8 +13,11 @@
  *       See the License for the specific language governing permissions and
  *       limitations under the License.
  */
-package com.expedia.www.haystack.trace.reader.config.entities
 
-import com.expedia.www.haystack.trace.reader.readers.transformers.{SpanTreeTransformer, TraceTransformer}
+package com.expedia.www.haystack.trace.reader.readers.transformers
 
-case class TraceTransformersConfiguration(preTransformers: Seq[TraceTransformer], postTransformers: Seq[SpanTreeTransformer])
+import com.expedia.www.haystack.trace.reader.readers.utils.MutableSpanForest
+
+trait SpanTreeTransformer {
+  def transform(forest: MutableSpanForest): MutableSpanForest
+}

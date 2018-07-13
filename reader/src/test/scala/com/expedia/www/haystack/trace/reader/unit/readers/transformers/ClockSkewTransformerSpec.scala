@@ -18,6 +18,7 @@ package com.expedia.www.haystack.trace.reader.unit.readers.transformers
 
 import com.expedia.open.tracing.{Log, Span, Tag}
 import com.expedia.www.haystack.trace.reader.readers.transformers.ClockSkewTransformer
+import com.expedia.www.haystack.trace.reader.readers.utils.MutableSpanForest
 import com.expedia.www.haystack.trace.reader.unit.BaseUnitTestSpec
 
 class ClockSkewTransformerSpec extends BaseUnitTestSpec {
@@ -141,10 +142,10 @@ class ClockSkewTransformerSpec extends BaseUnitTestSpec {
     it("should not change clock skew if there are no merged spans") {
       Given("trace with skewed spans")
       val timestamp = 150000000000l
-      val spans = createTraceWithoutMergedSpans(timestamp)
+      val spanForest = MutableSpanForest(createTraceWithoutMergedSpans(timestamp))
 
       When("invoking transform")
-      val transformedSpans = new ClockSkewTransformer().transform(spans).toList
+      val transformedSpans = new ClockSkewTransformer().transform(spanForest).getUnderlyingSpans
 
       Then("return spans without fixing skew")
       transformedSpans.length should be(5)
@@ -158,10 +159,10 @@ class ClockSkewTransformerSpec extends BaseUnitTestSpec {
     it("should fix clock skew if there merged spans with skew") {
       Given("trace with skewed spans")
       val timestamp = 150000000000l
-      val spans = createSpansWithClientAndServer(timestamp)
+      val spanForest = MutableSpanForest(createSpansWithClientAndServer(timestamp))
 
       When("invoking transform")
-      val transformedSpans = new ClockSkewTransformer().transform(spans).toList
+      val transformedSpans = new ClockSkewTransformer().transform(spanForest).getUnderlyingSpans
 
       Then("return spans without fixing skew")
       transformedSpans.length should be(4)

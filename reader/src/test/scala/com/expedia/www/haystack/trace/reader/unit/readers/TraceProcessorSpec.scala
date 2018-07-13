@@ -168,7 +168,7 @@ class TraceProcessorSpec
     val traceProcessor = new TraceProcessor(
       Seq(new TraceIdValidator),
       Seq(new DeDuplicateSpanTransformer),
-      Seq(new InvalidParentTransformer, new InvalidRootTransformer, new PartialSpanTransformer, new ClockSkewTransformer, new SortSpanTransformer))
+      Seq(new PartialSpanTransformer, new InvalidRootTransformer, new InvalidParentTransformer, new ClockSkewTransformer, new SortSpanTransformer))
 
     it("should successfully process a simple valid trace") {
       Given("a simple liner trace ")
@@ -199,9 +199,9 @@ class TraceProcessorSpec
       processedTraceOption.isSuccess should be(true)
       val processedTrace = processedTraceOption.get
 
-      processedTrace.getChildSpansList.size() should be(4)
+      processedTrace.getChildSpansList.size() should be(5)
       getSpanById(processedTrace, "a").getServiceName should be("x")
-      getSpanById(processedTrace, "b").getParentSpanId should be("a")
+      getSpanById(processedTrace, "b").getParentSpanId should not be "a"
       getSpanById(processedTrace, "c").getParentSpanId should be("b")
       getSpanById(processedTrace, "d").getParentSpanId should be("b")
     }

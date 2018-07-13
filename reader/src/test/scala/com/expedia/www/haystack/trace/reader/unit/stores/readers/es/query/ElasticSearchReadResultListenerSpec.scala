@@ -41,7 +41,7 @@ class ElasticSearchReadResultListenerSpec extends BaseUnitTestSpec {
   private val searchRequest = {
     val generator = new TraceSearchQueryGenerator(esConfig, "spans", new WhitelistIndexFieldConfiguration)
     val field = Field.newBuilder().setName("serviceName").setValue("expweb").build()
-    generator.generate(TracesSearchRequest.newBuilder().setStartTime(1510469157572000l).setEndTime(1510469161172000l).setLimit(40).addFields(field).build())
+    generator.generate(TracesSearchRequest.newBuilder().setStartTime(1510469157572000l).setEndTime(1510469161172000l).setLimit(40).addFields(field).build(), true)
   }
 
   describe("ElasticSearch Read Result Listener") {

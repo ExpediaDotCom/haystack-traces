@@ -55,6 +55,13 @@ class CassandraEsTraceStore(cassandraConfig: CassandraConfiguration,
   override def searchTraces(request: TracesSearchRequest): Future[Seq[Trace]] = {
     esReader
       .search(traceSearchQueryGenerator.generate(request))
+      .flatMap(result =>
+        if (result.getErrorMessage.contains(esReader.INDEX_NOT_FOUND_EXCEPTION)) {
+          esReader
+            .search(traceSearchQueryGenerator.generate(request, useSpecificIndices = false))
+        } else {
+          Future(result)
+        })
       .flatMap(extractTraces)
   }
 

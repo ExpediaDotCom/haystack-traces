@@ -33,10 +33,22 @@ class TraceSearchQueryGenerator(esConfig: ElasticSearchConfiguration,
                                 indexConfiguration: WhitelistIndexFieldConfiguration)
   extends QueryGenerator(nestedDocName, indexConfiguration) {
 
-  def generate(request: TracesSearchRequest): Search = {
+  def generate(request: TracesSearchRequest, useSpecificIndices: Boolean): Search = {
     require(request.getStartTime > 0)
     require(request.getEndTime > 0)
     require(request.getLimit > 0)
+
+    if (useSpecificIndices) {
+      generate(request)
+    } else {
+      new Search.Builder(buildQueryString(request))
+        .addIndex(esConfig.indexNamePrefix)
+        .addType(esConfig.indexType)
+        .build()
+    }
+  }
+
+  def generate(request: TracesSearchRequest): Search = {
 
     val targetIndicesToSearch = getESIndexes(
       request.getStartTime,

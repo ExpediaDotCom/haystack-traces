@@ -28,8 +28,6 @@ import scala.concurrent.Promise
 
 object ElasticSearchCountResultListener {
   protected val LOGGER: Logger = LoggerFactory.getLogger(classOf[ElasticSearchCountResultListener])
-
-  protected def is2xx(code: Int): Boolean = (code / 100) == 2
 }
 
 class ElasticSearchCountResultListener(request: Search,
@@ -39,15 +37,7 @@ class ElasticSearchCountResultListener(request: Search,
 
   override def completed(result: SearchResult): Unit = {
     timer.close()
-
-    if (!is2xx(result.getResponseCode)) {
-      val ex = ElasticSearchClientError(result.getResponseCode, result.getJsonString)
-      LOGGER.error(s"Failed in reading from elasticsearch for request='${request.toJson}'", ex)
-      failure.mark()
-      promise.failure(ex)
-    } else {
-      promise.success(result)
-    }
+    promise.success(result)
   }
 
   override def failed(ex: Exception): Unit = {

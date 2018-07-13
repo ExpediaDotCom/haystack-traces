@@ -105,11 +105,14 @@ class TraceSearchQueryGeneratorSpec extends BaseUnitTestSpec with BeforeAndAfter
     it("should generate valid search queries for expression tree based searches with span level searches") {
       Given("a trace search request")
 
+      val startTime = 1531454400L * 1000 * 1000  // July 13, 2018 04:00:00 AM (in microSec)
+      val endTime = 1531476000L * 1000 * 1000    // July 13, 2018 10:00:00 AM (in microSec)
+
       val request = TracesSearchRequest
         .newBuilder()
         .setFilterExpression(spanLevelExpressionTree)
-        .setStartTime(1)
-        .setEndTime(System.currentTimeMillis() * 1000)
+        .setStartTime(startTime)
+        .setEndTime(endTime)
         .setLimit(10)
         .build()
 
@@ -120,6 +123,7 @@ class TraceSearchQueryGeneratorSpec extends BaseUnitTestSpec with BeforeAndAfter
 
       Then("generate a valid query with fields in lowercase")
       query.toJson.contains(fieldKey.toLowerCase()) should be(true)
+      query.getIndex shouldBe "haystack-traces-2018-07-13-0,haystack-traces-2018-07-13-1"
     }
 
     it("should use UTC when determining which indexes to read") {
@@ -131,6 +135,27 @@ class TraceSearchQueryGeneratorSpec extends BaseUnitTestSpec with BeforeAndAfter
 
       Then("they are correct based off of UTC")
       esIndexes shouldBe Vector("haystack-traces-2018-07-05-3", "haystack-traces-2018-07-05-4")
+    }
+
+    it("should query the mentioned index rather that calculated one") {
+      Given("a trace search request")
+
+      val request = TracesSearchRequest
+        .newBuilder()
+        .setFilterExpression(spanLevelExpressionTree)
+        .setStartTime(1)
+        .setEndTime(System.currentTimeMillis() * 1000)
+        .setLimit(10)
+        .build()
+
+      val queryGenerator = new TraceSearchQueryGenerator(esConfig, "spans", new WhitelistIndexFieldConfiguration)
+
+      When("generating query")
+      val query: Search = queryGenerator.generate(request, false)
+
+      Then("generate a valid query with given index name")
+      query.toJson.contains(fieldKey.toLowerCase()) should be(true)
+      query.getIndex shouldBe "haystack-traces"
     }
   }
 }

@@ -17,23 +17,26 @@
 package com.expedia.www.haystack.trace.reader.stores.readers.es
 
 import com.expedia.www.haystack.trace.reader.config.entities.ElasticSearchConfiguration
-import com.expedia.www.haystack.trace.reader.exceptions.ElasticSearchClientError
 import com.expedia.www.haystack.trace.reader.metrics.{AppMetricNames, MetricsSupport}
 import com.expedia.www.haystack.trace.reader.stores.readers.es.ESUtils._
 import com.google.gson.Gson
 import io.searchbox.client.config.HttpClientConfig
 import io.searchbox.client.{JestClient, JestClientFactory}
 import io.searchbox.core.{Search, SearchResult}
+import org.elasticsearch.ElasticsearchException
 import org.slf4j.LoggerFactory
 
 import scala.concurrent.{ExecutionContextExecutor, Future, Promise}
 import scala.util.Try
 
+trait ElasticSearchResult
+case class SuccessEsResult(searchResult: SearchResult) extends ElasticSearchResult
+case class FailedEsResult(error: ElasticsearchException) extends ElasticSearchResult
+
 class ElasticSearchReader(config: ElasticSearchConfiguration)(implicit val dispatcher: ExecutionContextExecutor) extends MetricsSupport with AutoCloseable {
   private val LOGGER = LoggerFactory.getLogger(classOf[ElasticSearchReader])
   private val readTimer = metricRegistry.timer(AppMetricNames.ELASTIC_SEARCH_READ_TIME)
   private val readFailures = metricRegistry.meter(AppMetricNames.ELASTIC_SEARCH_READ_FAILURES)
-  val INDEX_NOT_FOUND_EXCEPTION = "index_not_found_exception"
 
   protected def is2xx(code: Int): Boolean = (code / 100) == 2
 
@@ -54,24 +57,12 @@ class ElasticSearchReader(config: ElasticSearchConfiguration)(implicit val dispa
     factory.getObject
   }
 
-  def search(request: Search): Future[SearchResult] = {
-    val promise = Promise[SearchResult]()
+  def search(request: Search): Future[ElasticSearchResult] = {
+    val promise = Promise[ElasticSearchResult]()
     val time = readTimer.time()
     try {
       LOGGER.info(s"elastic search query requested: ${request.toString}', query: '${request.toJson}'")
       esClient.executeAsync(request, new ElasticSearchReadResultListener(request, promise, time, readFailures))
-
-     promise.future.map({result =>
-       if (!is2xx(result.getResponseCode) && result.getJsonString.toLowerCase.contains(INDEX_NOT_FOUND_EXCEPTION)) {
-         result.setErrorMessage(INDEX_NOT_FOUND_EXCEPTION)
-         promise.success(result)
-       } else if (!is2xx(result.getResponseCode)) {
-         val ex = ElasticSearchClientError(result.getResponseCode, result.getJsonString)
-         LOGGER.error(s"Failed in reading from elasticsearch for request='${request.toJson}'", ex)
-         readFailures.mark()
-         promise.failure(ex)
-       }
-     })
       promise.future
     } catch {
       case ex: Exception =>

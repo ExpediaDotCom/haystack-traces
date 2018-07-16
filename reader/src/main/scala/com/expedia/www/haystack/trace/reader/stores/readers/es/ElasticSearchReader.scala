@@ -37,8 +37,7 @@ class ElasticSearchReader(config: ElasticSearchConfiguration)(implicit val dispa
   private val LOGGER = LoggerFactory.getLogger(classOf[ElasticSearchReader])
   private val readTimer = metricRegistry.timer(AppMetricNames.ELASTIC_SEARCH_READ_TIME)
   private val readFailures = metricRegistry.meter(AppMetricNames.ELASTIC_SEARCH_READ_FAILURES)
-
-  protected def is2xx(code: Int): Boolean = (code / 100) == 2
+  val INDEX_NOT_FOUND_EXCEPTION = "index_not_found_exception"
 
   // initialize the elastic search client
   private val esClient: JestClient = {
@@ -73,8 +72,8 @@ class ElasticSearchReader(config: ElasticSearchConfiguration)(implicit val dispa
     }
   }
 
-  def count(request: Search): Future[SearchResult] = {
-    val promise = Promise[SearchResult]()
+  def count(request: Search): Future[ElasticSearchResult] = {
+    val promise = Promise[ElasticSearchResult]()
     val time = readTimer.time()
     try {
       LOGGER.info(s"elastic count query requested: ${request.toString}', query: '${request.toJson}'")

@@ -49,6 +49,9 @@ class TraceSearchQueryGenerator(esConfig: ElasticSearchConfiguration,
   }
 
   def generate(request: TracesSearchRequest): Search = {
+    require(request.getStartTime > 0)
+    require(request.getEndTime > 0)
+    require(request.getLimit > 0)
 
     val targetIndicesToSearch = getESIndexes(
       request.getStartTime,

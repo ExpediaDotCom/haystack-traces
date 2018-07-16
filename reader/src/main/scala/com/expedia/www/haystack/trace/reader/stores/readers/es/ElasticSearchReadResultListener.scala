@@ -29,7 +29,7 @@ import scala.concurrent.Promise
 
 object ElasticSearchReadResultListener {
   protected val LOGGER: Logger = LoggerFactory.getLogger(classOf[ElasticSearchReadResultListener])
-
+  val INDEX_NOT_FOUND_EXCEPTION = "index_not_found_exception"
   protected def is2xx(code: Int): Boolean = (code / 100) == 2
 }
 
@@ -37,7 +37,6 @@ class ElasticSearchReadResultListener(request: Search,
                                       promise: Promise[ElasticSearchResult],
                                       timer: Timer.Context,
                                       failure: Meter) extends JestResultHandler[SearchResult] {
-  val INDEX_NOT_FOUND_EXCEPTION = "index_not_found_exception"
 
   override def completed(result: SearchResult): Unit = {
     timer.close()
@@ -45,7 +44,7 @@ class ElasticSearchReadResultListener(request: Search,
     if (!is2xx(result.getResponseCode)) {
       if (result.getJsonString.toLowerCase.contains(INDEX_NOT_FOUND_EXCEPTION)) {
         val indexNotFoundEx = new IndexNotFoundException("Index not found exception, should retry", ElasticSearchClientError(result.getResponseCode, result.getJsonString))
-        promise.success(new FailedEsResult(indexNotFoundEx))
+        promise.success(FailedEsResult(indexNotFoundEx))
       } else {
         val ex = ElasticSearchClientError(result.getResponseCode, result.getJsonString)
         LOGGER.error(s"Failed in reading from elasticsearch for request='${request.toJson}'", ex)
@@ -53,7 +52,7 @@ class ElasticSearchReadResultListener(request: Search,
         promise.failure(ex)
       }
     } else {
-      promise.success(new SuccessEsResult(result))
+      promise.success(SuccessEsResult(result))
     }
   }
 

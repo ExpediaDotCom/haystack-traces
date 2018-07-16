@@ -54,6 +54,7 @@ class CassandraEsTraceStore(cassandraConfig: CassandraConfiguration,
   private val fieldValuesQueryGenerator = new FieldValuesQueryGenerator(esConfig, ES_NESTED_DOC_NAME, indexConfig)
 
   override def searchTraces(request: TracesSearchRequest): Future[Seq[Trace]] = {
+
     def handleResult(result: Future[ElasticSearchResult], failOnAnyError: Boolean = false): Future[SearchResult] = {
       result.flatMap {
         case SuccessEsResult(res) => Future.successful(res)
@@ -68,7 +69,7 @@ class CassandraEsTraceStore(cassandraConfig: CassandraConfiguration,
     }
 
     val esResponse = esReader.search(traceSearchQueryGenerator.generate(request))
-    handleResult(esResponse).flatMap(rs => extractTraces(rs))
+    handleResult(esResponse).flatMap(result => extractTraces(result))
   }
 
   private def extractTraces(result: SearchResult): Future[Seq[Trace]] = {
@@ -137,11 +138,22 @@ class CassandraEsTraceStore(cassandraConfig: CassandraConfiguration,
   }
 
   override def getTraceCounts(request: TraceCountsRequest): Future[TraceCounts] = {
-    val countSearchRequest = traceCountsQueryGenerator.generate(request)
-    esReader
-      .count(countSearchRequest)
-      .map(result =>
-        mapSearchResultToTraceCount(request.getStartTime, request.getEndTime, result))
+
+    def handleResult(result: Future[ElasticSearchResult], failOnAnyError: Boolean = false): Future[SearchResult] = {
+      result.flatMap {
+        case SuccessEsResult(res) => Future.successful(res)
+        case FailedEsResult(error) =>
+          if (!failOnAnyError && error.isInstanceOf[IndexNotFoundException]) {
+            handleResult(esReader.count(traceCountsQueryGenerator.generate(request, useSpecificIndices = false)), failOnAnyError = true)
+          }
+          else {
+            Future.failed(error)
+          }
+      }
+    }
+
+    val esResponse = esReader.count(traceCountsQueryGenerator.generate(request))
+    handleResult(esResponse).map(result => mapSearchResultToTraceCount(request.getStartTime, request.getEndTime, result))
   }
 
   // convert all Futures to Try to make sure they all complete

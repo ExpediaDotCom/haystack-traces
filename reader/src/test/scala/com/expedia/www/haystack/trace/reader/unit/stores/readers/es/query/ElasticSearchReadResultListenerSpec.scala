@@ -22,7 +22,7 @@ import com.expedia.open.tracing.api.{Field, TracesSearchRequest}
 import com.expedia.www.haystack.trace.commons.config.entities.{IndexFieldType, WhitelistIndexFieldConfiguration}
 import com.expedia.www.haystack.trace.reader.config.entities.ElasticSearchConfiguration
 import com.expedia.www.haystack.trace.reader.exceptions.ElasticSearchClientError
-import com.expedia.www.haystack.trace.reader.stores.readers.es.ElasticSearchReadResultListener
+import com.expedia.www.haystack.trace.reader.stores.readers.es.{ElasticSearchReadResultListener, ElasticSearchResult, SuccessEsResult}
 import com.expedia.www.haystack.trace.reader.stores.readers.es.query.TraceSearchQueryGenerator
 import com.expedia.www.haystack.trace.reader.unit.BaseUnitTestSpec
 import io.searchbox.core.SearchResult
@@ -46,15 +46,16 @@ class ElasticSearchReadResultListenerSpec extends BaseUnitTestSpec {
 
   describe("ElasticSearch Read Result Listener") {
     it("should invoke successful promise with search result") {
-      val promise = mock[Promise[SearchResult]]
+      val promise = mock[Promise[ElasticSearchResult]]
       val timer = mock[Timer.Context]
       val failureMeter = mock[Meter]
       val searchResult = mock[SearchResult]
+      val elasticSearchResult = new SuccessEsResult(searchResult)
 
       expecting {
         timer.close().once()
         searchResult.getResponseCode.andReturn(200).atLeastOnce()
-        promise.success(searchResult).andReturn(promise).once()
+        promise.success(elasticSearchResult).andReturn(promise).once()
       }
 
       whenExecuting(promise, timer, failureMeter, searchResult) {
@@ -64,7 +65,7 @@ class ElasticSearchReadResultListenerSpec extends BaseUnitTestSpec {
     }
 
     it("should invoke failed promise with exception object if response code is not 2xx ") {
-      val promise = mock[Promise[SearchResult]]
+      val promise = mock[Promise[ElasticSearchResult]]
       val timer = mock[Timer.Context]
       val failureMeter = mock[Meter]
       val searchResult = mock[SearchResult]
@@ -84,7 +85,7 @@ class ElasticSearchReadResultListenerSpec extends BaseUnitTestSpec {
     }
 
     it("should invoke failed promise with exception object if failure is generated") {
-      val promise = mock[Promise[SearchResult]]
+      val promise = mock[Promise[ElasticSearchResult]]
       val timer = mock[Timer.Context]
       val failureMeter = mock[Meter]
       val expectedException = new Exception

@@ -24,9 +24,10 @@ import com.expedia.www.haystack.trace.reader.config.entities.{ElasticSearchConfi
 import com.expedia.www.haystack.trace.reader.metrics.{AppMetricNames, MetricsSupport}
 import com.expedia.www.haystack.trace.reader.stores.readers.ServiceMetadataReader
 import com.expedia.www.haystack.trace.reader.stores.readers.cassandra.CassandraTraceReader
-import com.expedia.www.haystack.trace.reader.stores.readers.es.ElasticSearchReader
 import com.expedia.www.haystack.trace.reader.stores.readers.es.query.{FieldValuesQueryGenerator, TraceCountsQueryGenerator, TraceSearchQueryGenerator}
+import com.expedia.www.haystack.trace.reader.stores.readers.es.{ElasticSearchReader, ElasticSearchResult, FailedEsResult, SuccessEsResult}
 import io.searchbox.core.SearchResult
+import org.elasticsearch.index.IndexNotFoundException
 import org.slf4j.LoggerFactory
 
 import scala.collection.JavaConverters._
@@ -53,16 +54,21 @@ class CassandraEsTraceStore(cassandraConfig: CassandraConfiguration,
   private val fieldValuesQueryGenerator = new FieldValuesQueryGenerator(esConfig, ES_NESTED_DOC_NAME, indexConfig)
 
   override def searchTraces(request: TracesSearchRequest): Future[Seq[Trace]] = {
-    esReader
-      .search(traceSearchQueryGenerator.generate(request))
-      .flatMap(result =>
-        if (result.getErrorMessage.contains(esReader.INDEX_NOT_FOUND_EXCEPTION)) {
-          esReader
-            .search(traceSearchQueryGenerator.generate(request, useSpecificIndices = false))
-        } else {
-          Future(result)
-        })
-      .flatMap(extractTraces)
+    def handleResult(result: Future[ElasticSearchResult], failOnAnyError: Boolean = false): Future[SearchResult] = {
+      result.flatMap {
+        case SuccessEsResult(res) => Future.successful(res)
+        case FailedEsResult(error) =>
+          if (!failOnAnyError && error.isInstanceOf[IndexNotFoundException]) {
+            handleResult(esReader.search(traceSearchQueryGenerator.generate(request, useSpecificIndices = false)), failOnAnyError = true)
+          }
+          else {
+            Future.failed(error)
+          }
+      }
+    }
+
+    val esResponse = esReader.search(traceSearchQueryGenerator.generate(request))
+    handleResult(esResponse).flatMap(rs => extractTraces(rs))
   }
 
   private def extractTraces(result: SearchResult): Future[Seq[Trace]] = {
@@ -123,7 +129,11 @@ class CassandraEsTraceStore(cassandraConfig: CassandraConfiguration,
     readFromServiceMetadata(request).getOrElse(
       esReader
         .search(fieldValuesQueryGenerator.generate(request))
-        .map(extractFieldValues(_, request.getFieldName.toLowerCase)))
+        flatMap {
+        case SuccessEsResult(res) => Future.successful(extractFieldValues(res, request.getFieldName.toLowerCase))
+        case FailedEsResult(error) => Future.failed(error)
+      }
+    )
   }
 
   override def getTraceCounts(request: TraceCountsRequest): Future[TraceCounts] = {

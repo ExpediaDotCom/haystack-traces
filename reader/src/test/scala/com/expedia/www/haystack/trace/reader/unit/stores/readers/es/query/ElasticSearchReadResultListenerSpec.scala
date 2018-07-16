@@ -73,7 +73,7 @@ class ElasticSearchReadResultListenerSpec extends BaseUnitTestSpec {
       expecting {
         timer.close().once()
         searchResult.getResponseCode.andReturn(500).atLeastOnce()
-        searchResult.getJsonString.andReturn("json-string").once()
+        searchResult.getJsonString.andReturn("json-string").times(2)
         failureMeter.mark()
         promise.failure(EasyMock.anyObject(classOf[ElasticSearchClientError])).andReturn(promise).once()
       }

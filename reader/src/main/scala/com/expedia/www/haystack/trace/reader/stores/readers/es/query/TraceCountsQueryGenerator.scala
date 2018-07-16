@@ -38,6 +38,21 @@ class TraceCountsQueryGenerator(esConfig: ElasticSearchConfiguration,
 
   import TraceCountsQueryGenerator._
 
+  def generate(request: TraceCountsRequest, useSpecificIndices: Boolean): Search = {
+    require(request.getStartTime > 0)
+    require(request.getEndTime > 0)
+    require(request.getInterval > 0)
+
+    if (useSpecificIndices) {
+      generate(request)
+    } else {
+      new Search.Builder(buildQueryString(request))
+        .addIndex(esConfig.indexNamePrefix)
+        .addType(esConfig.indexType)
+        .build()
+    }
+  }
+
   def generate(request: TraceCountsRequest): Search = {
     require(request.getStartTime > 0)
     require(request.getEndTime > 0)

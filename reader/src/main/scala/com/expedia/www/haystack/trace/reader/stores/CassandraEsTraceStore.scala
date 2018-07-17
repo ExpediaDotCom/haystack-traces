@@ -24,8 +24,8 @@ import com.expedia.www.haystack.trace.reader.config.entities.{ElasticSearchConfi
 import com.expedia.www.haystack.trace.reader.metrics.{AppMetricNames, MetricsSupport}
 import com.expedia.www.haystack.trace.reader.stores.readers.ServiceMetadataReader
 import com.expedia.www.haystack.trace.reader.stores.readers.cassandra.CassandraTraceReader
-import com.expedia.www.haystack.trace.reader.stores.readers.es.query.{FieldValuesQueryGenerator, TraceCountsQueryGenerator, TraceSearchQueryGenerator}
 import com.expedia.www.haystack.trace.reader.stores.readers.es.ElasticSearchReader
+import com.expedia.www.haystack.trace.reader.stores.readers.es.query.{FieldValuesQueryGenerator, TraceCountsQueryGenerator, TraceSearchQueryGenerator}
 import io.searchbox.core.SearchResult
 import org.elasticsearch.index.IndexNotFoundException
 import org.slf4j.LoggerFactory
@@ -68,9 +68,9 @@ class CassandraEsTraceStore(cassandraConfig: CassandraConfiguration,
   }
 
   override def searchTraces(request: TracesSearchRequest): Future[Seq[Trace]] = {
-    // search ES with
+    // search ES with specific indices
     val esResult = esSearchTraces(request, true)
-    // handle the response
+    // handle the response and retry in case of IndexNotFoundException
     handleResult(esResult, () => esSearchTraces(request, false)).flatMap(result => extractTraces(result))
   }
 
@@ -136,7 +136,10 @@ class CassandraEsTraceStore(cassandraConfig: CassandraConfiguration,
   }
 
   override def getTraceCounts(request: TraceCountsRequest): Future[TraceCounts] = {
+    // search ES with specific indices
     val esResponse = esCountTraces(request, true)
+
+    // handle the response and retry in case of IndexNotFoundException
     handleResult(esResponse, () => esCountTraces(request, false))
       .map(result => mapSearchResultToTraceCount(request.getStartTime, request.getEndTime, result))
   }

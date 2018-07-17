@@ -29,15 +29,10 @@ import org.slf4j.LoggerFactory
 import scala.concurrent.{ExecutionContextExecutor, Future, Promise}
 import scala.util.Try
 
-trait ElasticSearchResult
-case class SuccessEsResult(searchResult: SearchResult) extends ElasticSearchResult
-case class FailedEsResult(error: ElasticsearchException) extends ElasticSearchResult
-
 class ElasticSearchReader(config: ElasticSearchConfiguration)(implicit val dispatcher: ExecutionContextExecutor) extends MetricsSupport with AutoCloseable {
   private val LOGGER = LoggerFactory.getLogger(classOf[ElasticSearchReader])
   private val readTimer = metricRegistry.timer(AppMetricNames.ELASTIC_SEARCH_READ_TIME)
   private val readFailures = metricRegistry.meter(AppMetricNames.ELASTIC_SEARCH_READ_FAILURES)
-  val INDEX_NOT_FOUND_EXCEPTION = "index_not_found_exception"
 
   // initialize the elastic search client
   private val esClient: JestClient = {
@@ -56,8 +51,8 @@ class ElasticSearchReader(config: ElasticSearchConfiguration)(implicit val dispa
     factory.getObject
   }
 
-  def search(request: Search): Future[ElasticSearchResult] = {
-    val promise = Promise[ElasticSearchResult]()
+  def search(request: Search): Future[SearchResult] = {
+    val promise = Promise[SearchResult]()
     val time = readTimer.time()
     try {
       LOGGER.info(s"elastic search query requested: ${request.toString}', query: '${request.toJson}'")
@@ -72,8 +67,8 @@ class ElasticSearchReader(config: ElasticSearchConfiguration)(implicit val dispa
     }
   }
 
-  def count(request: Search): Future[ElasticSearchResult] = {
-    val promise = Promise[ElasticSearchResult]()
+  def count(request: Search): Future[SearchResult] = {
+    val promise = Promise[SearchResult]()
     val time = readTimer.time()
     try {
       LOGGER.info(s"elastic count query requested: ${request.toString}', query: '${request.toJson}'")

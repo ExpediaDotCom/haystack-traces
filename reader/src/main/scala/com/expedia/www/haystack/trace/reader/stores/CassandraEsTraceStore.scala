@@ -25,7 +25,7 @@ import com.expedia.www.haystack.trace.reader.metrics.{AppMetricNames, MetricsSup
 import com.expedia.www.haystack.trace.reader.stores.readers.ServiceMetadataReader
 import com.expedia.www.haystack.trace.reader.stores.readers.cassandra.CassandraTraceReader
 import com.expedia.www.haystack.trace.reader.stores.readers.es.query.{FieldValuesQueryGenerator, TraceCountsQueryGenerator, TraceSearchQueryGenerator}
-import com.expedia.www.haystack.trace.reader.stores.readers.es.{ElasticSearchReader}
+import com.expedia.www.haystack.trace.reader.stores.readers.es.ElasticSearchReader
 import io.searchbox.core.SearchResult
 import org.elasticsearch.index.IndexNotFoundException
 import org.slf4j.LoggerFactory

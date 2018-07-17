@@ -23,7 +23,6 @@ import com.google.gson.Gson
 import io.searchbox.client.config.HttpClientConfig
 import io.searchbox.client.{JestClient, JestClientFactory}
 import io.searchbox.core.{Search, SearchResult}
-import org.elasticsearch.ElasticsearchException
 import org.slf4j.LoggerFactory
 
 import scala.concurrent.{ExecutionContextExecutor, Future, Promise}

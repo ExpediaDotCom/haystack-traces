@@ -52,11 +52,11 @@ class CassandraEsTraceStore(cassandraConfig: CassandraConfiguration,
   private val traceCountsQueryGenerator = new TraceCountsQueryGenerator(esConfig, ES_NESTED_DOC_NAME, indexConfig)
   private val fieldValuesQueryGenerator = new FieldValuesQueryGenerator(esConfig, ES_NESTED_DOC_NAME, indexConfig)
 
-  private val countFunc = (request: TraceCountsRequest, useSpecificIndices: Boolean) => {
+  private val esCountTraces = (request: TraceCountsRequest, useSpecificIndices: Boolean) => {
     esReader.count(traceCountsQueryGenerator.generate(request, useSpecificIndices))
   }
 
-  private val esSearchFunc = (request: TracesSearchRequest, useSpecificIndices: Boolean) => {
+  private val esSearchTraces = (request: TracesSearchRequest, useSpecificIndices: Boolean) => {
     esReader.search(traceSearchQueryGenerator.generate(request, useSpecificIndices))
   }
 
@@ -69,9 +69,9 @@ class CassandraEsTraceStore(cassandraConfig: CassandraConfiguration,
 
   override def searchTraces(request: TracesSearchRequest): Future[Seq[Trace]] = {
     // search ES with
-    val esResult = esSearchFunc(request, true)
+    val esResult = esSearchTraces(request, true)
     // handle the response
-    handleResult(esResult, () => esSearchFunc(request, false)).flatMap(result => extractTraces(result))
+    handleResult(esResult, () => esSearchTraces(request, false)).flatMap(result => extractTraces(result))
   }
 
   private def extractTraces(result: SearchResult): Future[Seq[Trace]] = {
@@ -136,8 +136,8 @@ class CassandraEsTraceStore(cassandraConfig: CassandraConfiguration,
   }
 
   override def getTraceCounts(request: TraceCountsRequest): Future[TraceCounts] = {
-    val esResponse = countFunc(request, true)
-    handleResult(esResponse, () => countFunc(request, false))
+    val esResponse = esCountTraces(request, true)
+    handleResult(esResponse, () => esCountTraces(request, false))
       .map(result => mapSearchResultToTraceCount(request.getStartTime, request.getEndTime, result))
   }
 

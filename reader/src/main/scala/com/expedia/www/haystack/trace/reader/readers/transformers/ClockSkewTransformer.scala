@@ -30,6 +30,8 @@ import com.expedia.www.haystack.trace.reader.readers.utils.{MutableSpanForest, S
 class ClockSkewTransformer extends SpanTreeTransformer {
 
   override def transform(forest: MutableSpanForest): MutableSpanForest = {
+    require(forest.getAllTrees.size == 1)
+    
     val clockedSkewAdjusted = adjustSkew(forest.getAllTrees.head, None)
     forest.updateUnderlyingSpans(clockedSkewAdjusted)
   }

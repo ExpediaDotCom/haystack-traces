@@ -66,6 +66,8 @@ case class MutableSpanForest(private var spans: Seq[Span]) {
     })
 
     updateUnderlyingSpanWith(toBeUpdatedUnderlyingSpans)
+    this.forest = mutable.ListBuffer[SpanTree](root)
+    needForestUpdate = false
     this
   }
 

@@ -41,7 +41,8 @@ class InvalidParentTransformerSpec extends BaseUnitTestSpec {
       )
 
       When("invoking transform")
-      val transformedSpans = new InvalidParentTransformer().transform(MutableSpanForest(spans)).getUnderlyingSpans
+      val transformedSpanTree = new InvalidParentTransformer().transform(MutableSpanForest(spans))
+      val transformedSpans = transformedSpanTree.getUnderlyingSpans
 
       Then("mark root to be parent of spans with invalid parent id")
       transformedSpans.length should be(3)
@@ -54,6 +55,8 @@ class InvalidParentTransformerSpec extends BaseUnitTestSpec {
 
       val cSpan = transformedSpans.find(_.getSpanId == "c")
       cSpan.get.getParentSpanId should be("a")
+
+      transformedSpanTree.getAllTrees.size shouldBe 1
     }
 
     it("should mark root as parent for spans with parent ids that are not in the trace") {

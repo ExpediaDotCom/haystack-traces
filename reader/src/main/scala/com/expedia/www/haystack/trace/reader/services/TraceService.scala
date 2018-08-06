@@ -126,4 +126,10 @@ class TraceService(traceStore: TraceStore,
       traceReader.getTraceCounts(request)
     }
   }
+
+  override def getRawTraces(request: RawTracesRequest, responseObserver: StreamObserver[RawTracesResult]): Unit = {
+    handleTraceCallGraphResponse.handle(request, responseObserver) {
+      traceReader.getRawTraces(request)
+    }
+  }
 }

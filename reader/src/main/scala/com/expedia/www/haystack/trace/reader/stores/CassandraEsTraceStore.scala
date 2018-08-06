@@ -144,6 +144,10 @@ class CassandraEsTraceStore(cassandraConfig: CassandraConfiguration,
       .map(result => mapSearchResultToTraceCount(request.getStartTime, request.getEndTime, result))
   }
 
+  override def getRawTraces(request: RawTracesRequest): Future[Seq[Trace]] = {
+    cassandraReader.readRawTraces(request.getTraceIdList.asScala.toList)
+  }
+
   // convert all Futures to Try to make sure they all complete
   private def liftToTry[T](futures: Seq[Future[T]]): Seq[Future[Try[T]]] = futures.map { f =>
     f.map(Try(_)).recover { case t: Throwable => Failure(t) }

@@ -125,6 +125,12 @@ class TraceReader(traceStore: TraceStore,
       .getTraceCounts(request)
   }
 
+  def getRawTraces(request: RawTracesRequest): Future[RawTracesResult] = {
+    traceStore
+      .getRawTraces(request)
+      .flatMap(traces => Future.successful(RawTracesResult.newBuilder().addAllTraces(traces.asJava).build()))
+  }
+
   private def buildTraceCallGraph(trace: Trace): TraceCallGraph = {
     val calls = trace.getChildSpansList
       .asScala

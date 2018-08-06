@@ -57,6 +57,15 @@ class CassandraSession(config: CassandraConfiguration, factory: ClusterFactory) 
         .where(QueryBuilder.eq(ID_COLUMN_NAME, bindMarker(ID_COLUMN_NAME))))
   }
 
+  def selectRawTracesPreparedStmt: PreparedStatement = {
+    import QueryBuilder.bindMarker
+    session.prepare(
+      QueryBuilder
+        .select()
+        .from(config.tracesKeyspace.name, config.tracesKeyspace.table)
+        .where(QueryBuilder.in(ID_COLUMN_NAME, bindMarker(ID_COLUMN_NAME))))
+  }
+
   def createServiceMetadataInsertPreparedStatement(keyspace: KeyspaceConfiguration): PreparedStatement = {
     import QueryBuilder.{bindMarker, ttl}
 
@@ -93,9 +102,10 @@ class CassandraSession(config: CassandraConfiguration, factory: ClusterFactory) 
 
   /**
     * create bound statement for writing to cassandra table
-    * @param serviceName name of service ie primary key in cassandra
-    * @param operationList name of operation
-    * @param consistencyLevel consistency level for cassandra write
+    *
+    * @param serviceName                    name of service ie primary key in cassandra
+    * @param operationList                  name of operation
+    * @param consistencyLevel               consistency level for cassandra write
     * @param insertServiceMetadataStatement prepared statement to use
     * @return
     */
@@ -117,9 +127,10 @@ class CassandraSession(config: CassandraConfiguration, factory: ClusterFactory) 
 
   /**
     * create bound statement for writing to cassandra table
-    * @param traceId trace id
-    * @param spanBufferBytes data bytes of spanBuffer that belong to a given trace id
-    * @param consistencyLevel consistency level for cassandra write
+    *
+    * @param traceId              trace id
+    * @param spanBufferBytes      data bytes of spanBuffer that belong to a given trace id
+    * @param consistencyLevel     consistency level for cassandra write
     * @param insertTraceStatement prepared statement to use
     * @return
     */
@@ -136,6 +147,7 @@ class CassandraSession(config: CassandraConfiguration, factory: ClusterFactory) 
 
   /**
     * create new select statement for retrieving data for traceId
+    *
     * @param traceId trace id
     * @return
     */
@@ -144,7 +156,18 @@ class CassandraSession(config: CassandraConfiguration, factory: ClusterFactory) 
   }
 
   /**
+    * create new select statement for retrieving Raw Traces data for traceIds
+    *
+    * @param traceIds list of trace id
+    * @return statement for select query for traceIds
+    */
+  def newSelectRawTracesBoundStatement(traceIds: List[String]): Statement = {
+    new BoundStatement(selectRawTracesPreparedStmt).setList(ID_COLUMN_NAME, traceIds.asJava)
+  }
+
+  /**
     * executes the statement async and return the resultset future
+    *
     * @param statement prepared statement to be executed
     * @return future object of ResultSet
     */

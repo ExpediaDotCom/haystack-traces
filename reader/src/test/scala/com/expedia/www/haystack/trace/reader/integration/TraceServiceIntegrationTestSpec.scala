@@ -393,4 +393,49 @@ class TraceServiceIntegrationTestSpec extends BaseIntegrationTestSpec {
       traceCounts.getTraceCountList.asScala.foreach(_.getCount shouldBe 1)
     }
   }
+
+  describe("TraceReader.getRawTraces") {
+    it("should get raw traces for given traceIds from cassandra") {
+      Given("traces in cassandra")
+      val traceId1 = UUID.randomUUID().toString
+      val spanId1 = UUID.randomUUID().toString
+      val spanId2 = UUID.randomUUID().toString
+      putTraceInCassandra(traceId1, spanId1, "svc1", "oper1")
+      putTraceInCassandra(traceId1, spanId2, "svc2", "oper2")
+
+      val traceId2 = UUID.randomUUID().toString
+      val spanId3 = UUID.randomUUID().toString
+      putTraceInCassandra(traceId2, spanId3, "svc1", "oper1")
+
+      When("getRawTraces is invoked")
+      val tracesResult = client.getRawTraces(RawTracesRequest.newBuilder().addAllTraceId(Seq(traceId1, traceId2).asJava).build())
+
+      Then("should return the traces")
+      tracesResult.getTracesList.asScala
+        .map(trace => {
+          trace.getTraceId match {
+            case traceId1 =>
+              trace.getChildSpansList().asScala.map(span => span.getSpanId).toSet shouldEqual (Set(spanId1, spanId2))
+            case traceId2 =>
+              trace.getChildSpansList().asScala.map(span => span.getSpanId).toSet shouldEqual (Set(spanId3))
+            case _ => fail("shouldn't be anything else")
+
+          }
+        })
+    }
+
+    it("should return TraceNotFound exception if traceID is not in cassandra") {
+      Given("trace in cassandra")
+      putTraceInCassandra(UUID.randomUUID().toString)
+
+      When("getTrace is invoked")
+      val thrown = the[StatusRuntimeException] thrownBy {
+        client.getTrace(TraceRequest.newBuilder().setTraceId(UUID.randomUUID().toString).build())
+      }
+
+      Then("thrown StatusRuntimeException should have 'not found' error")
+      thrown.getStatus.getCode should be(Status.NOT_FOUND.getCode)
+      thrown.getStatus.getDescription should include("traceId not found")
+    }
+  }
 }

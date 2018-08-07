@@ -70,7 +70,6 @@ class CassandraReadRawTracesResultListener(asyncResult: ResultSetFuture,
   }
 
   private def tryDeserialize(rows: Seq[Row]): Try[mutable.Map[String, Trace]] = {
-    val traceBuilder = Trace.newBuilder()
     val tracesMap = new mutable.HashMap[String, Trace]()
     var deserFailed: Failure[mutable.Map[String, Trace]] = null
 
@@ -82,7 +81,7 @@ class CassandraReadRawTracesResultListener(asyncResult: ResultSetFuture,
               val updatedTrace = trace.toBuilder.addAllChildSpans(sBuffer.getChildSpansList).build()
               tracesMap.update(sBuffer.getTraceId, updatedTrace)
             case _ =>
-              tracesMap.put(sBuffer.getTraceId, traceBuilder.setTraceId(sBuffer.getTraceId).addAllChildSpans(sBuffer.getChildSpansList).build())
+              tracesMap.put(sBuffer.getTraceId, Trace.newBuilder().setTraceId(sBuffer.getTraceId).addAllChildSpans(sBuffer.getChildSpansList).build())
           }
         case Failure(cause) => deserFailed = Failure(cause)
       }

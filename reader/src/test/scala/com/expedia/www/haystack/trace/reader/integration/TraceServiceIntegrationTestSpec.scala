@@ -411,17 +411,11 @@ class TraceServiceIntegrationTestSpec extends BaseIntegrationTestSpec {
       val tracesResult = client.getRawTraces(RawTracesRequest.newBuilder().addAllTraceId(Seq(traceId1, traceId2).asJava).build())
 
       Then("should return the traces")
-      tracesResult.getTracesList.asScala
-        .map(trace => {
-          trace.getTraceId match {
-            case traceId1 =>
-              trace.getChildSpansList().asScala.map(span => span.getSpanId).toSet shouldEqual (Set(spanId1, spanId2))
-            case traceId2 =>
-              trace.getChildSpansList().asScala.map(span => span.getSpanId).toSet shouldEqual (Set(spanId3))
-            case _ => fail("shouldn't be anything else")
+      val traceIdSpansMap: Map[String, Set[String]] = tracesResult.getTracesList.asScala
+        .map(trace => (trace.getTraceId -> trace.getChildSpansList().asScala.map(_.getSpanId).toSet)).toMap
 
-          }
-        })
+      traceIdSpansMap(traceId1) shouldEqual (Set(spanId1, spanId2))
+      traceIdSpansMap(traceId2) shouldEqual (Set(spanId3))
     }
   }
 

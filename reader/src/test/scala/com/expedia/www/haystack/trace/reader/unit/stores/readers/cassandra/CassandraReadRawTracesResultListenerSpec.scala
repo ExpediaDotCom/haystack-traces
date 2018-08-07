@@ -51,8 +51,8 @@ class CassandraReadRawTracesResultListenerSpec extends BaseUnitTestSpec {
       val spanBuffer_1 = SpanBuffer.newBuilder().setTraceId("TRACE_ID1").addChildSpans(span_1).build()
       val spanBuffer_2 = SpanBuffer.newBuilder().setTraceId("TRACE_ID1").addChildSpans(span_2).build()
 
-      val span_3 = Span.newBuilder().setTraceId("TRACE_ID2").setSpanId("SPAN_ID_3")
-      val spanBuffer_3 = SpanBuffer.newBuilder().setTraceId("TRACE_ID2").addChildSpans(span_3).build()
+      val span_3 = Span.newBuilder().setTraceId("TRACE_ID3").setSpanId("SPAN_ID_3")
+      val spanBuffer_3 = SpanBuffer.newBuilder().setTraceId("TRACE_ID3").addChildSpans(span_3).build()
 
 
       val capturedTraces = EasyMock.newCapture[Seq[Trace]]()
@@ -69,15 +69,11 @@ class CassandraReadRawTracesResultListenerSpec extends BaseUnitTestSpec {
       whenExecuting(mockReadResult, promise, failureMeter, timer, resultSet, mockSpanBufferRow_1, mockSpanBufferRow_2, mockSpanBufferRow_3) {
         val listener = new CassandraReadRawTracesResultListener(mockReadResult, timer, failureMeter, promise)
         listener.run()
-        capturedTraces.getValue.map(
-          capturedTrace =>
-            capturedTrace.getTraceId match {
-              case "TRACE_ID1" =>
-                capturedTrace.getChildSpansList.asScala.map(_.getSpanId) should contain allOf("SPAN_ID_1", "SPAN_ID_2")
-              case "TRACE_ID2" =>
-                capturedTrace.getChildSpansList.asScala.map(_.getSpanId) should contain ("SPAN_ID_3")
-            }
-        )
+        val traceIdSpansMap: Map[String, Set[String]] = capturedTraces.getValue.map(capturedTrace =>
+          capturedTrace.getTraceId -> capturedTrace.getChildSpansList.asScala.map(_.getSpanId).toSet).toMap
+
+        traceIdSpansMap("TRACE_ID1") shouldEqual Set("SPAN_ID_1", "SPAN_ID_2")
+        traceIdSpansMap("TRACE_ID3") shouldEqual Set("SPAN_ID_3")
       }
     }
 

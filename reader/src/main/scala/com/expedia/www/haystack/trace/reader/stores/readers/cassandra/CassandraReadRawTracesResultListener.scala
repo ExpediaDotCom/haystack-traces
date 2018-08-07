@@ -46,8 +46,8 @@ class CassandraReadRawTracesResultListener(asyncResult: ResultSetFuture,
       .flatMap(tryGetTraceRows)
       .flatMap(tryDeserialize)
     match {
-      case Success(traceMap) =>
-        promise.success(traceMap.values.toSeq)
+      case Success(traces) =>
+        promise.success(traces)
       case Failure(ex) =>
         if (fatalError(ex)) {
           LOGGER.error("Fatal error in reading from cassandra, tearing down the app", ex)
@@ -69,23 +69,22 @@ class CassandraReadRawTracesResultListener(asyncResult: ResultSetFuture,
     if (rows.isEmpty) Failure(new TraceNotFoundException) else Success(rows)
   }
 
-  private def tryDeserialize(rows: Seq[Row]): Try[mutable.Map[String, Trace]] = {
-    val tracesMap = new mutable.HashMap[String, Trace]()
-    var deserFailed: Failure[mutable.Map[String, Trace]] = null
+  private def tryDeserialize(rows: Seq[Row]): Try[Seq[Trace]] = {
+    val traceBuilderMap = new mutable.HashMap[String, Trace.Builder]()
+    var deserFailed: Failure[Seq[Trace]] = null
 
     rows.foreach(row => {
       CassandraTableSchema.extractSpanBufferFromRow(row) match {
         case Success(sBuffer) =>
-          tracesMap.get(sBuffer.getTraceId) match {
-            case Some(trace) =>
-              val updatedTrace = trace.toBuilder.addAllChildSpans(sBuffer.getChildSpansList).build()
-              tracesMap.update(sBuffer.getTraceId, updatedTrace)
+          traceBuilderMap.get(sBuffer.getTraceId) match {
+            case Some(traceBuilder) =>
+              traceBuilderMap.put(sBuffer.getTraceId, traceBuilder.addAllChildSpans(sBuffer.getChildSpansList))
             case _ =>
-              tracesMap.put(sBuffer.getTraceId, Trace.newBuilder().setTraceId(sBuffer.getTraceId).addAllChildSpans(sBuffer.getChildSpansList).build())
+              traceBuilderMap.put(sBuffer.getTraceId, Trace.newBuilder().setTraceId(sBuffer.getTraceId).addAllChildSpans(sBuffer.getChildSpansList))
           }
         case Failure(cause) => deserFailed = Failure(cause)
       }
     })
-    if (deserFailed == null) Success(tracesMap) else deserFailed
+    if (deserFailed == null) Success(traceBuilderMap.values.map(_.build).toSeq) else deserFailed
   }
 }

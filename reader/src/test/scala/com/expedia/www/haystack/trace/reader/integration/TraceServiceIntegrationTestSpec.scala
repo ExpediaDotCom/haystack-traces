@@ -418,21 +418,4 @@ class TraceServiceIntegrationTestSpec extends BaseIntegrationTestSpec {
       traceIdSpansMap(traceId2) shouldEqual (Set(spanId3))
     }
   }
-
-  describe("TraceReader.getTrace") {
-
-    it("should return TraceNotFound exception if traceID is not in cassandra") {
-      Given("trace in cassandra")
-      putTraceInCassandra(UUID.randomUUID().toString)
-
-      When("getTrace is invoked")
-      val thrown = the[StatusRuntimeException] thrownBy {
-        client.getTrace(TraceRequest.newBuilder().setTraceId(UUID.randomUUID().toString).build())
-      }
-
-      Then("thrown StatusRuntimeException should have 'not found' error")
-      thrown.getStatus.getCode should be(Status.NOT_FOUND.getCode)
-      thrown.getStatus.getDescription should include("traceId not found")
-    }
-  }
 }

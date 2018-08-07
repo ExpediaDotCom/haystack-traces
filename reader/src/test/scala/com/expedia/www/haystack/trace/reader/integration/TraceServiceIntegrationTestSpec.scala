@@ -423,6 +423,9 @@ class TraceServiceIntegrationTestSpec extends BaseIntegrationTestSpec {
           }
         })
     }
+  }
+
+  describe("TraceReader.getTrace") {
 
     it("should return TraceNotFound exception if traceID is not in cassandra") {
       Given("trace in cassandra")

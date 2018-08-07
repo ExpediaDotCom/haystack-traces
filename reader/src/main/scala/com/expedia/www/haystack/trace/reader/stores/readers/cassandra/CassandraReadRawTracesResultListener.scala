@@ -79,7 +79,7 @@ class CassandraReadRawTracesResultListener(asyncResult: ResultSetFuture,
         case Success(sBuffer) =>
           tracesMap.get(sBuffer.getTraceId) match {
             case Some(trace) =>
-              val updatedTrace = trace.toBuilder.addAllChildSpans(sBuffer.getChildSpansList).build()
+              val updatedTrace = trace.toBuilder.addAllChildSpans(trace.getChildSpansList).build()
               tracesMap.put(sBuffer.getTraceId, updatedTrace)
             case _ =>
               tracesMap.put(sBuffer.getTraceId, traceBuilder.setTraceId(sBuffer.getTraceId).addAllChildSpans(sBuffer.getChildSpansList).build())

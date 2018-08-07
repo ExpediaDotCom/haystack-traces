@@ -44,30 +44,39 @@ class CassandraReadRawTracesResultListenerSpec extends BaseUnitTestSpec {
 
       val mockSpanBufferRow_1 = mock[Row]
       val mockSpanBufferRow_2 = mock[Row]
+      val mockSpanBufferRow_3 = mock[Row]
 
-      val span_1 = Span.newBuilder().setTraceId("TRACE_ID").setSpanId("SPAN_ID_1")
-      val span_2 = Span.newBuilder().setTraceId("TRACE_ID").setSpanId("SPAN_ID_2")
-      val spanBuffer_1 = SpanBuffer.newBuilder().setTraceId("TRACE_ID").addChildSpans(span_1).build()
-      val spanBuffer_2 = SpanBuffer.newBuilder().setTraceId("TRACE_ID").addChildSpans(span_2).build()
+      val span_1 = Span.newBuilder().setTraceId("TRACE_ID1").setSpanId("SPAN_ID_1")
+      val span_2 = Span.newBuilder().setTraceId("TRACE_ID1").setSpanId("SPAN_ID_2")
+      val spanBuffer_1 = SpanBuffer.newBuilder().setTraceId("TRACE_ID1").addChildSpans(span_1).build()
+      val spanBuffer_2 = SpanBuffer.newBuilder().setTraceId("TRACE_ID1").addChildSpans(span_2).build()
+
+      val span_3 = Span.newBuilder().setTraceId("TRACE_ID2").setSpanId("SPAN_ID_3")
+      val spanBuffer_3 = SpanBuffer.newBuilder().setTraceId("TRACE_ID2").addChildSpans(span_3).build()
+
 
       val capturedTraces = EasyMock.newCapture[Seq[Trace]]()
       expecting {
         timer.close()
         mockReadResult.get().andReturn(resultSet)
-        resultSet.all().andReturn(List(mockSpanBufferRow_1, mockSpanBufferRow_2).asJava)
+        resultSet.all().andReturn(List(mockSpanBufferRow_1, mockSpanBufferRow_2, mockSpanBufferRow_3).asJava)
         mockSpanBufferRow_1.getBytes(CassandraTableSchema.SPANS_COLUMN_NAME).andReturn(ByteBuffer.wrap(spanBuffer_1.toByteArray))
         mockSpanBufferRow_2.getBytes(CassandraTableSchema.SPANS_COLUMN_NAME).andReturn(ByteBuffer.wrap(spanBuffer_2.toByteArray))
+        mockSpanBufferRow_3.getBytes(CassandraTableSchema.SPANS_COLUMN_NAME).andReturn(ByteBuffer.wrap(spanBuffer_3.toByteArray))
         promise.success(EasyMock.capture(capturedTraces)).andReturn(promise)
       }
 
-      whenExecuting(mockReadResult, promise, failureMeter, timer, resultSet, mockSpanBufferRow_1, mockSpanBufferRow_2) {
+      whenExecuting(mockReadResult, promise, failureMeter, timer, resultSet, mockSpanBufferRow_1, mockSpanBufferRow_2, mockSpanBufferRow_3) {
         val listener = new CassandraReadRawTracesResultListener(mockReadResult, timer, failureMeter, promise)
         listener.run()
         capturedTraces.getValue.map(
-          capturedTrace => {
-            capturedTrace.getChildSpansList.asScala.map(_.getSpanId) should contain allOf("SPAN_ID_1", "SPAN_ID_2")
-            capturedTrace.getTraceId shouldBe "TRACE_ID"
-          }
+          capturedTrace =>
+            capturedTrace.getTraceId match {
+              case "TRACE_ID1" =>
+                capturedTrace.getChildSpansList.asScala.map(_.getSpanId) should contain allOf("SPAN_ID_1", "SPAN_ID_2")
+              case "TRACE_ID2" =>
+                capturedTrace.getChildSpansList.asScala.map(_.getSpanId) should contain ("SPAN_ID_3")
+            }
         )
       }
     }

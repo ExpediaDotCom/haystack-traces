@@ -76,12 +76,7 @@ class CassandraReadRawTracesResultListener(asyncResult: ResultSetFuture,
     rows.foreach(row => {
       CassandraTableSchema.extractSpanBufferFromRow(row) match {
         case Success(sBuffer) =>
-          traceBuilderMap.get(sBuffer.getTraceId) match {
-            case Some(traceBuilder) =>
-              traceBuilderMap.put(sBuffer.getTraceId, traceBuilder.addAllChildSpans(sBuffer.getChildSpansList))
-            case _ =>
-              traceBuilderMap.put(sBuffer.getTraceId, Trace.newBuilder().setTraceId(sBuffer.getTraceId).addAllChildSpans(sBuffer.getChildSpansList))
-          }
+          traceBuilderMap.getOrElseUpdate(sBuffer.getTraceId, Trace.newBuilder().setTraceId(sBuffer.getTraceId)).addAllChildSpans(sBuffer.getChildSpansList)
         case Failure(cause) => deserFailed = Failure(cause)
       }
     })

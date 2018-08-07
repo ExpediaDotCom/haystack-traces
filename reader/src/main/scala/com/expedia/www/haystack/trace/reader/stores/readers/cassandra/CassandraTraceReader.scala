@@ -49,5 +49,23 @@ class CassandraTraceReader(cassandra: CassandraSession, config: CassandraConfigu
     }
   }
 
+  def readRawTraces(traceIds: List[String]): Future[Seq[Trace]] = {
+    val timer = readTimer.time()
+    val promise = Promise[Seq[Trace]]
+
+    try {
+      val statement = cassandra.newSelectRawTracesBoundStatement(traceIds)
+      val asyncResult = cassandra.executeAsync(statement)
+      asyncResult.addListener(new CassandraReadRawTracesResultListener(asyncResult, timer, readFailures, promise), dispatcher)
+      promise.future
+    } catch {
+      case ex: Exception =>
+        readFailures.mark()
+        timer.stop()
+        LOGGER.error("Failed to read raw traces with exception", ex)
+        Future.failed(ex)
+    }
+  }
+
   override def close(): Unit = ()
 }

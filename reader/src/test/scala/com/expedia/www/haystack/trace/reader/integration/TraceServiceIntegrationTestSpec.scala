@@ -393,4 +393,29 @@ class TraceServiceIntegrationTestSpec extends BaseIntegrationTestSpec {
       traceCounts.getTraceCountList.asScala.foreach(_.getCount shouldBe 1)
     }
   }
+
+  describe("TraceReader.getRawTraces") {
+    it("should get raw traces for given traceIds from cassandra") {
+      Given("traces in cassandra")
+      val traceId1 = UUID.randomUUID().toString
+      val spanId1 = UUID.randomUUID().toString
+      val spanId2 = UUID.randomUUID().toString
+      putTraceInCassandra(traceId1, spanId1, "svc1", "oper1")
+      putTraceInCassandra(traceId1, spanId2, "svc2", "oper2")
+
+      val traceId2 = UUID.randomUUID().toString
+      val spanId3 = UUID.randomUUID().toString
+      putTraceInCassandra(traceId2, spanId3, "svc1", "oper1")
+
+      When("getRawTraces is invoked")
+      val tracesResult = client.getRawTraces(RawTracesRequest.newBuilder().addAllTraceId(Seq(traceId1, traceId2).asJava).build())
+
+      Then("should return the traces")
+      val traceIdSpansMap: Map[String, Set[String]] = tracesResult.getTracesList.asScala
+        .map(trace => (trace.getTraceId -> trace.getChildSpansList().asScala.map(_.getSpanId).toSet)).toMap
+
+      traceIdSpansMap(traceId1) shouldEqual (Set(spanId1, spanId2))
+      traceIdSpansMap(traceId2) shouldEqual (Set(spanId3))
+    }
+  }
 }

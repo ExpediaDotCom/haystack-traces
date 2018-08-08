@@ -57,7 +57,7 @@ class CassandraSession(config: CassandraConfiguration, factory: ClusterFactory) 
         .where(QueryBuilder.eq(ID_COLUMN_NAME, bindMarker(ID_COLUMN_NAME))))
   }
 
-  def selectRawTracesPreparedStmt: PreparedStatement = {
+  lazy val selectRawTracesPreparedStmt: PreparedStatement = {
     import QueryBuilder.bindMarker
     session.prepare(
       QueryBuilder

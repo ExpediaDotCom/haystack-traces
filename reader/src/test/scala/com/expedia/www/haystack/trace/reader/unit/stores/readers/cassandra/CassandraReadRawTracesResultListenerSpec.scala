@@ -24,7 +24,7 @@ import com.expedia.open.tracing.Span
 import com.expedia.open.tracing.api.Trace
 import com.expedia.open.tracing.buffer.SpanBuffer
 import com.expedia.www.haystack.trace.commons.clients.cassandra.CassandraTableSchema
-import com.expedia.www.haystack.trace.reader.stores.readers.cassandra.{CassandraReadRawTracesResultListener, CassandraReadTraceResultListener}
+import com.expedia.www.haystack.trace.reader.stores.readers.cassandra.CassandraReadRawTracesResultListener
 import com.expedia.www.haystack.trace.reader.unit.BaseUnitTestSpec
 import io.grpc.{Status, StatusException}
 import org.easymock.EasyMock
@@ -40,6 +40,7 @@ class CassandraReadRawTracesResultListenerSpec extends BaseUnitTestSpec {
       val resultSet = mock[ResultSet]
       val promise = mock[Promise[Seq[Trace]]]
       val failureMeter = mock[Meter]
+      val tracesFailures = mock[Meter]
       val timer = mock[Timer.Context]
 
       val mockSpanBufferRow_1 = mock[Row]
@@ -56,8 +57,10 @@ class CassandraReadRawTracesResultListenerSpec extends BaseUnitTestSpec {
 
 
       val capturedTraces = EasyMock.newCapture[Seq[Trace]]()
+      val capturedMeter = EasyMock.newCapture[Int]()
       expecting {
         timer.close()
+        tracesFailures.mark(EasyMock.capture(capturedMeter))
         mockReadResult.get().andReturn(resultSet)
         resultSet.all().andReturn(List(mockSpanBufferRow_1, mockSpanBufferRow_2, mockSpanBufferRow_3).asJava)
         mockSpanBufferRow_1.getBytes(CassandraTableSchema.SPANS_COLUMN_NAME).andReturn(ByteBuffer.wrap(spanBuffer_1.toByteArray))
@@ -66,14 +69,16 @@ class CassandraReadRawTracesResultListenerSpec extends BaseUnitTestSpec {
         promise.success(EasyMock.capture(capturedTraces)).andReturn(promise)
       }
 
-      whenExecuting(mockReadResult, promise, failureMeter, timer, resultSet, mockSpanBufferRow_1, mockSpanBufferRow_2, mockSpanBufferRow_3) {
-        val listener = new CassandraReadRawTracesResultListener(mockReadResult, timer, failureMeter, promise)
+      whenExecuting(mockReadResult, promise, tracesFailures, failureMeter, timer, resultSet, mockSpanBufferRow_1, mockSpanBufferRow_2, mockSpanBufferRow_3) {
+        val listener = new CassandraReadRawTracesResultListener(mockReadResult, promise, timer, failureMeter, tracesFailures, 2)
         listener.run()
         val traceIdSpansMap: Map[String, Set[String]] = capturedTraces.getValue.map(capturedTrace =>
           capturedTrace.getTraceId -> capturedTrace.getChildSpansList.asScala.map(_.getSpanId).toSet).toMap
 
         traceIdSpansMap("TRACE_ID1") shouldEqual Set("SPAN_ID_1", "SPAN_ID_2")
         traceIdSpansMap("TRACE_ID3") shouldEqual Set("SPAN_ID_3")
+
+        capturedMeter.getValue shouldEqual 0
       }
     }
 
@@ -82,6 +87,7 @@ class CassandraReadRawTracesResultListenerSpec extends BaseUnitTestSpec {
       val resultSet = mock[ResultSet]
       val promise = mock[Promise[Seq[Trace]]]
       val failureMeter = mock[Meter]
+      val tracesFailures = mock[Meter]
       val timer = mock[Timer.Context]
 
       val mockSpanBufferRow_1 = mock[Row]
@@ -90,9 +96,11 @@ class CassandraReadRawTracesResultListenerSpec extends BaseUnitTestSpec {
       val span_1 = Span.newBuilder().setTraceId("TRACE_ID").setSpanId("SPAN_ID_1")
       val spanBuffer_1 = SpanBuffer.newBuilder().setTraceId("TRACE_ID").addChildSpans(span_1).build()
 
+      val capturedMeter = EasyMock.newCapture[Int]()
       expecting {
         timer.close()
         failureMeter.mark()
+        tracesFailures.mark(EasyMock.capture(capturedMeter))
         mockReadResult.get().andReturn(resultSet)
         resultSet.all().andReturn(List(mockSpanBufferRow_1, mockSpanBufferRow_2).asJava)
         mockSpanBufferRow_1.getBytes(CassandraTableSchema.SPANS_COLUMN_NAME).andReturn(ByteBuffer.wrap(spanBuffer_1.toByteArray))
@@ -100,32 +108,37 @@ class CassandraReadRawTracesResultListenerSpec extends BaseUnitTestSpec {
         promise.failure(EasyMock.anyObject()).andReturn(promise)
       }
 
-      whenExecuting(mockReadResult, promise, failureMeter, timer, resultSet, mockSpanBufferRow_1, mockSpanBufferRow_2) {
-        val listener = new CassandraReadRawTracesResultListener(mockReadResult, timer, failureMeter, promise)
+      whenExecuting(mockReadResult, promise, failureMeter, tracesFailures, timer, resultSet, mockSpanBufferRow_1, mockSpanBufferRow_2) {
+        val listener = new CassandraReadRawTracesResultListener(mockReadResult, promise, timer, failureMeter, tracesFailures, 1)
         listener.run()
+        capturedMeter.getValue shouldEqual 1
       }
     }
 
     it("should return an exception for empty traceId") {
       val mockReadResult = mock[ResultSetFuture]
       val resultSet = mock[ResultSet]
-      val promise = mock[Promise[Trace]]
+      val promise = mock[Promise[Seq[Trace]]]
       val failureMeter = mock[Meter]
+      val tracesFailures = mock[Meter]
       val timer = mock[Timer.Context]
 
       val capturedException = EasyMock.newCapture[StatusException]()
+      val capturedMeter = EasyMock.newCapture[Int]()
       expecting {
         timer.close()
         failureMeter.mark()
+        tracesFailures.mark(EasyMock.capture(capturedMeter))
         mockReadResult.get().andReturn(resultSet)
         resultSet.all().andReturn(List[Row]().asJava)
         promise.failure(EasyMock.capture(capturedException)).andReturn(promise)
       }
 
-      whenExecuting(mockReadResult, promise, failureMeter, timer, resultSet) {
-        val listener = new CassandraReadTraceResultListener(mockReadResult, timer, failureMeter, promise)
+      whenExecuting(mockReadResult, promise, failureMeter, tracesFailures, timer, resultSet) {
+        val listener = new CassandraReadRawTracesResultListener(mockReadResult, promise, timer, failureMeter, tracesFailures, 0)
         listener.run()
         capturedException.getValue.getStatus.getCode shouldEqual Status.NOT_FOUND.getCode
+        capturedMeter.getValue shouldEqual 0
       }
     }
   }

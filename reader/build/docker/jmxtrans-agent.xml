@@ -5,6 +5,7 @@
         <query objectName="metrics:name=cassandra.read.time" attributes="99thPercentile,50thPercentile,OneMinuteRate" resultAlias="cassandra.read.time.#attribute#"/>
         <query objectName="metrics:name=cassandra.read.failures" attributes="OneMinuteRate" resultAlias="cassandra.read.failures.#attribute#"/>
         <query objectName="metrics:name=search.trace.rejected" attributes="OneMinuteRate" resultAlias="trace-search.rejected.#attribute#"/>
+        <query objectName="metrics:name=cassandra.traces.failures" attributes="OneMinuteRate" resultAlias="cassandra.traces.failures.#attribute#"/>
 
         <!-- reader endpoint metrics -->
         <query objectName="metrics:name=TraceReader.getFieldNames" attributes="50thPercentile,99thPercentile,OneMinuteRate" resultAlias="trace.reader.getFieldNames.#attribute#"/>

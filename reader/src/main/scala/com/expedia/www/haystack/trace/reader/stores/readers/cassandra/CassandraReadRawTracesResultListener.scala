@@ -36,9 +36,11 @@ object CassandraReadRawTracesResultListener {
 }
 
 class CassandraReadRawTracesResultListener(asyncResult: ResultSetFuture,
+                                           promise: Promise[Seq[Trace]],
                                            timer: Timer.Context,
                                            failure: Meter,
-                                           promise: Promise[Seq[Trace]]) extends Runnable {
+                                           tracesFailure: Meter,
+                                           raceIdCount: Int) extends Runnable {
   override def run(): Unit = {
     timer.close()
 
@@ -47,6 +49,7 @@ class CassandraReadRawTracesResultListener(asyncResult: ResultSetFuture,
       .flatMap(tryDeserialize)
     match {
       case Success(traces) =>
+        tracesFailure.mark(raceIdCount - traces.length)
         promise.success(traces)
       case Failure(ex) =>
         if (fatalError(ex)) {
@@ -56,6 +59,7 @@ class CassandraReadRawTracesResultListener(asyncResult: ResultSetFuture,
           LOGGER.error("Failed in reading the record from cassandra", ex)
         }
         failure.mark()
+        tracesFailure.mark(raceIdCount)
         promise.failure(ex)
     }
   }

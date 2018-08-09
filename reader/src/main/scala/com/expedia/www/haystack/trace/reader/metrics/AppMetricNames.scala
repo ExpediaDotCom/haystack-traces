@@ -24,6 +24,7 @@ object AppMetricNames {
 
   val CASSANDRA_READ_TIME = "cassandra.read.time"
   val CASSANDRA_READ_FAILURES = "cassandra.read.failures"
+  val CASSANDRA_TRACES_FAILURE = "cassandra.traces.failures"
 
   val SEARCH_TRACE_REJECTED = "search.trace.rejected"
   val COUNT_BUCKET_REJECTED = "count.bucket.rejected"

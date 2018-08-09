@@ -30,6 +30,7 @@ class CassandraTraceReader(cassandra: CassandraSession, config: CassandraConfigu
 
   private val readTimer = metricRegistry.timer(AppMetricNames.CASSANDRA_READ_TIME)
   private val readFailures = metricRegistry.meter(AppMetricNames.CASSANDRA_READ_FAILURES)
+  private val tracesFailures = metricRegistry.meter(AppMetricNames.CASSANDRA_TRACES_FAILURE)
 
   def readTrace(traceId: String): Future[Trace] = {
     val timer = readTimer.time()
@@ -56,7 +57,7 @@ class CassandraTraceReader(cassandra: CassandraSession, config: CassandraConfigu
     try {
       val statement = cassandra.newSelectRawTracesBoundStatement(traceIds)
       val asyncResult = cassandra.executeAsync(statement)
-      asyncResult.addListener(new CassandraReadRawTracesResultListener(asyncResult, timer, readFailures, promise), dispatcher)
+      asyncResult.addListener(new CassandraReadRawTracesResultListener(asyncResult, promise, timer, readFailures, tracesFailures, traceIds.size), dispatcher)
       promise.future
     } catch {
       case ex: Exception =>

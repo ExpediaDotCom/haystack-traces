@@ -2,12 +2,12 @@
 
 [ -z "$JAVA_XMS" ] && JAVA_XMS=1024m
 [ -z "$JAVA_XMX" ] && JAVA_XMX=1024m
+[ -z "$JAVA_GC_OPTS" ] && JAVA_GC_OPTS="-XX:+UseG1GC"
 
 set -e
 JAVA_OPTS="${JAVA_OPTS} \
 -javaagent:${APP_HOME}/${JMXTRANS_AGENT}.jar=${APP_HOME}/jmxtrans-agent.xml \
--XX:+UseConcMarkSweepGC \
--XX:+UseParNewGC \
+${JAVA_GC_OPTS} \
 -Xmx${JAVA_XMX} \
 -Xms${JAVA_XMS} \
 -XX:+ExitOnOutOfMemoryError \

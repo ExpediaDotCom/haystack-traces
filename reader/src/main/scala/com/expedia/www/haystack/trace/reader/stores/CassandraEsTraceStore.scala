@@ -41,7 +41,6 @@ class CassandraEsTraceStore(cassandraConfig: CassandraConfiguration,
   extends TraceStore with MetricsSupport with ResponseParser {
 
   private val LOGGER = LoggerFactory.getLogger(classOf[ElasticSearchReader])
-  private val traceRejected = metricRegistry.meter(AppMetricNames.SEARCH_TRACE_REJECTED)
 
   private val cassandraSession = new CassandraSession(cassandraConfig, new CassandraClusterFactory)
   private val cassandraReader: CassandraTraceReader = new CassandraTraceReader(cassandraSession, cassandraConfig)
@@ -79,35 +78,20 @@ class CassandraEsTraceStore(cassandraConfig: CassandraConfiguration,
     // go through each hit and fetch trace for parsed traceId
     val sourceList = result.getSourceAsStringList
     if (sourceList != null && sourceList.size() > 0) {
-      val traceFutures = sourceList
+      val traceIds = sourceList
         .asScala
         .map(source => extractTraceIdFromSource(source))
         .filter(!_.isEmpty)
-        .toSet[String]
-        .toSeq
-        .map(id => getTrace(id))
+        .toSet[String]  // de-dup traceIds
+        .toList
 
-      // wait for all Futures to complete and then map them to Traces
-      Future
-        .sequence(liftToTry(traceFutures))
-        .map(_.flatMap(retrieveTriedTrace))
+      cassandraReader.readRawTraces(traceIds)
     } else {
       Future.successful(Nil)
     }
   }
 
   override def getTrace(traceId: String): Future[Trace] = cassandraReader.readTrace(traceId)
-
-  private def retrieveTriedTrace(mayBeTrace: Try[Trace]): Option[Trace] = {
-    mayBeTrace match {
-      case Success(trace) =>
-        Some(trace)
-      case Failure(ex) =>
-        LOGGER.warn("traceId not found in cassandra, rejected searched trace", ex)
-        traceRejected.mark()
-        None
-    }
-  }
 
   override def getFieldNames(): Future[Seq[String]] = {
     Future.successful(indexConfig.whitelistIndexFields.map(_.name).distinct.sorted)

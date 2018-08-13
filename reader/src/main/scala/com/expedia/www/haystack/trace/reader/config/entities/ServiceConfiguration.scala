@@ -19,5 +19,5 @@ package com.expedia.www.haystack.trace.reader.config.entities
 /**
   * @param port port to start grpc servicer on
   */
-case class ServiceConfiguration(port: Int, ssl: SslConfiguration)
+case class ServiceConfiguration(port: Int, ssl: SslConfiguration, throttler: Map[String, Int])
 case class SslConfiguration(enabled: Boolean, certChainFilePath: String, privateKeyPath: String)

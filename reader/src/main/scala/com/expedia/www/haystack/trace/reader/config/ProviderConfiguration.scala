@@ -40,7 +40,13 @@ class ProviderConfiguration {
     val ssl = serviceConfig.getConfig("ssl")
     val sslConfig = SslConfiguration(ssl.getBoolean("enabled"), ssl.getString("cert.path"), ssl.getString("private.key.path"))
 
-    ServiceConfiguration(serviceConfig.getInt("port"), sslConfig)
+    val throttleMap = serviceConfig.getConfig("throttler")
+      .entrySet()
+      .asScala
+      .map(entry => s"TraceReader/${entry.getKey}" -> entry.getValue.unwrapped().asInstanceOf[Int])
+      .toMap
+
+    ServiceConfiguration(serviceConfig.getInt("port"), sslConfig, throttleMap)
   }
 
   /**

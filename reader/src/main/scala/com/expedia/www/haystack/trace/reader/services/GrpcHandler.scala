@@ -46,6 +46,8 @@ class GrpcHandler(operationName: String)(implicit val executor: ExecutionContext
     val time = timer.time()
     op onComplete {
       case Success(response) =>
+        System.out.println("Thread Id=" + Thread.currentThread().getId)
+        Thread.sleep(10000)
         responseObserver.onNext(response)
         responseObserver.onCompleted()
         time.stop()

@@ -40,11 +40,15 @@ class ProviderConfiguration {
     val ssl = serviceConfig.getConfig("ssl")
     val sslConfig = SslConfiguration(ssl.getBoolean("enabled"), ssl.getString("cert.path"), ssl.getString("private.key.path"))
 
-    val throttleMap = serviceConfig.getConfig("throttler")
-      .entrySet()
-      .asScala
-      .map(entry => s"TraceReader/${entry.getKey}" -> entry.getValue.unwrapped().asInstanceOf[Int])
-      .toMap
+    val throttleMap = if(serviceConfig.hasPath("throttler")) {
+      serviceConfig.getConfig("throttler")
+        .entrySet()
+        .asScala
+        .map(entry => s"tracereader/${entry.getKey}" -> entry.getValue.unwrapped().asInstanceOf[Int])
+        .toMap
+    } else {
+      Map.empty[String, Int]
+    }
 
     ServiceConfiguration(serviceConfig.getInt("port"), sslConfig, throttleMap)
   }

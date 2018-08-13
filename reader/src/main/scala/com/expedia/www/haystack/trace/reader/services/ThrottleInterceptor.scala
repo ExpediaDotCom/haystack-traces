@@ -18,6 +18,7 @@ package com.expedia.www.haystack.trace.reader.services
 
 import java.util.concurrent.Semaphore
 
+import io.grpc.ForwardingServerCallListener.SimpleForwardingServerCallListener
 import io.grpc.{Metadata, ServerCall, ServerCallHandler, ServerInterceptor}
 
 class ThrottleInterceptor(concurrencyByMethodNames: Map[String, Int]) extends ServerInterceptor {
@@ -28,16 +29,27 @@ class ThrottleInterceptor(concurrencyByMethodNames: Map[String, Int]) extends Se
   override def interceptCall[ReqT, RespT](call: ServerCall[ReqT, RespT],
                                           metadata: Metadata,
                                           next: ServerCallHandler[ReqT, RespT]): ServerCall.Listener[ReqT] = {
-    semaphoresByMethodNames.get(call.getMethodDescriptor.getFullMethodName) match {
+    semaphoresByMethodNames.get(call.getMethodDescriptor.getFullMethodName.toLowerCase) match {
       case Some(semaphore) =>
-        try {
-          semaphore.acquire()
-          next.startCall(call, metadata)
-        } finally {
-          semaphore.release()
+        semaphore.acquire()
+        val listener = next.startCall(call, metadata)
+        new SimpleForwardingServerCallListener[ReqT](listener) {
+          override def onComplete(): Unit = {
+            super.onComplete()
+            releaseSlot(semaphore)
+          }
+
+          override def onCancel(): Unit = {
+            super.onCancel()
+            releaseSlot(semaphore)
+          }
         }
       case _ =>
         next.startCall(call, metadata)
     }
+  }
+
+  private def releaseSlot(semaphore: Semaphore): Unit = {
+    semaphore.release()
   }
 }

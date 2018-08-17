@@ -128,6 +128,33 @@ case class MutableSpanForest(private var spans: Seq[Span]) {
       })
     }
   }
+
+  def collapse(applyCondition: (SpanTree) => Option[Span]): Unit = {
+    val underlyingSpans = mutable.ListBuffer[Span]()
+
+    def collapseTree(spanTree: SpanTree): Unit = {
+      val queue = mutable.Queue[SpanTree]()
+      queue.enqueue(spanTree)
+
+      while (queue.nonEmpty) {
+        val tree = queue.dequeue()
+        applyCondition(tree) match {
+          case Some(mergedSpan) =>
+            tree.span = mergedSpan
+            val childSpanTrees = new ListBuffer[SpanTree]()
+            tree.children.foreach(t => childSpanTrees.appendAll(t.children))
+            tree.children.clear()
+            childSpanTrees.foreach(tr => tree.children.append(tr))
+          case _ =>
+        }
+        underlyingSpans.append(tree.span)
+        queue.enqueue(tree.children:_*)
+      }
+    }
+
+    getAllTrees.foreach(collapseTree)
+    updateUnderlyingSpans(underlyingSpans, triggerForestUpdate = false)
+  }
 }
 
 case class SpanTree(var span: Span, children: mutable.ListBuffer[SpanTree] = mutable.ListBuffer[SpanTree]())

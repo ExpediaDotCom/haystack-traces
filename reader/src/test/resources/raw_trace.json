@@ -1,0 +1,1756 @@
+{
+  "traceId": "c4fffc7d-7c0d-4073-98ea-34362506d323",
+  "childSpans": [
+    {
+      "traceId": "c4fffc7d-7c0d-4073-98ea-34362506d323",
+      "spanId": "2fe438d3-9742-4973-a5b6-e0e7870c60e3",
+      "parentSpanId": "9b0523d6-f14b-4a33-ba75-1e46720684cc",
+      "serviceName": "airtrafficcontroller-service",
+      "operationName": "GetRulesV2",
+      "startTime": 1534487370387000,
+      "duration": 0,
+      "logs": [],
+      "tags": [
+        {
+          "key": "Blob-RESPONSE-sz",
+          "value": "2182"
+        },
+        {
+          "key": "MessageGuid",
+          "value": "2fe438d3-9742-4973-a5b6-e0e7870c60e3"
+        },
+        {
+          "key": "MessageName",
+          "value": "GetRulesV2"
+        },
+        {
+          "key": "Blob-REQUEST-sz",
+          "value": "756"
+        },
+        {
+          "key": "DirectClientName",
+          "value": "gulfstream-detail-service"
+        },
+        {
+          "key": "DebugTrace",
+          "value": "true"
+        },
+        {
+          "key": "span.kind",
+          "value": "server"
+        },
+        {
+          "key": "UserID",
+          "value": "066ed253-5c50-4417-a37b-3fa4d301a2b7"
+        },
+        {
+          "key": "OriginalClientName",
+          "value": "gulfstream-detail-service"
+        },
+        {
+          "key": "Failure",
+          "value": "false"
+        },
+        {
+          "key": "Blob-REQUEST",
+          "value": "https://haystack-blobs.exp-prod.net/getBlob/airtrafficcontroller-service/REQUEST/c4fffc7d-7c0d-4073-98ea-34362506d323/9b0523d6-f14b-4a33-ba75-1e46720684cc/2fe438d3-9742-4973-a5b6-e0e7870c60e3"
+        },
+        {
+          "key": "Path",
+          "value": "STANDALONE"
+        },
+        {
+          "key": "EAPID",
+          "value": "0"
+        },
+        {
+          "key": "index",
+          "value": "false"
+        },
+        {
+          "key": "client.version",
+          "value": "7563f109cad7a8b433153a60a11139f62d3908fb"
+        },
+        {
+          "key": "peer.ipv4",
+          "value": "10.9.36.177"
+        },
+        {
+          "key": "TPID",
+          "value": "1"
+        },
+        {
+          "key": "component",
+          "value": "platform-diagnostics"
+        },
+        {
+          "key": "TransactionGuid",
+          "value": "c4fffc7d-7c0d-4073-98ea-34362506d323"
+        },
+        {
+          "key": "Passengers",
+          "value": "[ADULT]"
+        },
+        {
+          "key": "Blob-RESPONSE",
+          "value": "https://haystack-blobs.exp-prod.net/getBlob/airtrafficcontroller-service/RESPONSE/c4fffc7d-7c0d-4073-98ea-34362506d323/9b0523d6-f14b-4a33-ba75-1e46720684cc/2fe438d3-9742-4973-a5b6-e0e7870c60e3"
+        },
+        {
+          "key": "success",
+          "value": "true"
+        },
+        {
+          "key": "RequestedAdvisorys",
+          "value": "[BRANDEDFARES, CRSDECISION, APC_THROTTLE, ST_FARETYPEFILTER]"
+        },
+        {
+          "key": "TripType",
+          "value": "ONEWAY"
+        },
+        {
+          "key": "TUID",
+          "value": "1"
+        },
+        {
+          "key": "Application",
+          "value": "airtrafficcontroller-service"
+        },
+        {
+          "key": "X-HAYSTACK-INFRASTRUCTURE-PROVIDER",
+          "value": "aws"
+        },
+        {
+          "key": "X-HAYSTACK-AWS-REGION",
+          "value": "us-west-2"
+        }
+      ]
+    },
+    {
+      "traceId": "c4fffc7d-7c0d-4073-98ea-34362506d323",
+      "spanId": "933e7aa6-9dd6-4818-86b0-a8561fc0b4da",
+      "parentSpanId": "9b0523d6-f14b-4a33-ba75-1e46720684cc",
+      "serviceName": "gulfstream-detail-service",
+      "operationName": "offer.cache.get",
+      "startTime": 1534487370212000,
+      "duration": 155000,
+      "logs": [
+        {
+          "timestamp": 1534487370212000,
+          "fields": [
+            {
+              "key": "event",
+              "value": "cs"
+            }
+          ]
+        },
+        {
+          "timestamp": 1534487370367000,
+          "fields": [
+            {
+              "key": "event",
+              "value": "cr"
+            }
+          ]
+        }
+      ],
+      "tags": [
+        {
+          "key": "clientVersion",
+          "value": "fafede744a872707963291367c6315bc47ddb0ea"
+        },
+        {
+          "key": "hostIP",
+          "value": "10.178.169.162"
+        },
+        {
+          "key": "X-HAYSTACK-INFRASTRUCTURE-PROVIDER",
+          "value": "dc"
+        }
+      ]
+    },
+    {
+      "traceId": "c4fffc7d-7c0d-4073-98ea-34362506d323",
+      "spanId": "2fe438d3-9742-4973-a5b6-e0e7870c60e3",
+      "parentSpanId": "9b0523d6-f14b-4a33-ba75-1e46720684cc",
+      "serviceName": "gulfstream-detail-service",
+      "operationName": "atc.v2",
+      "startTime": 1534487370368000,
+      "duration": 53000,
+      "logs": [
+        {
+          "timestamp": 1534487370368000,
+          "fields": [
+            {
+              "key": "event",
+              "value": "cs"
+            }
+          ]
+        },
+        {
+          "timestamp": 1534487370421000,
+          "fields": [
+            {
+              "key": "event",
+              "value": "cr"
+            }
+          ]
+        }
+      ],
+      "tags": [
+        {
+          "key": "clientVersion",
+          "value": "fafede744a872707963291367c6315bc47ddb0ea"
+        },
+        {
+          "key": "hostIP",
+          "value": "10.178.169.162"
+        },
+        {
+          "key": "X-HAYSTACK-INFRASTRUCTURE-PROVIDER",
+          "value": "dc"
+        }
+      ]
+    },
+    {
+      "traceId": "c4fffc7d-7c0d-4073-98ea-34362506d323",
+      "spanId": "f9d9fd32-55b9-4355-a07a-5e9455d17820",
+      "parentSpanId": "5e5a9451-08f2-4d83-90cb-4eb424f657fb",
+      "serviceName": "sabreprovideradapter-aws",
+      "operationName": "SWS_GetDetails",
+      "startTime": 1534487372108000,
+      "duration": 177000,
+      "logs": [
+        {
+          "timestamp": 1534487372108000,
+          "fields": [
+            {
+              "key": "event",
+              "value": "cs"
+            }
+          ]
+        },
+        {
+          "timestamp": 1534487372285000,
+          "fields": [
+            {
+              "key": "event",
+              "value": "cr"
+            }
+          ]
+        }
+      ],
+      "tags": [
+        {
+          "key": "clientVersion",
+          "value": "1.1.60"
+        },
+        {
+          "key": "hostIP",
+          "value": "10.9.35.144"
+        },
+        {
+          "key": "SpoofID",
+          "value": "0"
+        },
+        {
+          "key": "TPID",
+          "value": "1"
+        },
+        {
+          "key": "TransactionGuid",
+          "value": "c4fffc7d-7c0d-4073-98ea-34362506d323"
+        },
+        {
+          "key": "DebugTrace",
+          "value": "true"
+        },
+        {
+          "key": "EAPID",
+          "value": "0"
+        },
+        {
+          "key": "Blob-RESPONSE",
+          "value": "https://haystack-blobs.exp-prod.net/getBlob/sabreprovideradapter-aws/RESPONSE/c4fffc7d-7c0d-4073-98ea-34362506d323/5e5a9451-08f2-4d83-90cb-4eb424f657fb/f9d9fd32-55b9-4355-a07a-5e9455d17820"
+        },
+        {
+          "key": "guid",
+          "value": "5e5a9451-08f2-4d83-90cb-4eb424f657fb"
+        },
+        {
+          "key": "TUID",
+          "value": "1"
+        },
+        {
+          "key": "message",
+          "value": "GetDetails"
+        },
+        {
+          "key": "Blob-REQUEST",
+          "value": "https://haystack-blobs.exp-prod.net/getBlob/sabreprovideradapter-aws/REQUEST/c4fffc7d-7c0d-4073-98ea-34362506d323/5e5a9451-08f2-4d83-90cb-4eb424f657fb/f9d9fd32-55b9-4355-a07a-5e9455d17820"
+        },
+        {
+          "key": "clientHostName",
+          "value": "chexjvaass173.ch.expeso.com"
+        },
+        {
+          "key": "X-HAYSTACK-INFRASTRUCTURE-PROVIDER",
+          "value": "aws"
+        },
+        {
+          "key": "X-HAYSTACK-AWS-REGION",
+          "value": "us-west-2"
+        }
+      ]
+    },
+    {
+      "traceId": "c4fffc7d-7c0d-4073-98ea-34362506d323",
+      "spanId": "5e5a9451-08f2-4d83-90cb-4eb424f657fb",
+      "parentSpanId": "12e410a5-58a4-4f3a-b559-6822ade5acfd",
+      "serviceName": "sabreprovideradapter-aws",
+      "operationName": "GetDetails",
+      "startTime": 1534487370603000,
+      "duration": 1686000,
+      "logs": [
+        {
+          "timestamp": 1534487370603000,
+          "fields": [
+            {
+              "key": "event",
+              "value": "sr"
+            }
+          ]
+        },
+        {
+          "timestamp": 1534487372289000,
+          "fields": [
+            {
+              "key": "event",
+              "value": "ss"
+            }
+          ]
+        }
+      ],
+      "tags": [
+        {
+          "key": "clientVersion",
+          "value": "1.1.60"
+        },
+        {
+          "key": "hostIP",
+          "value": "10.9.35.144"
+        },
+        {
+          "key": "EAPID",
+          "value": "0"
+        },
+        {
+          "key": "latency",
+          "value": "1686"
+        },
+        {
+          "key": "message",
+          "value": "GetDetails"
+        },
+        {
+          "key": "SpoofID",
+          "value": "0"
+        },
+        {
+          "key": "TPID",
+          "value": "1"
+        },
+        {
+          "key": "TransactionGuid",
+          "value": "c4fffc7d-7c0d-4073-98ea-34362506d323"
+        },
+        {
+          "key": "DebugTrace",
+          "value": "true"
+        },
+        {
+          "key": "Blob-RESPONSE",
+          "value": "https://haystack-blobs.exp-prod.net/getBlob/sabreprovideradapter-aws/RESPONSE/c4fffc7d-7c0d-4073-98ea-34362506d323/12e410a5-58a4-4f3a-b559-6822ade5acfd/5e5a9451-08f2-4d83-90cb-4eb424f657fb"
+        },
+        {
+          "key": "guid",
+          "value": "5e5a9451-08f2-4d83-90cb-4eb424f657fb"
+        },
+        {
+          "key": "TUID",
+          "value": "1"
+        },
+        {
+          "key": "Blob-REQUEST",
+          "value": "https://haystack-blobs.exp-prod.net/getBlob/sabreprovideradapter-aws/REQUEST/c4fffc7d-7c0d-4073-98ea-34362506d323/12e410a5-58a4-4f3a-b559-6822ade5acfd/5e5a9451-08f2-4d83-90cb-4eb424f657fb"
+        },
+        {
+          "key": "clientHostName",
+          "value": "chexjvaass173.ch.expeso.com"
+        },
+        {
+          "key": "IsSuccessful",
+          "value": "true"
+        },
+        {
+          "key": "X-HAYSTACK-INFRASTRUCTURE-PROVIDER",
+          "value": "aws"
+        },
+        {
+          "key": "X-HAYSTACK-AWS-REGION",
+          "value": "us-west-2"
+        }
+      ]
+    },
+    {
+      "traceId": "c4fffc7d-7c0d-4073-98ea-34362506d323",
+      "spanId": "5e5a9451-08f2-4d83-90cb-4eb424f657fb",
+      "parentSpanId": "9b0523d6-f14b-4a33-ba75-1e46720684cc",
+      "serviceName": "gulfstream-detail-service",
+      "operationName": "pad.sabre",
+      "startTime": 1534487370430000,
+      "duration": 1893000,
+      "logs": [
+        {
+          "timestamp": 1534487370430000,
+          "fields": [
+            {
+              "key": "event",
+              "value": "cs"
+            }
+          ]
+        },
+        {
+          "timestamp": 1534487372323000,
+          "fields": [
+            {
+              "key": "event",
+              "value": "cr"
+            }
+          ]
+        }
+      ],
+      "tags": [
+        {
+          "key": "clientVersion",
+          "value": "fafede744a872707963291367c6315bc47ddb0ea"
+        },
+        {
+          "key": "hostIP",
+          "value": "10.178.169.162"
+        },
+        {
+          "key": "X-HAYSTACK-INFRASTRUCTURE-PROVIDER",
+          "value": "dc"
+        }
+      ]
+    },
+    {
+      "traceId": "c4fffc7d-7c0d-4073-98ea-34362506d323",
+      "spanId": "0e4ebf10-ad12-4d3c-bf4c-db2bafa64e60",
+      "parentSpanId": "9b0523d6-f14b-4a33-ba75-1e46720684cc",
+      "serviceName": "gulfstream-detail-service",
+      "operationName": "aos.aws",
+      "startTime": 1534487372324000,
+      "duration": 399000,
+      "logs": [
+        {
+          "timestamp": 1534487372324000,
+          "fields": [
+            {
+              "key": "event",
+              "value": "cs"
+            }
+          ]
+        },
+        {
+          "timestamp": 1534487372723000,
+          "fields": [
+            {
+              "key": "event",
+              "value": "cr"
+            }
+          ]
+        }
+      ],
+      "tags": [
+        {
+          "key": "clientVersion",
+          "value": "fafede744a872707963291367c6315bc47ddb0ea"
+        },
+        {
+          "key": "hostIP",
+          "value": "10.178.169.162"
+        },
+        {
+          "key": "X-HAYSTACK-INFRASTRUCTURE-PROVIDER",
+          "value": "dc"
+        }
+      ]
+    },
+    {
+      "traceId": "c4fffc7d-7c0d-4073-98ea-34362506d323",
+      "spanId": "eb9b1f0d-c0e5-487e-9b50-a2175c69807e",
+      "parentSpanId": "9b0523d6-f14b-4a33-ba75-1e46720684cc",
+      "serviceName": "gulfstream-detail-service",
+      "operationName": "aos.aws",
+      "startTime": 1534487372726000,
+      "duration": 95000,
+      "logs": [
+        {
+          "timestamp": 1534487372726000,
+          "fields": [
+            {
+              "key": "event",
+              "value": "cs"
+            }
+          ]
+        },
+        {
+          "timestamp": 1534487372821000,
+          "fields": [
+            {
+              "key": "event",
+              "value": "cr"
+            }
+          ]
+        }
+      ],
+      "tags": [
+        {
+          "key": "clientVersion",
+          "value": "fafede744a872707963291367c6315bc47ddb0ea"
+        },
+        {
+          "key": "hostIP",
+          "value": "10.178.169.162"
+        },
+        {
+          "key": "X-HAYSTACK-INFRASTRUCTURE-PROVIDER",
+          "value": "dc"
+        }
+      ]
+    },
+    {
+      "traceId": "c4fffc7d-7c0d-4073-98ea-34362506d323",
+      "spanId": "9b0523d6-f14b-4a33-ba75-1e46720684cc",
+      "parentSpanId": "a6575426-1bd5-4195-ba8d-1bd36bc390b1",
+      "serviceName": "gulfstream-detail-service",
+      "operationName": "AirGetDetails",
+      "startTime": 1534487370211000,
+      "duration": 2617000,
+      "logs": [
+        {
+          "timestamp": 1534487370211000,
+          "fields": [
+            {
+              "key": "event",
+              "value": "sr"
+            }
+          ]
+        },
+        {
+          "timestamp": 1534487372828000,
+          "fields": [
+            {
+              "key": "event",
+              "value": "ss"
+            }
+          ]
+        }
+      ],
+      "tags": [
+        {
+          "key": "clientVersion",
+          "value": "fafede744a872707963291367c6315bc47ddb0ea"
+        },
+        {
+          "key": "hostIP",
+          "value": "10.178.169.162"
+        },
+        {
+          "key": "error",
+          "value": "false"
+        },
+        {
+          "key": "Transaction-requestOfferToken",
+          "value": "v5-e70a061944d3b4969876f79ecb41dda4-7-1~2.S~AQoCCAESBwjUBBABGAEgASAHIAkgDSAMKAJYAQ~AQpECiEIwaYBEgQyMjMzGLiNASCSASirpKEBMNykoQE4UkAAWAEKHwjBpgESAzMyOBiSASCyEijGpaEBMMKmoQE4UkABWAESCggBEAEYASoCQVMYASIECAEQASgCKAMoBDAC"
+        },
+        {
+          "key": "GUID-TransactionGuid",
+          "value": "c4fffc7d-7c0d-4073-98ea-34362506d323"
+        },
+        {
+          "key": "TransactionPrice-totalPrice",
+          "value": "141.64USD"
+        },
+        {
+          "key": "CreateDateTime",
+          "value": "2018-08-17T06:29:30.178-00:00"
+        },
+        {
+          "key": "Transaction-totalAmountAtDetails",
+          "value": "141.64"
+        },
+        {
+          "key": "Poskey-JurisdictionCode",
+          "value": "USA"
+        },
+        {
+          "key": "Transaction-responseOfferToken",
+          "value": "7d340de796534a66903b37bce43a3408-0-1~0.D~AQoCCAESBwjUBBABGAEgASgCWAE~AQpECiEIwaYBEgQyMjMzGLiNASCSASirpKEBMNykoQE4UkAAWAEKHwjBpgESAzMyOBiSASCyEijGpaEBMMKmoQE4UkABWAESCggBEAEYASoCQVMYASIECAEQASgCKAMoBDAC"
+        },
+        {
+          "key": "HostAddress",
+          "value": "chexjvaass173.ch.expeso.com"
+        },
+        {
+          "key": "ChannelInfo-TPID",
+          "value": "1"
+        },
+        {
+          "key": "GUID-ParentMessageId",
+          "value": "a6575426-1bd5-4195-ba8d-1bd36bc390b1"
+        },
+        {
+          "key": "ClientName",
+          "value": "flight-infosite-web"
+        },
+        {
+          "key": "DebugTrace",
+          "value": "true"
+        },
+        {
+          "key": "Service-Endpoint",
+          "value": "https://airshopsvc.ch.expeso.com:8443/details/v2"
+        },
+        {
+          "key": "GUID-TraceId",
+          "value": "c4fffc7d-7c0d-4073-98ea-34362506d323"
+        },
+        {
+          "key": "HostName",
+          "value": "chexjvaass173.ch.expeso.com"
+        },
+        {
+          "key": "Blob-REQUEST",
+          "value": "https://haystack-blobs.exp-prod.net/getBlob/gulfstream-detail-service/REQUEST/c4fffc7d-7c0d-4073-98ea-34362506d323/a6575426-1bd5-4195-ba8d-1bd36bc390b1/9b0523d6-f14b-4a33-ba75-1e46720684cc"
+        },
+        {
+          "key": "MessageVersion",
+          "value": "2.0.0"
+        },
+        {
+          "key": "User-TUID",
+          "value": "1"
+        },
+        {
+          "key": "GUID-MessageGuid",
+          "value": "9b0523d6-f14b-4a33-ba75-1e46720684cc"
+        },
+        {
+          "key": "TransactionPrice-totalAmountAtSearch",
+          "value": "141.64"
+        },
+        {
+          "key": "Message-ContentType",
+          "value": "application/fastinfoset"
+        },
+        {
+          "key": "ChannelInfo-EAPID",
+          "value": "0"
+        },
+        {
+          "key": "Transaction-provider",
+          "value": "SABREPAD"
+        },
+        {
+          "key": "GUID-MessageId",
+          "value": "9b0523d6-f14b-4a33-ba75-1e46720684cc"
+        },
+        {
+          "key": "Transaction-gds",
+          "value": "Sabre"
+        },
+        {
+          "key": "Transaction-transactionStatus",
+          "value": "SUCCEEDED"
+        },
+        {
+          "key": "TransactionResult-isPriceChanged",
+          "value": "false"
+        },
+        {
+          "key": "Transaction-cacheHit",
+          "value": "true"
+        },
+        {
+          "key": "User-GUID",
+          "value": "066ed253-5c50-4417-a37b-3fa4d301a2b7"
+        },
+        {
+          "key": "TransactionResult-isSearchOnTva",
+          "value": "true"
+        },
+        {
+          "key": "Blob-RESPONSE",
+          "value": "https://haystack-blobs.exp-prod.net/getBlob/gulfstream-detail-service/RESPONSE/c4fffc7d-7c0d-4073-98ea-34362506d323/a6575426-1bd5-4195-ba8d-1bd36bc390b1/9b0523d6-f14b-4a33-ba75-1e46720684cc"
+        },
+        {
+          "key": "Poskey-ManagementunitCode",
+          "value": "1010"
+        },
+        {
+          "key": "TransactionResult-isDetailsOnTva",
+          "value": "false"
+        },
+        {
+          "key": "Transaction-errorCode",
+          "value": "-1"
+        },
+        {
+          "key": "Poskey-CompanyCode",
+          "value": "10111"
+        },
+        {
+          "key": "X-HAYSTACK-INFRASTRUCTURE-PROVIDER",
+          "value": "dc"
+        }
+      ]
+    },
+    {
+      "traceId": "c4fffc7d-7c0d-4073-98ea-34362506d323",
+      "spanId": "14eeae8e-90c2-4e43-8a3a-2737b8a8dd55",
+      "parentSpanId": "9b0523d6-f14b-4a33-ba75-1e46720684cc",
+      "serviceName": "gulfstream-detail-service",
+      "operationName": "route.bfs-pad-price-change-notify",
+      "startTime": 1534487372725000,
+      "duration": 986000,
+      "logs": [
+        {
+          "timestamp": 1534487372725000,
+          "fields": [
+            {
+              "key": "event",
+              "value": "cs"
+            }
+          ]
+        },
+        {
+          "timestamp": 1534487373711000,
+          "fields": [
+            {
+              "key": "event",
+              "value": "cr"
+            }
+          ]
+        }
+      ],
+      "tags": [
+        {
+          "key": "clientVersion",
+          "value": "fafede744a872707963291367c6315bc47ddb0ea"
+        },
+        {
+          "key": "hostIP",
+          "value": "10.178.169.162"
+        },
+        {
+          "key": "Blob-RESPONSE",
+          "value": "https://haystack-blobs.exp-prod.net/getBlob/gulfstream-detail-service/RESPONSE/c4fffc7d-7c0d-4073-98ea-34362506d323/9b0523d6-f14b-4a33-ba75-1e46720684cc/14eeae8e-90c2-4e43-8a3a-2737b8a8dd55"
+        },
+        {
+          "key": "Blob-REQUEST",
+          "value": "https://haystack-blobs.exp-prod.net/getBlob/gulfstream-detail-service/REQUEST/c4fffc7d-7c0d-4073-98ea-34362506d323/9b0523d6-f14b-4a33-ba75-1e46720684cc/14eeae8e-90c2-4e43-8a3a-2737b8a8dd55"
+        },
+        {
+          "key": "X-HAYSTACK-INFRASTRUCTURE-PROVIDER",
+          "value": "dc"
+        }
+      ]
+    },
+    {
+      "traceId": "c4fffc7d-7c0d-4073-98ea-34362506d323",
+      "spanId": "e799c8f3-7dd1-49e6-bb8a-df6f4f02966e",
+      "parentSpanId": "0e4ebf10-ad12-4d3c-bf4c-db2bafa64e60",
+      "serviceName": "airoffer-service",
+      "operationName": "BFSPad-ASD",
+      "startTime": 1534487372347000,
+      "duration": 81000,
+      "logs": [
+        {
+          "timestamp": 1534487372347000,
+          "fields": [
+            {
+              "key": "event",
+              "value": "cs"
+            }
+          ]
+        },
+        {
+          "timestamp": 1534487372428000,
+          "fields": [
+            {
+              "key": "event",
+              "value": "cr"
+            }
+          ]
+        }
+      ],
+      "tags": [
+        {
+          "key": "clientVersion",
+          "value": "1.0"
+        },
+        {
+          "key": "hostIP",
+          "value": "10.9.141.186"
+        },
+        {
+          "key": "Blob-RESPONSE",
+          "value": "https://haystack-blobs.exp-prod.net/getBlob/airoffer-service/RESPONSE/c4fffc7d-7c0d-4073-98ea-34362506d323/0e4ebf10-ad12-4d3c-bf4c-db2bafa64e60/e799c8f3-7dd1-49e6-bb8a-df6f4f02966e"
+        },
+        {
+          "key": "Blob-REQUEST",
+          "value": "https://haystack-blobs.exp-prod.net/getBlob/airoffer-service/REQUEST/c4fffc7d-7c0d-4073-98ea-34362506d323/0e4ebf10-ad12-4d3c-bf4c-db2bafa64e60/e799c8f3-7dd1-49e6-bb8a-df6f4f02966e"
+        },
+        {
+          "key": "X-HAYSTACK-INFRASTRUCTURE-PROVIDER",
+          "value": "aws"
+        },
+        {
+          "key": "X-HAYSTACK-AWS-REGION",
+          "value": "us-west-2"
+        }
+      ]
+    },
+    {
+      "traceId": "c4fffc7d-7c0d-4073-98ea-34362506d323",
+      "spanId": "0e4ebf10-ad12-4d3c-bf4c-db2bafa64e60",
+      "parentSpanId": "0e4ebf10-ad12-4d3c-bf4c-db2bafa64e60",
+      "serviceName": "airoffer-service",
+      "operationName": "BFSPad-OBFee",
+      "startTime": 1534487372435000,
+      "duration": 146000,
+      "logs": [
+        {
+          "timestamp": 1534487372435000,
+          "fields": [
+            {
+              "key": "event",
+              "value": "cs"
+            }
+          ]
+        },
+        {
+          "timestamp": 1534487372581000,
+          "fields": [
+            {
+              "key": "event",
+              "value": "cr"
+            }
+          ]
+        }
+      ],
+      "tags": [
+        {
+          "key": "clientVersion",
+          "value": "1.0"
+        },
+        {
+          "key": "hostIP",
+          "value": "10.9.141.186"
+        },
+        {
+          "key": "Blob-RESPONSE",
+          "value": "https://haystack-blobs.exp-prod.net/getBlob/airoffer-service/RESPONSE/c4fffc7d-7c0d-4073-98ea-34362506d323/0e4ebf10-ad12-4d3c-bf4c-db2bafa64e60/0e4ebf10-ad12-4d3c-bf4c-db2bafa64e60"
+        },
+        {
+          "key": "Blob-REQUEST",
+          "value": "https://haystack-blobs.exp-prod.net/getBlob/airoffer-service/REQUEST/c4fffc7d-7c0d-4073-98ea-34362506d323/0e4ebf10-ad12-4d3c-bf4c-db2bafa64e60/0e4ebf10-ad12-4d3c-bf4c-db2bafa64e60"
+        },
+        {
+          "key": "X-HAYSTACK-INFRASTRUCTURE-PROVIDER",
+          "value": "aws"
+        },
+        {
+          "key": "X-HAYSTACK-AWS-REGION",
+          "value": "us-west-2"
+        }
+      ]
+    },
+    {
+      "traceId": "c4fffc7d-7c0d-4073-98ea-34362506d323",
+      "spanId": "fc1d74f3-94a4-4a95-86af-b6100bb6a337",
+      "parentSpanId": "0e4ebf10-ad12-4d3c-bf4c-db2bafa64e60",
+      "serviceName": "airoffer-service",
+      "operationName": "APS-V3",
+      "startTime": 1534487372691000,
+      "duration": 0,
+      "logs": [
+        {
+          "timestamp": 1534487372691000,
+          "fields": [
+            {
+              "key": "event",
+              "value": "cs"
+            }
+          ]
+        },
+        {
+          "timestamp": 1534487372691000,
+          "fields": [
+            {
+              "key": "event",
+              "value": "cr"
+            }
+          ]
+        }
+      ],
+      "tags": [
+        {
+          "key": "clientVersion",
+          "value": "1.0"
+        },
+        {
+          "key": "hostIP",
+          "value": "10.9.141.186"
+        },
+        {
+          "key": "Blob-RESPONSE",
+          "value": "https://haystack-blobs.exp-prod.net/getBlob/airoffer-service/RESPONSE/c4fffc7d-7c0d-4073-98ea-34362506d323/0e4ebf10-ad12-4d3c-bf4c-db2bafa64e60/fc1d74f3-94a4-4a95-86af-b6100bb6a337"
+        },
+        {
+          "key": "Blob-REQUEST",
+          "value": "https://haystack-blobs.exp-prod.net/getBlob/airoffer-service/REQUEST/c4fffc7d-7c0d-4073-98ea-34362506d323/0e4ebf10-ad12-4d3c-bf4c-db2bafa64e60/fc1d74f3-94a4-4a95-86af-b6100bb6a337"
+        },
+        {
+          "key": "X-HAYSTACK-INFRASTRUCTURE-PROVIDER",
+          "value": "aws"
+        },
+        {
+          "key": "X-HAYSTACK-AWS-REGION",
+          "value": "us-west-2"
+        }
+      ]
+    },
+    {
+      "traceId": "c4fffc7d-7c0d-4073-98ea-34362506d323",
+      "spanId": "0e4ebf10-ad12-4d3c-bf4c-db2bafa64e60",
+      "parentSpanId": "9b0523d6-f14b-4a33-ba75-1e46720684cc",
+      "serviceName": "airoffer-service",
+      "operationName": "createairoffers_flightdetails",
+      "startTime": 1534487372345000,
+      "duration": 348000,
+      "logs": [
+        {
+          "timestamp": 1534487372345000,
+          "fields": [
+            {
+              "key": "event",
+              "value": "sr"
+            }
+          ]
+        },
+        {
+          "timestamp": 1534487372693000,
+          "fields": [
+            {
+              "key": "event",
+              "value": "ss"
+            }
+          ]
+        }
+      ],
+      "tags": [
+        {
+          "key": "clientVersion",
+          "value": "1.0"
+        },
+        {
+          "key": "hostIP",
+          "value": "10.9.141.186"
+        },
+        {
+          "key": "error",
+          "value": "false"
+        },
+        {
+          "key": "tpid",
+          "value": "1"
+        },
+        {
+          "key": "eapid",
+          "value": "0"
+        },
+        {
+          "key": "Blob-RESPONSE",
+          "value": "https://haystack-blobs.exp-prod.net/getBlob/airoffer-service/RESPONSE/c4fffc7d-7c0d-4073-98ea-34362506d323/9b0523d6-f14b-4a33-ba75-1e46720684cc/0e4ebf10-ad12-4d3c-bf4c-db2bafa64e60"
+        },
+        {
+          "key": "tuid",
+          "value": "1"
+        },
+        {
+          "key": "Blob-REQUEST",
+          "value": "https://haystack-blobs.exp-prod.net/getBlob/airoffer-service/REQUEST/c4fffc7d-7c0d-4073-98ea-34362506d323/9b0523d6-f14b-4a33-ba75-1e46720684cc/0e4ebf10-ad12-4d3c-bf4c-db2bafa64e60"
+        },
+        {
+          "key": "X-HAYSTACK-INFRASTRUCTURE-PROVIDER",
+          "value": "aws"
+        },
+        {
+          "key": "X-HAYSTACK-AWS-REGION",
+          "value": "us-west-2"
+        }
+      ]
+    },
+    {
+      "traceId": "c4fffc7d-7c0d-4073-98ea-34362506d323",
+      "spanId": "435a043c-fcd9-4a81-8045-9d69bc9966c9",
+      "parentSpanId": "eb9b1f0d-c0e5-487e-9b50-a2175c69807e",
+      "serviceName": "airoffer-service",
+      "operationName": "APS-V3",
+      "startTime": 1534487372789000,
+      "duration": 0,
+      "logs": [
+        {
+          "timestamp": 1534487372789000,
+          "fields": [
+            {
+              "key": "event",
+              "value": "cs"
+            }
+          ]
+        },
+        {
+          "timestamp": 1534487372789000,
+          "fields": [
+            {
+              "key": "event",
+              "value": "cr"
+            }
+          ]
+        }
+      ],
+      "tags": [
+        {
+          "key": "clientVersion",
+          "value": "1.0"
+        },
+        {
+          "key": "hostIP",
+          "value": "10.9.141.186"
+        },
+        {
+          "key": "Blob-RESPONSE",
+          "value": "https://haystack-blobs.exp-prod.net/getBlob/airoffer-service/RESPONSE/c4fffc7d-7c0d-4073-98ea-34362506d323/eb9b1f0d-c0e5-487e-9b50-a2175c69807e/435a043c-fcd9-4a81-8045-9d69bc9966c9"
+        },
+        {
+          "key": "Blob-REQUEST",
+          "value": "https://haystack-blobs.exp-prod.net/getBlob/airoffer-service/REQUEST/c4fffc7d-7c0d-4073-98ea-34362506d323/eb9b1f0d-c0e5-487e-9b50-a2175c69807e/435a043c-fcd9-4a81-8045-9d69bc9966c9"
+        },
+        {
+          "key": "X-HAYSTACK-INFRASTRUCTURE-PROVIDER",
+          "value": "aws"
+        },
+        {
+          "key": "X-HAYSTACK-AWS-REGION",
+          "value": "us-west-2"
+        }
+      ]
+    },
+    {
+      "traceId": "c4fffc7d-7c0d-4073-98ea-34362506d323",
+      "spanId": "eb9b1f0d-c0e5-487e-9b50-a2175c69807e",
+      "parentSpanId": "9b0523d6-f14b-4a33-ba75-1e46720684cc",
+      "serviceName": "airoffer-service",
+      "operationName": "createairoffers_flightdetails",
+      "startTime": 1534487372748000,
+      "duration": 43000,
+      "logs": [
+        {
+          "timestamp": 1534487372748000,
+          "fields": [
+            {
+              "key": "event",
+              "value": "sr"
+            }
+          ]
+        },
+        {
+          "timestamp": 1534487372791000,
+          "fields": [
+            {
+              "key": "event",
+              "value": "ss"
+            }
+          ]
+        }
+      ],
+      "tags": [
+        {
+          "key": "clientVersion",
+          "value": "1.0"
+        },
+        {
+          "key": "hostIP",
+          "value": "10.9.141.186"
+        },
+        {
+          "key": "error",
+          "value": "false"
+        },
+        {
+          "key": "tpid",
+          "value": "1"
+        },
+        {
+          "key": "eapid",
+          "value": "0"
+        },
+        {
+          "key": "Blob-RESPONSE",
+          "value": "https://haystack-blobs.exp-prod.net/getBlob/airoffer-service/RESPONSE/c4fffc7d-7c0d-4073-98ea-34362506d323/9b0523d6-f14b-4a33-ba75-1e46720684cc/eb9b1f0d-c0e5-487e-9b50-a2175c69807e"
+        },
+        {
+          "key": "tuid",
+          "value": "1"
+        },
+        {
+          "key": "Blob-REQUEST",
+          "value": "https://haystack-blobs.exp-prod.net/getBlob/airoffer-service/REQUEST/c4fffc7d-7c0d-4073-98ea-34362506d323/9b0523d6-f14b-4a33-ba75-1e46720684cc/eb9b1f0d-c0e5-487e-9b50-a2175c69807e"
+        },
+        {
+          "key": "X-HAYSTACK-INFRASTRUCTURE-PROVIDER",
+          "value": "aws"
+        },
+        {
+          "key": "X-HAYSTACK-AWS-REGION",
+          "value": "us-west-2"
+        }
+      ]
+    },
+    {
+      "traceId": "c4fffc7d-7c0d-4073-98ea-34362506d323",
+      "spanId": "fc1d74f3-94a4-4a95-86af-b6100bb6a337",
+      "parentSpanId": "0e4ebf10-ad12-4d3c-bf4c-db2bafa64e60",
+      "serviceName": "airpricingservice",
+      "operationName": "details",
+      "startTime": 1534487372648000,
+      "duration": 44000,
+      "logs": [
+        {
+          "timestamp": 1534487372648000,
+          "fields": [
+            {
+              "key": "event",
+              "value": "sr"
+            }
+          ]
+        },
+        {
+          "timestamp": 1534487372692000,
+          "fields": [
+            {
+              "key": "event",
+              "value": "ss"
+            }
+          ]
+        }
+      ],
+      "tags": [
+        {
+          "key": "clientVersion",
+          "value": "1.0"
+        },
+        {
+          "key": "hostIP",
+          "value": "10.9.36.190"
+        },
+        {
+          "key": "error",
+          "value": "false"
+        },
+        {
+          "key": "tpid",
+          "value": "1"
+        },
+        {
+          "key": "eapid",
+          "value": "0"
+        },
+        {
+          "key": "Blob-RESPONSE",
+          "value": "https://haystack-blobs.exp-prod.net/getBlob/airpricingservice/RESPONSE/c4fffc7d-7c0d-4073-98ea-34362506d323/0e4ebf10-ad12-4d3c-bf4c-db2bafa64e60/fc1d74f3-94a4-4a95-86af-b6100bb6a337"
+        },
+        {
+          "key": "success",
+          "value": "true"
+        },
+        {
+          "key": "transactionguid",
+          "value": "c4fffc7d-7c0d-4073-98ea-34362506d323"
+        },
+        {
+          "key": "tuid",
+          "value": "1"
+        },
+        {
+          "key": "messageguid",
+          "value": "fc1d74f3-94a4-4a95-86af-b6100bb6a337"
+        },
+        {
+          "key": "Blob-REQUEST",
+          "value": "https://haystack-blobs.exp-prod.net/getBlob/airpricingservice/REQUEST/c4fffc7d-7c0d-4073-98ea-34362506d323/0e4ebf10-ad12-4d3c-bf4c-db2bafa64e60/fc1d74f3-94a4-4a95-86af-b6100bb6a337"
+        },
+        {
+          "key": "X-HAYSTACK-INFRASTRUCTURE-PROVIDER",
+          "value": "aws"
+        },
+        {
+          "key": "X-HAYSTACK-AWS-REGION",
+          "value": "us-west-2"
+        }
+      ]
+    },
+    {
+      "traceId": "c4fffc7d-7c0d-4073-98ea-34362506d323",
+      "spanId": "435a043c-fcd9-4a81-8045-9d69bc9966c9",
+      "parentSpanId": "eb9b1f0d-c0e5-487e-9b50-a2175c69807e",
+      "serviceName": "airpricingservice",
+      "operationName": "details",
+      "startTime": 1534487372756000,
+      "duration": 34000,
+      "logs": [
+        {
+          "timestamp": 1534487372756000,
+          "fields": [
+            {
+              "key": "event",
+              "value": "sr"
+            }
+          ]
+        },
+        {
+          "timestamp": 1534487372790000,
+          "fields": [
+            {
+              "key": "event",
+              "value": "ss"
+            }
+          ]
+        }
+      ],
+      "tags": [
+        {
+          "key": "clientVersion",
+          "value": "1.0"
+        },
+        {
+          "key": "hostIP",
+          "value": "10.9.36.190"
+        },
+        {
+          "key": "error",
+          "value": "false"
+        },
+        {
+          "key": "tpid",
+          "value": "1"
+        },
+        {
+          "key": "eapid",
+          "value": "0"
+        },
+        {
+          "key": "Blob-RESPONSE",
+          "value": "https://haystack-blobs.exp-prod.net/getBlob/airpricingservice/RESPONSE/c4fffc7d-7c0d-4073-98ea-34362506d323/eb9b1f0d-c0e5-487e-9b50-a2175c69807e/435a043c-fcd9-4a81-8045-9d69bc9966c9"
+        },
+        {
+          "key": "success",
+          "value": "true"
+        },
+        {
+          "key": "transactionguid",
+          "value": "c4fffc7d-7c0d-4073-98ea-34362506d323"
+        },
+        {
+          "key": "tuid",
+          "value": "1"
+        },
+        {
+          "key": "messageguid",
+          "value": "435a043c-fcd9-4a81-8045-9d69bc9966c9"
+        },
+        {
+          "key": "Blob-REQUEST",
+          "value": "https://haystack-blobs.exp-prod.net/getBlob/airpricingservice/REQUEST/c4fffc7d-7c0d-4073-98ea-34362506d323/eb9b1f0d-c0e5-487e-9b50-a2175c69807e/435a043c-fcd9-4a81-8045-9d69bc9966c9"
+        },
+        {
+          "key": "X-HAYSTACK-INFRASTRUCTURE-PROVIDER",
+          "value": "aws"
+        },
+        {
+          "key": "X-HAYSTACK-AWS-REGION",
+          "value": "us-west-2"
+        }
+      ]
+    },
+    {
+      "traceId": "c4fffc7d-7c0d-4073-98ea-34362506d323",
+      "spanId": "9b0523d6-f14b-4a33-ba75-1e46720684cc",
+      "parentSpanId": "5fbe1254-1036-4d47-80b9-0cbf36fdd128",
+      "serviceName": "flight-infosite-web",
+      "operationName": "GulfstreamDetailRequest",
+      "startTime": 1534487372849000,
+      "duration": 0,
+      "logs": [
+        {
+          "timestamp": 1534487372849000,
+          "fields": [
+            {
+              "key": "event",
+              "value": "cs"
+            }
+          ]
+        },
+        {
+          "timestamp": 1534487372849000,
+          "fields": [
+            {
+              "key": "event",
+              "value": "cr"
+            }
+          ]
+        }
+      ],
+      "tags": [
+        {
+          "key": "clientVersion",
+          "value": "master"
+        },
+        {
+          "key": "hostIP",
+          "value": "192.168.234.88"
+        },
+        {
+          "key": "error",
+          "value": "false"
+        },
+        {
+          "key": "messageName",
+          "value": "GulfstreamDetailRequest"
+        },
+        {
+          "key": "Trace-ID",
+          "value": "c4fffc7d-7c0d-4073-98ea-34362506d323"
+        },
+        {
+          "key": "user.guid",
+          "value": "066ed253-5c50-4417-a37b-3fa4d301a2b7"
+        },
+        {
+          "key": "Message-ID",
+          "value": "9b0523d6-f14b-4a33-ba75-1e46720684cc"
+        },
+        {
+          "key": "Debug-Trace",
+          "value": "true"
+        },
+        {
+          "key": "X-HAYSTACK-INFRASTRUCTURE-PROVIDER",
+          "value": "aws"
+        },
+        {
+          "key": "X-HAYSTACK-AWS-REGION",
+          "value": "us-west-2"
+        }
+      ]
+    },
+    {
+      "traceId": "c4fffc7d-7c0d-4073-98ea-34362506d323",
+      "spanId": "5fbe1254-1036-4d47-80b9-0cbf36fdd128",
+      "parentSpanId": "",
+      "serviceName": "flight-infosite-web",
+      "operationName": "request_from_browser",
+      "startTime": 1534487370131000,
+      "duration": 2844000,
+      "logs": [
+        {
+          "timestamp": 1534487370131000,
+          "fields": [
+            {
+              "key": "event",
+              "value": "sr"
+            }
+          ]
+        },
+        {
+          "timestamp": 1534487372975000,
+          "fields": [
+            {
+              "key": "event",
+              "value": "ss"
+            }
+          ]
+        }
+      ],
+      "tags": [
+        {
+          "key": "clientVersion",
+          "value": "master"
+        },
+        {
+          "key": "hostIP",
+          "value": "192.168.234.88"
+        },
+        {
+          "key": "Trace-ID",
+          "value": "c4fffc7d-7c0d-4073-98ea-34362506d323"
+        },
+        {
+          "key": "Message-ID",
+          "value": "5fbe1254-1036-4d47-80b9-0cbf36fdd128"
+        },
+        {
+          "key": "queryString",
+          "value": "continuationId=aac3d0a6-5692-4bdd-a5d4-d1f2d07b092a&rfrr=&superlativeMessages[0]=&trace=true&udpDisplayMode=showhotelbanneronly"
+        },
+        {
+          "key": "X-HAYSTACK-INFRASTRUCTURE-PROVIDER",
+          "value": "aws"
+        },
+        {
+          "key": "X-HAYSTACK-AWS-REGION",
+          "value": "us-west-2"
+        }
+      ]
+    },
+    {
+      "traceId": "c4fffc7d-7c0d-4073-98ea-34362506d323",
+      "spanId": "095f1fa8-d920-4230-b142-6ccb0d9e7a04",
+      "parentSpanId": "",
+      "serviceName": "cloud-gate-proxy",
+      "operationName": "http.request",
+      "startTime": 1534487368981000,
+      "duration": 3019000,
+      "logs": [
+        {
+          "timestamp": 1534487368981000,
+          "fields": [
+            {
+              "key": "event",
+              "value": "sr"
+            }
+          ]
+        },
+        {
+          "timestamp": 1534487372000000,
+          "fields": [
+            {
+              "key": "event",
+              "value": "ss"
+            }
+          ]
+        }
+      ],
+      "tags": [
+        {
+          "key": "methodUri",
+          "value": "GET /Flight-Information?continuationId=aac3d0a6-5692-4bdd-a5d4-d1f2d07b092a&rfrr=&superlativeMessages[0]=&trace=true&udpDisplayMode=showhotelbanneronly HTTP/1.1"
+        },
+        {
+          "key": "url",
+          "value": "/Flight-Information"
+        },
+        {
+          "key": "referer",
+          "value": "false"
+        },
+        {
+          "key": "http-status",
+          "value": "200"
+        },
+        {
+          "key": "bytes",
+          "value": "34276"
+        },
+        {
+          "key": "duaid",
+          "value": "066ed253-5c50-4417-a37b-3fa4d301a2b7"
+        },
+        {
+          "key": "hmsSession",
+          "value": "b5adbfb4-3a3a-4040-ad4c-552cc1583829"
+        },
+        {
+          "key": "error",
+          "value": "false"
+        },
+        {
+          "key": "service-root",
+          "value": "true"
+        },
+        {
+          "key": "page-name",
+          "value": "page.Flight.Ratedetails"
+        },
+        {
+          "key": "funnel-id",
+          "value": "30"
+        },
+        {
+          "key": "lob-id",
+          "value": "F"
+        },
+        {
+          "key": "siteid",
+          "value": "1"
+        },
+        {
+          "key": "eapid",
+          "value": "0"
+        },
+        {
+          "key": "tpid",
+          "value": "1"
+        },
+        {
+          "key": "req-Accept",
+          "value": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8"
+        },
+        {
+          "key": "req-Accept-Encoding",
+          "value": "gzip"
+        },
+        {
+          "key": "req-Accept-Language",
+          "value": "en-US,en;q=0.9"
+        },
+        {
+          "key": "req-Akamai-Origin-Hop",
+          "value": "2"
+        },
+        {
+          "key": "req-Cache-Control",
+          "value": "no-cache, max-age=0"
+        },
+        {
+          "key": "req-CLIENT-IP",
+          "value": "216.251.118.195"
+        },
+        {
+          "key": "req-Debug-Trace",
+          "value": "ON"
+        },
+        {
+          "key": "req-host",
+          "value": "www.expedia.com"
+        },
+        {
+          "key": "req-Message-ID",
+          "value": "5fbe1254-1036-4d47-80b9-0cbf36fdd128"
+        },
+        {
+          "key": "req-Parent-Message-ID",
+          "value": "095f1fa8-d920-4230-b142-6ccb0d9e7a04"
+        },
+        {
+          "key": "req-Pragma",
+          "value": "no-cache"
+        },
+        {
+          "key": "req-proxy-to-host",
+          "value": "flight-infosite-web.us-west-2.prod-p.expedia.com"
+        },
+        {
+          "key": "req-Referer",
+          "value": "https://www.expedia.com/Flights-Search?flight-type=on&starDate=01%2F09%2F2019&mode=search&trip=oneway&leg1=from%3AVancouver%2C+BC%2C+Canada+%28YVR-Vancouver+Intl.%29%2Cto%3ASan+Jose%2C+CA+%28SJC-Norman+Y.+Mineta+San+Jose+Intl.%29%2Cdeparture%3A01%2F09%2F2019TANYT&passengers=children%3A0%2Cadults%3A1%2Cseniors%3A0%2Cinfantinlap%3AY"
+        },
+        {
+          "key": "req-Trace-ID",
+          "value": "c4fffc7d-7c0d-4073-98ea-34362506d323"
+        },
+        {
+          "key": "req-upgrade-insecure-requests",
+          "value": "1"
+        },
+        {
+          "key": "req-User-Agent",
+          "value": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_12_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/68.0.3440.106 Safari/537.36"
+        },
+        {
+          "key": "req-Via",
+          "value": "1.1 v1-akamaitech.net(ghost) (AkamaiGHost), 1.1 akamai.net(ghost) (AkamaiGHost), 1.1 styx"
+        },
+        {
+          "key": "req-X-Akamai-CONFIG-LOG-DETAIL",
+          "value": "true"
+        },
+        {
+          "key": "req-X-Akamai-Device-Characteristics",
+          "value": "brand_name=Chrome;device_os=Mac OS X;device_os_version=10.12;is_mobile=false;is_tablet=false;is_wireless_device=false;mobile_browser=Chrome;mobile_browser_version=68;model_name=68;physical_screen_height=175;physical_screen_width=280;resolution_height=800;resolution_width=1280"
+        },
+        {
+          "key": "req-X-Akamai-Edgescape",
+          "value": "georegion=244,country_code=US,region_code=AZ,city=CHANDLER,dma=753,msa=6200,areacode=480,county=MARICOPA,fips=04013,lat=33.3240,long=-111.8671,timezone=MST,zip=85224-85226+85244+85246+85248-85249+85286,continent=NA,throughput=vhigh,bw=5000,network=qwest,asnum=20296,location_id=0"
+        },
+        {
+          "key": "req-X-Akamai-Protocol",
+          "value": "false"
+        },
+        {
+          "key": "req-x-BONO-Classification",
+          "value": "Whitelist"
+        },
+        {
+          "key": "req-x-BONO-Confidence",
+          "value": "100"
+        },
+        {
+          "key": "req-x-BONO-Rules-Executed",
+          "value": "[id:551,version:1],[id:1,version:18],[id:88,version:2],[id:409,version:2]"
+        },
+        {
+          "key": "req-X-CGP-application-destination-protocol",
+          "value": "https"
+        },
+        {
+          "key": "req-X-CGP-endpoint",
+          "value": "flight-infosite-web"
+        },
+        {
+          "key": "req-X-CGP-Response-Rewrite-Strategy",
+          "value": "PROXY_INTERCEPT_ERRORS"
+        },
+        {
+          "key": "req-X-Cloud-Gate-Destination-Id",
+          "value": "flight-infosite-web"
+        },
+        {
+          "key": "req-X-Cloud-Gate-Rewrite-Destination-Id",
+          "value": "hopscotch-star-https"
+        },
+        {
+          "key": "req-X-Cloud-Gate-routing-nerf-mode",
+          "value": "false"
+        },
+        {
+          "key": "req-X-EdgeConnect-Session-Id",
+          "value": "41e5c417-5b766b4a-1f58339"
+        },
+        {
+          "key": "req-X-Expedia-EAPID",
+          "value": "0"
+        },
+        {
+          "key": "req-X-Expedia-Site-ID",
+          "value": "1"
+        },
+        {
+          "key": "req-X-Expedia-TPID",
+          "value": "1"
+        },
+        {
+          "key": "req-X-Forwarded-For",
+          "value": "216.251.118.195, 198.172.88.190, 104.99.239.76, 127.0.0.1"
+        },
+        {
+          "key": "req-X-Forwarded-Port",
+          "value": "443"
+        },
+        {
+          "key": "req-X-Forwarded-Proto",
+          "value": "https"
+        },
+        {
+          "key": "req-X-Hcom-Request-Id",
+          "value": "e59530f0-a1e6-11e8-aa40-0242fd9ac9db"
+        },
+        {
+          "key": "res-activity-id",
+          "value": "c4fffc7d-7c0d-4073-98ea-34362506d323"
+        },
+        {
+          "key": "res-Connection",
+          "value": "keep-alive"
+        },
+        {
+          "key": "res-Content-Encoding",
+          "value": "gzip"
+        },
+        {
+          "key": "res-Content-Language",
+          "value": "en-US"
+        },
+        {
+          "key": "res-Content-Type",
+          "value": "text/html;charset=utf8"
+        },
+        {
+          "key": "res-Date",
+          "value": "Fri, 17 Aug 2018 06:29:32 GMT"
+        },
+        {
+          "key": "res-transfer-encoding",
+          "value": "chunked"
+        },
+        {
+          "key": "res-Vary",
+          "value": "Accept-Encoding"
+        },
+        {
+          "key": "res-x-app-info",
+          "value": "flight-infosite-web,cfac9dfec1967761880c0fff14b2ee7865805c44,us-west-2"
+        },
+        {
+          "key": "res-X-Hcom-Origin-Id",
+          "value": "flight-infosite-web_443_us-west-2_qJHh"
+        },
+        {
+          "key": "res-x-page-id",
+          "value": "page.Flight.Ratedetails,F,30"
+        }
+      ]
+    },
+    {
+      "traceId": "c4fffc7d-7c0d-4073-98ea-34362506d323",
+      "spanId": "5fbe1254-1036-4d47-80b9-0cbf36fdd128",
+      "parentSpanId": "095f1fa8-d920-4230-b142-6ccb0d9e7a04",
+      "serviceName": "cloud-gate-proxy",
+      "operationName": "flight-infosite-web",
+      "startTime": 1534487368981000,
+      "duration": 3019000,
+      "logs": [
+        {
+          "timestamp": 1534487368981000,
+          "fields": [
+            {
+              "key": "event",
+              "value": "cs"
+            }
+          ]
+        },
+        {
+          "timestamp": 1534487372000000,
+          "fields": [
+            {
+              "key": "event",
+              "value": "cr"
+            }
+          ]
+        }
+      ],
+      "tags": [
+        {
+          "key": "status",
+          "value": "200"
+        },
+        {
+          "key": "error",
+          "value": "false"
+        }
+      ]
+    }
+  ]
+}

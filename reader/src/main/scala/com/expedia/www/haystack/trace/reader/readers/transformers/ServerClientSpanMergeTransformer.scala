@@ -1,5 +1,5 @@
 /*
- *  Copyright 2017 Expedia, Inc.
+ *  Copyright 2018 Expedia, Inc.
  *
  *       Licensed under the Apache License, Version 2.0 (the "License");
  *       you may not use this file except in compliance with the License.
@@ -16,24 +16,17 @@
 
 package com.expedia.www.haystack.trace.reader.readers.transformers
 
-import com.expedia.open.tracing.Span
-import com.expedia.www.haystack.trace.reader.readers.utils._
+import com.expedia.www.haystack.trace.reader.readers.utils.{MutableSpanForest, SpanMerger}
 
-/**
-  * Merges partial spans and generates a single Span combining a client and corresponding server span
-  * gracefully fallback to collapse to a single span if there are multiple or missing client/server spans
-  */
-class PartialSpanTransformer extends SpanTreeTransformer {
+class ServerClientSpanMergeTransformer extends SpanTreeTransformer {
   override def transform(spanForest: MutableSpanForest): MutableSpanForest = {
-    var hasAnySpanMerged = false
+    spanForest.collapse((tree) =>
+      tree.children match {
+        case Seq(singleChild) if singleChild.span.getServiceName != tree.span.getServiceName && !SpanMerger.isAlreadyMergedSpan(tree.span) &&  !SpanMerger.isAlreadyMergedSpan(singleChild.span) =>
+          Some(SpanMerger.mergeParentChildSpans(tree.span, singleChild.span))
+        case _ => None
+      })
 
-    val mergedSpans: Seq[Span] = spanForest.getUnderlyingSpans.groupBy(_.getSpanId).map((pair) => pair._2 match {
-      case Seq(span: Span) => span
-      case list: Seq[Span] =>
-        hasAnySpanMerged = true
-        SpanMerger.mergeSpans(list)
-    }).toSeq
-
-    spanForest.updateUnderlyingSpans(mergedSpans, hasAnySpanMerged)
+    spanForest
   }
 }

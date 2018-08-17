@@ -29,7 +29,7 @@ object SpanUtils {
       log.getFieldsList.asScala.exists(tag => {
         tag.getKey.equalsIgnoreCase(LOG_EVENT_TAG_KEY) && tag.getVStr.equalsIgnoreCase(event)
       })
-    }).get.getTimestamp
+    }).map(_.getTimestamp).getOrElse(-1l)
   }
 
   def getEndTime(span: Span): Long = {

@@ -16,7 +16,9 @@
 
 package com.expedia.www.haystack.trace.reader.readers.utils
 
-import com.expedia.open.tracing.{Log, Span, Tag}
+import com.expedia.open.tracing.Log
+import com.expedia.open.tracing.Span
+import com.expedia.open.tracing.Tag
 import com.expedia.www.haystack.trace.reader.readers.utils.SpanMarkers._
 
 import scala.collection.JavaConverters._
@@ -45,20 +47,23 @@ object SpanUtils {
   }
 
   def getEffectiveServiceName(span: Span): String = {
-      if(containsServiceTag(span)) {
-        val serviceTagValue = span.getTagsList.asScala.find(_.getKey == SERVICE_TAG_KEY).map(_.getVStr).get
-        if(serviceTagValue == "") { // Span protobuf-generated code returns empty string for a missing tag key
-          span.getServiceName
-        } else {
-          serviceTagValue
-        }
-      } else {
+    val serviceTag = getServiceTag(span)
+    if (serviceTag.isDefined) {
+      val serviceTagValue = serviceTag.get.getVStr
+      if (serviceTagValue == "") { // Span protobuf-generated code returns empty string for a missing tag key
         span.getServiceName
+      } else {
+        serviceTagValue
       }
-   }
+    } else {
+      span.getServiceName
+    }
+  }
 
-  def containsServiceTag(span: Span): Boolean = {
-    containsTag(span, SERVICE_TAG_KEY)
+  def getServiceTag(span: Span): Option[Tag] = {
+    span.getTagsList.asScala.find(tag => {
+      tag.getKey.equalsIgnoreCase(SERVICE_TAG_KEY)
+    })
   }
 
   def containsClientLogTag(span: Span): Boolean = {
@@ -106,12 +111,6 @@ object SpanUtils {
       log.getFieldsList.asScala.exists(tag => {
         tag.getKey.equalsIgnoreCase(LOG_EVENT_TAG_KEY) && tag.getVStr.equalsIgnoreCase(event)
       })
-    })
-  }
-
-  private def containsTag(span: Span, key: String) = {
-    span.getTagsList.asScala.exists(tag => {
-      tag.getKey.equalsIgnoreCase(key)
     })
   }
 

@@ -13,14 +13,14 @@
  *       See the License for the specific language governing permissions and
  *       limitations under the License.
  */
-package com.expedia.www.haystack.trace.reader.readers.utils
+package com.expedia.www.haystack.trace.commons.unit
 
 import java.lang.System.currentTimeMillis
 
 import com.expedia.open.tracing.Span
 import com.expedia.open.tracing.Tag
-import com.expedia.www.haystack.trace.reader.readers.utils.SpanMarkers.SERVICE_TAG_KEY
-import com.expedia.www.haystack.trace.reader.unit.BaseUnitTestSpec
+import com.expedia.www.haystack.trace.commons.utils.SpanMarkers.SERVICE_TAG_KEY
+import com.expedia.www.haystack.trace.commons.utils.SpanUtils
 
 class SpanUtilsSpec extends BaseUnitTestSpec {
   val ServiceNameInAttribute: String = currentTimeMillis + "ServiceNameInAttribute"

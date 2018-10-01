@@ -26,6 +26,7 @@ import com.expedia.www.haystack.trace.commons.clients.es.document.TraceIndexDoc
 import com.expedia.www.haystack.trace.commons.clients.es.document.TraceIndexDoc.{OPERATION_KEY_NAME, SERVICE_KEY_NAME, TagValue}
 import com.expedia.www.haystack.trace.commons.config.entities.IndexFieldType.IndexFieldType
 import com.expedia.www.haystack.trace.commons.config.entities.{IndexFieldType, WhitelistIndexFieldConfiguration}
+import com.expedia.www.haystack.trace.commons.utils.SpanUtils
 import org.apache.commons.lang3.StringUtils
 
 import scala.collection.JavaConverters._
@@ -53,11 +54,12 @@ class IndexDocumentGenerator(config: WhitelistIndexFieldConfiguration) extends M
       traceStartTime = Math.min(traceStartTime, microsToSecondGranularity(span.getStartTime))
       if(span.getParentSpanId == null) rootDuration = span.getDuration
 
+      val serviceName = SpanUtils.getEffectiveServiceName(span)
       val spanIndexDoc = spanIndices
-        .find(sp => sp(OPERATION_KEY_NAME).equals(span.getOperationName) && sp(SERVICE_KEY_NAME).equals(span.getServiceName))
+        .find(sp => sp(OPERATION_KEY_NAME).equals(span.getOperationName) && sp(SERVICE_KEY_NAME).equals(serviceName))
         .getOrElse({
           val newSpanIndexDoc = mutable.Map[String, Any](
-            SERVICE_KEY_NAME -> span.getServiceName,
+            SERVICE_KEY_NAME -> serviceName,
             OPERATION_KEY_NAME -> span.getOperationName)
           spanIndices.append(newSpanIndexDoc)
           newSpanIndexDoc
@@ -68,7 +70,7 @@ class IndexDocumentGenerator(config: WhitelistIndexFieldConfiguration) extends M
   }
 
   private def isValidForIndex(span: Span): Boolean = {
-    StringUtils.isNotEmpty(span.getServiceName) && StringUtils.isNotEmpty(span.getOperationName)
+    StringUtils.isNotEmpty(SpanUtils.getEffectiveServiceName(span)) && StringUtils.isNotEmpty(span.getOperationName)
   }
 
   /**

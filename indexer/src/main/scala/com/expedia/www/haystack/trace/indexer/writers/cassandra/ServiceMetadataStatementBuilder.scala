@@ -22,6 +22,7 @@ import java.time.Instant
 import com.datastax.driver.core.Statement
 import com.expedia.open.tracing.Span
 import com.expedia.www.haystack.trace.commons.clients.cassandra.CassandraSession
+import com.expedia.www.haystack.trace.commons.utils.SpanUtils
 import com.expedia.www.haystack.trace.indexer.config.entities.ServiceMetadataWriteConfiguration
 import org.apache.commons.lang3.StringUtils
 
@@ -72,8 +73,9 @@ class ServiceMetadataStatementBuilder(cassandra: CassandraSession,
   def getAndUpdateServiceMetadata(spans: Iterable[Span]): Seq[Statement] = {
     this.synchronized {
       spans.foreach(span => {
-        if (StringUtils.isNotEmpty(span.getServiceName) && StringUtils.isNotEmpty(span.getOperationName)) {
-          val operationsList = serviceMetadataMap.getOrElseUpdate(span.getServiceName, mutable.Set[String]())
+        val serviceName = SpanUtils.getEffectiveServiceName(span)
+        if (StringUtils.isNotEmpty(serviceName) && StringUtils.isNotEmpty(span.getOperationName)) {
+          val operationsList = serviceMetadataMap.getOrElseUpdate(serviceName, mutable.Set[String]())
           if (operationsList.add(span.getOperationName)) {
             allOperationCount += 1
           }

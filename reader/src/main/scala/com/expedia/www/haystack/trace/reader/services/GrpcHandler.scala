@@ -37,7 +37,6 @@ object GrpcHandler {
   * @param operationName: name of operation
   * @param executor: executor service on which handler is invoked
   */
-
 class GrpcHandler(operationName: String)(implicit val executor: ExecutionContextExecutor) extends MetricsSupport {
   private val metricFriendlyOperationName = operationName.replace('/', '.')
   private val timer = metricRegistry.timer(metricFriendlyOperationName)

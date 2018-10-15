@@ -23,8 +23,9 @@ import com.expedia.www.haystack.commons.health.{HealthController, UpdateHealthSt
 import com.expedia.www.haystack.commons.logger.LoggerUtils
 import com.expedia.www.haystack.trace.reader.config.ProviderConfiguration
 import com.expedia.www.haystack.trace.reader.metrics.MetricsSupport
-import com.expedia.www.haystack.trace.reader.services.TraceService
+import com.expedia.www.haystack.trace.reader.services.{ThrottleInterceptor, TraceService}
 import com.expedia.www.haystack.trace.reader.stores.CassandraEsTraceStore
+import io.grpc.ServerInterceptors
 import io.grpc.netty.NettyServerBuilder
 import org.slf4j.{Logger, LoggerFactory}
 
@@ -62,7 +63,11 @@ object Service extends MetricsSupport {
       val serverBuilder = NettyServerBuilder
         .forPort(serviceConfig.port)
         .directExecutor()
-        .addService(new TraceService(store, config.traceValidatorConfig, config.traceTransformerConfig)(executor))
+        .addService(
+          ServerInterceptors.intercept(
+            new TraceService(store, config.traceValidatorConfig, config.traceTransformerConfig)(executor),
+            new ThrottleInterceptor(config.serviceConfig.throttler)))
+
 
       // enable ssl if enabled
       if (serviceConfig.ssl.enabled) {

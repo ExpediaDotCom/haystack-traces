@@ -29,6 +29,8 @@ class ConfigurationLoaderSpec extends BaseUnitTestSpec {
       serviceConfig.ssl.enabled shouldBe true
       serviceConfig.ssl.certChainFilePath shouldBe "/ssl/cert"
       serviceConfig.ssl.privateKeyPath shouldBe "/ssl/private-key"
+      serviceConfig.throttler.size shouldBe 1
+      serviceConfig.throttler.get("tracereader/searchtraces") shouldBe Some(10)
     }
 
     it("should load the trace transformers") {

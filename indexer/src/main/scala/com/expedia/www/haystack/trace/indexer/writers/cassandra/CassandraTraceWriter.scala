@@ -67,7 +67,7 @@ class CassandraTraceWriter(cassandra: CassandraSession,
       onSuccess = (_: Any) => inflightRequestsSemaphore.release(),
       onFailure = (ex) => {
         inflightRequestsSemaphore.release()
-        LOGGER.error("Fail to write to cassandra after {} retry attempts", config.retryConfig.maxRetries, ex)
+        LOGGER.error("Fail to write to cassandra after {} retry attempts for {}, {}, {}", config.retryConfig.maxRetries, traceId, packedSpanBuffer.protoObj.getChildSpans(0).getServiceName, packedSpanBuffer.protoObj.getChildSpans(0).getOperationName, ex)
       })
   }
 

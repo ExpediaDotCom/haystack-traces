@@ -18,7 +18,7 @@ package com.expedia.www.haystack.trace.reader.unit.config
 import com.expedia.www.haystack.trace.commons.config.entities.KeyspaceConfiguration
 import com.expedia.www.haystack.trace.reader.config.ProviderConfiguration
 import com.expedia.www.haystack.trace.reader.config.entities.{ServiceConfiguration, TraceTransformersConfiguration}
-import com.expedia.www.haystack.trace.reader.readers.transformers.{ClientServerEventLogTransformer, DeDuplicateSpanTransformer, PartialSpanTransformer}
+import com.expedia.www.haystack.trace.reader.readers.transformers.{ClientServerEventLogTransformer, DeDuplicateSpanTransformer, InfrastructureTagTransformer, PartialSpanTransformer}
 import com.expedia.www.haystack.trace.reader.unit.BaseUnitTestSpec
 
 class ConfigurationLoaderSpec extends BaseUnitTestSpec {
@@ -35,18 +35,20 @@ class ConfigurationLoaderSpec extends BaseUnitTestSpec {
       val traceConfig: TraceTransformersConfiguration = new ProviderConfiguration().traceTransformerConfig
       traceConfig.postTransformers.length shouldBe 3
       traceConfig.postTransformers.head.isInstanceOf[PartialSpanTransformer] shouldBe true
-      traceConfig.preTransformers.length shouldBe 2
+      traceConfig.preTransformers.length shouldBe 3
       traceConfig.preTransformers.head.isInstanceOf[DeDuplicateSpanTransformer] shouldBe true
       traceConfig.preTransformers(1).isInstanceOf[ClientServerEventLogTransformer] shouldBe true
+      traceConfig.preTransformers(2).isInstanceOf[InfrastructureTagTransformer] shouldBe true
     }
 
     it("should load the trace validators") {
       val traceConfig: TraceTransformersConfiguration = new ProviderConfiguration().traceTransformerConfig
       traceConfig.postTransformers.length shouldBe 3
       traceConfig.postTransformers.head.isInstanceOf[PartialSpanTransformer] shouldBe true
-      traceConfig.preTransformers.length shouldBe 2
+      traceConfig.preTransformers.length shouldBe 3
       traceConfig.preTransformers.head.isInstanceOf[DeDuplicateSpanTransformer] shouldBe true
       traceConfig.preTransformers(1).isInstanceOf[ClientServerEventLogTransformer] shouldBe true
+      traceConfig.preTransformers(2).isInstanceOf[InfrastructureTagTransformer] shouldBe true
     }
 
     it("should load service metadata configuration ") {

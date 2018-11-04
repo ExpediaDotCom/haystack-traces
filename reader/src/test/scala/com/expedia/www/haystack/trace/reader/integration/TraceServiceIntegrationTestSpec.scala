@@ -21,6 +21,7 @@ import java.util.UUID
 import com.expedia.open.tracing.api.ExpressionTree.Operator
 import com.expedia.open.tracing.api._
 import com.expedia.www.haystack.trace.commons.clients.es.document.TraceIndexDoc
+import grpc.health.v1._
 import io.grpc.{Status, StatusRuntimeException}
 
 import scala.collection.JavaConverters._
@@ -412,10 +413,18 @@ class TraceServiceIntegrationTestSpec extends BaseIntegrationTestSpec {
 
       Then("should return the traces")
       val traceIdSpansMap: Map[String, Set[String]] = tracesResult.getTracesList.asScala
-        .map(trace => (trace.getTraceId -> trace.getChildSpansList().asScala.map(_.getSpanId).toSet)).toMap
+        .map(trace => trace.getTraceId -> trace.getChildSpansList.asScala.map(_.getSpanId).toSet).toMap
 
-      traceIdSpansMap(traceId1) shouldEqual (Set(spanId1, spanId2))
-      traceIdSpansMap(traceId2) shouldEqual (Set(spanId3))
+      traceIdSpansMap(traceId1) shouldEqual Set(spanId1, spanId2)
+      traceIdSpansMap(traceId2) shouldEqual Set(spanId3)
+    }
+  }
+
+  describe("TraceReader.HealthCheck") {
+    it("should return SERVING as health check response") {
+      val request = HealthOuterClass.HealthCheckRequest.newBuilder().build()
+      val response = healthCheckClient.check(request)
+      response.getStatus shouldEqual HealthOuterClass.HealthCheckResponse.ServingStatus.SERVING
     }
   }
 }

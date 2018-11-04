@@ -15,8 +15,8 @@
  */
 
 package com.expedia.www.haystack.trace.reader.services
-import io.grpc.stub.StreamObserver
 import grpc.health.v1._
+import io.grpc.stub.StreamObserver
 
 class GrpcHealthService extends HealthGrpc.HealthImplBase {
   override def check(request: HealthOuterClass.HealthCheckRequest, responseObserver: StreamObserver[HealthOuterClass.HealthCheckResponse]): Unit = {

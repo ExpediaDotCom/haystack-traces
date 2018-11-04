@@ -15,6 +15,7 @@
     <properties>
         <mainClass>com.expedia.www.haystack.trace.reader.Service</mainClass>
         <finalName>${project.artifactId}-${project.version}</finalName>
+        <maven-protobuf-plugin.version>3.3.0.1</maven-protobuf-plugin.version>
     </properties>
 
     <dependencies>
@@ -114,6 +115,39 @@
                                 <HAYSTACK_OVERRIDES_CONFIG_PATH>/src/reader/build/integration-tests/docker-app.conf</HAYSTACK_OVERRIDES_CONFIG_PATH>
                             </environmentVariables>
                             <wildcardSuites>com.expedia.www.haystack.trace.reader.integration</wildcardSuites>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <plugin>
+                <groupId>com.github.os72</groupId>
+                <artifactId>protoc-jar-maven-plugin</artifactId>
+                <version>${maven-protobuf-plugin.version}</version>
+                <executions>
+                    <execution>
+                        <phase>generate-sources</phase>
+                        <goals>
+                            <goal>run</goal>
+                        </goals>
+                        <configuration>
+                            <protocArtifact>com.google.protobuf:protoc:3.0.0</protocArtifact>
+                            <includeDirectories>
+                                <include>${project.basedir}/grpc-health</include>
+                            </includeDirectories>
+                            <inputDirectories>
+                                <include>${project.basedir}/grpc-health/</include>
+                            </inputDirectories>
+                            <outputDirectory>${project.basedir}/target/generated-sources</outputDirectory>
+                            <outputTargets>
+                                <outputTarget>
+                                    <type>java</type>
+                                </outputTarget>
+                                <outputTarget>
+                                    <type>grpc-java</type>
+                                    <pluginArtifact>io.grpc:protoc-gen-grpc-java:1.0.1</pluginArtifact>
+                                </outputTarget>
+                            </outputTargets>
                         </configuration>
                     </execution>
                 </executions>

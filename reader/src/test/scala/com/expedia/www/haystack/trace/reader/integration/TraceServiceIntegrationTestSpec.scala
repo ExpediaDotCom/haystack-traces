@@ -21,7 +21,7 @@ import java.util.UUID
 import com.expedia.open.tracing.api.ExpressionTree.Operator
 import com.expedia.open.tracing.api._
 import com.expedia.www.haystack.trace.commons.clients.es.document.TraceIndexDoc
-import grpc.health.v1._
+import io.grpc.health.v1.{HealthCheckRequest, HealthCheckResponse}
 import io.grpc.{Status, StatusRuntimeException}
 
 import scala.collection.JavaConverters._
@@ -422,9 +422,9 @@ class TraceServiceIntegrationTestSpec extends BaseIntegrationTestSpec {
 
   describe("TraceReader.HealthCheck") {
     it("should return SERVING as health check response") {
-      val request = HealthOuterClass.HealthCheckRequest.newBuilder().build()
+      val request = HealthCheckRequest.newBuilder().build()
       val response = healthCheckClient.check(request)
-      response.getStatus shouldEqual HealthOuterClass.HealthCheckResponse.ServingStatus.SERVING
+      response.getStatus shouldEqual HealthCheckResponse.ServingStatus.SERVING
     }
   }
 }

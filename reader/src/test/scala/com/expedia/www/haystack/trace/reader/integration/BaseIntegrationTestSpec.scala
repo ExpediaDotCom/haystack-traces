@@ -32,8 +32,8 @@ import com.expedia.www.haystack.trace.commons.clients.es.document.TraceIndexDoc
 import com.expedia.www.haystack.trace.commons.config.entities.{IndexFieldType, WhiteListIndexFields, WhitelistIndexField}
 import com.expedia.www.haystack.trace.reader.Service
 import com.expedia.www.haystack.trace.reader.unit.readers.builders.ValidTraceBuilder
-import grpc.health.v1._
 import io.grpc.ManagedChannelBuilder
+import io.grpc.health.v1.HealthGrpc
 import io.searchbox.client.config.HttpClientConfig
 import io.searchbox.client.{JestClient, JestClientFactory}
 import io.searchbox.core.Index

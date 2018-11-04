@@ -15,14 +15,15 @@
  */
 
 package com.expedia.www.haystack.trace.reader.services
-import grpc.health.v1._
+import io.grpc.health.v1.{HealthCheckRequest, HealthCheckResponse, HealthGrpc}
 import io.grpc.stub.StreamObserver
 
 class GrpcHealthService extends HealthGrpc.HealthImplBase {
-  override def check(request: HealthOuterClass.HealthCheckRequest, responseObserver: StreamObserver[HealthOuterClass.HealthCheckResponse]): Unit = {
-    responseObserver.onNext(HealthOuterClass.HealthCheckResponse
+
+  override def check(request: HealthCheckRequest, responseObserver: StreamObserver[HealthCheckResponse]): Unit = {
+    responseObserver.onNext(HealthCheckResponse
       .newBuilder()
-      .setStatus(HealthOuterClass.HealthCheckResponse.ServingStatus.SERVING)
+      .setStatus(HealthCheckResponse.ServingStatus.SERVING)
       .build())
     responseObserver.onCompleted()
   }

@@ -33,6 +33,7 @@ import com.expedia.www.haystack.trace.commons.config.entities.{IndexFieldType, W
 import com.expedia.www.haystack.trace.reader.Service
 import com.expedia.www.haystack.trace.reader.unit.readers.builders.ValidTraceBuilder
 import io.grpc.ManagedChannelBuilder
+import io.grpc.health.v1.HealthGrpc
 import io.searchbox.client.config.HttpClientConfig
 import io.searchbox.client.{JestClient, JestClientFactory}
 import io.searchbox.core.Index
@@ -49,6 +50,7 @@ trait BaseIntegrationTestSpec extends FunSpec with GivenWhenThen with Matchers w
   protected implicit val formats: Formats = DefaultFormats + new EnumNameSerializer(IndexFieldType)
   protected var client: TraceReaderBlockingStub = _
 
+  protected var healthCheckClient: HealthGrpc.HealthBlockingStub = _
   private val CASSANDRA_ENDPOINT = "cassandra"
   private val CASSANDRA_KEYSPACE = "haystack"
   private val CASSANDRA_TABLE = "traces"
@@ -179,6 +181,10 @@ trait BaseIntegrationTestSpec extends FunSpec with GivenWhenThen with Matchers w
     Thread.sleep(5000)
 
     client = TraceReaderGrpc.newBlockingStub(ManagedChannelBuilder.forAddress("localhost", 8088)
+      .usePlaintext(true)
+      .build())
+
+    healthCheckClient = HealthGrpc.newBlockingStub(ManagedChannelBuilder.forAddress("localhost", 8088)
       .usePlaintext(true)
       .build())
   }

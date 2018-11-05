@@ -19,11 +19,10 @@ package com.expedia.www.haystack.trace.reader
 import java.io.File
 
 import com.codahale.metrics.JmxReporter
-import com.expedia.www.haystack.commons.health.{HealthController, UpdateHealthStatusFile}
 import com.expedia.www.haystack.commons.logger.LoggerUtils
 import com.expedia.www.haystack.trace.reader.config.ProviderConfiguration
 import com.expedia.www.haystack.trace.reader.metrics.MetricsSupport
-import com.expedia.www.haystack.trace.reader.services.TraceService
+import com.expedia.www.haystack.trace.reader.services.{GrpcHealthService, TraceService}
 import com.expedia.www.haystack.trace.reader.stores.CassandraEsTraceStore
 import io.grpc.netty.NettyServerBuilder
 import org.slf4j.{Logger, LoggerFactory}
@@ -49,7 +48,6 @@ object Service extends MetricsSupport {
   private def startService(): Unit = {
     try {
       val config = new ProviderConfiguration
-      HealthController.addListener(new UpdateHealthStatusFile(config.healthStatusFilePath))
 
       val store = new CassandraEsTraceStore(
         config.cassandraConfig,
@@ -63,6 +61,7 @@ object Service extends MetricsSupport {
         .forPort(serviceConfig.port)
         .directExecutor()
         .addService(new TraceService(store, config.traceValidatorConfig, config.traceTransformerConfig)(executor))
+        .addService(new GrpcHealthService())
 
       // enable ssl if enabled
       if (serviceConfig.ssl.enabled) {
@@ -81,9 +80,6 @@ object Service extends MetricsSupport {
           LOGGER.info("server has been shutdown now")
         }
       })
-
-      // mark the status of app as 'healthy'
-      HealthController.setHealthy()
 
       server.awaitTermination()
     } catch {

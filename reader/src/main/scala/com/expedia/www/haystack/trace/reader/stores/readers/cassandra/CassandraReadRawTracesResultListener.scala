@@ -20,7 +20,6 @@ import com.codahale.metrics.{Meter, Timer}
 import com.datastax.driver.core.exceptions.NoHostAvailableException
 import com.datastax.driver.core.{ResultSet, ResultSetFuture, Row}
 import com.expedia.open.tracing.api.Trace
-import com.expedia.www.haystack.commons.health.HealthController
 import com.expedia.www.haystack.trace.commons.clients.cassandra.CassandraTableSchema
 import com.expedia.www.haystack.trace.reader.exceptions.TraceNotFoundException
 import com.expedia.www.haystack.trace.reader.stores.readers.cassandra.CassandraReadRawTracesResultListener._
@@ -54,7 +53,6 @@ class CassandraReadRawTracesResultListener(asyncResult: ResultSetFuture,
       case Failure(ex) =>
         if (fatalError(ex)) {
           LOGGER.error("Fatal error in reading from cassandra, tearing down the app", ex)
-          HealthController.setUnhealthy()
         } else {
           LOGGER.error("Failed in reading the record from cassandra", ex)
         }

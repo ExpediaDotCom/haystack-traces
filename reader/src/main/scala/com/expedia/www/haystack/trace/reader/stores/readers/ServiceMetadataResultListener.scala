@@ -19,7 +19,6 @@ package com.expedia.www.haystack.trace.reader.stores.readers
 import com.codahale.metrics.{Meter, Timer}
 import com.datastax.driver.core.exceptions.NoHostAvailableException
 import com.datastax.driver.core.{ResultSetFuture, Row}
-import com.expedia.www.haystack.commons.health.HealthController
 import com.expedia.www.haystack.trace.reader.stores.readers.ServiceMetadataResultListener._
 import org.slf4j.{Logger, LoggerFactory}
 
@@ -43,7 +42,6 @@ class ServiceMetadataResultListener(asyncResult: ResultSetFuture,
       case Failure(ex) =>
         if (fatalError(ex)) {
           LOGGER.error("Fatal error in reading service metadata from cassandra, tearing down the app", ex)
-          HealthController.setUnhealthy()
         } else {
           LOGGER.error("Failed in reading the service metadata from cassandra", ex)
         }

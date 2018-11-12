@@ -15,14 +15,9 @@
  *
  */
 
-package com.expedia.www.haystack.trace.reader.metrics
+package com.expedia.www.haystack.trace.storage.backends.cassandra.config.entities
 
-import com.codahale.metrics.MetricRegistry
-
-trait MetricsSupport {
-  val metricRegistry: MetricRegistry = MetricsRegistries.metricRegistry
-}
-
-object MetricsRegistries {
-  val metricRegistry = new MetricRegistry()
-}
+case class SocketConfiguration(maxConnectionPerHost: Int,
+                               keepAlive: Boolean,
+                               connectionTimeoutMillis: Int,
+                               readTimeoutMills: Int)

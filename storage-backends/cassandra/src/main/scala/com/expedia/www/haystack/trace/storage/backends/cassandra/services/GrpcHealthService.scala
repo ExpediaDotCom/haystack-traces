@@ -14,7 +14,8 @@
  *       limitations under the License.
  */
 
-package com.expedia.www.haystack.trace.reader.services
+package com.expedia.www.haystack.trace.storage.backends.cassandra.services
+
 import io.grpc.health.v1.{HealthCheckRequest, HealthCheckResponse, HealthGrpc}
 import io.grpc.stub.StreamObserver
 

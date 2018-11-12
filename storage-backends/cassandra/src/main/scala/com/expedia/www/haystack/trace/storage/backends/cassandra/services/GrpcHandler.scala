@@ -14,10 +14,10 @@
  *       limitations under the License.
  */
 
-package com.expedia.www.haystack.trace.reader.services
+package com.expedia.www.haystack.trace.storage.backends.cassandra.services
 
-import com.expedia.www.haystack.trace.reader.metrics.MetricsSupport
-import com.expedia.www.haystack.trace.reader.services.GrpcHandler._
+import com.expedia.www.haystack.commons.metrics.MetricsSupport
+import com.expedia.www.haystack.trace.storage.backends.cassandra.services.GrpcHandler._
 import com.google.protobuf.GeneratedMessageV3
 import io.grpc.Status
 import io.grpc.stub.StreamObserver
@@ -34,8 +34,9 @@ object GrpcHandler {
   * Handler for Grpc response
   * populates responseObserver with response object or error accordingly
   * takes care of corresponding logging and updating counters
-  * @param operationName: name of operation
-  * @param executor: executor service on which handler is invoked
+  *
+  * @param operationName : name of operation
+  * @param executor      : executor service on which handler is invoked
   */
 
 class GrpcHandler(operationName: String)(implicit val executor: ExecutionContextExecutor) extends MetricsSupport {

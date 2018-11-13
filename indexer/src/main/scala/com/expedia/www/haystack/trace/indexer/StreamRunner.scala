@@ -29,14 +29,15 @@ import com.expedia.www.haystack.trace.indexer.processors.StreamTaskState.StreamT
 import com.expedia.www.haystack.trace.indexer.processors._
 import com.expedia.www.haystack.trace.indexer.processors.supplier.SpanIndexProcessorSupplier
 import com.expedia.www.haystack.trace.indexer.store.SpanBufferMemoryStoreSupplier
+import com.expedia.www.haystack.trace.indexer.writers.TraceWriter
 import com.expedia.www.haystack.trace.indexer.writers.cassandra.CassandraTraceWriter
-import com.expedia.www.haystack.trace.indexer.writers.es.ElasticSearchWriter
+import com.expedia.www.haystack.trace.indexer.writers.es.{ElasticSearchWriter, ServiceMetadataWriter}
 import com.expedia.www.haystack.trace.indexer.writers.kafka.KafkaWriter
-import com.expedia.www.haystack.trace.indexer.writers.{ServiceMetadataWriter, TraceWriter}
 import org.apache.commons.lang3.StringUtils
 import org.slf4j.LoggerFactory
 
 import scala.collection.mutable
+import scala.concurrent.ExecutionContextExecutor
 import scala.util.Try
 
 class StreamRunner(kafkaConfig: KafkaConfiguration,
@@ -46,7 +47,7 @@ class StreamRunner(kafkaConfig: KafkaConfiguration,
                    serviceMetadataWriteConfig: ServiceMetadataWriteConfiguration,
                    indexConfig: WhitelistIndexFieldConfiguration) extends AutoCloseable with StateListener {
 
-  implicit private val executor = scala.concurrent.ExecutionContext.global
+  implicit private val executor: ExecutionContextExecutor = scala.concurrent.ExecutionContext.global
 
   private val LOGGER = LoggerFactory.getLogger(classOf[StreamRunner])
 
@@ -61,11 +62,11 @@ class StreamRunner(kafkaConfig: KafkaConfiguration,
     writers += new CassandraTraceWriter(cassandraSession, cassandraConfig)(executor)
     writers += new ElasticSearchWriter(esConfig, indexConfig)
 
-    if(serviceMetadataWriteConfig.enabled) {
-      writers += new ServiceMetadataWriter(cassandraSession, serviceMetadataWriteConfig)(executor)
+    if (serviceMetadataWriteConfig.enabled) {
+      writers += new ServiceMetadataWriter(serviceMetadataWriteConfig)
     }
 
-    if(StringUtils.isNotEmpty(kafkaConfig.produceTopic)) {
+    if (StringUtils.isNotEmpty(kafkaConfig.produceTopic)) {
       writers += new KafkaWriter(kafkaConfig.producerProps, kafkaConfig.produceTopic)
     }
     writers
@@ -84,7 +85,7 @@ class StreamRunner(kafkaConfig: KafkaConfiguration,
       writers,
       PackerFactory.spanBufferPacker(accumulatorConfig.packerType))
 
-    for(streamId <- 0 until kafkaConfig.numStreamThreads) {
+    for (streamId <- 0 until kafkaConfig.numStreamThreads) {
       val task = new StreamTaskRunnable(streamId, kafkaConfig, streamProcessSupplier)
       task.setStateListener(this)
       taskRunnables += task
@@ -95,7 +96,7 @@ class StreamRunner(kafkaConfig: KafkaConfiguration,
   }
 
   override def close(): Unit = {
-    if(isStarted.getAndSet(false)) {
+    if (isStarted.getAndSet(false)) {
       val shutdownThread = new Thread() {
         closeStreamTasks()
         closeWriters()
@@ -107,7 +108,7 @@ class StreamRunner(kafkaConfig: KafkaConfiguration,
   }
 
   override def onTaskStateChange(state: StreamTaskState): Unit = {
-    if(state == StreamTaskState.FAILED) {
+    if (state == StreamTaskState.FAILED) {
       LOGGER.error("Thread state has changed to 'FAILED', so tearing down the app")
       HealthController.setUnhealthy()
     }
@@ -115,12 +116,16 @@ class StreamRunner(kafkaConfig: KafkaConfiguration,
 
   private def closeStreamTasks(): Unit = {
     LOGGER.info("Closing all the stream tasks..")
-    taskRunnables foreach { _.close() }
+    taskRunnables foreach {
+      _.close()
+    }
   }
 
   private def closeWriters(): Unit = {
     LOGGER.info("Closing all the writers now..")
-    writers foreach { _.close }
+    writers foreach {
+      _.close
+    }
     Try(cassandraSession.close())
   }
 

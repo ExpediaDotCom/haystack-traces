@@ -21,8 +21,8 @@ import java.text.SimpleDateFormat
 import java.util.Date
 
 import com.expedia.www.haystack.commons.retries.RetryOperation
-import com.expedia.www.haystack.trace.commons.config.entities.{IndexFieldType, WhiteListIndexFields, WhitelistIndexField, WhitelistIndexFieldConfiguration}
-import com.expedia.www.haystack.trace.indexer.config.entities.ElasticSearchConfiguration
+import com.expedia.www.haystack.trace.commons.config.entities._
+import com.expedia.www.haystack.trace.indexer.config.entities.{ElasticSearchConfiguration, ServiceMetadataWriteConfiguration}
 import io.searchbox.client.config.HttpClientConfig
 import io.searchbox.client.{JestClient, JestClientFactory}
 import io.searchbox.core.Search
@@ -77,6 +77,26 @@ class ElasticSearchTestClient {
     10,
     RetryOperation.Config(3, 2000, 2))
 
+  def buildServiceMetadataConfig: ServiceMetadataWriteConfiguration = {
+    ServiceMetadataWriteConfiguration(enabled = true,
+      esEndpoint = ELASTIC_SEARCH_ENDPOINT,
+      username = None,
+      password = None,
+      consistencyLevel = "one",
+      indexTemplateJson = Some(INDEX_TEMPLATE),
+      indexName = "service_metadata",
+      indexType = "metadata",
+      connectionTimeoutMillis = 3000,
+      readTimeoutMillis = 3000,
+      maxInFlightBulkRequests = 10,
+      maxDocsInBulk = 5,
+      maxBulkDocSizeInBytes = 50,
+      flushIntervalInSec = 10,
+      flushOnMaxOperationCount = 10,
+      retryConfig = RetryOperation.Config(10, 250, 2))
+  }
+
+
   def indexingConfig: WhitelistIndexFieldConfiguration = {
     val cfg = WhitelistIndexFieldConfiguration()
     val cfgJsonData = Serialization.write(WhiteListIndexFields(
@@ -92,7 +112,7 @@ class ElasticSearchTestClient {
       .addType(INDEX_TYPE)
       .build()
     val result = esClient.execute(searchQuery)
-    if(result.getSourceAsStringList != null && result.getSourceAsStringList.size() > 0) {
+    if (result.getSourceAsStringList != null && result.getSourceAsStringList.size() > 0) {
       result.getSourceAsStringList.asScala.map(Serialization.read[EsSourceDocument]).toList
     }
     else {

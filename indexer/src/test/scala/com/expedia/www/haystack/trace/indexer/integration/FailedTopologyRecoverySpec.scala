@@ -40,7 +40,7 @@ class FailedTopologyRecoverySpec extends BaseIntegrationTestSpec {
       val esConfig = elastic.buildConfig
       val indexTagsConfig = elastic.indexingConfig
       val cassandraConfig = cassandra.buildConfig
-      val serviceMetadataConfig = cassandra.buildServiceMetadataConfig
+      val serviceMetadataConfig = elastic.buildServiceMetadataConfig
       val accumulatorConfig = spanAccumulatorConfig.copy(pollIntervalMillis = spanAccumulatorConfig.pollIntervalMillis * 5)
       val startTimestamp = System.currentTimeMillis()
       produceSpansAsync(

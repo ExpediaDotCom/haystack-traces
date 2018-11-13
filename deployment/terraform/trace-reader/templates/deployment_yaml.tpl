@@ -76,3 +76,4 @@ spec:
     targetPort: ${container_port}
   selector:
     k8s-app: ${app_name}
+  clusterIP: None

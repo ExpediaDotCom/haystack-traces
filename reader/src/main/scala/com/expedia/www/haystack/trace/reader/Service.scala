@@ -38,7 +38,7 @@ object Service extends MetricsSupport {
     startService()
   }
 
-  private def startJmxReporter() = {
+  private def startJmxReporter(): Unit = {
     JmxReporter
       .forRegistry(metricRegistry)
       .build()
@@ -51,9 +51,8 @@ object Service extends MetricsSupport {
 
       val store = new CassandraEsTraceStore(
         config.cassandraConfig,
-        config.serviceMetadataConfig,
-        config.elasticSearchConfig,
-        config.indexConfig)(executor)
+        config.elasticSearchConfiguration,
+        config.whitelistedFieldsConfig)(executor)
 
       val serviceConfig = config.serviceConfig
 

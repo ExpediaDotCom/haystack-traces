@@ -133,8 +133,6 @@ abstract class BaseIntegrationTestSpec extends WordSpec with GivenWhenThen with 
           sp.getOperationName shouldBe s"op$idx"
       }
     })
-
-    verifyServices()
   }
 
   def verifyServices(): Unit = {

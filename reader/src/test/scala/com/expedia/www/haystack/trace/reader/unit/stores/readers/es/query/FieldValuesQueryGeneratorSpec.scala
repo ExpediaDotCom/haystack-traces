@@ -17,14 +17,19 @@ package com.expedia.www.haystack.trace.reader.unit.stores.readers.es.query
 
 import com.expedia.open.tracing.api.{Field, FieldValuesRequest}
 import com.expedia.www.haystack.trace.commons.config.entities.WhitelistIndexFieldConfiguration
-import com.expedia.www.haystack.trace.reader.config.entities.ElasticSearchConfiguration
+import com.expedia.www.haystack.trace.reader.config.entities.SpansIndexConfiguration
 import com.expedia.www.haystack.trace.reader.stores.readers.es.ESUtils._
 import com.expedia.www.haystack.trace.reader.stores.readers.es.query.FieldValuesQueryGenerator
 import com.expedia.www.haystack.trace.reader.unit.BaseUnitTestSpec
 
 class FieldValuesQueryGeneratorSpec extends BaseUnitTestSpec {
   private val indexType = "spans"
-  private val esConfig = ElasticSearchConfiguration("endpoint", None, None, "haystack-traces", indexType, 5000, 5000, 6, 72, false)
+  private val spansIndexConfiguration = SpansIndexConfiguration(
+    indexNamePrefix = "haystack-traces",
+    indexType = indexType,
+    indexHourTtl = 72,
+    indexHourBucket = 6,
+    useRootDocumentStartTime = false)
 
   describe("FieldValuesQueryGenerator") {
     it("should generate valid search queries") {
@@ -35,7 +40,7 @@ class FieldValuesQueryGeneratorSpec extends BaseUnitTestSpec {
         .setFieldName("operationName")
         .addFilters(Field.newBuilder().setName("serviceName").setValue(serviceName).build())
         .build()
-      val queryGenerator = new FieldValuesQueryGenerator(esConfig, "spans", new WhitelistIndexFieldConfiguration)
+      val queryGenerator = new FieldValuesQueryGenerator(spansIndexConfiguration, "spans", new WhitelistIndexFieldConfiguration)
 
       When("generating query")
       val query = queryGenerator.generate(request)
@@ -54,7 +59,7 @@ class FieldValuesQueryGeneratorSpec extends BaseUnitTestSpec {
         .setFieldName(operationField)
         .addFilters(Field.newBuilder().setName(serviceField).setValue(serviceName).build())
         .build()
-      val queryGenerator = new FieldValuesQueryGenerator(esConfig, "spans", new WhitelistIndexFieldConfiguration)
+      val queryGenerator = new FieldValuesQueryGenerator(spansIndexConfiguration, "spans", new WhitelistIndexFieldConfiguration)
 
       When("generating query")
       val query = queryGenerator.generate(request)

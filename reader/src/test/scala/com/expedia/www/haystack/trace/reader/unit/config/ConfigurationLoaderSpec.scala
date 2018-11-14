@@ -15,7 +15,6 @@
  */
 package com.expedia.www.haystack.trace.reader.unit.config
 
-import com.expedia.www.haystack.trace.commons.config.entities.KeyspaceConfiguration
 import com.expedia.www.haystack.trace.reader.config.ProviderConfiguration
 import com.expedia.www.haystack.trace.reader.config.entities.{ServiceConfiguration, TraceTransformersConfiguration}
 import com.expedia.www.haystack.trace.reader.readers.transformers.{ClientServerEventLogTransformer, DeDuplicateSpanTransformer, InfrastructureTagTransformer, PartialSpanTransformer}
@@ -51,10 +50,26 @@ class ConfigurationLoaderSpec extends BaseUnitTestSpec {
       traceConfig.preTransformers(2).isInstanceOf[InfrastructureTagTransformer] shouldBe true
     }
 
-    it("should load service metadata configuration ") {
-      val metadataConfig = new ProviderConfiguration().serviceMetadataConfig
-      metadataConfig.enabled shouldBe false
-      metadataConfig.keyspace shouldEqual KeyspaceConfiguration("haystack_metadata", "services")
+    it("should load elastic search configuration") {
+
+
+      val elasticSearchConfig = new ProviderConfiguration().elasticSearchConfiguration
+
+      elasticSearchConfig.clientConfiguration.endpoint shouldEqual "http://elasticsearch:9200"
+      elasticSearchConfig.clientConfiguration.connectionTimeoutMillis shouldEqual 10000
+      elasticSearchConfig.clientConfiguration.readTimeoutMillis shouldEqual 5000
+
+
+      elasticSearchConfig.spansIndexConfiguration.indexHourBucket shouldEqual 6
+      elasticSearchConfig.spansIndexConfiguration.indexHourTtl shouldEqual 72
+      elasticSearchConfig.spansIndexConfiguration.useRootDocumentStartTime shouldEqual false
+      elasticSearchConfig.spansIndexConfiguration.indexType shouldEqual "spans"
+      elasticSearchConfig.spansIndexConfiguration.indexNamePrefix shouldEqual "haystack-traces"
+
+
+      elasticSearchConfig.serviceMetadataIndexConfiguration.enabled shouldEqual false
+      elasticSearchConfig.serviceMetadataIndexConfiguration.indexName shouldEqual "service_metadata"
+      elasticSearchConfig.serviceMetadataIndexConfiguration.indexType shouldEqual "metadata"
     }
   }
 }

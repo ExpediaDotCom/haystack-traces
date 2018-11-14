@@ -1,0 +1,56 @@
+/*
+ *  Copyright 2017 Expedia, Inc.
+ *
+ *       Licensed under the Apache License, Version 2.0 (the "License");
+ *       you may not use this file except in compliance with the License.
+ *      You may obtain a copy of the License at
+ *
+ *           http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *       Unless required by applicable law or agreed to in writing, software
+ *       distributed under the License is distributed on an "AS IS" BASIS,
+ *       WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *       See the License for the specific language governing permissions and
+ *       limitations under the License.
+ */
+
+package com.expedia.www.haystack.trace.reader.stores.readers.es.query
+
+import com.expedia.www.haystack.trace.reader.config.entities.ServiceMetadataIndexConfiguration
+import io.searchbox.core.Search
+
+class ServiceMetadataQueryGenerator(config: ServiceMetadataIndexConfiguration) {
+
+
+  def generateQueryForServiceAggregations(): Search = {
+    val serviceAggregationQuery = buildServiceAggregationQuery()
+    generateSearchQuery(serviceAggregationQuery)
+  }
+
+  def generateQueryForOperationAggregations(serviceName:String): Search = {
+    val serviceAggregationQuery = buildOperationAggregationQuery(serviceName)
+    generateSearchQuery(serviceAggregationQuery)
+  }
+
+  private def generateSearchQuery(queryString: String): Search = {
+    new Search.Builder(queryString)
+      .addIndex(config.indexName)
+      .addType(config.indexType)
+      .build()
+  }
+
+  //TODO ADD the service aggregation query
+  private def buildServiceAggregationQuery(): String = {
+    val fieldName = "servicename"
+    fieldName
+  }
+
+  //TODO ADD the operation aggregation query
+  private def buildOperationAggregationQuery(serviceName: String): String = {
+    val serviceFieldName = "servicename"
+    val operationFieldName = "operationname"
+    operationFieldName
+  }
+
+
+}

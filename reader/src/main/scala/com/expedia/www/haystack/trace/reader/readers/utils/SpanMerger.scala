@@ -114,6 +114,7 @@ object SpanMerger {
     List(
       buildStringTag(AuxiliaryTags.CLIENT_SERVICE_NAME, SpanUtils.getEffectiveServiceName(span)),
       buildStringTag(AuxiliaryTags.CLIENT_OPERATION_NAME, span.getOperationName),
+      buildStringTag(AuxiliaryTags.CLIENT_SPAN_ID, span.getSpanId),
       buildStringTag(AuxiliaryTags.CLIENT_INFRASTRUCTURE_PROVIDER, extractTagStringValue(span, AuxiliaryTags.INFRASTRUCTURE_PROVIDER)),
       buildStringTag(AuxiliaryTags.CLIENT_INFRASTRUCTURE_LOCATION, extractTagStringValue(span, AuxiliaryTags.INFRASTRUCTURE_LOCATION)),
       buildLongTag(AuxiliaryTags.CLIENT_START_TIME, span.getStartTime),

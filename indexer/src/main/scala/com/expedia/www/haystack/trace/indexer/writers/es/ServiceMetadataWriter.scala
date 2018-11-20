@@ -129,7 +129,7 @@ class ServiceMetadataWriter(config: ServiceMetadataWriteConfiguration)
       .index(indexName)
       .`type`(config.indexType)
       .setParameter(Parameters.CONSISTENCY, config.consistencyLevel)
-      .id(s"${document.serviceName}_${document.operationName}")
+      .id(s"${document.servicename}_${document.operationname}")
       .build()
     bulkBuilder.addAction(action, document.json.getBytes("utf-8").length, forceBulkCreate = false)
   }

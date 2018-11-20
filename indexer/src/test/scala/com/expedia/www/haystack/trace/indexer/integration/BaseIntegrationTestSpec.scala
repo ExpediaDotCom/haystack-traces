@@ -58,7 +58,7 @@ abstract class BaseIntegrationTestSpec extends WordSpec with GivenWhenThen with 
     elastic.prepare()
   }
 
-  override def afterAll(): Unit = if(scheduler != null) scheduler.shutdownNow()
+  override def afterAll(): Unit = if (scheduler != null) scheduler.shutdownNow()
 
   protected def validateChildSpans(spanBuffer: SpanBuffer,
                                    traceId: String,
@@ -123,8 +123,8 @@ abstract class BaseIntegrationTestSpec extends WordSpec with GivenWhenThen with 
     rows.foreach(row => {
       val descr = traceDescriptions.find(_.traceId == row.id).get
       row.spanBuffer should not be null
-      row.spanBuffer.getChildSpansCount should be >=minSpansPerTrace
-      row.spanBuffer.getChildSpansCount should be <=maxSpansPerTrace
+      row.spanBuffer.getChildSpansCount should be >= minSpansPerTrace
+      row.spanBuffer.getChildSpansCount should be <= maxSpansPerTrace
 
       row.spanBuffer.getChildSpansList.asScala.zipWithIndex foreach {
         case (sp, idx) =>
@@ -135,13 +135,46 @@ abstract class BaseIntegrationTestSpec extends WordSpec with GivenWhenThen with 
     })
   }
 
-  def verifyServices(): Unit = {
-    val serviceMetadataRows = cassandra.queryServices()
-    serviceMetadataRows.size should be >=5
-    serviceMetadataRows.indices foreach { idx =>
-      val row = serviceMetadataRows.find(_.serviceName == s"service$idx").get
-      row.operationName shouldEqual s"op$idx"
-    }
+  def verifyOperationNames(): Unit = {
+    val operationNamesQuery =
+      """
+        | {
+        |  "size": 0,
+        |  "aggregations": {
+        |    "servicename": {
+        |      "filter": {
+        |        "term": {
+        |          "servicename": {
+        |            "value": "test_service",
+        |            "boost": 1.0
+        |          }
+        |        }
+        |      },
+        |      "aggregations": {
+        |        "operationname": {
+        |          "terms": {
+        |            "size": 1000,
+        |            "min_doc_count": 1,
+        |            "shard_min_doc_count": 0,
+        |            "show_term_doc_count_error": false,
+        |            "order": [
+        |              {
+        |                "_count": "desc"
+        |              },
+        |              {
+        |                "_key": "asc"
+        |              }
+        |            ]
+        |          }
+        |        }
+        |      }
+        |    }
+        |  }
+        |}
+      """.stripMargin
+    val docs = elastic.queryServiceMetadataIndex(operationNamesQuery)
+    docs.size shouldBe 1
+
   }
 
   def verifyElasticSearchWrites(traceIds: Seq[String]): Unit = {
@@ -152,7 +185,7 @@ abstract class BaseIntegrationTestSpec extends WordSpec with GivenWhenThen with 
         |    }
         |}""".stripMargin
 
-    var docs = elastic.query(matchAllQuery)
+    var docs = elastic.querySpansIndex(matchAllQuery)
     docs.size shouldBe traceIds.size
     docs.indices.foreach { idx =>
       val traceId = docs.apply(idx).traceid
@@ -189,7 +222,7 @@ abstract class BaseIntegrationTestSpec extends WordSpec with GivenWhenThen with 
         |      ]
         |}}}
       """.stripMargin
-    docs = elastic.query(spanSpecificQuery)
+    docs = elastic.querySpansIndex(spanSpecificQuery)
     docs.size shouldBe traceIds.size
 
     val emptyResponseQuery =
@@ -222,84 +255,87 @@ abstract class BaseIntegrationTestSpec extends WordSpec with GivenWhenThen with 
         |      ]
         |}}}
       """.stripMargin
-    docs = elastic.query(emptyResponseQuery)
+    docs = elastic.querySpansIndex(emptyResponseQuery)
     docs.size shouldBe 0
 
-    val tagQuery =  """
-                      |{
-                      |  "query": {
-                      |    "bool": {
-                      |      "must": [
-                      |        {
-                      |          "nested": {
-                      |            "path": "spans",
-                      |            "query": {
-                      |              "bool": {
-                      |                "must": [
-                      |                  {
-                      |                    "match": {
-                      |                      "spans.servicename": "service2"
-                      |                    }
-                      |                  },
-                      |                  {
-                      |                    "match": {
-                      |                      "spans.operationname": "op2"
-                      |                    }
-                      |                  },
-                      |                  {
-                      |                    "match": {
-                      |                      "spans.errorcode": "404"
-                      |                    }
-                      |                  }
-                      |                ]
-                      |              }
-                      |            }
-                      |          }
-                      |        }
-                      |      ]
-                      |}}}
-                    """.stripMargin
-    docs = elastic.query(tagQuery)
+    val tagQuery =
+      """
+        |{
+        |  "query": {
+        |    "bool": {
+        |      "must": [
+        |        {
+        |          "nested": {
+        |            "path": "spans",
+        |            "query": {
+        |              "bool": {
+        |                "must": [
+        |                  {
+        |                    "match": {
+        |                      "spans.servicename": "service2"
+        |                    }
+        |                  },
+        |                  {
+        |                    "match": {
+        |                      "spans.operationname": "op2"
+        |                    }
+        |                  },
+        |                  {
+        |                    "match": {
+        |                      "spans.errorcode": "404"
+        |                    }
+        |                  }
+        |                ]
+        |              }
+        |            }
+        |          }
+        |        }
+        |      ]
+        |}}}
+      """.stripMargin
+    docs = elastic.querySpansIndex(tagQuery)
     docs.size shouldBe traceIds.size
     docs.map(_.traceid) should contain theSameElementsAs traceIds
 
 
-    val roleTagQuery =  """
-                      |{
-                      |  "query": {
-                      |    "bool": {
-                      |      "must": [
-                      |        {
-                      |          "nested": {
-                      |            "path": "spans",
-                      |            "query": {
-                      |              "bool": {
-                      |                "must": [
-                      |                  {
-                      |                    "match": {
-                      |                      "spans.servicename": "service2"
-                      |                    }
-                      |                  },
-                      |                  {
-                      |                    "match": {
-                      |                      "spans.operationname": "op2"
-                      |                    }
-                      |                  },
-                      |                  {
-                      |                    "match": {
-                      |                      "spans.role": "haystack"
-                      |                    }
-                      |                  }
-                      |                ]
-                      |              }
-                      |            }
-                      |          }
-                      |        }
-                      |      ]
-                      |}}}
-                    """.stripMargin
-    docs = elastic.query(roleTagQuery)
+    val roleTagQuery =
+      """
+        |{
+        |  "query": {
+        |    "bool": {
+        |      "must": [
+        |        {
+        |          "nested": {
+        |            "path": "spans",
+        |            "query": {
+        |              "bool": {
+        |                "must": [
+        |                  {
+        |                    "match": {
+        |                      "spans.servicename": "service2"
+        |                    }
+        |                  },
+        |                  {
+        |                    "match": {
+        |                      "spans.operationname": "op2"
+        |                    }
+        |                  },
+        |                  {
+        |                    "match": {
+        |                      "spans.role": "haystack"
+        |                    }
+        |                  }
+        |                ]
+        |              }
+        |            }
+        |          }
+        |        }
+        |      ]
+        |}}}
+      """.stripMargin
+    docs = elastic.querySpansIndex(roleTagQuery)
     docs.size shouldBe traceIds.size
     docs.map(_.traceid) should contain theSameElementsAs traceIds
+
   }
 }

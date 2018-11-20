@@ -18,6 +18,11 @@ package com.expedia.www.haystack.trace.reader.stores.readers.es.query
 
 import com.expedia.www.haystack.trace.reader.config.entities.ServiceMetadataIndexConfiguration
 import io.searchbox.core.Search
+import org.elasticsearch.index.query.QueryBuilders.termQuery
+import org.elasticsearch.search.aggregations.bucket.filter.FilterAggregationBuilder
+import org.elasticsearch.search.aggregations.bucket.terms.TermsAggregationBuilder
+import org.elasticsearch.search.aggregations.support.ValueType
+import org.elasticsearch.search.builder.SearchSourceBuilder
 
 class ServiceMetadataQueryGenerator(config: ServiceMetadataIndexConfiguration) {
 
@@ -27,7 +32,7 @@ class ServiceMetadataQueryGenerator(config: ServiceMetadataIndexConfiguration) {
     generateSearchQuery(serviceAggregationQuery)
   }
 
-  def generateQueryForOperationAggregations(serviceName:String): Search = {
+  def generateQueryForOperationAggregations(serviceName: String): Search = {
     val serviceAggregationQuery = buildOperationAggregationQuery(serviceName)
     generateSearchQuery(serviceAggregationQuery)
   }
@@ -42,14 +47,25 @@ class ServiceMetadataQueryGenerator(config: ServiceMetadataIndexConfiguration) {
   //TODO ADD the service aggregation query
   private def buildServiceAggregationQuery(): String = {
     val fieldName = "servicename"
-    fieldName
+    val termsAggregationBuilder = new TermsAggregationBuilder(fieldName, ValueType.STRING)
+      .size(1000)
+    new SearchSourceBuilder()
+      .aggregation(termsAggregationBuilder)
+      .size(0)
+      .toString
   }
 
   //TODO ADD the operation aggregation query
   private def buildOperationAggregationQuery(serviceName: String): String = {
-    val serviceFieldName = "servicename"
-    val operationFieldName = "operationname"
-    operationFieldName
+    val serviceNameKey = "servicename"
+    val operationNameKey = "operationname"
+    val filterAggregationBuilder = new FilterAggregationBuilder(s"$serviceNameKey", termQuery(serviceNameKey, serviceName))
+      .subAggregation(new TermsAggregationBuilder(s"$operationNameKey", ValueType.STRING)
+        .size(1000))
+    new SearchSourceBuilder()
+      .aggregation(filterAggregationBuilder)
+      .size(0)
+      .toString
   }
 
 

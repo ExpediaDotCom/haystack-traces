@@ -145,7 +145,7 @@ abstract class BaseIntegrationTestSpec extends WordSpec with GivenWhenThen with 
         |      "filter": {
         |        "term": {
         |          "servicename": {
-        |            "value": "test_service",
+        |            "value": "service0",
         |            "boost": 1.0
         |          }
         |        }

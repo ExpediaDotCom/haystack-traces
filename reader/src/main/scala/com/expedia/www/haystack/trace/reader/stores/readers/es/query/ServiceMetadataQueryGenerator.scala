@@ -48,6 +48,7 @@ class ServiceMetadataQueryGenerator(config: ServiceMetadataIndexConfiguration) {
   private def buildServiceAggregationQuery(): String = {
     val fieldName = "servicename"
     val termsAggregationBuilder = new TermsAggregationBuilder(fieldName, ValueType.STRING)
+      .field(fieldName)
       .size(1000)
     new SearchSourceBuilder()
       .aggregation(termsAggregationBuilder)
@@ -61,6 +62,7 @@ class ServiceMetadataQueryGenerator(config: ServiceMetadataIndexConfiguration) {
     val operationNameKey = "operationname"
     val filterAggregationBuilder = new FilterAggregationBuilder(s"$serviceNameKey", termQuery(serviceNameKey, serviceName))
       .subAggregation(new TermsAggregationBuilder(s"$operationNameKey", ValueType.STRING)
+        .field(operationNameKey)
         .size(1000))
     new SearchSourceBuilder()
       .aggregation(filterAggregationBuilder)

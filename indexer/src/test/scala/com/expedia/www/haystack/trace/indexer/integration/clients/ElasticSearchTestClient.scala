@@ -120,7 +120,7 @@ class ElasticSearchTestClient {
     }
   }
 
-  def queryServiceMetadataIndex(query: String): List[EsSourceDocument] = {
+  def queryServiceMetadataIndex(query: String): List[String] = {
     import scala.collection.JavaConverters._
     val SERVICE_METADATA_INDEX_NAME = "service-metadata"
     val SERVICE_METADATA_INDEX_TYPE = "metadata"
@@ -130,7 +130,7 @@ class ElasticSearchTestClient {
       .build()
     val result = esClient.execute(searchQuery)
     if (result.getSourceAsStringList != null && result.getSourceAsStringList.size() > 0) {
-      result.getSourceAsStringList.asScala.map(Serialization.read[EsSourceDocument]).toList
+      result.getSourceAsStringList.asScala.toList
     }
     else {
       Nil

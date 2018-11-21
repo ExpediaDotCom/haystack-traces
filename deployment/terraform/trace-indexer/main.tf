@@ -1,7 +1,7 @@
 locals {
   app_name = "trace-indexer"
-  config_file_path = "${path.module}/templates/trace-indexer_conf.tpl"
-  deployment_yaml_file_path = "${path.module}/templates/deployment_yaml.tpl"
+  config_file_path = "${path.module}/templates/trace-indexer.conf"
+  deployment_yaml_file_path = "${path.module}/templates/deployment.yaml"
   count = "${var.enabled?1:0}"
   span_produce_topic = "${var.enable_kafka_sink?"span-buffer":""}"
   elasticsearch_endpoint = "${var.elasticsearch_hostname}:${var.elasticsearch_port}"

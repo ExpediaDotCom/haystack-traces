@@ -137,9 +137,8 @@ abstract class BaseIntegrationTestSpec extends WordSpec with GivenWhenThen with 
 
   def verifyOperationNames(): Unit = {
     val operationNamesQuery =
-      """
-        | {
-        |  "query" : {
+      """{
+        | "query" : {
         |    "term" : {
         |      "servicename" : {
         |        "value" : "service0",
@@ -155,8 +154,7 @@ abstract class BaseIntegrationTestSpec extends WordSpec with GivenWhenThen with 
         |      "servicename"
         |    ]
         |  }
-        |}
-      """.stripMargin
+        |}""".stripMargin
     val docs = elastic.queryServiceMetadataIndex(operationNamesQuery)
     docs.size shouldBe 1
 

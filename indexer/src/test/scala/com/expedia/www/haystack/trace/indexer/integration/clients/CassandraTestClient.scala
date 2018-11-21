@@ -33,25 +33,11 @@ class CassandraTestClient {
   private val KEYSPACE = "haystack"
   private val TABLE_NAME = "traces"
 
-  private val SERVICES_METADATA_KEYSPACE = "haystack_metadata"
-  private val SERVICES_TABLE_NAME = "services"
   private val cassandraSession = Cluster.builder().addContactPoints(CASSANDRA_ENDPOINT).build().connect()
   private val traceSchema = Some("CREATE KEYSPACE IF NOT EXISTS haystack WITH REPLICATION = { 'class': 'SimpleStrategy', 'replication_factor' : 1} AND durable_writes = false;\n\nCREATE TABLE haystack.traces (\nid varchar,\nts timestamp,\nspans blob,\nPRIMARY KEY ((id), ts)\n) WITH CLUSTERING ORDER BY (ts ASC);\n\nALTER TABLE haystack.traces WITH compaction = { 'class' :  'DateTieredCompactionStrategy'  };")
-  private val metadataSchema = Some("CREATE KEYSPACE IF NOT EXISTS haystack_metadata WITH REPLICATION = { 'class': 'SimpleStrategy', 'replication_factor' : 1} AND durable_writes = false;\n\nCREATE TABLE haystack_metadata.services (\nservice_name varchar,\noperation_name varchar,\nts timestamp,\nPRIMARY KEY ((service_name), operation_name)\n) WITH CLUSTERING ORDER BY (operation_name ASC);\n\nALTER TABLE haystack_metadata.services WITH compaction = { 'class' :  'DateTieredCompactionStrategy'  };")
 
   def prepare(): Unit = {
     cassandraSession.execute(new SimpleStatement(s"DROP KEYSPACE IF EXISTS $KEYSPACE"))
-    cassandraSession.execute(new SimpleStatement(s"DROP KEYSPACE IF EXISTS $SERVICES_METADATA_KEYSPACE"))
-  }
-
-  def buildServiceMetadataConfig: ServiceMetadataWriteConfiguration = {
-    ServiceMetadataWriteConfiguration(enabled = true,
-      10,
-      1,
-      1000,
-      RetryOperation.Config(10, 250, 2),
-      ConsistencyLevel.ONE,
-      KeyspaceConfiguration(SERVICES_METADATA_KEYSPACE, SERVICES_TABLE_NAME, 10000, metadataSchema))
   }
 
   def buildConfig = CassandraWriteConfiguration(
@@ -62,17 +48,12 @@ class CassandraTestClient {
       KeyspaceConfiguration(KEYSPACE, TABLE_NAME, 10000, traceSchema),
       SocketConfiguration(5, keepAlive = true, 5000, 5000)), ConsistencyLevel.ONE, 10, RetryOperation.Config(10, 250, 2), List((Class.forName("com.datastax.driver.core.exceptions.UnavailableException"), ConsistencyLevel.ANY)))
 
-  def queryAllTraces(unpack: (Array[Byte] => SpanBuffer)): Seq[CassandraSpanRow] = {
+  def queryAllTraces(unpack: Array[Byte] => SpanBuffer): Seq[CassandraSpanRow] = {
     val rows = cassandraSession.execute(s"SELECT id, ts, spans from $KEYSPACE.$TABLE_NAME")
     val result = for (row <- rows.asScala)
       yield CassandraSpanRow(row.getString("id"), row.getTimestamp("ts"), unpack(row.getBytes("spans").array()))
     result.toSeq
   }
 
-  def queryServices(): Seq[ServiceMetadataRow] = {
-    val rows = cassandraSession.execute(s"SELECT service_name, operation_name, ts from $SERVICES_METADATA_KEYSPACE.$SERVICES_TABLE_NAME")
-    val result = for (row <- rows.asScala)
-      yield ServiceMetadataRow(row.getString("service_name"), row.getString("operation_name"), row.getTimestamp("ts"))
-    result.toSeq
-  }
+
 }

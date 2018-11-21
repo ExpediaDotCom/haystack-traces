@@ -1,5 +1,5 @@
 /*
- *  Copyright 2018 Expedia, Inc.
+ *  Copyright 2018 Expedia, Group.
  *
  *     Licensed under the Apache License, Version 2.0 (the "License");
  *     you may not use this file except in compliance with the License.
@@ -15,44 +15,34 @@
  *
  */
 
-package com.expedia.www.haystack.trace.indexer.writers.cassandra
+package com.expedia.www.haystack.trace.indexer.writers.es
 
 import java.time.Instant
 
-import com.datastax.driver.core.Statement
 import com.expedia.open.tracing.Span
-import com.expedia.www.haystack.trace.commons.clients.cassandra.CassandraSession
+import com.expedia.www.haystack.commons.metrics.MetricsSupport
+import com.expedia.www.haystack.trace.commons.clients.es.document.ServiceMetadataDoc
 import com.expedia.www.haystack.trace.commons.utils.SpanUtils
 import com.expedia.www.haystack.trace.indexer.config.entities.ServiceMetadataWriteConfiguration
 import org.apache.commons.lang3.StringUtils
 
 import scala.collection.mutable
 
-/**
-  * builder that generates cassandra statements for writing serviceName and its operations
-  * @param cassandra: cassandra session
-  * @param cfg: service metadata configuration
-  */
-class ServiceMetadataStatementBuilder(cassandra: CassandraSession,
-                                      cfg: ServiceMetadataWriteConfiguration) {
+class ServiceMetadataDocumentGenerator(config: ServiceMetadataWriteConfiguration) extends MetricsSupport {
+
   private var serviceMetadataMap = new mutable.HashMap[String, mutable.Set[String]]()
-  private val serviceMetadataInsertPreparedStmt = cassandra.createServiceMetadataInsertPreparedStatement(cfg.cassandraKeyspace)
   private var allOperationCount: Int = 0
   private var lastFlushInstant = Instant.MIN
 
   private def shouldFlush: Boolean = {
-    cfg.flushIntervalInSec == 0 || Instant.now().minusSeconds(cfg.flushIntervalInSec).isAfter(lastFlushInstant)
+    config.flushIntervalInSec == 0 || Instant.now().minusSeconds(config.flushIntervalInSec).isAfter(lastFlushInstant)
   }
 
-  private def areStatementsReadyToBeExecuted(): Seq[Statement] = {
-    if (serviceMetadataMap.nonEmpty && (shouldFlush || allOperationCount > cfg.flushOnMaxOperationCount)) {
-      val statements = serviceMetadataMap.map {
+  private def areStatementsReadyToBeExecuted(): Seq[ServiceMetadataDoc] = {
+    if (serviceMetadataMap.nonEmpty && (shouldFlush || allOperationCount > config.flushOnMaxOperationCount)) {
+      val statements = serviceMetadataMap.flatMap {
         case (serviceName, operationList) =>
-          cassandra.newServiceMetadataInsertStatement(
-            serviceName,
-            operationList,
-            cfg.consistencyLevel,
-            serviceMetadataInsertPreparedStmt)
+          createServiceMetadataDoc(serviceName, operationList)
       }
 
       lastFlushInstant = Instant.now()
@@ -67,10 +57,10 @@ class ServiceMetadataStatementBuilder(cassandra: CassandraSession,
   /**
     * get or update the cassandra statements that need to be executed
     *
-    * @param spans: list of spans
+    * @param spans : list of spans
     * @return
     */
-  def getAndUpdateServiceMetadata(spans: Iterable[Span]): Seq[Statement] = {
+  def getAndUpdateServiceMetadata(spans: Iterable[Span]): Seq[ServiceMetadataDoc] = {
     this.synchronized {
       spans.foreach(span => {
         val serviceName = SpanUtils.getEffectiveServiceName(span)
@@ -84,4 +74,14 @@ class ServiceMetadataStatementBuilder(cassandra: CassandraSession,
       areStatementsReadyToBeExecuted()
     }
   }
+
+  /**
+    * @return index document that can be put in elastic search
+    */
+  def createServiceMetadataDoc(serviceName: String, operationList: mutable.Set[String]): List[ServiceMetadataDoc] = {
+    operationList.map(operationName => ServiceMetadataDoc(serviceName, operationName)).toList
+
+  }
+
+
 }

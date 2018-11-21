@@ -20,7 +20,7 @@ package com.expedia.www.haystack.trace.reader.unit.stores.readers.es.query
 import com.codahale.metrics.{Meter, Timer}
 import com.expedia.open.tracing.api.{Field, TracesSearchRequest}
 import com.expedia.www.haystack.trace.commons.config.entities.{IndexFieldType, WhitelistIndexFieldConfiguration}
-import com.expedia.www.haystack.trace.reader.config.entities.ElasticSearchConfiguration
+import com.expedia.www.haystack.trace.reader.config.entities.{ElasticSearchClientConfiguration, SpansIndexConfiguration}
 import com.expedia.www.haystack.trace.reader.exceptions.ElasticSearchClientError
 import com.expedia.www.haystack.trace.reader.stores.readers.es.ElasticSearchReadResultListener
 import com.expedia.www.haystack.trace.reader.stores.readers.es.query.TraceSearchQueryGenerator
@@ -34,12 +34,19 @@ import scala.concurrent.Promise
 
 class ElasticSearchReadResultListenerSpec extends BaseUnitTestSpec {
   protected implicit val formats: Formats = DefaultFormats + new EnumNameSerializer(IndexFieldType)
-  private val esConfig = ElasticSearchConfiguration("endpoint", None, None, "haystack-traces", "spans", 5000, 5000, 6, 72, false)
-
   val ES_INDEX_HOUR_BUCKET = 6
   val ES_INDEX_HOUR_TTL = 72
+
+  private val spansIndexConfiguration = SpansIndexConfiguration(
+    indexNamePrefix = "haystack-traces",
+    indexType = "spans",
+    indexHourTtl = ES_INDEX_HOUR_TTL,
+    indexHourBucket = ES_INDEX_HOUR_BUCKET,
+    useRootDocumentStartTime = false)
+
+
   private val searchRequest = {
-    val generator = new TraceSearchQueryGenerator(esConfig, "spans", new WhitelistIndexFieldConfiguration)
+    val generator = new TraceSearchQueryGenerator(spansIndexConfiguration, "spans", new WhitelistIndexFieldConfiguration)
     val field = Field.newBuilder().setName("serviceName").setValue("expweb").build()
     generator.generate(TracesSearchRequest.newBuilder().setStartTime(1510469157572000l).setEndTime(1510469161172000l).setLimit(40).addFields(field).build(), true)
   }

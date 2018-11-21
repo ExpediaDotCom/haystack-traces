@@ -122,7 +122,7 @@ class ElasticSearchTestClient {
 
   def queryServiceMetadataIndex(query: String): List[EsSourceDocument] = {
     import scala.collection.JavaConverters._
-    val SERVICE_METADATA_INDEX_NAME = "haystack-traces"
+    val SERVICE_METADATA_INDEX_NAME = "service-metadata"
     val SERVICE_METADATA_INDEX_TYPE = "metadata"
     val searchQuery = new Search.Builder(query)
       .addIndex(SERVICE_METADATA_INDEX_NAME)

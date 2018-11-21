@@ -18,21 +18,20 @@ package com.expedia.www.haystack.trace.reader.stores.readers.es.query
 
 import com.expedia.www.haystack.trace.reader.config.entities.ServiceMetadataIndexConfiguration
 import io.searchbox.core.Search
+import org.elasticsearch.index.query.MatchAllQueryBuilder
 import org.elasticsearch.index.query.QueryBuilders.termQuery
-import org.elasticsearch.search.aggregations.bucket.filter.FilterAggregationBuilder
-import org.elasticsearch.search.aggregations.bucket.terms.TermsAggregationBuilder
-import org.elasticsearch.search.aggregations.support.ValueType
 import org.elasticsearch.search.builder.SearchSourceBuilder
 
 class ServiceMetadataQueryGenerator(config: ServiceMetadataIndexConfiguration) {
+  val SERVICE_NAME_KEY = "servicename"
+  val OPERATION_NAME_KEY = "operationname"
 
-
-  def generateQueryForServiceAggregations(): Search = {
+  def generateSearchServiceQuery(): Search = {
     val serviceAggregationQuery = buildServiceAggregationQuery()
     generateSearchQuery(serviceAggregationQuery)
   }
 
-  def generateQueryForOperationAggregations(serviceName: String): Search = {
+  def generateSearchOperationQuery(serviceName: String): Search = {
     val serviceAggregationQuery = buildOperationAggregationQuery(serviceName)
     generateSearchQuery(serviceAggregationQuery)
   }
@@ -44,31 +43,20 @@ class ServiceMetadataQueryGenerator(config: ServiceMetadataIndexConfiguration) {
       .build()
   }
 
-  //TODO ADD the service aggregation query
   private def buildServiceAggregationQuery(): String = {
-    val fieldName = "servicename"
-    val termsAggregationBuilder = new TermsAggregationBuilder(fieldName, ValueType.STRING)
-      .field(fieldName)
+    new SearchSourceBuilder()
+      .query(new MatchAllQueryBuilder())
+      .fetchSource(SERVICE_NAME_KEY,OPERATION_NAME_KEY)
       .size(1000)
-    new SearchSourceBuilder()
-      .aggregation(termsAggregationBuilder)
-      .size(0)
       .toString
   }
 
-  //TODO ADD the operation aggregation query
   private def buildOperationAggregationQuery(serviceName: String): String = {
-    val serviceNameKey = "servicename"
-    val operationNameKey = "operationname"
-    val filterAggregationBuilder = new FilterAggregationBuilder(s"$serviceNameKey", termQuery(serviceNameKey, serviceName))
-      .subAggregation(new TermsAggregationBuilder(s"$operationNameKey", ValueType.STRING)
-        .field(operationNameKey)
-        .size(1000))
+
     new SearchSourceBuilder()
-      .aggregation(filterAggregationBuilder)
-      .size(0)
+      .query(termQuery(SERVICE_NAME_KEY, serviceName))
+      .fetchSource(OPERATION_NAME_KEY,SERVICE_NAME_KEY)
+      .size(1000)
       .toString
   }
-
-
 }

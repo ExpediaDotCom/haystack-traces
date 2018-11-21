@@ -139,36 +139,21 @@ abstract class BaseIntegrationTestSpec extends WordSpec with GivenWhenThen with 
     val operationNamesQuery =
       """
         | {
-        |  "size": 0,
-        |  "aggregations": {
-        |    "servicename": {
-        |      "filter": {
-        |        "term": {
-        |          "servicename": {
-        |            "value": "service0",
-        |            "boost": 1.0
-        |          }
-        |        }
-        |      },
-        |      "aggregations": {
-        |        "operationname": {
-        |          "terms": {
-        |            "size": 1000,
-        |            "min_doc_count": 1,
-        |            "shard_min_doc_count": 0,
-        |            "show_term_doc_count_error": false,
-        |            "order": [
-        |              {
-        |                "_count": "desc"
-        |              },
-        |              {
-        |                "_key": "asc"
-        |              }
-        |            ]
-        |          }
-        |        }
+        |  "query" : {
+        |    "term" : {
+        |      "servicename" : {
+        |        "value" : "service0",
+        |        "boost" : 1.0
         |      }
         |    }
+        |  },
+        |  "_source" : {
+        |    "includes" : [
+        |      "operationname"
+        |    ],
+        |    "excludes" : [
+        |      "servicename"
+        |    ]
         |  }
         |}
       """.stripMargin

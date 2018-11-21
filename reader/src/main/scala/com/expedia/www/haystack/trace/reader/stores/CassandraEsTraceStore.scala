@@ -70,13 +70,14 @@ class CassandraEsTraceStore(cassandraConfig: CassandraConfiguration,
   }
 
   private def extractTraces(result: SearchResult): Future[Seq[Trace]] = {
+    val traceIdKey = "traceid"
 
     // go through each hit and fetch trace for parsed traceId
     val sourceList = result.getSourceAsStringList
     if (sourceList != null && sourceList.size() > 0) {
       val traceIds = sourceList
         .asScala
-        .map(source => extractTraceIdFromSource(source))
+        .map(source => extractStringFieldFromSource(source, traceIdKey))
         .filter(!_.isEmpty)
         .toSet[String] // de-dup traceIds
         .toList
@@ -99,21 +100,23 @@ class CassandraEsTraceStore(cassandraConfig: CassandraConfiguration,
 
     if (request.getFieldName.toLowerCase == TraceIndexDoc.SERVICE_KEY_NAME && request.getFiltersCount == 0) {
       Some(esReader
-        .search(serviceMetadataQueryGenerator.generateQueryForServiceAggregations())
-        .map(extractFieldValues(_, request.getFieldName.toLowerCase))
+        .search(serviceMetadataQueryGenerator.generateSearchServiceQuery())
+        .map(extractServiceMetadataFromSource(_, request.getFieldName.toLowerCase))
       )
     } else if (request.getFieldName.toLowerCase == TraceIndexDoc.OPERATION_KEY_NAME
       && (request.getFiltersCount == 1)
       && request.getFiltersList.get(0).getName.toLowerCase == TraceIndexDoc.SERVICE_KEY_NAME) {
       Some(esReader
-        .search(serviceMetadataQueryGenerator.generateQueryForOperationAggregations(request.getFilters(0).getValue))
-        .map(extractFieldValues(_, request.getFieldName.toLowerCase)))
+        .search(serviceMetadataQueryGenerator.generateSearchOperationQuery(request.getFilters(0).getValue))
+        .map(extractServiceMetadataFromSource(_, request.getFieldName.toLowerCase)))
 
     } else {
       LOGGER.info("read from service metadata request isn't served by cassandra")
       None
     }
   }
+
+
 
   override def getFieldValues(request: FieldValuesRequest): Future[Seq[String]] = {
     readFromServiceMetadata(request).getOrElse(

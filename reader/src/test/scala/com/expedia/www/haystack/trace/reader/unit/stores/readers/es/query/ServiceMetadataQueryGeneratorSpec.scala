@@ -32,7 +32,7 @@ class ServiceMetadataQueryGeneratorSpec extends BaseUnitTestSpec {
       val queryGenerator = new ServiceMetadataQueryGenerator(serviceMetadataIndexConfiguration)
 
       When("asked for aggregated service name")
-      val query = queryGenerator.generateQueryForServiceAggregations()
+      val query = queryGenerator.generateSearchServiceQuery()
 
       Then("generate a valid query")
       query.getType should be(indexType)
@@ -43,7 +43,7 @@ class ServiceMetadataQueryGeneratorSpec extends BaseUnitTestSpec {
       val queryGenerator = new ServiceMetadataQueryGenerator(serviceMetadataIndexConfiguration)
       val serviceName = "test_service"
       When("asked for aggregated operation names")
-      val query = queryGenerator.generateQueryForOperationAggregations(serviceName)
+      val query = queryGenerator.generateSearchOperationQuery(serviceName)
 
       Then("generate a valid query")
       query.getType should be(indexType)

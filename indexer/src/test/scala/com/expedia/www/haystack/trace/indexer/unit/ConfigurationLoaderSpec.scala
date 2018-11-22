@@ -71,13 +71,21 @@ class ConfigurationLoaderSpec extends FunSpec with Matchers {
 
     it("should load the service metadata config from base.conf") {
       val config = project.serviceMetadataWriteConfig
-      config.maxInflight shouldBe 100
       config.flushIntervalInSec shouldBe 60
       config.flushOnMaxOperationCount shouldBe 10000
-      config.consistencyLevel shouldBe ConsistencyLevel.ONE
-      config.enabled shouldBe true
-      config.cassandraKeyspace shouldBe KeyspaceConfiguration("haystack_metadata", "services", 259200, Some("cassandra_cql_schema_2"))
-      config.retryConfig shouldBe RetryOperation.Config(10, 100l, 2.0)
+      config.esEndpoint shouldBe "http://elasticsearch:9200"
+      config.maxInFlightBulkRequests shouldBe 10
+      config.maxDocsInBulk shouldBe 100
+      config.maxBulkDocSizeInBytes shouldBe 1000000
+      config.indexTemplateJson shouldBe Some("some_template_json")
+      config.consistencyLevel shouldBe "one"
+      config.readTimeoutMillis shouldBe 5000
+      config.connectionTimeoutMillis shouldBe 10000
+      config.indexName shouldBe "service-metadata"
+      config.indexType shouldBe "metadata"
+      config.retryConfig.maxRetries shouldBe 10
+      config.retryConfig.backOffInMillis shouldBe 100
+      config.retryConfig.backoffFactor shouldBe 2
     }
 
     it("should load the cassandra config from base.conf and few properties overridden from env variable") {

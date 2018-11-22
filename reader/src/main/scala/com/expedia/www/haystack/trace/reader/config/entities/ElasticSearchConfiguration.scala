@@ -16,13 +16,22 @@
  */
 package com.expedia.www.haystack.trace.reader.config.entities
 
-case class ElasticSearchConfiguration(endpoint: String,
-                                      username: Option[String],
-                                      password: Option[String],
-                                      indexNamePrefix: String,
-                                      indexType: String,
-                                      connectionTimeoutMillis: Int,
-                                      readTimeoutMillis: Int,
-                                      indexHourBucket: Int,
-                                      indexHourTtl: Int,
-                                      useRootDocumentStartTime: Boolean)
+case class ElasticSearchClientConfiguration(endpoint: String,
+                                            username: Option[String],
+                                            password: Option[String],
+                                            connectionTimeoutMillis: Int,
+                                            readTimeoutMillis: Int)
+
+case class SpansIndexConfiguration(indexNamePrefix: String,
+                                   indexType: String,
+                                   indexHourTtl: Int,
+                                   indexHourBucket: Int,
+                                   useRootDocumentStartTime: Boolean)
+
+case class ServiceMetadataIndexConfiguration(enabled: Boolean,
+                                             indexName: String,
+                                             indexType: String)
+
+case class ElasticSearchConfiguration(clientConfiguration: ElasticSearchClientConfiguration,
+                                      spansIndexConfiguration: SpansIndexConfiguration,
+                                      serviceMetadataIndexConfiguration: ServiceMetadataIndexConfiguration)

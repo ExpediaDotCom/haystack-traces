@@ -18,19 +18,19 @@ package com.expedia.www.haystack.trace.reader.stores.readers.es.query
 
 import com.expedia.open.tracing.api.FieldValuesRequest
 import com.expedia.www.haystack.trace.commons.config.entities.WhitelistIndexFieldConfiguration
-import com.expedia.www.haystack.trace.reader.config.entities.ElasticSearchConfiguration
+import com.expedia.www.haystack.trace.reader.config.entities.{ElasticSearchClientConfiguration, SpansIndexConfiguration}
 import io.searchbox.core.Search
 import org.elasticsearch.search.builder.SearchSourceBuilder
 
-class FieldValuesQueryGenerator(esConfig: ElasticSearchConfiguration,
+class FieldValuesQueryGenerator(config: SpansIndexConfiguration,
                                 nestedDocName: String,
                                 indexConfiguration: WhitelistIndexFieldConfiguration)
-  extends QueryGenerator(nestedDocName, indexConfiguration) {
+  extends SpansIndexQueryGenerator(nestedDocName, indexConfiguration) {
 
   def generate(request: FieldValuesRequest): Search = {
     new Search.Builder(buildQueryString(request))
-      .addIndex(s"${esConfig.indexNamePrefix}*")
-      .addType(esConfig.indexType)
+      .addIndex(s"${config.indexNamePrefix}*")
+      .addType(config.indexType)
       .build()
   }
 

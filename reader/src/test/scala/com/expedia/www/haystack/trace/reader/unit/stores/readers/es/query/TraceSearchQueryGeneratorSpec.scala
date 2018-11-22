@@ -18,7 +18,7 @@ package com.expedia.www.haystack.trace.reader.unit.stores.readers.es.query
 import com.expedia.open.tracing.api.{Field, TracesSearchRequest}
 import com.expedia.www.haystack.trace.commons.clients.es.document.TraceIndexDoc
 import com.expedia.www.haystack.trace.commons.config.entities.WhitelistIndexFieldConfiguration
-import com.expedia.www.haystack.trace.reader.config.entities.ElasticSearchConfiguration
+import com.expedia.www.haystack.trace.reader.config.entities.SpansIndexConfiguration
 import com.expedia.www.haystack.trace.reader.stores.readers.es.ESUtils._
 import com.expedia.www.haystack.trace.reader.stores.readers.es.query.TraceSearchQueryGenerator
 import com.expedia.www.haystack.trace.reader.unit.BaseUnitTestSpec
@@ -27,7 +27,12 @@ import io.searchbox.core.Search
 import org.scalatest.BeforeAndAfterEach
 
 class TraceSearchQueryGeneratorSpec extends BaseUnitTestSpec with BeforeAndAfterEach {
-  private val esConfig = ElasticSearchConfiguration("endpoint", None, None, "haystack-traces", "spans", 5000, 5000, 6, 72, false)
+  private val spansIndexConfiguration = SpansIndexConfiguration(
+    indexNamePrefix = "haystack-traces",
+    indexType = "spans",
+    indexHourTtl = 72,
+    indexHourBucket = 6,
+    useRootDocumentStartTime = false)
 
   var timezone: String = _
 
@@ -53,7 +58,7 @@ class TraceSearchQueryGeneratorSpec extends BaseUnitTestSpec with BeforeAndAfter
         .setEndTime(System.currentTimeMillis() * 1000)
         .setLimit(10)
         .build()
-      val queryGenerator = new TraceSearchQueryGenerator(esConfig, "spans", new WhitelistIndexFieldConfiguration)
+      val queryGenerator = new TraceSearchQueryGenerator(spansIndexConfiguration, "spans", new WhitelistIndexFieldConfiguration)
 
       When("generating query")
       val query = queryGenerator.generate(request)
@@ -73,7 +78,7 @@ class TraceSearchQueryGeneratorSpec extends BaseUnitTestSpec with BeforeAndAfter
         .setEndTime(System.currentTimeMillis() * 1000)
         .setLimit(10)
         .build()
-      val queryGenerator = new TraceSearchQueryGenerator(esConfig, "spans", new WhitelistIndexFieldConfiguration)
+      val queryGenerator = new TraceSearchQueryGenerator(spansIndexConfiguration, "spans", new WhitelistIndexFieldConfiguration)
 
       When("generating query")
       val query: Search = queryGenerator.generate(request)
@@ -93,7 +98,7 @@ class TraceSearchQueryGeneratorSpec extends BaseUnitTestSpec with BeforeAndAfter
         .setLimit(10)
         .build()
 
-      val queryGenerator = new TraceSearchQueryGenerator(esConfig, "spans", new WhitelistIndexFieldConfiguration)
+      val queryGenerator = new TraceSearchQueryGenerator(spansIndexConfiguration, "spans", new WhitelistIndexFieldConfiguration)
 
       When("generating query")
       val query: Search = queryGenerator.generate(request)
@@ -105,8 +110,8 @@ class TraceSearchQueryGeneratorSpec extends BaseUnitTestSpec with BeforeAndAfter
     it("should generate valid search queries for expression tree based searches with span level searches") {
       Given("a trace search request")
 
-      val startTime = 1531454400L * 1000 * 1000  // July 13, 2018 04:00:00 AM (in microSec)
-      val endTime = 1531476000L * 1000 * 1000    // July 13, 2018 10:00:00 AM (in microSec)
+      val startTime = 1531454400L * 1000 * 1000 // July 13, 2018 04:00:00 AM (in microSec)
+      val endTime = 1531476000L * 1000 * 1000 // July 13, 2018 10:00:00 AM (in microSec)
 
       val request = TracesSearchRequest
         .newBuilder()
@@ -116,7 +121,7 @@ class TraceSearchQueryGeneratorSpec extends BaseUnitTestSpec with BeforeAndAfter
         .setLimit(10)
         .build()
 
-      val queryGenerator = new TraceSearchQueryGenerator(esConfig, "spans", new WhitelistIndexFieldConfiguration)
+      val queryGenerator = new TraceSearchQueryGenerator(spansIndexConfiguration, "spans", new WhitelistIndexFieldConfiguration)
 
       When("generating query")
       val query: Search = queryGenerator.generate(request)
@@ -131,7 +136,7 @@ class TraceSearchQueryGeneratorSpec extends BaseUnitTestSpec with BeforeAndAfter
       System.setProperty("user.timezone", "CST")
 
       When("getting the indexes")
-      val esIndexes = new TraceSearchQueryGenerator(esConfig, "spans", new WhitelistIndexFieldConfiguration).getESIndexes(1530806291394000L, 1530820646394000L, "haystack-traces", 4, 24)
+      val esIndexes = new TraceSearchQueryGenerator(spansIndexConfiguration, "spans", new WhitelistIndexFieldConfiguration).getESIndexes(1530806291394000L, 1530820646394000L, "haystack-traces", 4, 24)
 
       Then("they are correct based off of UTC")
       esIndexes shouldBe Vector("haystack-traces-2018-07-05-3", "haystack-traces-2018-07-05-4")
@@ -148,7 +153,7 @@ class TraceSearchQueryGeneratorSpec extends BaseUnitTestSpec with BeforeAndAfter
         .setLimit(10)
         .build()
 
-      val queryGenerator = new TraceSearchQueryGenerator(esConfig, "spans", new WhitelistIndexFieldConfiguration)
+      val queryGenerator = new TraceSearchQueryGenerator(spansIndexConfiguration, "spans", new WhitelistIndexFieldConfiguration)
 
       When("generating query")
       val query: Search = queryGenerator.generate(request, false)

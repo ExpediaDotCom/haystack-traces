@@ -32,8 +32,6 @@ import scala.reflect.ClassTag
 class ProviderConfiguration {
   private val config: Config = ConfigurationLoader.loadConfigFileWithEnvOverrides()
 
-  val healthStatusFilePath: String = config.getString("health.status.path")
-
   val serviceConfig: ServiceConfiguration = {
     val serviceConfig = config.getConfig("service")
 
@@ -87,36 +85,56 @@ class ProviderConfiguration {
       socket)
   }
 
-  val serviceMetadataConfig: ServiceMetadataReadConfiguration = {
-    val metadataCfg = config.getConfig("service.metadata")
-    val keyspace = metadataCfg.getConfig("cassandra.keyspace")
-
-    ServiceMetadataReadConfiguration(
-      metadataCfg.getBoolean("enabled"),
-      KeyspaceConfiguration(keyspace.getString("name"), keyspace.getString("table.name")))
-  }
 
   /**
     * ElasticSearch configuration
     */
-  val elasticSearchConfig: ElasticSearchConfiguration = {
-    val es = config.getConfig("elasticsearch")
-    val indexConfig = es.getConfig("index")
 
-    val ausername = if (es.hasPath("username")) { Option(es.getString("username")) } else None
-    val apassword = if (es.hasPath("password")) { Option(es.getString("password")) } else None
 
-    ElasticSearchConfiguration(
+  private val elasticSearchClientConfig: ElasticSearchClientConfiguration = {
+    val es = config.getConfig("elasticsearch.client")
+
+    val username = if (es.hasPath("username")) {
+      Option(es.getString("username"))
+    } else None
+    val password = if (es.hasPath("password")) {
+      Option(es.getString("password"))
+    } else None
+
+    ElasticSearchClientConfiguration(
       endpoint = es.getString("endpoint"),
-      username = ausername,
-      password = apassword,
+      username = username,
+      password = password,
+      connectionTimeoutMillis = es.getInt("conn.timeout.ms"),
+      readTimeoutMillis = es.getInt("read.timeout.ms")
+    )
+  }
+  private val spansIndexConfiguration: SpansIndexConfiguration = {
+    val indexConfig = config.getConfig("elasticsearch.index.spans")
+    SpansIndexConfiguration(
       indexNamePrefix = indexConfig.getString("name.prefix"),
       indexType = indexConfig.getString("type"),
-      es.getInt("conn.timeout.ms"),
-      es.getInt("read.timeout.ms"),
       indexHourBucket = indexConfig.getInt("hour.bucket"),
       indexHourTtl = indexConfig.getInt("hour.ttl"),
-      useRootDocumentStartTime = es.getBoolean("use.root.doc.starttime"))
+      useRootDocumentStartTime = indexConfig.getBoolean("use.root.doc.starttime")
+    )
+  }
+  private val serviceMetadataIndexConfig: ServiceMetadataIndexConfiguration = {
+    val metadataCfg = config.getConfig("elasticsearch.index.service.metadata")
+
+    ServiceMetadataIndexConfiguration(
+      metadataCfg.getBoolean("enabled"),
+      metadataCfg.getString("name"),
+      metadataCfg.getString("type"))
+  }
+
+
+  val elasticSearchConfiguration: ElasticSearchConfiguration = {
+    ElasticSearchConfiguration(
+      clientConfiguration = elasticSearchClientConfig,
+      spansIndexConfiguration = spansIndexConfiguration,
+      serviceMetadataIndexConfiguration = serviceMetadataIndexConfig
+    )
   }
 
   private def toInstances[T](classes: util.List[String])(implicit ct: ClassTag[T]): scala.Seq[T] = {
@@ -162,14 +180,14 @@ class ProviderConfiguration {
   /**
     * configuration that contains list of tags that should be indexed for a span
     */
-  val indexConfig: WhitelistIndexFieldConfiguration = {
-    val indexConfig = WhitelistIndexFieldConfiguration()
-    indexConfig.reloadConfigTableName = Option(config.getConfig("reload.tables").getString("index.fields.config"))
-    indexConfig
+  val whitelistedFieldsConfig: WhitelistIndexFieldConfiguration = {
+    val whitelistedFieldsConfig = WhitelistIndexFieldConfiguration()
+    whitelistedFieldsConfig.reloadConfigTableName = Option(config.getConfig("reload.tables").getString("index.fields.config"))
+    whitelistedFieldsConfig
   }
 
   // configuration reloader
-  registerReloadableConfigurations(List(indexConfig))
+  registerReloadableConfigurations(List(whitelistedFieldsConfig))
 
   /**
     * registers a reloadable config object to reloader instance.
@@ -185,8 +203,12 @@ class ProviderConfiguration {
       reload.getString("config.endpoint"),
       reload.getString("config.database.name"),
       reload.getInt("interval.ms"),
-      if(reload.hasPath("config.username")){ Option(reload.getString("config.username")) } else None,
-      if(reload.hasPath("config.password")){ Option(reload.getString("config.password")) } else None,
+      if (reload.hasPath("config.username")) {
+        Option(reload.getString("config.username"))
+      } else None,
+      if (reload.hasPath("config.password")) {
+        Option(reload.getString("config.password"))
+      } else None,
       observers,
       loadOnStartup = reload.getBoolean("startup.load"))
 

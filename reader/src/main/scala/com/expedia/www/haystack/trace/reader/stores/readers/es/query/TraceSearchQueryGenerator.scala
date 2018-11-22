@@ -19,7 +19,7 @@ package com.expedia.www.haystack.trace.reader.stores.readers.es.query
 import com.expedia.open.tracing.api.TracesSearchRequest
 import com.expedia.www.haystack.trace.commons.clients.es.document.TraceIndexDoc._
 import com.expedia.www.haystack.trace.commons.config.entities.WhitelistIndexFieldConfiguration
-import com.expedia.www.haystack.trace.reader.config.entities.ElasticSearchConfiguration
+import com.expedia.www.haystack.trace.reader.config.entities.{ElasticSearchClientConfiguration, SpansIndexConfiguration}
 import io.searchbox.core.Search
 import org.apache.lucene.search.join.ScoreMode
 import org.elasticsearch.index.query.QueryBuilders._
@@ -28,10 +28,10 @@ import org.elasticsearch.search.sort.{FieldSortBuilder, SortOrder}
 
 import scala.collection.JavaConverters._
 
-class TraceSearchQueryGenerator(esConfig: ElasticSearchConfiguration,
+class TraceSearchQueryGenerator(config: SpansIndexConfiguration,
                                 nestedDocName: String,
                                 indexConfiguration: WhitelistIndexFieldConfiguration)
-  extends QueryGenerator(nestedDocName, indexConfiguration) {
+  extends SpansIndexQueryGenerator(nestedDocName, indexConfiguration) {
 
   def generate(request: TracesSearchRequest, useSpecificIndices: Boolean): Search = {
     require(request.getStartTime > 0)
@@ -42,8 +42,8 @@ class TraceSearchQueryGenerator(esConfig: ElasticSearchConfiguration,
       generate(request)
     } else {
       new Search.Builder(buildQueryString(request))
-        .addIndex(esConfig.indexNamePrefix)
-        .addType(esConfig.indexType)
+        .addIndex(config.indexNamePrefix)
+        .addType(config.indexType)
         .build()
     }
   }
@@ -56,13 +56,13 @@ class TraceSearchQueryGenerator(esConfig: ElasticSearchConfiguration,
     val targetIndicesToSearch = getESIndexes(
       request.getStartTime,
       request.getEndTime,
-      esConfig.indexNamePrefix,
-      esConfig.indexHourBucket,
-      esConfig.indexHourTtl).asJava
+      config.indexNamePrefix,
+      config.indexHourBucket,
+      config.indexHourTtl).asJava
 
     new Search.Builder(buildQueryString(request))
       .addIndex(targetIndicesToSearch)
-      .addType(esConfig.indexType)
+      .addType(config.indexType)
       .build()
   }
 
@@ -73,7 +73,7 @@ class TraceSearchQueryGenerator(esConfig: ElasticSearchConfiguration,
       else
         createFilterFieldBasedQuery(request.getFieldsList)
 
-    if(esConfig.useRootDocumentStartTime) {
+    if(config.useRootDocumentStartTime) {
       query
         .must(rangeQuery(START_TIME_KEY_NAME)
           .gte(request.getStartTime)
@@ -87,7 +87,7 @@ class TraceSearchQueryGenerator(esConfig: ElasticSearchConfiguration,
     }
 
     val sortBuilder =
-      if(esConfig.useRootDocumentStartTime) {
+      if(config.useRootDocumentStartTime) {
         new FieldSortBuilder(START_TIME_KEY_NAME).order(SortOrder.DESC)
       }
       else {

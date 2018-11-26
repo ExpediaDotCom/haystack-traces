@@ -45,7 +45,9 @@ abstract class SpansIndexQueryGenerator(nestedDocName: String, indexConfiguratio
       .partition(f => traceContextWhitelistFields.contains(f.getName.toLowerCase))
 
     val query = boolQuery()
+
     createNestedQuery(serviceContextFields).map(query.filter)
+
     traceContextFields.foreach(f => {
       query.filter(createNestedQuery(Seq(f)).get)
     })

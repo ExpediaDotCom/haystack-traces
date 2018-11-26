@@ -24,10 +24,9 @@ import com.expedia.www.haystack.trace.indexer.StreamRunner
 import org.apache.kafka.streams.KeyValue
 import org.apache.kafka.streams.integration.utils.IntegrationTestUtils
 
-import scala.collection.JavaConverters._
 import scala.concurrent.duration._
 
-class MultipleTraceIndexingTopologySpec extends BaseIntegrationTestSpec {
+class ServiceMetadataIndexingTopologySpec extends BaseIntegrationTestSpec {
   private val MAX_CHILD_SPANS_PER_TRACE = 5
   private val TRACE_ID_1 = "traceid-1"
   private val TRACE_ID_2 = "traceid-2"
@@ -35,8 +34,8 @@ class MultipleTraceIndexingTopologySpec extends BaseIntegrationTestSpec {
   private val SPAN_ID_PREFIX_2 = TRACE_ID_2 + "span-id-"
 
   "Trace Indexing Topology" should {
-    s"consume spans from input '${kafka.INPUT_TOPIC}' and buffer them together for every unique traceId and write to cassandra and elastic search" in {
-      Given("a set of spans with two different traceIds and project configurations")
+    s"consume spans from input '${kafka.INPUT_TOPIC}' and buffer them together for every service operation combination and write to elastic search elastic" in {
+      Given("a set of spans with different serviceNames and a project configurations")
       val kafkaConfig = kafka.buildConfig
       val esConfig = elastic.buildConfig
       val indexTagsConfig = elastic.indexingConfig
@@ -55,34 +54,15 @@ class MultipleTraceIndexingTopologySpec extends BaseIntegrationTestSpec {
       val topology = new StreamRunner(kafkaConfig, spanAccumulatorConfig, esConfig, cassandraConfig, serviceMetadataConfig, indexTagsConfig)
       topology.start()
 
-      Then(s"we should read two span buffers with different traceIds from '${kafka.OUTPUT_TOPIC}' topic and same should be read from cassandra and elastic search")
+      Then(s"we should read two multiple service operation combinations in elastic search")
       try {
         val result: util.List[KeyValue[String, SpanBuffer]] =
           IntegrationTestUtils.waitUntilMinKeyValueRecordsReceived(kafka.RESULT_CONSUMER_CONFIG, kafka.OUTPUT_TOPIC, 2, MAX_WAIT_FOR_OUTPUT_MS)
-
-        validateKafkaOutput(result.asScala, MAX_CHILD_SPANS_PER_TRACE)
-
         Thread.sleep(6000)
-        verifyCassandraWrites(traceDescriptions, MAX_CHILD_SPANS_PER_TRACE, MAX_CHILD_SPANS_PER_TRACE)
-        verifyElasticSearchWrites(Seq(TRACE_ID_1, TRACE_ID_2))
+        verifyOperationNames()
       } finally {
         topology.close()
       }
     }
-  }
-
-  // validate the kafka output
-  private def validateKafkaOutput(records: Iterable[KeyValue[String, SpanBuffer]], childSpanCount: Int): Unit = {
-    records.size shouldBe 2
-
-    // both traceIds should be present as different span buffer objects
-    records.map(_.key) should contain allOf (TRACE_ID_1, TRACE_ID_2)
-
-    records.foreach(record => {
-      record.key match {
-        case TRACE_ID_1 => validateChildSpans(record.value, TRACE_ID_1, SPAN_ID_PREFIX_1, MAX_CHILD_SPANS_PER_TRACE)
-        case TRACE_ID_2 => validateChildSpans(record.value, TRACE_ID_2, SPAN_ID_PREFIX_2, MAX_CHILD_SPANS_PER_TRACE)
-      }
-    })
   }
 }

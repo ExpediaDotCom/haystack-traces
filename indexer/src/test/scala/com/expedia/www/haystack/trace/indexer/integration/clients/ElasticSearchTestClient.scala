@@ -21,8 +21,8 @@ import java.text.SimpleDateFormat
 import java.util.Date
 
 import com.expedia.www.haystack.commons.retries.RetryOperation
-import com.expedia.www.haystack.trace.commons.config.entities.{IndexFieldType, WhiteListIndexFields, WhitelistIndexField, WhitelistIndexFieldConfiguration}
-import com.expedia.www.haystack.trace.indexer.config.entities.ElasticSearchConfiguration
+import com.expedia.www.haystack.trace.commons.config.entities._
+import com.expedia.www.haystack.trace.indexer.config.entities.{ElasticSearchConfiguration, ServiceMetadataWriteConfiguration}
 import io.searchbox.client.config.HttpClientConfig
 import io.searchbox.client.{JestClient, JestClientFactory}
 import io.searchbox.core.Search
@@ -37,13 +37,13 @@ class ElasticSearchTestClient {
   protected implicit val formats: Formats = DefaultFormats + new EnumNameSerializer(IndexFieldType)
 
   private val ELASTIC_SEARCH_ENDPOINT = "http://elasticsearch:9200"
-  private val INDEX_NAME_PREFIX = "haystack-traces"
-  private val INDEX_TYPE = "spans"
-  private val INDEX_HOUR_BUCKET = 6
+  private val SPANS_INDEX_NAME_PREFIX = "haystack-traces"
+  private val SPANS_INDEX_TYPE = "spans"
+  private val SPANS_INDEX_HOUR_BUCKET = 6
 
   private val HAYSTACK_TRACES_INDEX = {
     val formatter = new SimpleDateFormat("yyyy-MM-dd")
-    s"$INDEX_NAME_PREFIX-${formatter.format(new Date())}"
+    s"$SPANS_INDEX_NAME_PREFIX-${formatter.format(new Date())}"
   }
 
   private val esClient: JestClient = {
@@ -54,7 +54,7 @@ class ElasticSearchTestClient {
 
   def prepare(): Unit = {
     // drop the haystack-traces-<today's date> index
-    0 until (24 / INDEX_HOUR_BUCKET) foreach {
+    0 until (24 / SPANS_INDEX_HOUR_BUCKET) foreach {
       idx => {
         esClient.execute(new DeleteIndex.Builder(s"$HAYSTACK_TRACES_INDEX-$idx").build())
       }
@@ -67,15 +67,35 @@ class ElasticSearchTestClient {
     None,
     Some(INDEX_TEMPLATE),
     "one",
-    INDEX_NAME_PREFIX,
-    INDEX_HOUR_BUCKET,
-    INDEX_TYPE,
+    SPANS_INDEX_NAME_PREFIX,
+    SPANS_INDEX_HOUR_BUCKET,
+    SPANS_INDEX_TYPE,
     3000,
     3000,
     10,
     10,
     10,
     RetryOperation.Config(3, 2000, 2))
+
+  def buildServiceMetadataConfig: ServiceMetadataWriteConfiguration = {
+    ServiceMetadataWriteConfiguration(enabled = true,
+      esEndpoint = ELASTIC_SEARCH_ENDPOINT,
+      username = None,
+      password = None,
+      consistencyLevel = "one",
+      indexTemplateJson = Some(INDEX_TEMPLATE),
+      indexName = "service-metadata",
+      indexType = "metadata",
+      connectionTimeoutMillis = 3000,
+      readTimeoutMillis = 3000,
+      maxInFlightBulkRequests = 10,
+      maxDocsInBulk = 5,
+      maxBulkDocSizeInBytes = 50,
+      flushIntervalInSec = 10,
+      flushOnMaxOperationCount = 10,
+      retryConfig = RetryOperation.Config(10, 250, 2))
+  }
+
 
   def indexingConfig: WhitelistIndexFieldConfiguration = {
     val cfg = WhitelistIndexFieldConfiguration()
@@ -85,15 +105,32 @@ class ElasticSearchTestClient {
     cfg
   }
 
-  def query(query: String): List[EsSourceDocument] = {
+  def querySpansIndex(query: String): List[EsSourceDocument] = {
     import scala.collection.JavaConverters._
     val searchQuery = new Search.Builder(query)
-      .addIndex(INDEX_NAME_PREFIX)
-      .addType(INDEX_TYPE)
+      .addIndex(SPANS_INDEX_NAME_PREFIX)
+      .addType(SPANS_INDEX_TYPE)
       .build()
     val result = esClient.execute(searchQuery)
-    if(result.getSourceAsStringList != null && result.getSourceAsStringList.size() > 0) {
+    if (result.getSourceAsStringList != null && result.getSourceAsStringList.size() > 0) {
       result.getSourceAsStringList.asScala.map(Serialization.read[EsSourceDocument]).toList
+    }
+    else {
+      Nil
+    }
+  }
+
+  def queryServiceMetadataIndex(query: String): List[String] = {
+    import scala.collection.JavaConverters._
+    val SERVICE_METADATA_INDEX_NAME = "service-metadata"
+    val SERVICE_METADATA_INDEX_TYPE = "metadata"
+    val searchQuery = new Search.Builder(query)
+      .addIndex(SERVICE_METADATA_INDEX_NAME)
+      .addType(SERVICE_METADATA_INDEX_TYPE)
+      .build()
+    val result = esClient.execute(searchQuery)
+    if (result.getSourceAsStringList != null && result.getSourceAsStringList.size() > 0) {
+      result.getSourceAsStringList.asScala.toList
     }
     else {
       Nil

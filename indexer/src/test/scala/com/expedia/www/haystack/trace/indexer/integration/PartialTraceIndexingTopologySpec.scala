@@ -39,7 +39,7 @@ class PartialTraceIndexingTopologySpec extends BaseIntegrationTestSpec {
       val esConfig = elastic.buildConfig
       val indexTagsConfig = elastic.indexingConfig
       val cassandraConfig = cassandra.buildConfig
-      val serviceMetadataConfig = cassandra.buildServiceMetadataConfig
+      val serviceMetadataConfig = elastic.buildServiceMetadataConfig
       val traceDescription = List(TraceDescription(TRACE_ID, SPAN_ID_PREFIX))
 
       When(s"spans are produced in '${kafka.INPUT_TOPIC}' topic async, and kafka-streams topology is started")

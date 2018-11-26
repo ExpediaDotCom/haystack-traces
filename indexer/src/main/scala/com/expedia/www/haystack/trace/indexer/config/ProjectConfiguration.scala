@@ -146,7 +146,7 @@ class ProjectConfiguration extends AutoCloseable {
       val consistencyLevelOnErrorList = scala.collection.mutable.ListBuffer[(Class[_], ConsistencyLevel)]()
 
       var idx = 0
-      while(idx < consistencyLevelOnErrors.size()) {
+      while (idx < consistencyLevelOnErrors.size()) {
         val errorClass = consistencyLevelOnErrors.get(idx)
         val level = consistencyLevelOnErrors.get(idx + 1)
         consistencyLevelOnErrorList.+=((Class.forName(errorClass), toConsistencyLevel(level)))
@@ -210,17 +210,38 @@ class ProjectConfiguration extends AutoCloseable {
     */
   val serviceMetadataWriteConfig: ServiceMetadataWriteConfiguration = {
     val serviceMetadata = config.getConfig("service.metadata")
+    val es = serviceMetadata.getConfig("es")
+    val templateJsonConfigField = "index.template.json"
+    val indexTemplateJson = if (es.hasPath(templateJsonConfigField)
+      && StringUtils.isNotEmpty(es.getString(templateJsonConfigField))) {
+      Some(es.getString(templateJsonConfigField))
+    } else {
+      None
+    }
+    val username = if (es.hasPath("username")) Option(es.getString("username")) else None
+    val password = if (es.hasPath("password")) Option(es.getString("password")) else None
     ServiceMetadataWriteConfiguration(
-      serviceMetadata.getBoolean("enabled"),
-      maxInflight = serviceMetadata.getInt("max.inflight.requests"),
+      enabled = serviceMetadata.getBoolean("enabled"),
       flushIntervalInSec = serviceMetadata.getInt("flush.interval.sec"),
       flushOnMaxOperationCount = serviceMetadata.getInt("flush.operation.count"),
-      RetryOperation.Config(
-        serviceMetadata.getInt("retries.max"),
-        serviceMetadata.getLong("retries.backoff.initial.ms"),
-        serviceMetadata.getDouble("retries.backoff.factor")),
-      ConsistencyLevel.ONE,
-      keyspaceConfig(serviceMetadata.getConfig("cassandra.keyspace"), serviceMetadata.getInt("ttl.sec")))
+      esEndpoint = es.getString("endpoint"),
+      username = username,
+      password = password,
+      consistencyLevel = es.getString("consistency.level"),
+      indexName = es.getString("index.name"),
+      indexType = es.getString("index.type"),
+      indexTemplateJson = indexTemplateJson,
+
+      connectionTimeoutMillis = es.getInt("conn.timeout.ms"),
+      readTimeoutMillis = es.getInt("read.timeout.ms"),
+      maxInFlightBulkRequests = es.getInt("bulk.max.inflight"),
+      maxDocsInBulk = es.getInt("bulk.max.docs.count"),
+      maxBulkDocSizeInBytes = es.getInt("bulk.max.docs.size.kb") * 1000,
+      retryConfig = RetryOperation.Config(
+        es.getInt("retries.max"),
+        es.getLong("retries.backoff.initial.ms"),
+        es.getDouble("retries.backoff.factor"))
+    )
   }
 
   /**
@@ -287,8 +308,8 @@ class ProjectConfiguration extends AutoCloseable {
       reload.getString("config.endpoint"),
       reload.getString("config.database.name"),
       reload.getInt("interval.ms"),
-      if(reload.hasPath("config.username")) Option(reload.getString("config.username")) else None ,
-      if(reload.hasPath("config.password")) Option(reload.getString("config.password")) else None,
+      if (reload.hasPath("config.username")) Option(reload.getString("config.username")) else None,
+      if (reload.hasPath("config.password")) Option(reload.getString("config.password")) else None,
       observers,
       loadOnStartup = reload.getBoolean("startup.load"))
 

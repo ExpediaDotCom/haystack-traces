@@ -21,13 +21,14 @@ import java.io.{ByteArrayInputStream, ByteArrayOutputStream, OutputStream}
 import java.util.zip.GZIPOutputStream
 
 import com.expedia.www.haystack.trace.commons.packer.PackerType.PackerType
+import com.github.luben.zstd.ZstdOutputStream
 import com.google.protobuf.GeneratedMessageV3
 import org.apache.commons.io.IOUtils
 import org.xerial.snappy.SnappyOutputStream
 
 object PackerType extends Enumeration {
   type PackerType = Value
-  val GZIP, SNAPPY, NONE = Value
+  val GZIP, SNAPPY, NONE, ZSTD = Value
 }
 
 case class PackedMetadata(t: PackerType)
@@ -62,6 +63,12 @@ class NoopPacker[T <: GeneratedMessageV3] extends Packer[T] {
 class SnappyPacker[T <: GeneratedMessageV3] extends Packer[T] {
   override val packerType = PackerType.SNAPPY
   override protected def compressStream(stream: OutputStream): OutputStream = new SnappyOutputStream(stream)
+}
+
+
+class ZstdPacker[T <: GeneratedMessageV3] extends Packer[T] {
+  override val packerType = PackerType.ZSTD
+  override protected def compressStream(stream: OutputStream): OutputStream = new ZstdOutputStream(stream)
 }
 
 class GzipPacker[T <: GeneratedMessageV3] extends Packer[T] {

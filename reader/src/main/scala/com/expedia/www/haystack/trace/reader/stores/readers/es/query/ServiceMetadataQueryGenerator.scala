@@ -47,7 +47,7 @@ class ServiceMetadataQueryGenerator(config: ServiceMetadataIndexConfiguration) {
     new SearchSourceBuilder()
       .query(new MatchAllQueryBuilder())
       .fetchSource(SERVICE_NAME_KEY,OPERATION_NAME_KEY)
-      .size(1000)
+      .size(10000)
       .toString
   }
 
@@ -56,7 +56,7 @@ class ServiceMetadataQueryGenerator(config: ServiceMetadataIndexConfiguration) {
     new SearchSourceBuilder()
       .query(termQuery(SERVICE_NAME_KEY, serviceName))
       .fetchSource(OPERATION_NAME_KEY,SERVICE_NAME_KEY)
-      .size(1000)
+      .size(10000)
       .toString
   }
 }

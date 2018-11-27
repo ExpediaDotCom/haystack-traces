@@ -34,7 +34,7 @@ import org.elasticsearch.search.aggregations.support.ValueType
 
 import scala.collection.JavaConverters._
 
-abstract class QueryGenerator(nestedDocName: String, indexConfiguration: WhitelistIndexFieldConfiguration) {
+abstract class SpansIndexQueryGenerator(nestedDocName: String, indexConfiguration: WhitelistIndexFieldConfiguration) {
   private final val TIME_ZONE = TimeZone.getTimeZone("UTC")
 
   // create search query by using filters list
@@ -45,7 +45,9 @@ abstract class QueryGenerator(nestedDocName: String, indexConfiguration: Whiteli
       .partition(f => traceContextWhitelistFields.contains(f.getName.toLowerCase))
 
     val query = boolQuery()
+
     createNestedQuery(serviceContextFields).map(query.filter)
+
     traceContextFields.foreach(f => {
       query.filter(createNestedQuery(Seq(f)).get)
     })

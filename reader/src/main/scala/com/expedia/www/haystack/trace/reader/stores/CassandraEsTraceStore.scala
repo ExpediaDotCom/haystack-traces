@@ -20,12 +20,11 @@ import com.expedia.open.tracing.api._
 import com.expedia.www.haystack.trace.commons.clients.cassandra.{CassandraClusterFactory, CassandraSession}
 import com.expedia.www.haystack.trace.commons.clients.es.document.TraceIndexDoc
 import com.expedia.www.haystack.trace.commons.config.entities.{CassandraConfiguration, WhitelistIndexFieldConfiguration}
-import com.expedia.www.haystack.trace.reader.config.entities.{ElasticSearchConfiguration, ServiceMetadataReadConfiguration}
+import com.expedia.www.haystack.trace.reader.config.entities.ElasticSearchConfiguration
 import com.expedia.www.haystack.trace.reader.metrics.MetricsSupport
-import com.expedia.www.haystack.trace.reader.stores.readers.ServiceMetadataReader
 import com.expedia.www.haystack.trace.reader.stores.readers.cassandra.CassandraTraceReader
 import com.expedia.www.haystack.trace.reader.stores.readers.es.ElasticSearchReader
-import com.expedia.www.haystack.trace.reader.stores.readers.es.query.{FieldValuesQueryGenerator, TraceCountsQueryGenerator, TraceSearchQueryGenerator}
+import com.expedia.www.haystack.trace.reader.stores.readers.es.query.{FieldValuesQueryGenerator, ServiceMetadataQueryGenerator, TraceCountsQueryGenerator, TraceSearchQueryGenerator}
 import io.searchbox.core.SearchResult
 import org.elasticsearch.index.IndexNotFoundException
 import org.slf4j.LoggerFactory
@@ -34,21 +33,19 @@ import scala.collection.JavaConverters._
 import scala.concurrent.{ExecutionContextExecutor, Future}
 
 class CassandraEsTraceStore(cassandraConfig: CassandraConfiguration,
-                            serviceMetadataConfig: ServiceMetadataReadConfiguration,
-                            esConfig: ElasticSearchConfiguration,
-                            indexConfig: WhitelistIndexFieldConfiguration)(implicit val executor: ExecutionContextExecutor)
+                            elasticSearchConfiguration: ElasticSearchConfiguration,
+                            whitelistedFieldsConfiguration: WhitelistIndexFieldConfiguration)(implicit val executor: ExecutionContextExecutor)
   extends TraceStore with MetricsSupport with ResponseParser {
 
   private val LOGGER = LoggerFactory.getLogger(classOf[ElasticSearchReader])
 
   private val cassandraSession = new CassandraSession(cassandraConfig, new CassandraClusterFactory)
   private val cassandraReader: CassandraTraceReader = new CassandraTraceReader(cassandraSession, cassandraConfig)
-  private val esReader: ElasticSearchReader = new ElasticSearchReader(esConfig)
-  private val serviceMetadataReader: ServiceMetadataReader = new ServiceMetadataReader(cassandraSession, serviceMetadataConfig)
-
-  private val traceSearchQueryGenerator = new TraceSearchQueryGenerator(esConfig, ES_NESTED_DOC_NAME, indexConfig)
-  private val traceCountsQueryGenerator = new TraceCountsQueryGenerator(esConfig, ES_NESTED_DOC_NAME, indexConfig)
-  private val fieldValuesQueryGenerator = new FieldValuesQueryGenerator(esConfig, ES_NESTED_DOC_NAME, indexConfig)
+  private val esReader: ElasticSearchReader = new ElasticSearchReader(elasticSearchConfiguration.clientConfiguration)
+  private val traceSearchQueryGenerator = new TraceSearchQueryGenerator(elasticSearchConfiguration.spansIndexConfiguration, ES_NESTED_DOC_NAME, whitelistedFieldsConfiguration)
+  private val traceCountsQueryGenerator = new TraceCountsQueryGenerator(elasticSearchConfiguration.spansIndexConfiguration, ES_NESTED_DOC_NAME, whitelistedFieldsConfiguration)
+  private val fieldValuesQueryGenerator = new FieldValuesQueryGenerator(elasticSearchConfiguration.spansIndexConfiguration, ES_NESTED_DOC_NAME, whitelistedFieldsConfiguration)
+  private val serviceMetadataQueryGenerator = new ServiceMetadataQueryGenerator(elasticSearchConfiguration.serviceMetadataIndexConfiguration)
 
   private val esCountTraces = (request: TraceCountsRequest, useSpecificIndices: Boolean) => {
     esReader.count(traceCountsQueryGenerator.generate(request, useSpecificIndices))
@@ -73,13 +70,14 @@ class CassandraEsTraceStore(cassandraConfig: CassandraConfiguration,
   }
 
   private def extractTraces(result: SearchResult): Future[Seq[Trace]] = {
+    val traceIdKey = "traceid"
 
     // go through each hit and fetch trace for parsed traceId
     val sourceList = result.getSourceAsStringList
     if (sourceList != null && sourceList.size() > 0) {
       val traceIds = sourceList
         .asScala
-        .map(source => extractTraceIdFromSource(source))
+        .map(source => extractStringFieldFromSource(source, traceIdKey))
         .filter(!_.isEmpty)
         .toSet[String] // de-dup traceIds
         .toList
@@ -93,23 +91,32 @@ class CassandraEsTraceStore(cassandraConfig: CassandraConfiguration,
   override def getTrace(traceId: String): Future[Trace] = cassandraReader.readTrace(traceId)
 
   override def getFieldNames(): Future[Seq[String]] = {
-    Future.successful(indexConfig.whitelistIndexFields.map(_.name).distinct.sorted)
+    Future.successful(whitelistedFieldsConfiguration.whitelistIndexFields.map(_.name).distinct.sorted)
   }
 
   private def readFromServiceMetadata(request: FieldValuesRequest): Option[Future[Seq[String]]] = {
+    val serviceMetadataConfig = elasticSearchConfiguration.serviceMetadataIndexConfiguration
     if (!serviceMetadataConfig.enabled) return None
 
     if (request.getFieldName.toLowerCase == TraceIndexDoc.SERVICE_KEY_NAME && request.getFiltersCount == 0) {
-      Some(serviceMetadataReader.fetchAllServiceNames())
+      Some(esReader
+        .search(serviceMetadataQueryGenerator.generateSearchServiceQuery())
+        .map(extractServiceMetadata)
+      )
     } else if (request.getFieldName.toLowerCase == TraceIndexDoc.OPERATION_KEY_NAME
       && (request.getFiltersCount == 1)
       && request.getFiltersList.get(0).getName.toLowerCase == TraceIndexDoc.SERVICE_KEY_NAME) {
-      Some(serviceMetadataReader.fetchServiceOperations(request.getFilters(0).getValue))
+      Some(esReader
+        .search(serviceMetadataQueryGenerator.generateSearchOperationQuery(request.getFilters(0).getValue))
+        .map(extractOperationMetadataFromSource(_, request.getFieldName.toLowerCase)))
+
     } else {
       LOGGER.info("read from service metadata request isn't served by cassandra")
       None
     }
   }
+
+
 
   override def getFieldValues(request: FieldValuesRequest): Future[Seq[String]] = {
     readFromServiceMetadata(request).getOrElse(

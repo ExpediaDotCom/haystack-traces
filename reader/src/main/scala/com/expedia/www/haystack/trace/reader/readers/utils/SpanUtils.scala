@@ -16,7 +16,9 @@
 
 package com.expedia.www.haystack.trace.reader.readers.utils
 
-import com.expedia.open.tracing.{Log, Span, Tag}
+import com.expedia.open.tracing.Log
+import com.expedia.open.tracing.Span
+import com.expedia.open.tracing.Tag
 import com.expedia.www.haystack.trace.reader.readers.utils.SpanMarkers._
 
 import scala.collection.JavaConverters._
@@ -42,6 +44,26 @@ object SpanUtils {
 
   def containsServerLogTag(span: Span): Boolean = {
     containsLogTag(span, SERVER_RECV_EVENT) && containsLogTag(span, SERVER_SEND_EVENT)
+  }
+
+  def getEffectiveServiceName(span: Span): String = {
+    val serviceTag = getServiceTag(span)
+    if (serviceTag.isDefined) {
+      val serviceTagValue = serviceTag.get.getVStr
+      if (serviceTagValue == "") { // Span protobuf-generated code returns empty string for a missing tag key
+        span.getServiceName
+      } else {
+        serviceTagValue
+      }
+    } else {
+      span.getServiceName
+    }
+  }
+
+  def getServiceTag(span: Span): Option[Tag] = {
+    span.getTagsList.asScala.find(tag => {
+      tag.getKey.equalsIgnoreCase(SERVICE_TAG_KEY)
+    })
   }
 
   def containsClientLogTag(span: Span): Boolean = {
@@ -133,6 +155,7 @@ object SpanMarkers {
   val CLIENT_RECV_EVENT = "cr"
 
   val SPAN_KIND_TAG_KEY = "span.kind"
+  val SERVICE_TAG_KEY = "service"
   val SERVER_SPAN_KIND = "server"
   val CLIENT_SPAN_KIND = "client"
 }

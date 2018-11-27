@@ -22,6 +22,7 @@ import java.nio.ByteBuffer
 import java.util.zip.GZIPInputStream
 
 import com.expedia.open.tracing.buffer.SpanBuffer
+import com.github.luben.zstd.ZstdInputStream
 import org.apache.commons.io.IOUtils
 import org.json4s.jackson.Serialization
 import org.xerial.snappy.SnappyInputStream
@@ -62,6 +63,10 @@ object Unpacker {
         case PackerType.GZIP =>
           parsedDataBytes = unpack(
             new GZIPInputStream(
+              new ByteArrayInputStream(packedDataBytes, compressedDataOffset, packedDataBytes.length - compressedDataOffset)))
+        case PackerType.ZSTD =>
+          parsedDataBytes = unpack(
+            new ZstdInputStream(
               new ByteArrayInputStream(packedDataBytes, compressedDataOffset, packedDataBytes.length - compressedDataOffset)))
         case _ =>
           return SpanBuffer.parseFrom(

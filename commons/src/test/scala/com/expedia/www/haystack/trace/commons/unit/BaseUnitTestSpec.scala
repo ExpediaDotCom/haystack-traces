@@ -1,9 +1,9 @@
 /*
- * Copyright 2017 Expedia, Inc.
+ *  Copyright 2018 Expedia, Inc.
  *
  *       Licensed under the Apache License, Version 2.0 (the "License");
  *       you may not use this file except in compliance with the License.
- *       You may obtain a copy of the License at
+ *      You may obtain a copy of the License at
  *
  *           http://www.apache.org/licenses/LICENSE-2.0
  *
@@ -14,8 +14,11 @@
  *       limitations under the License.
  */
 
-package com.expedia.www.haystack.trace.reader.config.entities
+package com.expedia.www.haystack.trace.commons.unit
 
-import com.expedia.www.haystack.trace.commons.config.entities.KeyspaceConfiguration
+import org.scalatest.easymock.EasyMockSugar
+import org.scalatest.FunSpec
+import org.scalatest.GivenWhenThen
+import org.scalatest.Matchers
 
-case class ServiceMetadataReadConfiguration(enabled: Boolean, keyspace: KeyspaceConfiguration)
+trait BaseUnitTestSpec extends FunSpec with GivenWhenThen with Matchers with EasyMockSugar

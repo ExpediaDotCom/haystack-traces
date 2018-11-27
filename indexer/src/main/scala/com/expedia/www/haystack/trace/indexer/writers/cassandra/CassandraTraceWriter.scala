@@ -67,7 +67,7 @@ class CassandraTraceWriter(cassandra: CassandraSession,
       onSuccess = (_: Any) => inflightRequestsSemaphore.release(),
       onFailure = (ex) => {
         inflightRequestsSemaphore.release()
-        LOGGER.error("Fail to write to cassandra after {} retry attempts", config.retryConfig.maxRetries, ex)
+        LOGGER.error(s"Fail to write to cassandra after ${config.retryConfig.maxRetries} retry attempts for ${traceId}, ${packedSpanBuffer.protoObj.getChildSpans(0).getServiceName}, ${packedSpanBuffer.protoObj.getChildSpans(0).getOperationName}", ex)
       })
   }
 
@@ -78,7 +78,7 @@ class CassandraTraceWriter(cassandra: CassandraSession,
     *
     * @param traceId          : trace id
     * @param packedSpanBuffer : list of spans belonging to this traceId - span buffer
-    * @param isLastSpanBuffer tells if this is the last record, so the writer can flush
+    * @param isLastSpanBuffer tells if this is the last record, so the writer can flush``
     * @return
     */
   override def writeAsync(traceId: String, packedSpanBuffer: PackedMessage[SpanBuffer], isLastSpanBuffer: Boolean): Unit = {

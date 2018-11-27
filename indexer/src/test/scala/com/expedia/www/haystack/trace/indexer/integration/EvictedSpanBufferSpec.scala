@@ -23,7 +23,7 @@ class EvictedSpanBufferSpec extends BaseIntegrationTestSpec {
       val esConfig = elastic.buildConfig
       val indexTagsConfig = elastic.indexingConfig
       val cassandraConfig = cassandra.buildConfig
-      val serviceMetadataConfig = cassandra.buildServiceMetadataConfig
+      val serviceMetadataConfig = elastic.buildServiceMetadataConfig
       val accumulatorConfig = spanAccumulatorConfig.copy(minTracesPerCache = 1, maxEntriesAllStores = 1)
 
       produceSpansAsync(MAX_CHILD_SPANS,
@@ -45,7 +45,7 @@ class EvictedSpanBufferSpec extends BaseIntegrationTestSpec {
   }
 
   // validate the kafka output
-  private def validateKafkaOutput(records: Seq[KeyValue[String, SpanBuffer]]) = {
+  private def validateKafkaOutput(records: Seq[KeyValue[String, SpanBuffer]]): Unit = {
     records.map(_.key).toSet should contain allOf (TRACE_ID_1, TRACE_ID_2)
     records.foreach(rec => rec.value.getChildSpansCount shouldBe 1)
   }

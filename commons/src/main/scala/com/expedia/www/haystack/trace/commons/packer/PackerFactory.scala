@@ -25,6 +25,7 @@ object PackerFactory {
     `type` match {
       case PackerType.SNAPPY => new SnappyPacker[SpanBuffer]
       case PackerType.GZIP => new GzipPacker[SpanBuffer]
+      case PackerType.ZSTD => new ZstdPacker[SpanBuffer]
       case _ => new NoopPacker[SpanBuffer]
     }
   }

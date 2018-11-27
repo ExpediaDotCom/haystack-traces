@@ -53,8 +53,12 @@ object SpanMerger {
     Span
       .newBuilder(serverSpan)
       .setParentSpanId(clientSpan.getParentSpanId) // use the parentSpanId of the client span to stitch in the client's trace tree
-      .addAllTags((clientSpan.getTagsList.asScala ++ auxiliaryCommonTags(clientSpan, serverSpan) ++ auxiliaryClientTags(clientSpan) ++ auxiliaryServerTags(serverSpan)).asJavaCollection)
-      .clearLogs().addAllLogs((clientSpan.getLogsList.asScala ++ serverSpan.getLogsList.asScala.sortBy(_.getTimestamp)).asJavaCollection)
+      .addAllTags((clientSpan.getTagsList.asScala
+                ++ auxiliaryCommonTags(clientSpan, serverSpan)
+                ++ auxiliaryClientTags(clientSpan)
+                ++ auxiliaryServerTags(serverSpan)).asJavaCollection)
+      .clearLogs().addAllLogs((clientSpan.getLogsList.asScala
+                            ++ serverSpan.getLogsList.asScala.sortBy(_.getTimestamp)).asJavaCollection)
       .build()
   }
 
@@ -108,8 +112,9 @@ object SpanMerger {
 
   private def auxiliaryClientTags(span: Span): List[Tag] =
     List(
-      buildStringTag(AuxiliaryTags.CLIENT_SERVICE_NAME, span.getServiceName),
+      buildStringTag(AuxiliaryTags.CLIENT_SERVICE_NAME, SpanUtils.getEffectiveServiceName(span)),
       buildStringTag(AuxiliaryTags.CLIENT_OPERATION_NAME, span.getOperationName),
+      buildStringTag(AuxiliaryTags.CLIENT_SPAN_ID, span.getSpanId),
       buildStringTag(AuxiliaryTags.CLIENT_INFRASTRUCTURE_PROVIDER, extractTagStringValue(span, AuxiliaryTags.INFRASTRUCTURE_PROVIDER)),
       buildStringTag(AuxiliaryTags.CLIENT_INFRASTRUCTURE_LOCATION, extractTagStringValue(span, AuxiliaryTags.INFRASTRUCTURE_LOCATION)),
       buildLongTag(AuxiliaryTags.CLIENT_START_TIME, span.getStartTime),
@@ -118,7 +123,7 @@ object SpanMerger {
 
   private def auxiliaryServerTags(span: Span): List[Tag] = {
     List(
-      buildStringTag(AuxiliaryTags.SERVER_SERVICE_NAME, span.getServiceName),
+      buildStringTag(AuxiliaryTags.SERVER_SERVICE_NAME, SpanUtils.getEffectiveServiceName(span)),
       buildStringTag(AuxiliaryTags.SERVER_OPERATION_NAME, span.getOperationName),
       buildStringTag(AuxiliaryTags.SERVER_INFRASTRUCTURE_PROVIDER, extractTagStringValue(span, AuxiliaryTags.INFRASTRUCTURE_PROVIDER)),
       buildStringTag(AuxiliaryTags.SERVER_INFRASTRUCTURE_LOCATION, extractTagStringValue(span, AuxiliaryTags.INFRASTRUCTURE_LOCATION)),

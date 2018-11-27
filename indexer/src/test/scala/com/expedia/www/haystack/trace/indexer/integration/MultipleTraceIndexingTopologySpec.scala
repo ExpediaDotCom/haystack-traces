@@ -41,7 +41,7 @@ class MultipleTraceIndexingTopologySpec extends BaseIntegrationTestSpec {
       val esConfig = elastic.buildConfig
       val indexTagsConfig = elastic.indexingConfig
       val cassandraConfig = cassandra.buildConfig
-      val serviceMetadataConfig = cassandra.buildServiceMetadataConfig
+      val serviceMetadataConfig = elastic.buildServiceMetadataConfig
 
       When(s"spans are produced in '${kafka.INPUT_TOPIC}' topic async, and kafka-streams topology is started")
       val traceDescriptions = List(TraceDescription(TRACE_ID_1, SPAN_ID_PREFIX_1), TraceDescription(TRACE_ID_2, SPAN_ID_PREFIX_2))
@@ -72,7 +72,7 @@ class MultipleTraceIndexingTopologySpec extends BaseIntegrationTestSpec {
   }
 
   // validate the kafka output
-  private def validateKafkaOutput(records: Iterable[KeyValue[String, SpanBuffer]], childSpanCount: Int) = {
+  private def validateKafkaOutput(records: Iterable[KeyValue[String, SpanBuffer]], childSpanCount: Int): Unit = {
     records.size shouldBe 2
 
     // both traceIds should be present as different span buffer objects

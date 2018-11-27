@@ -36,7 +36,6 @@ trait ResponseParser {
   private val ES_COUNT_PER_INTERVAL = "__count_per_interval"
   private val ES_AGG_DOC_COUNT = "doc_count"
   protected val ES_NESTED_DOC_NAME = "spans"
-  private val ES_TRACE_ID_KEY = "traceid"
 
   protected def mapSearchResultToTraceCounts(result: SearchResult): Future[TraceCounts] = {
     val aggregation = result.getJsonObject
@@ -94,7 +93,26 @@ trait ResponseParser {
     }
   }
 
-  protected def extractTraceIdFromSource(source: String): String = {
-    (parse(source) \ ES_TRACE_ID_KEY).extract[String]
+  protected def extractStringFieldFromSource(source: String, fieldName:String): String = {
+    (parse(source) \ fieldName).extract[String]
+  }
+
+  protected def extractServiceMetadata(result: SearchResult): Seq[String] = {
+    result.getAggregations.getTermsAggregation("distinct_services").getBuckets.asScala.map(_.getKey)
+  }
+
+  protected def extractOperationMetadataFromSource(result: SearchResult, fieldName: String): List[String] = {
+    // go through each hit and fetch field from service_metadata
+    val sourceList = result.getSourceAsStringList
+    if (sourceList != null && sourceList.size() > 0) {
+      sourceList
+        .asScala
+        .map(source => extractStringFieldFromSource(source, fieldName))
+        .filter(!_.isEmpty)
+        .toSet[String] // de-dup fieldValues
+        .toList
+    } else {
+      Nil
+    }
   }
 }

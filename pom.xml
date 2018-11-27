@@ -72,6 +72,7 @@
         <json4s.version>3.5.3</json4s.version>
         <typesafe-config.version>1.3.1</typesafe-config.version>
         <snappy.version>1.1.7.1</snappy.version>
+        <zstd.version>1.3.7-2</zstd.version>
 
         <jest.version>5.3.2</jest.version>
         <elasticsearch.version>6.0.1</elasticsearch.version>
@@ -121,6 +122,12 @@
                 <artifactId>grpc-netty</artifactId>
                 <version>${grpc.version}</version>
             </dependency>
+            <dependency>
+                <groupId>io.grpc</groupId>
+                <artifactId>grpc-services</artifactId>
+                <version>${grpc.version}</version>
+            </dependency>
+
             <dependency>
                 <groupId>io.netty</groupId>
                 <artifactId>netty-handler</artifactId>
@@ -237,6 +244,11 @@
                 <artifactId>snappy-java</artifactId>
                 <version>${snappy.version}</version>
             </dependency>
+            <dependency>
+                <groupId>com.github.luben</groupId>
+                <artifactId>zstd-jni</artifactId>
+                <version>${zstd.version}</version>
+            </dependency>
         </dependencies>
     </dependencyManagement>
 
@@ -249,21 +261,6 @@
         <dependency>
             <groupId>com.typesafe</groupId>
             <artifactId>config</artifactId>
-        </dependency>
-
-        <dependency>
-            <groupId>com.google.protobuf</groupId>
-            <artifactId>protobuf-java</artifactId>
-        </dependency>
-
-        <dependency>
-            <groupId>io.grpc</groupId>
-            <artifactId>grpc-protobuf</artifactId>
-        </dependency>
-
-        <dependency>
-            <groupId>io.grpc</groupId>
-            <artifactId>grpc-stub</artifactId>
         </dependency>
 
         <dependency>

@@ -101,14 +101,14 @@ class CassandraEsTraceStore(cassandraConfig: CassandraConfiguration,
     if (request.getFieldName.toLowerCase == TraceIndexDoc.SERVICE_KEY_NAME && request.getFiltersCount == 0) {
       Some(esReader
         .search(serviceMetadataQueryGenerator.generateSearchServiceQuery())
-        .map(extractServiceMetadataFromSource(_, request.getFieldName.toLowerCase))
+        .map(extractServiceMetadata)
       )
     } else if (request.getFieldName.toLowerCase == TraceIndexDoc.OPERATION_KEY_NAME
       && (request.getFiltersCount == 1)
       && request.getFiltersList.get(0).getName.toLowerCase == TraceIndexDoc.SERVICE_KEY_NAME) {
       Some(esReader
         .search(serviceMetadataQueryGenerator.generateSearchOperationQuery(request.getFilters(0).getValue))
-        .map(extractServiceMetadataFromSource(_, request.getFieldName.toLowerCase)))
+        .map(extractOperationMetadataFromSource(_, request.getFieldName.toLowerCase)))
 
     } else {
       LOGGER.info("read from service metadata request isn't served by cassandra")

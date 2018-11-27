@@ -62,7 +62,7 @@ class ConfigurationLoaderSpec extends BaseUnitTestSpec {
 
       elasticSearchConfig.spansIndexConfiguration.indexHourBucket shouldEqual 6
       elasticSearchConfig.spansIndexConfiguration.indexHourTtl shouldEqual 72
-      elasticSearchConfig.spansIndexConfiguration.useRootDocumentStartTime shouldEqual false
+      elasticSearchConfig.spansIndexConfiguration.useRootDocumentStartTime shouldEqual true
       elasticSearchConfig.spansIndexConfiguration.indexType shouldEqual "spans"
       elasticSearchConfig.spansIndexConfiguration.indexNamePrefix shouldEqual "haystack-traces"
 

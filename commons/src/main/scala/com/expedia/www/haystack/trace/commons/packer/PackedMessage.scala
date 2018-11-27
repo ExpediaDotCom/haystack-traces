@@ -23,7 +23,6 @@ import com.google.protobuf.GeneratedMessageV3
 import org.json4s.jackson.Serialization
 import org.json4s.{DefaultFormats, Formats}
 
-
 object PackedMessage {
   implicit val formats: Formats = DefaultFormats + new org.json4s.ext.EnumSerializer(PackerType)
   val MAGIC_BYTES: Array[Byte] = "hytc".getBytes("utf-8")

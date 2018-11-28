@@ -18,6 +18,7 @@ package com.expedia.www.haystack.trace.reader.unit.stores.readers.es.query
 import com.expedia.www.haystack.trace.reader.config.entities.ServiceMetadataIndexConfiguration
 import com.expedia.www.haystack.trace.reader.stores.readers.es.query.ServiceMetadataQueryGenerator
 import com.expedia.www.haystack.trace.reader.unit.BaseUnitTestSpec
+import com.google.gson.Gson
 
 class ServiceMetadataQueryGeneratorSpec extends BaseUnitTestSpec {
   private val indexType = "metadata"
@@ -36,6 +37,8 @@ class ServiceMetadataQueryGeneratorSpec extends BaseUnitTestSpec {
 
       Then("generate a valid query")
       query.getType should be(indexType)
+      query.getData(new Gson()) shouldEqual "{\n  \"size\" : 0,\n  \"aggregations\" : {\n    \"distinct_services\" : {\n      \"terms\" : {\n        \"field\" : \"servicename\",\n        \"size\" : 10000,\n        \"min_doc_count\" : 1,\n        \"shard_min_doc_count\" : 0,\n        \"show_term_doc_count_error\" : false,\n        \"order\" : [\n          {\n            \"_count\" : \"desc\"\n          },\n          {\n            \"_key\" : \"asc\"\n          }\n        ]\n      }\n    }\n  }\n}"
+      query.toString shouldEqual "Search{uri=service_metadata/metadata/_search, method=POST}"
     }
 
     it("should generate valid aggregation queries for operation names") {

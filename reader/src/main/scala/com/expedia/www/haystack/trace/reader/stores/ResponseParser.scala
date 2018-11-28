@@ -97,7 +97,11 @@ trait ResponseParser {
     (parse(source) \ fieldName).extract[String]
   }
 
-  protected def extractServiceMetadataFromSource(result: SearchResult, fieldName: String): List[String] = {
+  protected def extractServiceMetadata(result: SearchResult): Seq[String] = {
+    result.getAggregations.getTermsAggregation("distinct_services").getBuckets.asScala.map(_.getKey)
+  }
+
+  protected def extractOperationMetadataFromSource(result: SearchResult, fieldName: String): List[String] = {
     // go through each hit and fetch field from service_metadata
     val sourceList = result.getSourceAsStringList
     if (sourceList != null && sourceList.size() > 0) {
@@ -108,7 +112,7 @@ trait ResponseParser {
         .toSet[String] // de-dup fieldValues
         .toList
     } else {
-      List()
+      Nil
     }
   }
 }

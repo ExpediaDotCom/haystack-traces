@@ -11,6 +11,7 @@
         <module>commons</module>
         <module>indexer</module>
         <module>reader</module>
+        <module>storage-backends</module>
     </modules>
 
     <scm>
@@ -63,7 +64,7 @@
     <properties>
         <project.jdk.version>1.8</project.jdk.version>
         <protobuf.version>3.4.0</protobuf.version>
-        <haystack-commons.version>1.0.46</haystack-commons.version>
+        <haystack-commons.version>1.0.55-SNAPSHOT</haystack-commons.version>
 
         <logback.version>1.2.3</logback.version>
         <slf4j-api.version>1.7.25</slf4j-api.version>

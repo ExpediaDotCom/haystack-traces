@@ -55,7 +55,7 @@ class CassandraEsTraceStore(cassandraConfig: CassandraConfiguration,
     esReader.search(traceSearchQueryGenerator.generate(request, useSpecificIndices))
   }
 
-  private def handleResult(result: Future[SearchResult],
+  private def handleIndexNotFoundResult(result: Future[SearchResult],
                            retryFunc: () => Future[SearchResult]): Future[SearchResult] = {
     result.recoverWith {
       case _: IndexNotFoundException => retryFunc()
@@ -66,7 +66,7 @@ class CassandraEsTraceStore(cassandraConfig: CassandraConfiguration,
     // search ES with specific indices
     val esResult = esSearchTraces(request, true)
     // handle the response and retry in case of IndexNotFoundException
-    handleResult(esResult, () => esSearchTraces(request, false)).flatMap(result => extractTraces(result))
+    handleIndexNotFoundResult(esResult, () => esSearchTraces(request, false)).flatMap(result => extractTraces(result))
   }
 
   private def extractTraces(result: SearchResult): Future[Seq[Trace]] = {
@@ -90,7 +90,7 @@ class CassandraEsTraceStore(cassandraConfig: CassandraConfiguration,
 
   override def getTrace(traceId: String): Future[Trace] = cassandraReader.readTrace(traceId)
 
-  override def getFieldNames(): Future[Seq[String]] = {
+  override def getFieldNames: Future[Seq[String]] = {
     Future.successful(whitelistedFieldsConfiguration.whitelistIndexFields.map(_.name).distinct.sorted)
   }
 
@@ -130,7 +130,7 @@ class CassandraEsTraceStore(cassandraConfig: CassandraConfiguration,
     val esResponse = esCountTraces(request, true)
 
     // handle the response and retry in case of IndexNotFoundException
-    handleResult(esResponse, () => esCountTraces(request, false))
+    handleIndexNotFoundResult(esResponse, () => esCountTraces(request, false))
       .map(result => mapSearchResultToTraceCount(request.getStartTime, request.getEndTime, result))
   }
 

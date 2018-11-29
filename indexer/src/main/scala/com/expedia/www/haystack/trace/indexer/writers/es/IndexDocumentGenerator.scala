@@ -35,6 +35,8 @@ import scala.util.{Failure, Success, Try}
 
 class IndexDocumentGenerator(config: WhitelistIndexFieldConfiguration) extends MetricsSupport {
 
+  private val MIN_DURATION_FOR_TRUNCATION = TimeUnit.SECONDS.toMicros(20)
+
   /**
     * @param spanBuffer a span buffer object
     * @return index document that can be put in elastic search
@@ -51,7 +53,7 @@ class IndexDocumentGenerator(config: WhitelistIndexFieldConfiguration) extends M
     spanBuffer.getChildSpansList.asScala filter isValidForIndex foreach(span => {
 
       // calculate the trace starttime based on the minimum starttime observed across all child spans.
-      traceStartTime = Math.min(traceStartTime, microsToSecondGranularity(span.getStartTime))
+      traceStartTime = Math.min(traceStartTime, truncateToSecondGranularity(span.getStartTime))
       if(span.getParentSpanId == null) rootDuration = span.getDuration
 
       val serviceName = SpanUtils.getEffectiveServiceName(span)
@@ -96,8 +98,8 @@ class IndexDocumentGenerator(config: WhitelistIndexFieldConfiguration) extends M
     }
 
     import com.expedia.www.haystack.trace.commons.clients.es.document.TraceIndexDoc._
-    append(DURATION_KEY_NAME, span.getDuration)
-    append(START_TIME_KEY_NAME, microsToSecondGranularity(span.getStartTime))
+    append(DURATION_KEY_NAME, adjustDurationForLowCardinality(span.getDuration))
+    append(START_TIME_KEY_NAME, truncateToSecondGranularity(span.getStartTime))
   }
 
 
@@ -143,7 +145,16 @@ class IndexDocumentGenerator(config: WhitelistIndexFieldConfiguration) extends M
     }
   }
 
-  private def microsToSecondGranularity(value: Long): Long = {
+  private def truncateToSecondGranularity(value: Long): Long = {
     TimeUnit.SECONDS.toMicros(TimeUnit.MICROSECONDS.toSeconds(value))
+  }
+
+  private def adjustDurationForLowCardinality(value: Long): Long = {
+    // dont consider millis, if it accounts for less than 5% of the actual value
+    if (value > MIN_DURATION_FOR_TRUNCATION) {
+      truncateToSecondGranularity(value)
+    } else {
+      value
+    }
   }
 }

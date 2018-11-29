@@ -56,12 +56,11 @@ class IndexDocumentGenerator(config: WhitelistIndexFieldConfiguration) extends M
       traceStartTime = Math.min(traceStartTime, truncateToSecondGranularity(span.getStartTime))
       if(span.getParentSpanId == null) rootDuration = span.getDuration
 
-      val serviceName = SpanUtils.getEffectiveServiceName(span)
       val spanIndexDoc = spanIndices
-        .find(sp => sp(OPERATION_KEY_NAME).equals(span.getOperationName) && sp(SERVICE_KEY_NAME).equals(serviceName))
+        .find(sp => sp(OPERATION_KEY_NAME).equals(span.getOperationName) && sp(SERVICE_KEY_NAME).equals(span.getServiceName))
         .getOrElse({
           val newSpanIndexDoc = mutable.Map[String, Any](
-            SERVICE_KEY_NAME -> serviceName,
+            SERVICE_KEY_NAME -> span.getServiceName,
             OPERATION_KEY_NAME -> span.getOperationName)
           spanIndices.append(newSpanIndexDoc)
           newSpanIndexDoc
@@ -72,7 +71,7 @@ class IndexDocumentGenerator(config: WhitelistIndexFieldConfiguration) extends M
   }
 
   private def isValidForIndex(span: Span): Boolean = {
-    StringUtils.isNotEmpty(SpanUtils.getEffectiveServiceName(span)) && StringUtils.isNotEmpty(span.getOperationName)
+    StringUtils.isNotEmpty(span.getServiceName) && StringUtils.isNotEmpty(span.getOperationName)
   }
 
   /**

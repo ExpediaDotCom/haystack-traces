@@ -46,20 +46,6 @@ object SpanUtils {
     containsLogTag(span, SERVER_RECV_EVENT) && containsLogTag(span, SERVER_SEND_EVENT)
   }
 
-  def getEffectiveServiceName(span: Span): String = {
-    val serviceTag = getServiceTag(span)
-    if (serviceTag.isDefined) {
-      val serviceTagValue = serviceTag.get.getVStr
-      if (serviceTagValue == "") { // Span protobuf-generated code returns empty string for a missing tag key
-        span.getServiceName
-      } else {
-        serviceTagValue
-      }
-    } else {
-      span.getServiceName
-    }
-  }
-
   def getServiceTag(span: Span): Option[Tag] = {
     span.getTagsList.asScala.find(tag => {
       tag.getKey.equalsIgnoreCase(SERVICE_TAG_KEY)

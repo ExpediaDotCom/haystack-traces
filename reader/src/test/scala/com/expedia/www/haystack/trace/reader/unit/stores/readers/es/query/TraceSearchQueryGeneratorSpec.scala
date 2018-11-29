@@ -23,6 +23,7 @@ import com.expedia.www.haystack.trace.reader.stores.readers.es.ESUtils._
 import com.expedia.www.haystack.trace.reader.stores.readers.es.query.TraceSearchQueryGenerator
 import com.expedia.www.haystack.trace.reader.unit.BaseUnitTestSpec
 import com.expedia.www.haystack.trace.reader.unit.stores.readers.es.query.helper.ExpressionTreeBuilder._
+import com.google.gson.Gson
 import io.searchbox.core.Search
 import org.scalatest.BeforeAndAfterEach
 
@@ -156,11 +157,33 @@ class TraceSearchQueryGeneratorSpec extends BaseUnitTestSpec with BeforeAndAfter
       val queryGenerator = new TraceSearchQueryGenerator(spansIndexConfiguration, "spans", new WhitelistIndexFieldConfiguration)
 
       When("generating query")
-      val query: Search = queryGenerator.generate(request, false)
+      val query: Search = queryGenerator.generate(request, useSpecificIndices = false)
 
       Then("generate a valid query with given index name")
       query.toJson.contains(fieldKey.toLowerCase()) should be(true)
       query.getIndex shouldBe "haystack-traces"
+    }
+
+    it("should generate valid count query for expression tree with duration field types") {
+      Given("a trace count request")
+      val queryGenerator = new TraceSearchQueryGenerator(spansIndexConfiguration, "spans", new WhitelistIndexFieldConfiguration)
+      val requests = Seq(expressionTreeWithDurationFields) map {
+        expression => {
+          TracesSearchRequest
+            .newBuilder()
+            .setFilterExpression(expression)
+            .setStartTime(1)
+            .setEndTime(1100 * 1000 * 1000)
+            .setLimit(10)
+            .build()
+        }
+      }
+      When("generating query")
+      val queries: Seq[Search] = requests.map(req => queryGenerator.generate(req, useSpecificIndices = false))
+
+      Then("generate a valid query")
+      queries.map(query => query.getData(new Gson()).replaceAll("\n", "").replaceAll(" ", "")) shouldEqual Seq(
+        "{\"size\":10,\"query\":{\"bool\":{\"must\":[{\"nested\":{\"query\":{\"range\":{\"spans.starttime\":{\"from\":1,\"to\":1100000000,\"include_lower\":true,\"include_upper\":true,\"boost\":1.0}}},\"path\":\"spans\",\"ignore_unmapped\":false,\"score_mode\":\"none\",\"boost\":1.0}}],\"filter\":[{\"nested\":{\"query\":{\"bool\":{\"filter\":[{\"term\":{\"spans.1\":{\"value\":\"1\",\"boost\":1.0}}},{\"term\":{\"spans.2\":{\"value\":\"2\",\"boost\":1.0}}},{\"term\":{\"spans.3\":{\"value\":\"3\",\"boost\":1.0}}}],\"adjust_pure_negative\":true,\"boost\":1.0}},\"path\":\"spans\",\"ignore_unmapped\":false,\"score_mode\":\"none\",\"boost\":1.0}},{\"nested\":{\"query\":{\"bool\":{\"filter\":[{\"term\":{\"spans.4\":{\"value\":\"4\",\"boost\":1.0}}},{\"term\":{\"spans.5\":{\"value\":\"5\",\"boost\":1.0}}}],\"adjust_pure_negative\":true,\"boost\":1.0}},\"path\":\"spans\",\"ignore_unmapped\":false,\"score_mode\":\"none\",\"boost\":1.0}},{\"nested\":{\"query\":{\"bool\":{\"filter\":[{\"term\":{\"spans.svcname\":{\"value\":\"svcValue\",\"boost\":1.0}}}],\"adjust_pure_negative\":true,\"boost\":1.0}},\"path\":\"spans\",\"ignore_unmapped\":false,\"score_mode\":\"none\",\"boost\":1.0}},{\"nested\":{\"query\":{\"bool\":{\"filter\":[{\"range\":{\"spans.duration\":{\"from\":500000,\"to\":null,\"include_lower\":false,\"include_upper\":true,\"boost\":1.0}}}],\"adjust_pure_negative\":true,\"boost\":1.0}},\"path\":\"spans\",\"ignore_unmapped\":false,\"score_mode\":\"none\",\"boost\":1.0}}],\"adjust_pure_negative\":true,\"boost\":1.0}},\"sort\":[{\"spans.starttime\":{\"order\":\"desc\",\"nested_path\":\"spans\"}}]}")
     }
   }
 }

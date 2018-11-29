@@ -18,7 +18,7 @@ package com.expedia.www.haystack.trace.reader.integration
 
 import java.nio.ByteBuffer
 import java.text.SimpleDateFormat
-import java.util.concurrent.Executors
+import java.util.concurrent.{Executors, TimeUnit}
 import java.util.{Date, UUID}
 
 import com.datastax.driver.core.querybuilder.QueryBuilder
@@ -61,6 +61,8 @@ trait BaseIntegrationTestSpec extends FunSpec with GivenWhenThen with Matchers w
   private val SPANS_INDEX_TYPE = "spans"
 
   private val executors = Executors.newSingleThreadExecutor()
+
+  private val DEFAULT_DURATION = TimeUnit.MILLISECONDS.toMicros(500)
 
   private val HAYSTACK_TRACES_INDEX = {
     val date = new Date()
@@ -119,6 +121,10 @@ trait BaseIntegrationTestSpec extends FunSpec with GivenWhenThen with Matchers w
                                  |                            "norms": false
                                  |                        },
                                  |                        "starttime": {
+                                 |                            "type": "long",
+                                 |                            "doc_values": true
+                                 |                        },
+                                 |                        "duration": {
                                  |                            "type": "long",
                                  |                            "doc_values": true
                                  |                        }
@@ -199,9 +205,10 @@ trait BaseIntegrationTestSpec extends FunSpec with GivenWhenThen with Matchers w
                                          operationName: String = "",
                                          tags: Map[String, String] = Map.empty,
                                          startTime: Long = System.currentTimeMillis() * 1000,
-                                         sleep: Boolean = true): Unit = {
-    insertTraceInCassandra(traceId, spanId, serviceName, operationName, tags, startTime)
-    insertTraceInEs(traceId, spanId, serviceName, operationName, tags, startTime)
+                                         sleep: Boolean = true,
+                                         duration: Long = DEFAULT_DURATION): Unit = {
+    insertTraceInCassandra(traceId, spanId, serviceName, operationName, tags, startTime, duration)
+    insertTraceInEs(traceId, spanId, serviceName, operationName, tags, startTime, duration)
 
     // wait for few sec to let ES refresh its index
     if(sleep) Thread.sleep(5000)
@@ -212,13 +219,15 @@ trait BaseIntegrationTestSpec extends FunSpec with GivenWhenThen with Matchers w
                               serviceName: String,
                               operationName: String,
                               tags: Map[String, String],
-                              startTime: Long) = {
+                              startTime: Long,
+                              duration: Long) = {
     import TraceIndexDoc._
     // create map using service, operation and tags
     val fieldMap:mutable.Map[String, Any] = mutable.Map(
       SERVICE_KEY_NAME -> serviceName,
       OPERATION_KEY_NAME -> operationName,
-      START_TIME_KEY_NAME -> mutable.Set[Any](startTime)
+      START_TIME_KEY_NAME -> mutable.Set[Any](startTime),
+      DURATION_KEY_NAME -> mutable.Set[Any](duration)
     )
     tags.foreach(pair => fieldMap.put(pair._1.toLowerCase(), pair._2))
 
@@ -249,8 +258,9 @@ trait BaseIntegrationTestSpec extends FunSpec with GivenWhenThen with Matchers w
                                      serviceName: String,
                                      operationName: String,
                                      tags: Map[String, String],
-                                     startTime: Long): ResultSet = {
-    val spanBuffer = createSpanBufferWithSingleSpan(traceId, spanId, serviceName, operationName, tags, startTime)
+                                     startTime: Long,
+                                     duration: Long): ResultSet = {
+    val spanBuffer = createSpanBufferWithSingleSpan(traceId, spanId, serviceName, operationName, tags, startTime, duration)
     writeToCassandra(spanBuffer, traceId)
   }
 
@@ -259,8 +269,9 @@ trait BaseIntegrationTestSpec extends FunSpec with GivenWhenThen with Matchers w
                                     serviceName: String = "",
                                     operationName: String = "",
                                     tags: Map[String, String] = Map.empty,
-                                    startTime: Long = System.currentTimeMillis() * 1000): Unit = {
-    insertTraceInCassandra(traceId, spanId, serviceName, operationName, tags, startTime)
+                                    startTime: Long = System.currentTimeMillis() * 1000,
+                                    duration: Long = DEFAULT_DURATION): Unit = {
+    insertTraceInCassandra(traceId, spanId, serviceName, operationName, tags, startTime, duration)
     // wait for few sec to let ES refresh its index
     Thread.sleep(1000)
   }
@@ -291,7 +302,8 @@ trait BaseIntegrationTestSpec extends FunSpec with GivenWhenThen with Matchers w
                                              serviceName: String,
                                              operationName: String,
                                              tags: Map[String, String],
-                                             startTime: Long) = {
+                                             startTime: Long,
+                                             duration: Long) = {
     val spanTags = tags.map(tag => com.expedia.open.tracing.Tag.newBuilder().setKey(tag._1).setVStr(tag._2).build())
 
     SpanBuffer
@@ -304,6 +316,7 @@ trait BaseIntegrationTestSpec extends FunSpec with GivenWhenThen with Matchers w
         .setOperationName(operationName)
         .setServiceName(serviceName)
         .setStartTime(startTime)
+        .setDuration(duration)
         .addAllTags(spanTags.asJava)
         .build())
       .build()

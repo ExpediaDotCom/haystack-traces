@@ -18,13 +18,14 @@ package com.expedia.www.haystack.trace.reader.stores.readers.es.query
 
 import com.expedia.www.haystack.trace.reader.config.entities.ServiceMetadataIndexConfiguration
 import io.searchbox.core.Search
-import org.elasticsearch.index.query.MatchAllQueryBuilder
 import org.elasticsearch.index.query.QueryBuilders.termQuery
+import org.elasticsearch.search.aggregations.AggregationBuilders
 import org.elasticsearch.search.builder.SearchSourceBuilder
 
 class ServiceMetadataQueryGenerator(config: ServiceMetadataIndexConfiguration) {
-  val SERVICE_NAME_KEY = "servicename"
-  val OPERATION_NAME_KEY = "operationname"
+  private val SERVICE_NAME_KEY = "servicename"
+  private val OPERATION_NAME_KEY = "operationname"
+  private val LIMIT = 10000
 
   def generateSearchServiceQuery(): Search = {
     val serviceAggregationQuery = buildServiceAggregationQuery()
@@ -44,19 +45,15 @@ class ServiceMetadataQueryGenerator(config: ServiceMetadataIndexConfiguration) {
   }
 
   private def buildServiceAggregationQuery(): String = {
-    new SearchSourceBuilder()
-      .query(new MatchAllQueryBuilder())
-      .fetchSource(SERVICE_NAME_KEY,OPERATION_NAME_KEY)
-      .size(1000)
-      .toString
+    val aggr = AggregationBuilders.terms("distinct_services").field(SERVICE_NAME_KEY).size(LIMIT)
+    new SearchSourceBuilder().aggregation(aggr).size(0).toString
   }
 
   private def buildOperationAggregationQuery(serviceName: String): String = {
-
     new SearchSourceBuilder()
       .query(termQuery(SERVICE_NAME_KEY, serviceName))
-      .fetchSource(OPERATION_NAME_KEY,SERVICE_NAME_KEY)
-      .size(1000)
+      .fetchSource(OPERATION_NAME_KEY, SERVICE_NAME_KEY)
+      .size(LIMIT)
       .toString
   }
 }

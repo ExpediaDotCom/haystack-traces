@@ -135,7 +135,7 @@ class ServiceMetadataWriter(config: ServiceMetadataWriteConfiguration)
   }
 
   private def applyTemplate(templateJson: String) {
-    val putTemplateRequest = new PutTemplate.Builder("haystack-template", templateJson).build()
+    val putTemplateRequest = new PutTemplate.Builder("service-metadata-template", templateJson).build()
     val result = esClient.execute(putTemplateRequest)
     if (!result.isSucceeded) {
       throw new RuntimeException(s"Fail to apply the following template to elastic search with reason=${result.getErrorMessage}")

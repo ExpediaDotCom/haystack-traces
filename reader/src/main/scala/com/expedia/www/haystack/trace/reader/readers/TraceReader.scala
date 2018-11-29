@@ -93,7 +93,7 @@ class TraceReader(traceStore: TraceStore,
 
   def getFieldNames: Future[FieldNames] = {
     traceStore
-      .getFieldNames()
+      .getFieldNames
       .map(names =>
         FieldNames
           .newBuilder()

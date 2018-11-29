@@ -17,9 +17,11 @@
 
 package com.expedia.www.haystack.trace.indexer.unit
 
+import java.util.concurrent.TimeUnit
+
 import com.expedia.open.tracing.buffer.SpanBuffer
 import com.expedia.open.tracing.{Log, Span, Tag}
-import com.expedia.www.haystack.trace.commons.config.entities.{WhiteListIndexFields, IndexFieldType, WhitelistIndexField, WhitelistIndexFieldConfiguration}
+import com.expedia.www.haystack.trace.commons.config.entities.{IndexFieldType, WhiteListIndexFields, WhitelistIndexField, WhitelistIndexFieldConfiguration}
 import com.expedia.www.haystack.trace.indexer.writers.es.IndexDocumentGenerator
 import com.google.protobuf.ByteString
 import org.json4s.ext.EnumNameSerializer
@@ -31,8 +33,10 @@ class SpanIndexDocumentGeneratorSpec extends FunSpec with Matchers {
   protected implicit val formats: Formats = DefaultFormats + new EnumNameSerializer(IndexFieldType)
 
   private val TRACE_ID = "trace_id"
-  private val START_TIME_1 = 1529042838469000l
+  private val START_TIME_1 = 1529042838469123l
   private val START_TIME_2 = 1529042848469000l
+
+  private val LONG_DURATION = TimeUnit.SECONDS.toMicros(25) + TimeUnit.MICROSECONDS.toMicros(500)
 
   describe("Span to IndexDocument Generator") {
     it ("should extract serviceName, operationName, duration and create json document for indexing") {
@@ -43,25 +47,25 @@ class SpanIndexDocumentGeneratorSpec extends FunSpec with Matchers {
         .setServiceName("service1")
         .setOperationName("op1")
         .setStartTime(START_TIME_1)
-        .setDuration(600L)
+        .setDuration(610000L)
         .build()
       val span_2 = Span.newBuilder().setTraceId(TRACE_ID)
         .setSpanId("span-2")
         .setServiceName("service1")
         .setOperationName("op1")
         .setStartTime(START_TIME_1)
-        .setDuration(500L)
+        .setDuration(500000L)
         .build()
       val span_3 = Span.newBuilder().setTraceId(TRACE_ID)
         .setSpanId("span-3")
         .setServiceName("service2")
-        .setDuration(1000L)
+        .setDuration(LONG_DURATION)
         .setStartTime(START_TIME_2)
         .setOperationName("op3").build()
 
       val spanBuffer = SpanBuffer.newBuilder().addChildSpans(span_1).addChildSpans(span_2).addChildSpans(span_3).setTraceId(TRACE_ID).build()
       val doc = generator.createIndexDocument(TRACE_ID, spanBuffer).get
-      doc.json shouldBe "{\"traceid\":\"trace_id\",\"rootduration\":0,\"starttime\":1529042838000000,\"spans\":[{\"servicename\":\"service1\",\"starttime\":[1529042838000000],\"duration\":[500,600],\"operationname\":\"op1\"},{\"servicename\":\"service2\",\"starttime\":[1529042848000000],\"duration\":[1000],\"operationname\":\"op3\"}]}"
+      doc.json shouldBe "{\"traceid\":\"trace_id\",\"rootduration\":0,\"starttime\":1529042838000000,\"spans\":[{\"servicename\":\"service1\",\"starttime\":[1529042838000000],\"duration\":[500000,610000],\"operationname\":\"op1\"},{\"servicename\":\"service2\",\"starttime\":[1529042848000000],\"duration\":[25000000],\"operationname\":\"op3\"}]}"
     }
 
     it ("should not create an index document if service name is absent") {

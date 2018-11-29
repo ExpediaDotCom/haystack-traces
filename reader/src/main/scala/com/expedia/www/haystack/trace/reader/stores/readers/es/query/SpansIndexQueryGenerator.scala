@@ -25,7 +25,7 @@ import com.expedia.www.haystack.trace.commons.config.entities.WhitelistIndexFiel
 import io.searchbox.strings.StringUtils
 import org.apache.lucene.search.join.ScoreMode
 import org.elasticsearch.index.query.QueryBuilders.{boolQuery, nestedQuery, termQuery}
-import org.elasticsearch.index.query.{BoolQueryBuilder, NestedQueryBuilder, QueryBuilder, TermQueryBuilder}
+import org.elasticsearch.index.query._
 import org.elasticsearch.search.aggregations.AggregationBuilder
 import org.elasticsearch.search.aggregations.bucket.filter.FilterAggregationBuilder
 import org.elasticsearch.search.aggregations.bucket.nested.NestedAggregationBuilder
@@ -33,11 +33,13 @@ import org.elasticsearch.search.aggregations.bucket.terms.TermsAggregationBuilde
 import org.elasticsearch.search.aggregations.support.ValueType
 
 import scala.collection.JavaConverters._
+import scala.concurrent.duration.Duration
 
 abstract class SpansIndexQueryGenerator(nestedDocName: String, indexConfiguration: WhitelistIndexFieldConfiguration) {
   private final val TIME_ZONE = TimeZone.getTimeZone("UTC")
 
   // create search query by using filters list
+  @deprecated
   protected def createFilterFieldBasedQuery(filterFields: java.util.List[Field]): BoolQueryBuilder = {
     val traceContextWhitelistFields = indexConfiguration.globalTraceContextIndexFieldNames
     val (traceContextFields, serviceContextFields) = filterFields
@@ -48,30 +50,38 @@ abstract class SpansIndexQueryGenerator(nestedDocName: String, indexConfiguratio
 
     createNestedQuery(serviceContextFields).map(query.filter)
 
-    traceContextFields.foreach(f => {
-      query.filter(createNestedQuery(Seq(f)).get)
-    })
-
+    traceContextFields foreach {
+      field => {
+        createNestedQuery(Seq(field)) match {
+          case Some(nestedQuery) => query.filter(nestedQuery)
+          case _ => /* may be log ? */
+        }
+      }
+    }
     query
   }
 
   // create search query by using filters expression tree
   protected def createExpressionTreeBasedQuery(expression: ExpressionTree): BoolQueryBuilder = {
-    val perContextFields = toListOfFilters(expression)
     val query = boolQuery()
+    val contextFiltersList = listOfContextFilters(expression)
 
-    // create a nested boolean query per
-    perContextFields.foreach(fields => {
-      query.filter(createNestedQuery(fields).get)
-    })
-
+    // create a nested boolean query per context
+    contextFiltersList foreach {
+      filters => {
+        createNestedQuery(filters) match {
+          case Some(nestedQuery) => query.filter(nestedQuery)
+          case _ => /* may be log ?*/
+        }
+      }
+    }
     query
   }
 
   // create list of fields, one for each trace level query and one for each span level groups
   // assuming that first level is trace level filters
   // and second level are span level filter groups
-  private def toListOfFilters(expression: ExpressionTree): List[List[Field]] = {
+  private def listOfContextFilters(expression: ExpressionTree): List[List[Field]] = {
     val (spanLevel, traceLevel) = expression.getOperandsList.asScala.partition(operand => operand.getOperandCase == OperandCase.EXPRESSION)
 
     val traceLevelFilters = traceLevel.map(field => List(field.getField))
@@ -88,22 +98,54 @@ abstract class SpansIndexQueryGenerator(nestedDocName: String, indexConfiguratio
     if (fields.isEmpty) {
       None
     } else {
-      val nestedBoolQueryBuilder = createBoolQuery(fields)
+      val nestedBoolQueryBuilder = createNestedBoolQuery(fields)
       Some(nestedQuery(nestedDocName, nestedBoolQueryBuilder, ScoreMode.None))
     }
   }
 
-  private def buildTermQuery(key: String, value: String): Option[TermQueryBuilder] = {
-    if (StringUtils.isBlank(value)) None else Some(termQuery(withBaseDoc(key), value))
+  private def buildNestedTermQuery(field: Field): TermQueryBuilder = {
+    termQuery(withBaseDoc(field.getName.toLowerCase), field.getValue)
   }
 
-  protected def createBoolQuery(fields: Seq[Field]): BoolQueryBuilder = {
+  private def convertToMicros(value: String): Long = {
+    // if value ends with 'm', it signifies min, so add 'in'
+    val adjustedValue = if (value.endsWith("m")) value + "in" else value
+    Duration(adjustedValue).toMicros
+  }
+
+  private def buildNestedRangeQuery(field: Field): RangeQueryBuilder = {
+    val rangeQuery = QueryBuilders.rangeQuery(withBaseDoc(field.getName.toLowerCase))
+
+    val rangeValue = field.getVType match {
+      case Field.ValueType.DURATION => convertToMicros(field.getValue)
+      case _ => field.getValue.toLong // TODO: may not be safe ?
+    }
+
+    field.getOperator match {
+      case Field.Operator.GREATER_THAN => rangeQuery.gt(rangeValue)
+      case Field.Operator.LESS_THAN => rangeQuery.lt(rangeValue)
+      case _ => throw new RuntimeException("Fail to understand the operator -" + field.getOperator)
+    }
+    rangeQuery
+  }
+
+  protected def createNestedBoolQuery(fields: Seq[Field]): BoolQueryBuilder = {
     val boolQueryBuilder = boolQuery()
-    // add all fields as term sub query
-    val subQueries: Seq[QueryBuilder] =
-      for (field <- fields;
-           termQuery = buildTermQuery(field.getName.toLowerCase, field.getValue); if termQuery.isDefined) yield termQuery.get
-    subQueries.foreach(boolQueryBuilder.filter)
+
+    val validFields = fields.filterNot(f => StringUtils.isBlank(f.getValue))
+    val subQueries = validFields map {
+      field => {
+        field match {
+          case _ if field.getOperator == null || field.getOperator == Field.Operator.EQUAL =>
+            buildNestedTermQuery(field)
+          case _ if field.getOperator == Field.Operator.GREATER_THAN || field.getOperator == Field.Operator.LESS_THAN =>
+            buildNestedRangeQuery(field)
+          case _ => throw new RuntimeException("Fail to understand the operator type of the field!")
+        }
+      }
+    }
+
+    subQueries foreach boolQueryBuilder.filter
 
     boolQueryBuilder
   }
@@ -116,7 +158,7 @@ abstract class SpansIndexQueryGenerator(nestedDocName: String, indexConfiguratio
           .size(1000))
 
   protected def createNestedAggregationQueryWithNestedFilters(fieldName: String, filterFields: java.util.List[Field]): AggregationBuilder = {
-    val boolQueryBuilder = createBoolQuery(filterFields.asScala)
+    val boolQueryBuilder = createNestedBoolQuery(filterFields.asScala)
 
     new NestedAggregationBuilder(nestedDocName, nestedDocName)
       .subAggregation(

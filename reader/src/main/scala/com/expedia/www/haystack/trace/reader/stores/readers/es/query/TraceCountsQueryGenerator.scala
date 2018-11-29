@@ -79,6 +79,7 @@ class TraceCountsQueryGenerator(config: SpansIndexConfiguration,
         createExpressionTreeBasedQuery(request.getFilterExpression)
       }
       else {
+        // this is deprecated
         createFilterFieldBasedQuery(request.getFieldsList)
       }
 

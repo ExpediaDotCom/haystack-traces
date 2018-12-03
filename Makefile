@@ -3,15 +3,15 @@
 PWD := $(shell pwd)
 
 clean:
-	mvn clean
+	./mvnw clean
 
 build: clean
-	mvn package
+	./mvnw package
 
 all: clean indexer reader report-coverage
 
 report-coverage:
-	docker run -it -v ~/.m2:/root/.m2 -w /src -v `pwd`:/src maven:3.5.0-jdk-8 /bin/sh -c 'mvn scoverage:report-only && mvn clean'
+	docker run -it -v ~/.m2:/root/.m2 -w /src -v `pwd`:/src maven:3.5.0-jdk-8 /bin/sh -c './mvnw scoverage:report-only && ./mvnw clean'
 
 indexer: build_indexer
 	#cd indexer && $(MAKE) integration_test
@@ -20,10 +20,10 @@ reader: build_reader
 	#cd reader && $(MAKE) integration_test
 
 build_reader:
-	mvn package -DfinalName=haystack-trace-reader -pl reader -am
+	./mvnw package -DfinalName=haystack-trace-reader -pl reader -am
 
 build_indexer:
-	mvn package -DfinalName=haystack-trace-indexer -pl indexer -am
+	./mvnw package -DfinalName=haystack-trace-indexer -pl indexer -am
 
 backends: cd storage_backends && (MAKE) all
 

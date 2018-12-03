@@ -35,6 +35,8 @@ import scala.util.{Failure, Success, Try}
 
 class IndexDocumentGenerator(config: WhitelistIndexFieldConfiguration) extends MetricsSupport {
 
+  private val MIN_DURATION_FOR_TRUNCATION = TimeUnit.SECONDS.toMicros(20)
+
   /**
     * @param spanBuffer a span buffer object
     * @return index document that can be put in elastic search
@@ -51,15 +53,14 @@ class IndexDocumentGenerator(config: WhitelistIndexFieldConfiguration) extends M
     spanBuffer.getChildSpansList.asScala filter isValidForIndex foreach(span => {
 
       // calculate the trace starttime based on the minimum starttime observed across all child spans.
-      traceStartTime = Math.min(traceStartTime, microsToSecondGranularity(span.getStartTime))
+      traceStartTime = Math.min(traceStartTime, truncateToSecondGranularity(span.getStartTime))
       if(span.getParentSpanId == null) rootDuration = span.getDuration
 
-      val serviceName = SpanUtils.getEffectiveServiceName(span)
       val spanIndexDoc = spanIndices
-        .find(sp => sp(OPERATION_KEY_NAME).equals(span.getOperationName) && sp(SERVICE_KEY_NAME).equals(serviceName))
+        .find(sp => sp(OPERATION_KEY_NAME).equals(span.getOperationName) && sp(SERVICE_KEY_NAME).equals(span.getServiceName))
         .getOrElse({
           val newSpanIndexDoc = mutable.Map[String, Any](
-            SERVICE_KEY_NAME -> serviceName,
+            SERVICE_KEY_NAME -> span.getServiceName,
             OPERATION_KEY_NAME -> span.getOperationName)
           spanIndices.append(newSpanIndexDoc)
           newSpanIndexDoc
@@ -70,7 +71,7 @@ class IndexDocumentGenerator(config: WhitelistIndexFieldConfiguration) extends M
   }
 
   private def isValidForIndex(span: Span): Boolean = {
-    StringUtils.isNotEmpty(SpanUtils.getEffectiveServiceName(span)) && StringUtils.isNotEmpty(span.getOperationName)
+    StringUtils.isNotEmpty(span.getServiceName) && StringUtils.isNotEmpty(span.getOperationName)
   }
 
   /**
@@ -96,8 +97,8 @@ class IndexDocumentGenerator(config: WhitelistIndexFieldConfiguration) extends M
     }
 
     import com.expedia.www.haystack.trace.commons.clients.es.document.TraceIndexDoc._
-    append(DURATION_KEY_NAME, span.getDuration)
-    append(START_TIME_KEY_NAME, microsToSecondGranularity(span.getStartTime))
+    append(DURATION_KEY_NAME, adjustDurationForLowCardinality(span.getDuration))
+    append(START_TIME_KEY_NAME, truncateToSecondGranularity(span.getStartTime))
   }
 
 
@@ -143,7 +144,16 @@ class IndexDocumentGenerator(config: WhitelistIndexFieldConfiguration) extends M
     }
   }
 
-  private def microsToSecondGranularity(value: Long): Long = {
+  private def truncateToSecondGranularity(value: Long): Long = {
     TimeUnit.SECONDS.toMicros(TimeUnit.MICROSECONDS.toSeconds(value))
+  }
+
+  private def adjustDurationForLowCardinality(value: Long): Long = {
+    // dont consider millis, if it accounts for less than 5% of the actual value
+    if (value > MIN_DURATION_FOR_TRUNCATION) {
+      truncateToSecondGranularity(value)
+    } else {
+      value
+    }
   }
 }

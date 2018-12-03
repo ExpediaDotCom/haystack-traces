@@ -344,6 +344,47 @@ class TraceServiceIntegrationTestSpec extends BaseIntegrationTestSpec {
       Then("should return traces")
       traces.getTracesList.asScala.exists(_.getTraceId == traceId) shouldBe true
     }
+
+
+    it("should return traces for expression tree with duration filter") {
+      Given("traces with tags in cassandra and elasticsearch")
+      val traceId = UUID.randomUUID().toString
+      val serviceName = "expressionTraceSvc"
+      val operationName = "expressionTraceOp"
+      val tags = Map("uKey" -> "uValue", "vKey" -> "vValue")
+      val startTime = 1
+      val endTime = (System.currentTimeMillis() + 10000000) * 1000
+      putTraceInCassandraAndEs(traceId, UUID.randomUUID().toString, serviceName, operationName, tags)
+
+      When("searching traces for tags using expression tree")
+      val baseExpr = ExpressionTree
+        .newBuilder()
+        .setOperator(Operator.AND)
+        .setIsSpanLevelExpression(true)
+        .addOperands(Operand.newBuilder().setField(Field.newBuilder().setName(TraceIndexDoc.SERVICE_KEY_NAME).setValue(serviceName)))
+
+      val greaterThanExpr = baseExpr.addOperands(Operand.newBuilder().setField(Field.newBuilder().setName(TraceIndexDoc.DURATION_KEY_NAME).setOperator(Field.Operator.GREATER_THAN).setVType(Field.ValueType.DURATION).setValue("300ms")))
+      val nonEmptyTraces = client.searchTraces(TracesSearchRequest
+        .newBuilder()
+        .setFilterExpression(greaterThanExpr)
+        .setStartTime(startTime)
+        .setEndTime(endTime)
+        .setLimit(10)
+        .build())
+
+      val lessThanExpr = baseExpr.addOperands(Operand.newBuilder().setField(Field.newBuilder().setName(TraceIndexDoc.DURATION_KEY_NAME).setOperator(Field.Operator.LESS_THAN).setVType(Field.ValueType.DURATION).setValue("300ms")))
+      val emptyTraces = client.searchTraces(TracesSearchRequest
+        .newBuilder()
+        .setFilterExpression(lessThanExpr)
+        .setStartTime(startTime)
+        .setEndTime(endTime)
+        .setLimit(10)
+        .build())
+
+      Then("should return traces")
+      nonEmptyTraces.getTracesList.asScala.exists(_.getTraceId == traceId) shouldBe true
+      emptyTraces.getTracesList shouldBe empty
+    }
   }
 
   describe("TraceReader.getTraceCallGraph") {

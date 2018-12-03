@@ -17,6 +17,7 @@
 package com.expedia.www.haystack.trace.reader.readers.utils
 
 import com.expedia.open.tracing.{Span, Tag}
+import com.expedia.www.haystack.trace.commons.utils.{SpanMarkers, SpanUtils}
 import com.expedia.www.haystack.trace.reader.readers.utils.TagBuilders.{buildBoolTag, buildLongTag, buildStringTag}
 import com.expedia.www.haystack.trace.reader.readers.utils.TagExtractors.extractTagStringValue
 
@@ -112,7 +113,7 @@ object SpanMerger {
 
   private def auxiliaryClientTags(span: Span): List[Tag] =
     List(
-      buildStringTag(AuxiliaryTags.CLIENT_SERVICE_NAME, SpanUtils.getEffectiveServiceName(span)),
+      buildStringTag(AuxiliaryTags.CLIENT_SERVICE_NAME, span.getServiceName),
       buildStringTag(AuxiliaryTags.CLIENT_OPERATION_NAME, span.getOperationName),
       buildStringTag(AuxiliaryTags.CLIENT_SPAN_ID, span.getSpanId),
       buildStringTag(AuxiliaryTags.CLIENT_INFRASTRUCTURE_PROVIDER, extractTagStringValue(span, AuxiliaryTags.INFRASTRUCTURE_PROVIDER)),
@@ -123,7 +124,7 @@ object SpanMerger {
 
   private def auxiliaryServerTags(span: Span): List[Tag] = {
     List(
-      buildStringTag(AuxiliaryTags.SERVER_SERVICE_NAME, SpanUtils.getEffectiveServiceName(span)),
+      buildStringTag(AuxiliaryTags.SERVER_SERVICE_NAME, span.getServiceName),
       buildStringTag(AuxiliaryTags.SERVER_OPERATION_NAME, span.getOperationName),
       buildStringTag(AuxiliaryTags.SERVER_INFRASTRUCTURE_PROVIDER, extractTagStringValue(span, AuxiliaryTags.INFRASTRUCTURE_PROVIDER)),
       buildStringTag(AuxiliaryTags.SERVER_INFRASTRUCTURE_LOCATION, extractTagStringValue(span, AuxiliaryTags.INFRASTRUCTURE_LOCATION)),

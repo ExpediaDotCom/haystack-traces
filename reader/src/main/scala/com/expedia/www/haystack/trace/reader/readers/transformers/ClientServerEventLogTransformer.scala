@@ -17,7 +17,7 @@
 package com.expedia.www.haystack.trace.reader.readers.transformers
 
 import com.expedia.open.tracing.Span
-import com.expedia.www.haystack.trace.reader.readers.utils.{SpanMarkers, SpanUtils}
+import com.expedia.www.haystack.trace.commons.utils.{SpanMarkers, SpanUtils}
 
 import scala.collection.JavaConverters._
 

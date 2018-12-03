@@ -1,8 +1,9 @@
 package com.expedia.www.haystack.trace.reader.unit.readers.transformers
 
 import com.expedia.open.tracing.{Span, Tag}
+import com.expedia.www.haystack.trace.commons.utils.SpanMarkers
 import com.expedia.www.haystack.trace.reader.readers.transformers.{OrphanedTraceTransformer, OrphanedTraceTransformerConstants}
-import com.expedia.www.haystack.trace.reader.readers.utils.{MutableSpanForest, SpanMarkers}
+import com.expedia.www.haystack.trace.reader.readers.utils.MutableSpanForest
 import com.expedia.www.haystack.trace.reader.unit.BaseUnitTestSpec
 
 class OrphanedTraceTransformerSpec extends BaseUnitTestSpec {

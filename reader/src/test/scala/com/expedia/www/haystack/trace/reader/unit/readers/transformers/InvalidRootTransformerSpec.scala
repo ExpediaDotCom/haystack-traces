@@ -17,8 +17,9 @@
 package com.expedia.www.haystack.trace.reader.unit.readers.transformers
 
 import com.expedia.open.tracing.{Span, Tag}
+import com.expedia.www.haystack.trace.commons.utils.SpanUtils
 import com.expedia.www.haystack.trace.reader.readers.transformers.InvalidRootTransformer
-import com.expedia.www.haystack.trace.reader.readers.utils.{MutableSpanForest, SpanUtils}
+import com.expedia.www.haystack.trace.reader.readers.utils.MutableSpanForest
 import com.expedia.www.haystack.trace.reader.unit.BaseUnitTestSpec
 
 import scala.collection.JavaConverters._

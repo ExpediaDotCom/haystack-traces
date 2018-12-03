@@ -124,7 +124,7 @@ object SpanUtils {
     val duration = (longestDurationSpan.getStartTime + longestDurationSpan.getDuration) - startTime
 
     val autoGenSpanBuilder = Span.newBuilder()
-      .setServiceName(earliestRoot.getServiceName)
+      .setServiceName(AUTOGEN_SERVICE_NAME)
       .setOperationName(AUTOGEN_OPERATION_NAME)
       .setTraceId(earliestRoot.getTraceId)
       .setSpanId(rootSpanId)
@@ -143,7 +143,8 @@ object SpanUtils {
 }
 
 object SpanMarkers {
-  val AUTOGEN_OPERATION_NAME = "auto-generated"
+  val AUTOGEN_SERVICE_NAME = "unknown"
+  val AUTOGEN_OPERATION_NAME = "unknown"
   val AUTOGEN_REASON_TAG = "X-HAYSTACK-AUTOGEN-REASON"
   val AUTOGEN_SPAN_ID_TAG = "X-HAYSTACK-AUTOGEN-SPAN-ID"
   val AUTOGEN_FLAG_TAG = "X-HAYSTACK-AUTOGEN"

@@ -17,6 +17,7 @@
         <mainClass>com.expedia.www.haystack.trace.backend.com.expedia.www.haystack.trace.storage.backends.cassandra.Service</mainClass>
         <finalName>${project.artifactId}-${project.version}</finalName>
         <maven-protobuf-plugin.version>3.3.0.1</maven-protobuf-plugin.version>
+        <cassandra.driver.version>3.1.0</cassandra.driver.version>
     </properties>
 
     <dependencies>

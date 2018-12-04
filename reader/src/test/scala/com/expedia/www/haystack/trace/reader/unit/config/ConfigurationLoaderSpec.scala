@@ -71,5 +71,11 @@ class ConfigurationLoaderSpec extends BaseUnitTestSpec {
       elasticSearchConfig.serviceMetadataIndexConfiguration.indexName shouldEqual "service_metadata"
       elasticSearchConfig.serviceMetadataIndexConfiguration.indexType shouldEqual "metadata"
     }
+
+    it("should load trace backend configuration") {
+      val traceBackendConfig = new ProviderConfiguration().traceBackendConfiguration
+      traceBackendConfig.host shouldEqual "localhost"
+      traceBackendConfig.port shouldEqual 8080
+    }
   }
 }

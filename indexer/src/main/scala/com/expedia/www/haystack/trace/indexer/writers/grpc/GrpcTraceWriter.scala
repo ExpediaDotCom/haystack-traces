@@ -41,7 +41,7 @@ class GrpcTraceWriter(config: TraceBackendConfiguration)(implicit val dispatcher
 
   private val LOGGER = LoggerFactory.getLogger(classOf[GrpcTraceWriter])
   val client: StorageBackendGrpc.StorageBackendFutureStub = StorageBackendGrpc.newFutureStub(
-    ManagedChannelBuilder.forAddress("localhost", 8088)
+    ManagedChannelBuilder.forAddress(config.clientConfig.host,config.clientConfig.port)
       .usePlaintext(true)
       .build())
 

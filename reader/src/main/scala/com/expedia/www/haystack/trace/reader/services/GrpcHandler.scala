@@ -17,7 +17,6 @@
 package com.expedia.www.haystack.trace.reader.services
 
 import com.expedia.www.haystack.commons.metrics.MetricsSupport
-import com.expedia.www.haystack.trace.storage.backends.cassandra.services.GrpcHandler._
 import com.google.protobuf.GeneratedMessageV3
 import io.grpc.Status
 import io.grpc.stub.StreamObserver
@@ -43,6 +42,8 @@ class GrpcHandler(operationName: String)(implicit val executor: ExecutionContext
   private val metricFriendlyOperationName = operationName.replace('/', '.')
   private val timer = metricRegistry.timer(metricFriendlyOperationName)
   private val failureMeter = metricRegistry.meter(s"$metricFriendlyOperationName.failures")
+
+  import GrpcHandler._
 
   def handle[Rs](request: GeneratedMessageV3, responseObserver: StreamObserver[Rs])(op: => Future[Rs]): Unit = {
     val time = timer.time()

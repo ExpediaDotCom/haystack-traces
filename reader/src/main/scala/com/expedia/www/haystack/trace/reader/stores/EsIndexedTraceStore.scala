@@ -17,14 +17,13 @@
 package com.expedia.www.haystack.trace.reader.stores
 
 import com.expedia.open.tracing.api._
-import com.expedia.www.haystack.trace.commons.clients.cassandra.{CassandraClusterFactory, CassandraSession}
+import com.expedia.www.haystack.commons.metrics.MetricsSupport
 import com.expedia.www.haystack.trace.commons.clients.es.document.TraceIndexDoc
-import com.expedia.www.haystack.trace.commons.config.entities.{CassandraConfiguration, WhitelistIndexFieldConfiguration}
+import com.expedia.www.haystack.trace.commons.config.entities.{TraceBackendClientConfiguration, WhitelistIndexFieldConfiguration}
 import com.expedia.www.haystack.trace.reader.config.entities.ElasticSearchConfiguration
-import com.expedia.www.haystack.trace.reader.metrics.MetricsSupport
-import com.expedia.www.haystack.trace.reader.stores.readers.cassandra.CassandraTraceReader
 import com.expedia.www.haystack.trace.reader.stores.readers.es.ElasticSearchReader
 import com.expedia.www.haystack.trace.reader.stores.readers.es.query.{FieldValuesQueryGenerator, ServiceMetadataQueryGenerator, TraceCountsQueryGenerator, TraceSearchQueryGenerator}
+import com.expedia.www.haystack.trace.reader.stores.readers.grpc.GrpcTraceReader
 import io.searchbox.core.SearchResult
 import org.elasticsearch.index.IndexNotFoundException
 import org.slf4j.LoggerFactory
@@ -32,15 +31,14 @@ import org.slf4j.LoggerFactory
 import scala.collection.JavaConverters._
 import scala.concurrent.{ExecutionContextExecutor, Future}
 
-class CassandraEsTraceStore(cassandraConfig: CassandraConfiguration,
-                            elasticSearchConfiguration: ElasticSearchConfiguration,
-                            whitelistedFieldsConfiguration: WhitelistIndexFieldConfiguration)(implicit val executor: ExecutionContextExecutor)
+class EsIndexedTraceStore(traceBackendConfig: TraceBackendClientConfiguration,
+                          elasticSearchConfiguration: ElasticSearchConfiguration,
+                          whitelistedFieldsConfiguration: WhitelistIndexFieldConfiguration)(implicit val executor: ExecutionContextExecutor)
   extends TraceStore with MetricsSupport with ResponseParser {
 
   private val LOGGER = LoggerFactory.getLogger(classOf[ElasticSearchReader])
 
-  private val cassandraSession = new CassandraSession(cassandraConfig, new CassandraClusterFactory)
-  private val cassandraReader: CassandraTraceReader = new CassandraTraceReader(cassandraSession, cassandraConfig)
+  private val traceReader: GrpcTraceReader = new GrpcTraceReader(traceBackendConfig)
   private val esReader: ElasticSearchReader = new ElasticSearchReader(elasticSearchConfiguration.clientConfiguration)
   private val traceSearchQueryGenerator = new TraceSearchQueryGenerator(elasticSearchConfiguration.spansIndexConfiguration, ES_NESTED_DOC_NAME, whitelistedFieldsConfiguration)
   private val traceCountsQueryGenerator = new TraceCountsQueryGenerator(elasticSearchConfiguration.spansIndexConfiguration, ES_NESTED_DOC_NAME, whitelistedFieldsConfiguration)
@@ -56,7 +54,7 @@ class CassandraEsTraceStore(cassandraConfig: CassandraConfiguration,
   }
 
   private def handleIndexNotFoundResult(result: Future[SearchResult],
-                           retryFunc: () => Future[SearchResult]): Future[SearchResult] = {
+                                        retryFunc: () => Future[SearchResult]): Future[SearchResult] = {
     result.recoverWith {
       case _: IndexNotFoundException => retryFunc()
     }
@@ -82,13 +80,13 @@ class CassandraEsTraceStore(cassandraConfig: CassandraConfiguration,
         .toSet[String] // de-dup traceIds
         .toList
 
-      cassandraReader.readRawTraces(traceIds)
+      traceReader.readTraces(traceIds)
     } else {
       Future.successful(Nil)
     }
   }
 
-  override def getTrace(traceId: String): Future[Trace] = cassandraReader.readTrace(traceId)
+  override def getTrace(traceId: String): Future[Trace] = traceReader.readTraces(List(traceId)).map(_.head)
 
   override def getFieldNames: Future[Seq[String]] = {
     Future.successful(whitelistedFieldsConfiguration.whitelistIndexFields.map(_.name).distinct.sorted)
@@ -111,11 +109,10 @@ class CassandraEsTraceStore(cassandraConfig: CassandraConfiguration,
         .map(extractOperationMetadataFromSource(_, request.getFieldName.toLowerCase)))
 
     } else {
-      LOGGER.info("read from service metadata request isn't served by cassandra")
+      LOGGER.info("read from service metadata request isn't served by elasticsearch")
       None
     }
   }
-
 
 
   override def getFieldValues(request: FieldValuesRequest): Future[Seq[String]] = {
@@ -135,12 +132,11 @@ class CassandraEsTraceStore(cassandraConfig: CassandraConfiguration,
   }
 
   override def getRawTraces(request: RawTracesRequest): Future[Seq[Trace]] = {
-    cassandraReader.readRawTraces(request.getTraceIdList.asScala.toList)
+    traceReader.readTraces(request.getTraceIdList.asScala.toList)
   }
 
   override def close(): Unit = {
-    cassandraReader.close()
+    traceReader.close()
     esReader.close()
-    cassandraSession.close()
   }
 }

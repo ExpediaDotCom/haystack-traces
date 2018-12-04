@@ -19,9 +19,9 @@ package com.expedia.www.haystack.trace.reader.readers
 import com.codahale.metrics.Meter
 import com.expedia.open.tracing.Span
 import com.expedia.open.tracing.api.{FieldNames, _}
+import com.expedia.www.haystack.commons.metrics.MetricsSupport
 import com.expedia.www.haystack.trace.reader.config.entities.{TraceTransformersConfiguration, TraceValidatorsConfiguration}
 import com.expedia.www.haystack.trace.reader.exceptions.SpanNotFoundException
-import com.expedia.www.haystack.trace.reader.metrics.MetricsSupport
 import com.expedia.www.haystack.trace.reader.readers.utils.AuxiliaryTags
 import com.expedia.www.haystack.trace.reader.readers.utils.TagExtractors._
 import com.expedia.www.haystack.trace.reader.stores.TraceStore

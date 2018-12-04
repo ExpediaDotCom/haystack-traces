@@ -17,17 +17,17 @@
 package com.expedia.www.haystack.trace.reader.integration
 
 import java.nio.ByteBuffer
+import java.sql.ResultSet
 import java.text.SimpleDateFormat
 import java.util.concurrent.{Executors, TimeUnit}
 import java.util.{Date, UUID}
 
-import com.datastax.driver.core.querybuilder.QueryBuilder
-import com.datastax.driver.core.{Cluster, ResultSet, Session, SimpleStatement}
 import com.expedia.open.tracing.Span
 import com.expedia.open.tracing.api.TraceReaderGrpc
 import com.expedia.open.tracing.api.TraceReaderGrpc.TraceReaderBlockingStub
+import com.expedia.open.tracing.backend.StorageBackendGrpc.StorageBackendBlockingStub
+import com.expedia.open.tracing.backend.{StorageBackendGrpc, TraceRecord, WriteSpansRequest, WriteSpansResponse}
 import com.expedia.open.tracing.buffer.SpanBuffer
-import com.expedia.www.haystack.trace.commons.clients.cassandra.CassandraTableSchema
 import com.expedia.www.haystack.trace.commons.clients.es.document.TraceIndexDoc
 import com.expedia.www.haystack.trace.commons.config.entities.{IndexFieldType, WhiteListIndexFields, WhitelistIndexField}
 import com.expedia.www.haystack.trace.reader.Service
@@ -38,10 +38,10 @@ import io.searchbox.client.config.HttpClientConfig
 import io.searchbox.client.{JestClient, JestClientFactory}
 import io.searchbox.core.Index
 import io.searchbox.indices.CreateIndex
+import org.scalatest._
 import org.json4s.ext.EnumNameSerializer
 import org.json4s.jackson.Serialization
 import org.json4s.{DefaultFormats, Formats}
-import org.scalatest._
 
 import scala.collection.JavaConverters._
 import scala.collection.mutable
@@ -51,9 +51,6 @@ trait BaseIntegrationTestSpec extends FunSpec with GivenWhenThen with Matchers w
   protected var client: TraceReaderBlockingStub = _
 
   protected var healthCheckClient: HealthGrpc.HealthBlockingStub = _
-  private val CASSANDRA_ENDPOINT = "cassandra"
-  private val CASSANDRA_KEYSPACE = "haystack"
-  private val CASSANDRA_TABLE = "traces"
 
   private val ELASTIC_SEARCH_ENDPOINT = "http://elasticsearch:9200"
   private val ELASTIC_SEARCH_WHITELIST_INDEX = "reload-configs"
@@ -72,102 +69,102 @@ trait BaseIntegrationTestSpec extends FunSpec with GivenWhenThen with Matchers w
 
     s"haystack-traces-$dateBucket-$hourBucket"
   }
-  private val INDEX_TEMPLATE = """{
-                                 |    "template": "haystack-traces*",
-                                 |    "settings": {
-                                 |        "number_of_shards": 1,
-                                 |        "index.mapping.ignore_malformed": true,
-                                 |        "analysis": {
-                                 |            "normalizer": {
-                                 |                "lowercase_normalizer": {
-                                 |                    "type": "custom",
-                                 |                    "filter": ["lowercase"]
-                                 |                }
-                                 |            }
-                                 |        }
-                                 |    },
-                                 |    "aliases": {
-                                 |        "haystack-traces": {}
-                                 |    },
-                                 |    "mappings": {
-                                 |        "spans": {
-                                 |            "_all": {
-                                 |                "enabled": false
-                                 |            },
-                                 |            "_source": {
-                                 |                "includes": ["traceid"]
-                                 |            },
-                                 |            "properties": {
-                                 |                "traceid": {
-                                 |                    "enabled": false
-                                 |                },
-                                 |                "starttime": {
-                                 |                   "type": "long",
-                                 |                   "doc_values": true
-                                 |                },
-                                 |                "spans": {
-                                 |                    "type": "nested",
-                                 |                    "properties": {
-                                 |                        "servicename": {
-                                 |                            "type": "keyword",
-                                 |                            "normalizer": "lowercase_normalizer",
-                                 |                            "doc_values": true,
-                                 |                            "norms": false
-                                 |                        },
-                                 |                        "operationname": {
-                                 |                            "type": "keyword",
-                                 |                            "normalizer": "lowercase_normalizer",
-                                 |                            "doc_values": true,
-                                 |                            "norms": false
-                                 |                        },
-                                 |                        "starttime": {
-                                 |                            "type": "long",
-                                 |                            "doc_values": true
-                                 |                        },
-                                 |                        "duration": {
-                                 |                            "type": "long",
-                                 |                            "doc_values": true
-                                 |                        }
-                                 |                    }
-                                 |                }
-                                 |            },
-                                 |            "dynamic_templates": [{
-                                 |                "strings_as_keywords_1": {
-                                 |                    "match_mapping_type": "string",
-                                 |                    "mapping": {
-                                 |                        "type": "keyword",
-                                 |                        "normalizer": "lowercase_normalizer",
-                                 |                        "doc_values": false,
-                                 |                        "norms": false
-                                 |                    }
-                                 |                }
-                                 |            }, {
-                                 |                "longs_disable_doc_norms": {
-                                 |                    "match_mapping_type": "long",
-                                 |                    "mapping": {
-                                 |                        "type": "long",
-                                 |                        "doc_values": false,
-                                 |                        "norms": false
-                                 |                    }
-                                 |                }
-                                 |            }]
-                                 |        }
-                                 |    }
-                                 |}
-                                 |""".stripMargin
+  private val INDEX_TEMPLATE =
+    """{
+      |    "template": "haystack-traces*",
+      |    "settings": {
+      |        "number_of_shards": 1,
+      |        "index.mapping.ignore_malformed": true,
+      |        "analysis": {
+      |            "normalizer": {
+      |                "lowercase_normalizer": {
+      |                    "type": "custom",
+      |                    "filter": ["lowercase"]
+      |                }
+      |            }
+      |        }
+      |    },
+      |    "aliases": {
+      |        "haystack-traces": {}
+      |    },
+      |    "mappings": {
+      |        "spans": {
+      |            "_all": {
+      |                "enabled": false
+      |            },
+      |            "_source": {
+      |                "includes": ["traceid"]
+      |            },
+      |            "properties": {
+      |                "traceid": {
+      |                    "enabled": false
+      |                },
+      |                "starttime": {
+      |                   "type": "long",
+      |                   "doc_values": true
+      |                },
+      |                "spans": {
+      |                    "type": "nested",
+      |                    "properties": {
+      |                        "servicename": {
+      |                            "type": "keyword",
+      |                            "normalizer": "lowercase_normalizer",
+      |                            "doc_values": true,
+      |                            "norms": false
+      |                        },
+      |                        "operationname": {
+      |                            "type": "keyword",
+      |                            "normalizer": "lowercase_normalizer",
+      |                            "doc_values": true,
+      |                            "norms": false
+      |                        },
+      |                        "starttime": {
+      |                            "type": "long",
+      |                            "doc_values": true
+      |                        },
+      |                        "duration": {
+      |                            "type": "long",
+      |                            "doc_values": true
+      |                        }
+      |                    }
+      |                }
+      |            },
+      |            "dynamic_templates": [{
+      |                "strings_as_keywords_1": {
+      |                    "match_mapping_type": "string",
+      |                    "mapping": {
+      |                        "type": "keyword",
+      |                        "normalizer": "lowercase_normalizer",
+      |                        "doc_values": false,
+      |                        "norms": false
+      |                    }
+      |                }
+      |            }, {
+      |                "longs_disable_doc_norms": {
+      |                    "match_mapping_type": "long",
+      |                    "mapping": {
+      |                        "type": "long",
+      |                        "doc_values": false,
+      |                        "norms": false
+      |                    }
+      |                }
+      |            }]
+      |        }
+      |    }
+      |}
+      |""".stripMargin
 
 
-  private var cassandraSession: Session = _
   private var esClient: JestClient = _
+  private var traceBackendClient: StorageBackendBlockingStub = _
 
   override def beforeAll() {
-    // setup cassandra
-    cassandraSession = Cluster
-      .builder()
-      .addContactPoints(CASSANDRA_ENDPOINT)
-      .build()
-      .connect(CASSANDRA_KEYSPACE)
-    deleteCassandraTableRows()
+    // setup traceBackend
+
+    traceBackendClient = StorageBackendGrpc.newBlockingStub(
+      ManagedChannelBuilder.forAddress("localhost", 8080)
+        .usePlaintext(true)
+        .build())
 
     // setup elasticsearch
     val factory = new JestClientFactory()
@@ -195,23 +192,20 @@ trait BaseIntegrationTestSpec extends FunSpec with GivenWhenThen with Matchers w
       .build())
   }
 
-  private def deleteCassandraTableRows(): Unit = {
-    cassandraSession.execute(new SimpleStatement(s"TRUNCATE $CASSANDRA_TABLE"))
-  }
 
-  protected def putTraceInCassandraAndEs(traceId: String = UUID.randomUUID().toString,
-                                         spanId: String = UUID.randomUUID().toString,
-                                         serviceName: String = "",
-                                         operationName: String = "",
-                                         tags: Map[String, String] = Map.empty,
-                                         startTime: Long = System.currentTimeMillis() * 1000,
-                                         sleep: Boolean = true,
-                                         duration: Long = DEFAULT_DURATION): Unit = {
-    insertTraceInCassandra(traceId, spanId, serviceName, operationName, tags, startTime, duration)
+  protected def putTraceInEsAndTraceBackend(traceId: String = UUID.randomUUID().toString,
+                                            spanId: String = UUID.randomUUID().toString,
+                                            serviceName: String = "",
+                                            operationName: String = "",
+                                            tags: Map[String, String] = Map.empty,
+                                            startTime: Long = System.currentTimeMillis() * 1000,
+                                            sleep: Boolean = true,
+                                            duration: Long = DEFAULT_DURATION): Unit = {
+    insertTraceInBackend(traceId, spanId, serviceName, operationName, tags, startTime, duration)
     insertTraceInEs(traceId, spanId, serviceName, operationName, tags, startTime, duration)
 
     // wait for few sec to let ES refresh its index
-    if(sleep) Thread.sleep(5000)
+    if (sleep) Thread.sleep(5000)
   }
 
   private def insertTraceInEs(traceId: String,
@@ -223,7 +217,7 @@ trait BaseIntegrationTestSpec extends FunSpec with GivenWhenThen with Matchers w
                               duration: Long) = {
     import TraceIndexDoc._
     // create map using service, operation and tags
-    val fieldMap:mutable.Map[String, Any] = mutable.Map(
+    val fieldMap: mutable.Map[String, Any] = mutable.Map(
       SERVICE_KEY_NAME -> serviceName,
       OPERATION_KEY_NAME -> operationName,
       START_TIME_KEY_NAME -> mutable.Set[Any](startTime),
@@ -237,13 +231,13 @@ trait BaseIntegrationTestSpec extends FunSpec with GivenWhenThen with Matchers w
       .`type`(SPANS_INDEX_TYPE)
       .build)
 
-    if(result.getErrorMessage != null) {
+    if (result.getErrorMessage != null) {
       fail("Fail to execute the indexing request " + result.getErrorMessage)
     }
   }
 
   protected def putWhitelistIndexFieldsInEs(fields: List[String]): Unit = {
-    val whitelistFields = for(field <- fields) yield WhitelistIndexField(field, IndexFieldType.string, aliases = Set(s"_$field"))
+    val whitelistFields = for (field <- fields) yield WhitelistIndexField(field, IndexFieldType.string, aliases = Set(s"_$field"))
     esClient.execute(new Index.Builder(Serialization.write(WhiteListIndexFields(whitelistFields)))
       .index(ELASTIC_SEARCH_WHITELIST_INDEX)
       .`type`(ELASTIC_SEARCH_WHITELIST_TYPE)
@@ -253,30 +247,30 @@ trait BaseIntegrationTestSpec extends FunSpec with GivenWhenThen with Matchers w
     Thread.sleep(10000)
   }
 
-  private def insertTraceInCassandra(traceId: String,
-                                     spanId: String,
-                                     serviceName: String,
-                                     operationName: String,
-                                     tags: Map[String, String],
-                                     startTime: Long,
-                                     duration: Long): ResultSet = {
+  private def insertTraceInBackend(traceId: String,
+                                   spanId: String,
+                                   serviceName: String,
+                                   operationName: String,
+                                   tags: Map[String, String],
+                                   startTime: Long,
+                                   duration: Long): WriteSpansResponse = {
     val spanBuffer = createSpanBufferWithSingleSpan(traceId, spanId, serviceName, operationName, tags, startTime, duration)
-    writeToCassandra(spanBuffer, traceId)
+    writeToBackend(spanBuffer, traceId)
   }
 
-  protected def putTraceInCassandra(traceId: String,
-                                    spanId: String = UUID.randomUUID().toString,
-                                    serviceName: String = "",
-                                    operationName: String = "",
-                                    tags: Map[String, String] = Map.empty,
-                                    startTime: Long = System.currentTimeMillis() * 1000,
-                                    duration: Long = DEFAULT_DURATION): Unit = {
-    insertTraceInCassandra(traceId, spanId, serviceName, operationName, tags, startTime, duration)
+  protected def putTraceInBackend(traceId: String,
+                                  spanId: String = UUID.randomUUID().toString,
+                                  serviceName: String = "",
+                                  operationName: String = "",
+                                  tags: Map[String, String] = Map.empty,
+                                  startTime: Long = System.currentTimeMillis() * 1000,
+                                  duration: Long = DEFAULT_DURATION): Unit = {
+    insertTraceInBackend(traceId, spanId, serviceName, operationName, tags, startTime, duration)
     // wait for few sec to let ES refresh its index
     Thread.sleep(1000)
   }
 
-  protected def putTraceInCassandraWithPartialSpans(traceId: String): ResultSet = {
+  protected def putTraceInBackendWithPartialSpans(traceId: String): WriteSpansResponse = {
     val trace = buildMultiServiceTrace()
     val spanBuffer = SpanBuffer
       .newBuilder()
@@ -284,17 +278,19 @@ trait BaseIntegrationTestSpec extends FunSpec with GivenWhenThen with Matchers w
       .addAllChildSpans(trace.getChildSpansList)
       .build()
 
-    writeToCassandra(spanBuffer, traceId)
+    writeToBackend(spanBuffer, traceId)
   }
 
-  private def writeToCassandra(spanBuffer: SpanBuffer, traceId: String) = {
-    import CassandraTableSchema._
+  private def writeToBackend(spanBuffer: SpanBuffer, traceId: String): WriteSpansResponse = {
 
-    cassandraSession.execute(QueryBuilder
-      .insertInto(CASSANDRA_TABLE)
-      .value(ID_COLUMN_NAME, traceId)
-      .value(TIMESTAMP_COLUMN_NAME, new Date())
-      .value(SPANS_COLUMN_NAME, ByteBuffer.wrap(spanBuffer.toByteArray)))
+    val traceRecord = TraceRecord.newBuilder().setTraceId(traceId).build()
+
+
+    val writeSpanRequest = WriteSpansRequest.newBuilder()
+      .addRecords(traceRecord)
+      .build()
+
+    traceBackendClient.writeSpans(writeSpanRequest)
   }
 
   private def createSpanBufferWithSingleSpan(traceId: String,

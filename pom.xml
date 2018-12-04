@@ -80,7 +80,6 @@
 
         <jest.version>5.3.2</jest.version>
         <elasticsearch.version>6.0.1</elasticsearch.version>
-        <cassandra.driver.version>3.1.0</cassandra.driver.version>
         <httpclient.version>4.5.3</httpclient.version>
         <aws-sdk.version>1.11.20</aws-sdk.version>
         <scala.major.version>2</scala.major.version>
@@ -157,6 +156,11 @@
                 <artifactId>config</artifactId>
                 <version>${typesafe-config.version}</version>
             </dependency>
+            <dependency>
+                <groupId>io.dropwizard.metrics</groupId>
+                <artifactId>metrics-core</artifactId>
+                <version>3.1.2</version>
+            </dependency>
 
             <!-- logging -->
             <dependency>
@@ -231,12 +235,6 @@
                 <version>${httpclient.version}</version>
             </dependency>
 
-            <!-- cassandra client-->
-            <dependency>
-                <groupId>com.datastax.cassandra</groupId>
-                <artifactId>cassandra-driver-core</artifactId>
-                <version>${cassandra.driver.version}</version>
-            </dependency>
 
             <dependency>
                 <groupId>com.expedia.www</groupId>
@@ -261,6 +259,11 @@
         <dependency>
             <groupId>com.expedia.www</groupId>
             <artifactId>haystack-commons</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>io.dropwizard.metrics</groupId>
+            <artifactId>metrics-core</artifactId>
         </dependency>
 
         <dependency>

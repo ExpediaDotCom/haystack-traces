@@ -14,16 +14,6 @@ prepare_integration_test_env: docker_build
 	docker-compose -f build/integration-tests/docker-compose.yml -p sandbox up -d
 	sleep 30
 
-	# prepare cassandra table for haystack-trace-reader to run against
-	docker run \
-		-it \
-		--rm \
-		--network=sandbox_default \
-		-v $(PWD)/build/integration-tests:/src \
-		-w /src \
-		node:alpine \
-		/bin/sh -c 'npm install && node create-cassandra-table.js'
-
 integration_test: prepare_integration_test_env
 	# run tests in a separate container and join the docker-compose network
 	docker run \

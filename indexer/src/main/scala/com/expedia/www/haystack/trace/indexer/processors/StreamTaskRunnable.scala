@@ -102,7 +102,6 @@ class StreamTaskRunnable(taskId: Int, kafkaConfig: KafkaConfiguration, processor
   /**
     * Execute the stream processors
     *
-    * @throws Exception for any exceptions
     */
   override def run(): Unit = {
     LOGGER.info("Starting stream processing thread with id={}", taskId)

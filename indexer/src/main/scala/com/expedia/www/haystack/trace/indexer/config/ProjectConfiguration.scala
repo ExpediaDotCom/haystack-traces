@@ -120,17 +120,6 @@ class ProjectConfiguration extends AutoCloseable {
       wakeupTimeoutInMillis = kafka.getInt("wakeup.timeout.ms"))
   }
 
-  private def keyspaceConfig(kConfig: Config, ttl: Int): KeyspaceConfiguration = {
-    val autoCreateSchemaField = "auto.create.schema"
-    val autoCreateSchema = if (kConfig.hasPath(autoCreateSchemaField)
-      && StringUtils.isNotEmpty(kConfig.getString(autoCreateSchemaField))) {
-      Some(kConfig.getString(autoCreateSchemaField))
-    } else {
-      None
-    }
-
-    KeyspaceConfiguration(kConfig.getString("name"), kConfig.getString("table.name"), ttl, autoCreateSchema)
-  }
 
   /**
     *
@@ -140,8 +129,10 @@ class ProjectConfiguration extends AutoCloseable {
 
 
     val traceBackendConfig = config.getConfig("backend")
+    val clientConfig = traceBackendConfig.getConfig("client")
 
     TraceBackendConfiguration(
+      TraceBackendClientConfiguration(clientConfig.getString("host"),clientConfig.getInt("port")),
       maxInFlightRequests = traceBackendConfig.getInt("max.inflight.requests"),
       retryConfig = RetryOperation.Config(
         traceBackendConfig.getInt("retries.max"),

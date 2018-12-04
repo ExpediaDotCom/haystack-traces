@@ -23,12 +23,6 @@
             <artifactId>aws-java-sdk-ec2</artifactId>
         </dependency>
 
-        <!-- cassandra client-->
-        <dependency>
-            <groupId>com.datastax.cassandra</groupId>
-            <artifactId>cassandra-driver-core</artifactId>
-        </dependency>
-
         <dependency>
             <groupId>io.searchbox</groupId>
             <artifactId>jest</artifactId>

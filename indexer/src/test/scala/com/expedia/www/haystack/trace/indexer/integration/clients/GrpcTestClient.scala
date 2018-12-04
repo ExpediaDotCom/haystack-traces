@@ -19,6 +19,7 @@ package com.expedia.www.haystack.trace.indexer.integration.clients
 
 import com.expedia.open.tracing.backend.TraceRecord
 import com.expedia.www.haystack.commons.retries.RetryOperation
+import com.expedia.www.haystack.trace.commons.config.entities.TraceBackendClientConfiguration
 import com.expedia.www.haystack.trace.indexer.config.entities.TraceBackendConfiguration
 
 class GrpcTestClient {
@@ -32,6 +33,7 @@ class GrpcTestClient {
   }
 
   def buildConfig = TraceBackendConfiguration(
+    TraceBackendClientConfiguration("localhost", 8080),
     10, RetryOperation.Config(10, 250, 2))
 
   def queryAllTraces(): Seq[TraceRecord] = {

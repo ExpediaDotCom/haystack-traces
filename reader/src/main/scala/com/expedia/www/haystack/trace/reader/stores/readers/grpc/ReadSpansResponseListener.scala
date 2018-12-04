@@ -14,15 +14,15 @@
  *       limitations under the License.
  */
 
-package com.expedia.www.haystack.trace.reader.stores.readers.cassandra
+package com.expedia.www.haystack.trace.reader.stores.readers.grpc
+
+import java.util.concurrent.Future
 
 import com.codahale.metrics.{Meter, Timer}
-import com.datastax.driver.core.exceptions.NoHostAvailableException
-import com.datastax.driver.core.{ResultSet, ResultSetFuture, Row}
 import com.expedia.open.tracing.api.Trace
-import com.expedia.www.haystack.trace.commons.clients.cassandra.CassandraTableSchema
+import com.expedia.open.tracing.backend.{ReadSpansResponse, TraceRecord}
+import com.expedia.www.haystack.trace.commons.packer.Unpacker
 import com.expedia.www.haystack.trace.reader.exceptions.TraceNotFoundException
-import com.expedia.www.haystack.trace.reader.stores.readers.cassandra.CassandraReadRawTracesResultListener._
 import org.slf4j.{Logger, LoggerFactory}
 
 import scala.collection.JavaConverters._
@@ -30,20 +30,23 @@ import scala.collection.mutable
 import scala.concurrent.Promise
 import scala.util.{Failure, Success, Try}
 
-object CassandraReadRawTracesResultListener {
-  protected val LOGGER: Logger = LoggerFactory.getLogger(classOf[CassandraReadRawTracesResultListener])
+object ReadSpansResponseListener {
+  protected val LOGGER: Logger = LoggerFactory.getLogger(classOf[ReadSpansResponseListener])
 }
 
-class CassandraReadRawTracesResultListener(asyncResult: ResultSetFuture,
-                                           promise: Promise[Seq[Trace]],
-                                           timer: Timer.Context,
-                                           failure: Meter,
-                                           tracesFailure: Meter,
-                                           traceIdCount: Int) extends Runnable {
+class ReadSpansResponseListener(readSpansResponse: Future[ReadSpansResponse],
+                                promise: Promise[Seq[Trace]],
+                                timer: Timer.Context,
+                                failure: Meter,
+                                tracesFailure: Meter,
+                                traceIdCount: Int) extends Runnable {
+
+  import ReadSpansResponseListener._
+
   override def run(): Unit = {
     timer.close()
 
-    Try(asyncResult.get)
+    Try(readSpansResponse.get)
       .flatMap(tryGetTraceRows)
       .flatMap(tryDeserialize)
     match {
@@ -51,32 +54,24 @@ class CassandraReadRawTracesResultListener(asyncResult: ResultSetFuture,
         tracesFailure.mark(traceIdCount - traces.length)
         promise.success(traces)
       case Failure(ex) =>
-        if (fatalError(ex)) {
-          LOGGER.error("Fatal error in reading from cassandra, tearing down the app", ex)
-        } else {
-          LOGGER.error("Failed in reading the record from cassandra", ex)
-        }
+        LOGGER.error("Failed in reading the record from trace-backend", ex)
         failure.mark()
         tracesFailure.mark(traceIdCount)
         promise.failure(ex)
     }
   }
 
-  private def fatalError(ex: Throwable): Boolean = {
-    if (ex.isInstanceOf[NoHostAvailableException]) true else ex.getCause != null && fatalError(ex.getCause)
+  private def tryGetTraceRows(response: ReadSpansResponse): Try[Seq[TraceRecord]] = {
+    val records = response.getRecordsList
+    if (records.isEmpty) Failure(new TraceNotFoundException) else Success(records.asScala)
   }
 
-  private def tryGetTraceRows(resultSet: ResultSet): Try[Seq[Row]] = {
-    val rows = resultSet.all().asScala
-    if (rows.isEmpty) Failure(new TraceNotFoundException) else Success(rows)
-  }
-
-  private def tryDeserialize(rows: Seq[Row]): Try[Seq[Trace]] = {
+  private def tryDeserialize(records: Seq[TraceRecord]): Try[Seq[Trace]] = {
     val traceBuilderMap = new mutable.HashMap[String, Trace.Builder]()
     var deserFailed: Failure[Seq[Trace]] = null
 
-    rows.foreach(row => {
-      CassandraTableSchema.extractSpanBufferFromRow(row) match {
+    records.foreach(record => {
+      Try(Unpacker.readSpanBuffer(record.getSpans.toByteArray)) match {
         case Success(sBuffer) =>
           traceBuilderMap.getOrElseUpdate(sBuffer.getTraceId, Trace.newBuilder().setTraceId(sBuffer.getTraceId)).addAllChildSpans(sBuffer.getChildSpansList)
         case Failure(cause) => deserFailed = Failure(cause)

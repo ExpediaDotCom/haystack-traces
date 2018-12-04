@@ -16,8 +16,9 @@
 
 package com.expedia.www.haystack.trace.reader.stores.readers.es
 
+import com.expedia.www.haystack.commons.metrics.MetricsSupport
 import com.expedia.www.haystack.trace.reader.config.entities.ElasticSearchClientConfiguration
-import com.expedia.www.haystack.trace.reader.metrics.{AppMetricNames, MetricsSupport}
+import com.expedia.www.haystack.trace.reader.metrics.AppMetricNames
 import com.expedia.www.haystack.trace.reader.stores.readers.es.ESUtils._
 import com.google.gson.Gson
 import io.searchbox.client.config.HttpClientConfig

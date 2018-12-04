@@ -35,12 +35,12 @@ class MultipleTraceIndexingTopologySpec extends BaseIntegrationTestSpec {
   private val SPAN_ID_PREFIX_2 = TRACE_ID_2 + "span-id-"
 
   "Trace Indexing Topology" should {
-    s"consume spans from input '${kafka.INPUT_TOPIC}' and buffer them together for every unique traceId and write to cassandra and elastic search" in {
+    s"consume spans from input '${kafka.INPUT_TOPIC}' and buffer them together for every unique traceId and write to trace-backend and elastic search" in {
       Given("a set of spans with two different traceIds and project configurations")
       val kafkaConfig = kafka.buildConfig
       val esConfig = elastic.buildConfig
       val indexTagsConfig = elastic.indexingConfig
-      val cassandraConfig = cassandra.buildConfig
+      val backendConfig = traceBackendClient.buildConfig
       val serviceMetadataConfig = elastic.buildServiceMetadataConfig
 
       When(s"spans are produced in '${kafka.INPUT_TOPIC}' topic async, and kafka-streams topology is started")
@@ -52,10 +52,10 @@ class MultipleTraceIndexingTopologySpec extends BaseIntegrationTestSpec {
         0,
         spanAccumulatorConfig.bufferingWindowMillis)
 
-      val topology = new StreamRunner(kafkaConfig, spanAccumulatorConfig, esConfig, cassandraConfig, serviceMetadataConfig, indexTagsConfig)
+      val topology = new StreamRunner(kafkaConfig, spanAccumulatorConfig, esConfig, backendConfig, serviceMetadataConfig, indexTagsConfig)
       topology.start()
 
-      Then(s"we should read two span buffers with different traceIds from '${kafka.OUTPUT_TOPIC}' topic and same should be read from cassandra and elastic search")
+      Then(s"we should read two span buffers with different traceIds from '${kafka.OUTPUT_TOPIC}' topic and same should be read from trace-backend and elastic search")
       try {
         val result: util.List[KeyValue[String, SpanBuffer]] =
           IntegrationTestUtils.waitUntilMinKeyValueRecordsReceived(kafka.RESULT_CONSUMER_CONFIG, kafka.OUTPUT_TOPIC, 2, MAX_WAIT_FOR_OUTPUT_MS)
@@ -63,7 +63,7 @@ class MultipleTraceIndexingTopologySpec extends BaseIntegrationTestSpec {
         validateKafkaOutput(result.asScala, MAX_CHILD_SPANS_PER_TRACE)
 
         Thread.sleep(6000)
-        verifyCassandraWrites(traceDescriptions, MAX_CHILD_SPANS_PER_TRACE, MAX_CHILD_SPANS_PER_TRACE)
+        verifyBackendWrites(traceDescriptions, MAX_CHILD_SPANS_PER_TRACE, MAX_CHILD_SPANS_PER_TRACE)
         verifyElasticSearchWrites(Seq(TRACE_ID_1, TRACE_ID_2))
       } finally {
         topology.close()

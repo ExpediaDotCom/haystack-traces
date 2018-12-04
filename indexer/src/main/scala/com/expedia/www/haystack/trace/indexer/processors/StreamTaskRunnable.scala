@@ -48,6 +48,7 @@ class StreamTaskRunnable(taskId: Int, kafkaConfig: KafkaConfiguration, processor
 
     /**
       * close the running processors for the revoked partitions
+      *
       * @param revokedPartitions revoked partitions
       */
     override def onPartitionsRevoked(revokedPartitions: util.Collection[TopicPartition]): Unit = {
@@ -62,6 +63,7 @@ class StreamTaskRunnable(taskId: Int, kafkaConfig: KafkaConfiguration, processor
 
     /**
       * create processors for newly assigned partitions
+      *
       * @param assignedPartitions newly assigned partitions
       */
     override def onPartitionsAssigned(assignedPartitions: util.Collection[TopicPartition]): Unit = {
@@ -71,7 +73,7 @@ class StreamTaskRunnable(taskId: Int, kafkaConfig: KafkaConfiguration, processor
         partition => {
           val processor = processorSupplier.get()
           val previousProcessor = processors.putIfAbsent(partition, processor)
-          if(previousProcessor == null) processor.init()
+          if (previousProcessor == null) processor.init()
         }
       }
     }
@@ -111,7 +113,7 @@ class StreamTaskRunnable(taskId: Int, kafkaConfig: KafkaConfiguration, processor
       case ie: InterruptedException =>
         LOGGER.error(s"This stream task with taskId=$taskId has been interrupted", ie)
       case ex: Exception =>
-        if(!shutdownRequested.get()) updateStateAndNotify(StreamTaskState.FAILED)
+        if (!shutdownRequested.get()) updateStateAndNotify(StreamTaskState.FAILED)
         // may be logging the exception again for kafka specific exceptions, but it is ok.
         LOGGER.error(s"Stream application faced an exception during processing for taskId=$taskId: ", ex)
     }
@@ -124,8 +126,9 @@ class StreamTaskRunnable(taskId: Int, kafkaConfig: KafkaConfiguration, processor
   /**
     * invoke the processor per partition for the records that are read from kafka.
     * Update the offsets (if any) that need to be committed in the committableOffsets map
-    * @param partition kafka partition
-    * @param partitionRecords records of the given kafka partition
+    *
+    * @param partition          kafka partition
+    * @param partitionRecords   records of the given kafka partition
     * @param committableOffsets offsets that need to be committed for the given topic partition
     */
   private def invokeProcessor(partition: Int,
@@ -146,7 +149,7 @@ class StreamTaskRunnable(taskId: Int, kafkaConfig: KafkaConfiguration, processor
     * run the consumer loop till the shutdown is requested or any exception is thrown
     */
   private def runLoop(): Unit = {
-    while(!shutdownRequested.get()) {
+    while (!shutdownRequested.get()) {
       poll() match {
         case Some(records) if records != null && !records.isEmpty && !processors.isEmpty =>
           val committableOffsets = new util.HashMap[TopicPartition, OffsetAndMetadata]()
@@ -206,13 +209,14 @@ class StreamTaskRunnable(taskId: Int, kafkaConfig: KafkaConfiguration, processor
 
   /**
     * commit the offset to kafka with a retry logic
-    * @param offsets map of offsets for each topic partition
+    *
+    * @param offsets      map of offsets for each topic partition
     * @param retryAttempt current retry attempt
     */
   @tailrec
   private def commit(offsets: util.HashMap[TopicPartition, OffsetAndMetadata], retryAttempt: Int = 0): Unit = {
     try {
-      if(!offsets.isEmpty && retryAttempt <= kafkaConfig.commitOffsetRetries) {
+      if (!offsets.isEmpty && retryAttempt <= kafkaConfig.commitOffsetRetries) {
         consumer.commitSync(offsets)
       }
     } catch {
@@ -226,7 +230,7 @@ class StreamTaskRunnable(taskId: Int, kafkaConfig: KafkaConfiguration, processor
   }
 
   private def updateStateAndNotify(newState: StreamTaskState) = {
-    if(state != newState) {
+    if (state != newState) {
       state = newState
 
       // invoke listeners for any state change
@@ -248,12 +252,14 @@ class StreamTaskRunnable(taskId: Int, kafkaConfig: KafkaConfiguration, processor
 
   /**
     * if consumer is still in running state
+    *
     * @return
     */
   def isStillRunning: Boolean = state == StreamTaskState.RUNNING
 
   /**
     * set the state change listener
+    *
     * @param listener state change listener
     */
   def setStateListener(listener: StateListener): Unit = listeners += listener

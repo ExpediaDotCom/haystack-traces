@@ -54,7 +54,7 @@ class ServiceMetadataWriter(config: ServiceMetadataWriteConfiguration)
   private val documentGenerator = new ServiceMetadataDocumentGenerator(config)
 
 
-  // this semaphore controls the parallel writes to cassandra
+  // this semaphore controls the parallel writes to service metadata index
   private val inflightRequestsSemaphore = new Semaphore(config.maxInFlightBulkRequests, true)
 
   // initialize the elastic search client

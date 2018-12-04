@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.expedia.www</groupId>
@@ -11,6 +12,7 @@
         <module>commons</module>
         <module>indexer</module>
         <module>reader</module>
+        <module>backends</module>
     </modules>
 
     <scm>
@@ -20,8 +22,10 @@
     </scm>
 
     <name>${project.groupId}:${project.artifactId}</name>
-    <description>Code to build the haystack indexer and reader which move and read spans from the span stream into elastic search
-    Cassandra, etc.</description>
+    <description>Code to build the haystack indexer and reader which move and read spans from the span stream into
+        elastic search
+        Cassandra, etc.
+    </description>
     <url>https://github.com/ExpediaDotCom/haystack-traces/tree/master</url>
 
     <licenses>
@@ -63,7 +67,7 @@
     <properties>
         <project.jdk.version>1.8</project.jdk.version>
         <protobuf.version>3.4.0</protobuf.version>
-        <haystack-commons.version>1.0.55</haystack-commons.version>
+        <haystack-commons.version>1.0.56</haystack-commons.version>
 
         <logback.version>1.2.3</logback.version>
         <slf4j-api.version>1.7.25</slf4j-api.version>
@@ -84,7 +88,8 @@
         <scala.tiny.version>5</scala.tiny.version>
         <haystack.logback.metrics.appender.version>1.0.5</haystack.logback.metrics.appender.version>
         <scala.major.minor.version>${scala.major.version}.${scala.minor.version}</scala.major.minor.version>
-        <scala-library.version>${scala.major.version}.${scala.minor.version}.${scala.tiny.version}</scala-library.version>
+        <scala-library.version>${scala.major.version}.${scala.minor.version}.${scala.tiny.version}
+        </scala-library.version>
 
         <testng.version>6.8</testng.version>
         <pegdown.version>1.6.0</pegdown.version>

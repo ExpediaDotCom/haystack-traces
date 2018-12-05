@@ -17,16 +17,18 @@
 package com.expedia.www.haystack.trace.storage.backends.cassandra.services
 
 import com.expedia.open.tracing.backend._
+import com.expedia.www.haystack.trace.storage.backends.cassandra.store.{CassandraTraceRecordReader, CassandraTraceRecordsWriter}
 import io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall
 import io.grpc.stub.StreamObserver
 
+import scala.collection.JavaConverters._
 import scala.concurrent.ExecutionContextExecutor
 
-class CassandraPersistenceService
-(implicit val executor: ExecutionContextExecutor) extends StorageBackendGrpc.StorageBackendImplBase {
+class SpansPersistenceService(reader: CassandraTraceRecordReader, writer: CassandraTraceRecordsWriter)
+                             (implicit val executor: ExecutionContextExecutor) extends StorageBackendGrpc.StorageBackendImplBase {
 
   override def writeSpans(request: WriteSpansRequest, responseObserver: StreamObserver[WriteSpansResponse]): Unit = {
-    asyncUnimplementedUnaryCall(StorageBackendGrpc.METHOD_WRITE_SPANS, responseObserver)
+    writer.writeTraceRecords(request.getRecordsList.asScala.toList)
   }
 
   /**
@@ -35,6 +37,6 @@ class CassandraPersistenceService
     * </pre>
     */
   override def readSpans(request: ReadSpansRequest, responseObserver: StreamObserver[ReadSpansResponse]): Unit = {
-    asyncUnimplementedUnaryCall(StorageBackendGrpc.METHOD_READ_SPANS, responseObserver)
+    reader.readTraceRecords(request.getTraceIdsList.asByteStringList())
   }
 }

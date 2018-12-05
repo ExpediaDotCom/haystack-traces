@@ -17,11 +17,7 @@
 
 package com.expedia.www.haystack.trace.indexer.unit
 
-import com.datastax.driver.core.ConsistencyLevel
-import com.datastax.driver.core.exceptions.UnavailableException
-import com.expedia.www.haystack.commons.retries.RetryOperation
-import com.expedia.www.haystack.trace.commons.config.entities.KeyspaceConfiguration
-import com.expedia.www.haystack.trace.commons.packer.PackerType
+`import com.expedia.www.haystack.trace.commons.packer.PackerType
 import com.expedia.www.haystack.trace.indexer.config.ProjectConfiguration
 import org.apache.kafka.clients.consumer.ConsumerConfig
 import org.apache.kafka.clients.producer.ProducerConfig

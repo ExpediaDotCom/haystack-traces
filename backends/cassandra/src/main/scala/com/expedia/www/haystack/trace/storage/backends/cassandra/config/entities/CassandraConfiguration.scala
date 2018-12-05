@@ -17,6 +17,8 @@
 
 package com.expedia.www.haystack.trace.storage.backends.cassandra.config.entities
 
+import com.datastax.driver.core.ConsistencyLevel
+import com.expedia.www.haystack.commons.retries.RetryOperation
 import org.apache.commons.lang3.StringUtils
 
 
@@ -50,3 +52,25 @@ case class CassandraConfiguration(endpoints: List[String],
                                   plaintextCredentials: Option[CredentialsConfiguration],
                                   tracesKeyspace: KeyspaceConfiguration,
                                   socket: SocketConfiguration)
+
+/**
+  * @param consistencyLevel: consistency level of writes
+  * @param maxInFlightRequests defines the max parallel writes to cassandra
+  * @param retryConfig retry configuration if writes fail
+  * @param consistencyLevelOnError: downgraded consistency level on write error
+  */
+case class CassandraWriteConfiguration(clientConfig: CassandraConfiguration,
+                                       consistencyLevel: ConsistencyLevel,
+                                       maxInFlightRequests: Int,
+                                       retryConfig: RetryOperation.Config,
+                                       consistencyLevelOnError: List[(Class[_], ConsistencyLevel)]) {
+  def writeConsistencyLevel(error: Throwable): ConsistencyLevel = {
+    if (error == null) {
+      consistencyLevel
+    } else {
+      consistencyLevelOnError
+        .find(errorClass => errorClass._1.isAssignableFrom(error.getClass))
+        .map(_._2).getOrElse(writeConsistencyLevel(error.getCause))
+    }
+  }
+}

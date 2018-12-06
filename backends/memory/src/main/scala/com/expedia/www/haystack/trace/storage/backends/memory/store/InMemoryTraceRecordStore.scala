@@ -43,7 +43,7 @@ class InMemoryTraceRecordStore()
   }
 
   /**
-    * writes the traceId and its spans to cassandra. Use the current timestamp as the sort key for the writes to same
+    * writes the traceId and its spans to a in. Use the current timestamp as the sort key for the writes to same
     * TraceId. Also if the parallel writes exceed the max inflight requests, then we block and this puts backpressure on
     * upstream
     *

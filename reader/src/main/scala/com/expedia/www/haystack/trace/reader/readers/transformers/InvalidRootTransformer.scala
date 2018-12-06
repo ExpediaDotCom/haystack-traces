@@ -19,7 +19,8 @@ package com.expedia.www.haystack.trace.reader.readers.transformers
 import java.util.UUID
 
 import com.expedia.open.tracing.{Span, Tag}
-import com.expedia.www.haystack.trace.reader.readers.utils.{MutableSpanForest, SpanUtils}
+import com.expedia.www.haystack.trace.commons.utils.SpanUtils
+import com.expedia.www.haystack.trace.reader.readers.utils.MutableSpanForest
 
 /**
   *
@@ -56,12 +57,12 @@ class InvalidRootTransformer extends SpanTreeTransformer {
     // by setting its parentSpanId as empty
     val loopbackTrees = forest.treesWithLoopbackRoots
     if (loopbackTrees.size == 1) {
-      return forest.updateEachSpanTreeRoot((span) => if (loopbackTrees.head.span == span) resetParentSpanId(span) else span)
+      return forest.updateEachSpanTreeRoot(span => if (loopbackTrees.head.span == span) resetParentSpanId(span) else span)
     }
 
     // for all other cases, get the root with the minimum startTime and make it as a root by setting parentSpanId as empty
     val spanWithMinStartTime = forest.getAllTrees.minBy(_.span.getStartTime).span
-    forest.updateEachSpanTreeRoot((span) => if (span == spanWithMinStartTime) resetParentSpanId(span) else span)
+    forest.updateEachSpanTreeRoot(span => if (span == spanWithMinStartTime) resetParentSpanId(span) else span)
   }
 
   private def toTraceWithSingleRoot(forest: MutableSpanForest, emptyParentIdSpanTrees: Int): MutableSpanForest = {

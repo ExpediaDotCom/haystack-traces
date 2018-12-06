@@ -30,8 +30,9 @@ import com.expedia.open.tracing.backend.{StorageBackendGrpc, TraceRecord, WriteS
 import com.expedia.open.tracing.buffer.SpanBuffer
 import com.expedia.www.haystack.trace.commons.clients.es.document.TraceIndexDoc
 import com.expedia.www.haystack.trace.commons.config.entities.{IndexFieldType, WhiteListIndexFields, WhitelistIndexField}
-import com.expedia.www.haystack.trace.reader.Service
+import  com.expedia.www.haystack.trace.reader.{Service => BackendService}
 import com.expedia.www.haystack.trace.reader.unit.readers.builders.ValidTraceBuilder
+import com.expedia.www.haystack.trace.storage.backends.memory.Service
 import io.grpc.ManagedChannelBuilder
 import io.grpc.health.v1.HealthGrpc
 import io.searchbox.client.config.HttpClientConfig
@@ -57,7 +58,7 @@ trait BaseIntegrationTestSpec extends FunSpec with GivenWhenThen with Matchers w
   private val ELASTIC_SEARCH_WHITELIST_TYPE = "whitelist-index-fields"
   private val SPANS_INDEX_TYPE = "spans"
 
-  private val executors = Executors.newSingleThreadExecutor()
+  private val executors = Executors.newFixedThreadPool(2)
 
   private val DEFAULT_DURATION = TimeUnit.MILLISECONDS.toMicros(500)
 
@@ -158,13 +159,21 @@ trait BaseIntegrationTestSpec extends FunSpec with GivenWhenThen with Matchers w
   private var esClient: JestClient = _
   private var traceBackendClient: StorageBackendBlockingStub = _
 
-  override def beforeAll() {
-    // setup traceBackend
+  def setupTraceBackend(): StorageBackendBlockingStub = {
 
+    executors.submit(new Runnable {
+      override def run(): Unit = BackendService.main(null)
+    })
     traceBackendClient = StorageBackendGrpc.newBlockingStub(
       ManagedChannelBuilder.forAddress("localhost", 8080)
         .usePlaintext(true)
         .build())
+    traceBackendClient
+  }
+
+  override def beforeAll() {
+    // setup traceBackend
+    traceBackendClient =  setupTraceBackend()
 
     // setup elasticsearch
     val factory = new JestClientFactory()

@@ -112,6 +112,12 @@
         </dependency>
 
         <dependency>
+            <groupId>com.expedia.www</groupId>
+            <artifactId>haystack-trace-backend-memory</artifactId>
+            <version>${project.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
             <groupId>org.apache.kafka</groupId>
             <artifactId>kafka-streams</artifactId>
             <version>${kafka-version}</version>

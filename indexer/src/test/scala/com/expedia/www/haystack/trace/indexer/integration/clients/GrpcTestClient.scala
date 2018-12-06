@@ -17,28 +17,41 @@
 
 package com.expedia.www.haystack.trace.indexer.integration.clients
 
-import com.expedia.open.tracing.backend.TraceRecord
+import java.util.concurrent.Executors
+
+import com.expedia.open.tracing.backend.{ReadSpansRequest, StorageBackendGrpc, TraceRecord}
 import com.expedia.www.haystack.commons.retries.RetryOperation
 import com.expedia.www.haystack.trace.commons.config.entities.TraceBackendClientConfiguration
 import com.expedia.www.haystack.trace.indexer.config.entities.TraceBackendConfiguration
+import com.expedia.www.haystack.trace.indexer.integration.TraceDescription
+import com.expedia.www.haystack.trace.storage.backends.memory.Service
+import io.grpc.ManagedChannelBuilder
+
+import scala.collection.JavaConverters._
 
 class GrpcTestClient {
 
+  private val executors = Executors.newSingleThreadExecutor()
 
-  case class ServiceMetadataRow(serviceName: String, operationName: String, timestamp: java.util.Date)
+  val port = 8088
 
+  val storageBackendClient = StorageBackendGrpc.newBlockingStub(ManagedChannelBuilder.forAddress("localhost", port)
+    .usePlaintext(true)
+    .build())
 
   def prepare(): Unit = {
-
+    executors.submit(new Runnable {
+      override def run(): Unit = Service.main(null)
+    })
   }
 
   def buildConfig = TraceBackendConfiguration(
-    TraceBackendClientConfiguration("localhost", 8080),
+    TraceBackendClientConfiguration("localhost", port),
     10, RetryOperation.Config(10, 250, 2))
 
-  def queryAllTraces(): Seq[TraceRecord] = {
-    List()
+  def queryTraces(traceDescriptions: Seq[TraceDescription]): Seq[TraceRecord] = {
+    val traceIds = traceDescriptions.map(traceDescription => traceDescription.traceId).toList
+    storageBackendClient.readSpans(ReadSpansRequest.newBuilder().addAllTraceIds(traceIds.asJava).build()).getRecordsList.asScala
   }
-
 
 }

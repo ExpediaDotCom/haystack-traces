@@ -3,27 +3,24 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 
     <parent>
-        <artifactId>haystack-traces</artifactId>
+        <artifactId>haystack-trace-backends</artifactId>
         <groupId>com.expedia.www</groupId>
         <version>1.0.0-SNAPSHOT</version>
+        <relativePath>../pom.xml</relativePath>
     </parent>
 
     <modelVersion>4.0.0</modelVersion>
-    <artifactId>haystack-trace-reader</artifactId>
+    <artifactId>haystack-trace-backend-memory</artifactId>
     <packaging>jar</packaging>
 
     <properties>
-        <mainClass>com.expedia.www.haystack.trace.reader.Service</mainClass>
+        <mainClass>com.expedia.www.haystack.trace.backend.com.expedia.www.haystack.trace.storage.backends.cassandra.Service</mainClass>
         <finalName>${project.artifactId}-${project.version}</finalName>
         <maven-protobuf-plugin.version>3.3.0.1</maven-protobuf-plugin.version>
+        <cassandra.driver.version>3.1.0</cassandra.driver.version>
     </properties>
 
     <dependencies>
-        <dependency>
-            <groupId>com.expedia.www</groupId>
-            <artifactId>haystack-trace-commons</artifactId>
-            <version>${project.version}</version>
-        </dependency>
 
         <dependency>
             <groupId>com.google.protobuf</groupId>
@@ -61,11 +58,6 @@
         </dependency>
 
         <dependency>
-            <groupId>org.elasticsearch</groupId>
-            <artifactId>elasticsearch</artifactId>
-        </dependency>
-
-        <dependency>
             <groupId>org.apache.commons</groupId>
             <artifactId>commons-lang3</artifactId>
         </dependency>
@@ -80,18 +72,6 @@
             <artifactId>aws-java-sdk-ec2</artifactId>
         </dependency>
 
-        <dependency>
-            <groupId>com.expedia.www</groupId>
-            <artifactId>haystack-logback-metrics-appender</artifactId>
-        </dependency>
-
-
-        <dependency>
-            <groupId>com.expedia.www</groupId>
-            <artifactId>haystack-trace-backend-memory</artifactId>
-            <version>${project.version}</version>
-            <scope>test</scope>
-        </dependency>
     </dependencies>
 
     <build>
@@ -107,7 +87,7 @@
                             <goal>test</goal>
                         </goals>
                         <configuration>
-                            <wildcardSuites>com.expedia.www.haystack.trace.reader.unit</wildcardSuites>
+                            <wildcardSuites>com.expedia.www.haystack.trace.storage.backends.memory.unit</wildcardSuites>
                         </configuration>
                     </execution>
                     <execution>
@@ -117,10 +97,7 @@
                             <goal>test</goal>
                         </goals>
                         <configuration>
-                            <environmentVariables>
-                                <HAYSTACK_OVERRIDES_CONFIG_PATH>/src/reader/build/integration-tests/docker-app.conf</HAYSTACK_OVERRIDES_CONFIG_PATH>
-                            </environmentVariables>
-                            <wildcardSuites>com.expedia.www.haystack.trace.reader.integration</wildcardSuites>
+                            <wildcardSuites>com.expedia.www.haystack.trace.storage.backends.memory.integration</wildcardSuites>
                         </configuration>
                     </execution>
                 </executions>

@@ -116,7 +116,7 @@ abstract class BaseIntegrationTestSpec extends WordSpec with GivenWhenThen with 
   }
 
   def verifyBackendWrites(traceDescriptions: Seq[TraceDescription], minSpansPerTrace: Int, maxSpansPerTrace: Int): Unit = {
-    val traceRecords = traceBackendClient.queryAllTraces()
+    val traceRecords = traceBackendClient.queryTraces(traceDescriptions)
 
     traceRecords should have size traceDescriptions.size
 

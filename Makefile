@@ -8,7 +8,7 @@ clean:
 build: clean
 	./mvnw package
 
-all: clean indexer reader backends report-coverage
+all: clean backends indexer reader  report-coverage
 
 report-coverage:
 	docker run -it -v ~/.m2:/root/.m2 -w /src -v `pwd`:/src maven:3.5.0-jdk-8 /bin/sh -c './mvnw scoverage:report-only && ./mvnw clean'

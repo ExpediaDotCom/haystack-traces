@@ -19,6 +19,7 @@ package com.expedia.www.haystack.trace.storage.backends.cassandra.config
 
 import com.datastax.driver.core.ConsistencyLevel
 import com.expedia.www.haystack.commons.config.ConfigurationLoader
+import com.expedia.www.haystack.commons.retries.RetryOperation
 import com.expedia.www.haystack.trace.storage.backends.cassandra.config.entities._
 import com.typesafe.config.Config
 import org.apache.commons.lang3.StringUtils
@@ -30,24 +31,19 @@ class ProjectConfiguration {
 
   val healthStatusFilePath: String = config.getString("health.status.path")
 
+  val serviceConfig: ServiceConfiguration = {
+    val serviceConfig = config.getConfig("service")
 
-  private def keyspaceConfig(kConfig: Config, ttl: Int): KeyspaceConfiguration = {
-    val autoCreateSchemaField = "auto.create.schema"
-    val autoCreateSchema = if (kConfig.hasPath(autoCreateSchemaField)
-      && StringUtils.isNotEmpty(kConfig.getString(autoCreateSchemaField))) {
-      Some(kConfig.getString(autoCreateSchemaField))
-    } else {
-      None
-    }
+    val ssl = serviceConfig.getConfig("ssl")
+    val sslConfig = SslConfiguration(ssl.getBoolean("enabled"), ssl.getString("cert.path"), ssl.getString("private.key.path"))
 
-    KeyspaceConfiguration(kConfig.getString("name"), kConfig.getString("table.name"), ttl, autoCreateSchema)
+    ServiceConfiguration(serviceConfig.getInt("port"), sslConfig)
   }
-
   /**
     *
     * cassandra configuration object
     */
-  val cassandraWriteConfig: CassandraConfiguration = {
+  val cassandraConfig: CassandraConfiguration = {
 
     def toConsistencyLevel(level: String) = ConsistencyLevel.values().find(_.toString.equalsIgnoreCase(level)).get
 
@@ -64,6 +60,18 @@ class ProjectConfiguration {
       }
 
       consistencyLevelOnErrorList.toList
+    }
+
+    def keyspaceConfig(kConfig: Config, ttl: Int): KeyspaceConfiguration = {
+      val autoCreateSchemaField = "auto.create.schema"
+      val autoCreateSchema = if (kConfig.hasPath(autoCreateSchemaField)
+        && StringUtils.isNotEmpty(kConfig.getString(autoCreateSchemaField))) {
+        Some(kConfig.getString(autoCreateSchemaField))
+      } else {
+        None
+      }
+
+      KeyspaceConfiguration(kConfig.getString("name"), kConfig.getString("table.name"), ttl, autoCreateSchema)
     }
 
     val cs = config.getConfig("cassandra")
@@ -99,12 +107,20 @@ class ProjectConfiguration {
     val consistencyLevel = toConsistencyLevel(cs.getString("consistency.level"))
 
     CassandraConfiguration(
-      if (cs.hasPath("endpoints")) cs.getString("endpoints").split(",").toList else Nil,
-      cs.getBoolean("auto.discovery.enabled"),
-      awsConfig,
-      credentialsConfig,
-      keyspaceConfig(cs.getConfig("keyspace"), cs.getInt("ttl.sec")),
-      socket)
+      clientConfig = ClientConfiguration(
+        if (cs.hasPath("endpoints")) cs.getString("endpoints").split(",").toList else Nil,
+        cs.getBoolean("auto.discovery.enabled"),
+        awsConfig,
+        credentialsConfig,
+        keyspaceConfig(cs.getConfig("keyspace"), cs.getInt("ttl.sec")),
+        socket),
+      consistencyLevel = consistencyLevel,
+      maxInFlightRequests = cs.getInt("max.inflight.requests"),
+      retryConfig = RetryOperation.Config(
+        cs.getInt("retries.max"),
+        cs.getLong("retries.backoff.initial.ms"),
+        cs.getDouble("retries.backoff.factor")),
+      consistencyLevelOnErrors(cs))
   }
 
 }

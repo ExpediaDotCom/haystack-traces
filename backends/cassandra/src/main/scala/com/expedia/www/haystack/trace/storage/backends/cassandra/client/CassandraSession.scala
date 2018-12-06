@@ -23,14 +23,14 @@ import java.util.Date
 import com.datastax.driver.core.BatchStatement.Type
 import com.datastax.driver.core._
 import com.datastax.driver.core.querybuilder.QueryBuilder
-import com.expedia.www.haystack.trace.storage.backends.cassandra.config.entities.{CassandraConfiguration, KeyspaceConfiguration}
+import com.expedia.www.haystack.trace.storage.backends.cassandra.config.entities.{ClientConfiguration, KeyspaceConfiguration}
 import org.slf4j.LoggerFactory
 import com.expedia.www.haystack.trace.storage.backends.cassandra.client.CassandraTableSchema._
 
 import scala.collection.JavaConverters._
 import scala.util.Try
 
-class CassandraSession(config: CassandraConfiguration, factory: ClusterFactory) {
+class CassandraSession(config: ClientConfiguration, factory: ClusterFactory) {
   private val LOGGER = LoggerFactory.getLogger(classOf[CassandraSession])
 
   /**
@@ -48,15 +48,6 @@ class CassandraSession(config: CassandraConfiguration, factory: ClusterFactory) 
     CassandraTableSchema.ensureExists(keyspace.name, keyspace.table, keyspace.autoCreateSchema, session)
   }
 
-  private lazy val selectTracePreparedStmt: PreparedStatement = {
-    import QueryBuilder.bindMarker
-    session.prepare(
-      QueryBuilder
-        .select()
-        .from(config.tracesKeyspace.name, config.tracesKeyspace.table)
-        .where(QueryBuilder.eq(ID_COLUMN_NAME, bindMarker(ID_COLUMN_NAME))))
-  }
-
   lazy val selectRawTracesPreparedStmt: PreparedStatement = {
     import QueryBuilder.bindMarker
     session.prepare(
@@ -66,18 +57,6 @@ class CassandraSession(config: CassandraConfiguration, factory: ClusterFactory) 
         .where(QueryBuilder.in(ID_COLUMN_NAME, bindMarker(ID_COLUMN_NAME))))
   }
 
-  def createServiceMetadataInsertPreparedStatement(keyspace: KeyspaceConfiguration): PreparedStatement = {
-    import QueryBuilder.{bindMarker, ttl}
-
-    val insert = QueryBuilder
-      .insertInto(keyspace.name, keyspace.table)
-      .value(SERVICE_COLUMN_NAME, bindMarker(SERVICE_COLUMN_NAME))
-      .value(OPERATION_COLUMN_NAME, bindMarker(OPERATION_COLUMN_NAME))
-      .value(TIMESTAMP_COLUMN_NAME, bindMarker(TIMESTAMP_COLUMN_NAME))
-      .using(ttl(keyspace.recordTTLInSec))
-
-    session.prepare(insert)
-  }
 
   def createSpanInsertPreparedStatement(keyspace: KeyspaceConfiguration): PreparedStatement = {
     import QueryBuilder.{bindMarker, ttl}
@@ -100,30 +79,6 @@ class CassandraSession(config: CassandraConfiguration, factory: ClusterFactory) 
     Try(cluster.close())
   }
 
-  /**
-    * create bound statement for writing to cassandra table
-    *
-    * @param serviceName                    name of service ie primary key in cassandra
-    * @param operationList                  name of operation
-    * @param consistencyLevel               consistency level for cassandra write
-    * @param insertServiceMetadataStatement prepared statement to use
-    * @return
-    */
-  def newServiceMetadataInsertStatement(serviceName: String,
-                                        operationList: Iterable[String],
-                                        consistencyLevel: ConsistencyLevel,
-                                        insertServiceMetadataStatement: PreparedStatement): Statement = {
-
-    val statements = operationList.map(operation => {
-      new BoundStatement(insertServiceMetadataStatement)
-        .setString(SERVICE_COLUMN_NAME, serviceName)
-        .setString(OPERATION_COLUMN_NAME, operation)
-        .setTimestamp(TIMESTAMP_COLUMN_NAME, new Date())
-        .setConsistencyLevel(consistencyLevel)
-    })
-
-    new BatchStatement(Type.UNLOGGED).addAll(statements.asJava)
-  }
 
   /**
     * create bound statement for writing to cassandra table
@@ -145,15 +100,6 @@ class CassandraSession(config: CassandraConfiguration, factory: ClusterFactory) 
       .setConsistencyLevel(consistencyLevel)
   }
 
-  /**
-    * create new select statement for retrieving data for traceId
-    *
-    * @param traceId trace id
-    * @return
-    */
-  def newSelectTraceBoundStatement(traceId: String): Statement = {
-    new BoundStatement(selectTracePreparedStmt).setString(ID_COLUMN_NAME, traceId)
-  }
 
   /**
     * create new select statement for retrieving Raw Traces data for traceIds
@@ -173,18 +119,5 @@ class CassandraSession(config: CassandraConfiguration, factory: ClusterFactory) 
     */
   def executeAsync(statement: Statement): ResultSetFuture = session.executeAsync(statement)
 
-  def newSelectServicePreparedStatement(keyspace: String, table: String): PreparedStatement = {
-    import QueryBuilder.bindMarker
 
-    val select = QueryBuilder
-      .select(OPERATION_COLUMN_NAME)
-      .from(keyspace, table)
-      .limit(1000)
-      .where(QueryBuilder.eq(SERVICE_COLUMN_NAME, bindMarker(SERVICE_COLUMN_NAME)))
-    session.prepare(select)
-  }
-
-  def newSelectAllServicesPreparedStatement(keyspace: String, table: String): PreparedStatement = {
-    session.prepare(QueryBuilder.select(SERVICE_COLUMN_NAME).distinct().from(keyspace, table))
-  }
 }

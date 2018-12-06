@@ -23,19 +23,19 @@ import com.expedia.open.tracing.backend.TraceRecord
 import com.expedia.www.haystack.commons.metrics.MetricsSupport
 import com.expedia.www.haystack.commons.retries.RetryOperation._
 import com.expedia.www.haystack.trace.storage.backends.cassandra.client.CassandraSession
-import com.expedia.www.haystack.trace.storage.backends.cassandra.config.entities.CassandraWriteConfiguration
+import com.expedia.www.haystack.trace.storage.backends.cassandra.config.entities.CassandraConfiguration
 import com.expedia.www.haystack.trace.storage.backends.cassandra.metrics.AppMetricNames
 import org.slf4j.LoggerFactory
 
-import scala.concurrent.ExecutionContextExecutor
+import scala.concurrent.{ExecutionContextExecutor, Future}
 import scala.util.Try
 
-class CassandraTraceRecordsWriter(cassandra: CassandraSession,
-                                  config: CassandraWriteConfiguration)(implicit val dispatcher: ExecutionContextExecutor)
+class CassandraTraceRecordWriter(cassandra: CassandraSession,
+                                 config: CassandraConfiguration)(implicit val dispatcher: ExecutionContextExecutor)
   extends MetricsSupport {
 
 
-  private val LOGGER = LoggerFactory.getLogger(classOf[CassandraTraceRecordsWriter])
+  private val LOGGER = LoggerFactory.getLogger(classOf[CassandraTraceRecordWriter])
 
   cassandra.ensureKeyspace(config.clientConfig.tracesKeyspace)
 
@@ -60,7 +60,7 @@ class CassandraTraceRecordsWriter(cassandra: CassandraSession,
         spanInsertPreparedStmt)
 
       val asyncResult = cassandra.executeAsync(statement)
-      asyncResult.addListener(new CassandraTraceRecordsWriteResultListener(asyncResult, timer, retryCallback), dispatcher)
+      asyncResult.addListener(new CassandraTraceRecordWriteResultListener(asyncResult, timer, retryCallback), dispatcher)
     },
       config.retryConfig,
       onSuccess = (_: Any) => inflightRequestsSemaphore.release(),
@@ -75,26 +75,28 @@ class CassandraTraceRecordsWriter(cassandra: CassandraSession,
     * TraceId. Also if the parallel writes exceed the max inflight requests, then we block and this puts backpressure on
     * upstream
     *
-    * @param traceRecords          : trace records which need to be written
+    * @param traceRecords : trace records which need to be written
     * @return
     */
   def writeTraceRecords(traceRecords: List[TraceRecord]): Unit = {
-    var isSemaphoreAcquired = false
 
-    traceRecords.foreach(record => {
 
-      try {
-        inflightRequestsSemaphore.acquire()
-        isSemaphoreAcquired = true
-        /* write spanBuffer for a given traceId */
-        execute(record)
-      } catch {
-        case ex: Exception =>
-          LOGGER.error("Fail to write the spans to cassandra with exception", ex)
-          writeFailures.mark()
-          if (isSemaphoreAcquired) inflightRequestsSemaphore.release()
-      }
-    })
+      var isSemaphoreAcquired = false
+
+      traceRecords.foreach(record => {
+
+        try {
+          inflightRequestsSemaphore.acquire()
+          isSemaphoreAcquired = true
+          /* write spanBuffer for a given traceId */
+          execute(record)
+        } catch {
+          case ex: Exception =>
+            LOGGER.error("Fail to write the spans to cassandra with exception", ex)
+            writeFailures.mark()
+            if (isSemaphoreAcquired) inflightRequestsSemaphore.release()
+        }
+      })
   }
 
   def close(): Unit = {

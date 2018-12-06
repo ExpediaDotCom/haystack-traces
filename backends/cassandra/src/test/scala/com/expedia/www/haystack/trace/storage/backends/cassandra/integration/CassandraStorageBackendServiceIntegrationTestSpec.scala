@@ -36,6 +36,8 @@ class CassandraStorageBackendServiceIntegrationTestSpec extends BaseIntegrationT
 
       Then("should return the trace")
       traceRecords.getRecordsList should not be empty
+      traceRecords.getRecordsCount shouldEqual  1
+      traceRecords.getRecordsList.get(0).getTraceId shouldEqual traceId
     }
   }
 }

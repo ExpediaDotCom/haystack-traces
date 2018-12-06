@@ -17,7 +17,7 @@
 
 package com.expedia.www.haystack.trace.indexer.unit
 
-`import com.expedia.www.haystack.trace.commons.packer.PackerType
+import com.expedia.www.haystack.trace.commons.packer.PackerType
 import com.expedia.www.haystack.trace.indexer.config.ProjectConfiguration
 import org.apache.kafka.clients.consumer.ConsumerConfig
 import org.apache.kafka.clients.producer.ProducerConfig

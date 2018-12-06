@@ -16,19 +16,25 @@
 
 package com.expedia.www.haystack.trace.storage.backends.cassandra.services
 
+import com.expedia.open.tracing.backend.WriteSpansResponse.ResultCode
 import com.expedia.open.tracing.backend._
-import com.expedia.www.haystack.trace.storage.backends.cassandra.store.{CassandraTraceRecordReader, CassandraTraceRecordsWriter}
-import io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall
+import com.expedia.www.haystack.trace.storage.backends.cassandra.store.{CassandraTraceRecordReader, CassandraTraceRecordWriter}
 import io.grpc.stub.StreamObserver
 
 import scala.collection.JavaConverters._
 import scala.concurrent.ExecutionContextExecutor
 
-class SpansPersistenceService(reader: CassandraTraceRecordReader, writer: CassandraTraceRecordsWriter)
+class SpansPersistenceService(reader: CassandraTraceRecordReader, writer: CassandraTraceRecordWriter)
                              (implicit val executor: ExecutionContextExecutor) extends StorageBackendGrpc.StorageBackendImplBase {
+
+  private val handleReadSpansResponse = new GrpcHandler(StorageBackendGrpc.METHOD_READ_SPANS.getFullMethodName)
+  private val handleWriteSpansResponse = new GrpcHandler(StorageBackendGrpc.METHOD_WRITE_SPANS.getFullMethodName)
 
   override def writeSpans(request: WriteSpansRequest, responseObserver: StreamObserver[WriteSpansResponse]): Unit = {
     writer.writeTraceRecords(request.getRecordsList.asScala.toList)
+    WriteSpansResponse.newBuilder().setCode(
+      ResultCode.SUCCESS
+    ).build()
   }
 
   /**
@@ -37,6 +43,15 @@ class SpansPersistenceService(reader: CassandraTraceRecordReader, writer: Cassan
     * </pre>
     */
   override def readSpans(request: ReadSpansRequest, responseObserver: StreamObserver[ReadSpansResponse]): Unit = {
-    reader.readTraceRecords(request.getTraceIdsList.asByteStringList())
+
+    handleReadSpansResponse.handle(request, responseObserver) {
+      reader.readTraceRecords(request.getTraceIdsList.asByteStringList().asScala.map(_.toString).toList).map {
+        records => {
+          ReadSpansResponse.newBuilder()
+            .addAllRecords(records.asJava)
+            .build()
+        }
+      }
+    }
   }
 }

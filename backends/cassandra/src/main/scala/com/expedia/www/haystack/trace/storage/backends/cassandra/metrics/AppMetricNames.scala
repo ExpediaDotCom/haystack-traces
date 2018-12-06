@@ -20,7 +20,6 @@ package com.expedia.www.haystack.trace.storage.backends.cassandra.metrics
 object AppMetricNames {
   val CASSANDRA_READ_TIME = "cassandra.read.time"
   val CASSANDRA_READ_FAILURES = "cassandra.read.failures"
-  val CASSANDRA_TRACES_FAILURE = "cassandra.traces.failures"
   val CASSANDRA_WRITE_TIME = "cassandra.write.time"
   val CASSANDRA_WRITE_FAILURE = "cassandra.write.failure"
   val CASSANDRA_WRITE_WARNINGS = "cassandra.write.warnings"

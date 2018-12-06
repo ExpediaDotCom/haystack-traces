@@ -15,7 +15,7 @@
  *
  */
 
-package com.expedia.www.haystack.trace.storage.backends.cassandra.unit
+package com.expedia.www.haystack.trace.storage.backends.cassandra.unit.client
 
 import com.amazonaws.services.ec2.AmazonEC2Client
 import com.amazonaws.services.ec2.model._

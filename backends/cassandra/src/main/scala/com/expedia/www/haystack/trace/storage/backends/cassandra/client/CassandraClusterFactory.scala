@@ -19,7 +19,7 @@ package com.expedia.www.haystack.trace.storage.backends.cassandra.client
 
 import com.datastax.driver.core._
 import com.datastax.driver.core.policies.{DefaultRetryPolicy, LatencyAwarePolicy, RoundRobinPolicy, TokenAwarePolicy}
-import com.expedia.www.haystack.trace.storage.backends.cassandra.config.entities.{AwsNodeDiscoveryConfiguration, CassandraConfiguration, CredentialsConfiguration}
+import com.expedia.www.haystack.trace.storage.backends.cassandra.config.entities.{AwsNodeDiscoveryConfiguration, ClientConfiguration, CredentialsConfiguration}
 
 class CassandraClusterFactory extends ClusterFactory {
 
@@ -31,7 +31,7 @@ class CassandraClusterFactory extends ClusterFactory {
   }
 
 
-  override def buildCluster(config: CassandraConfiguration): Cluster = {
+  override def buildCluster(config: ClientConfiguration): Cluster = {
     val contactPoints = if (config.autoDiscoverEnabled) discoverNodes(config.awsNodeDiscovery) else config.endpoints
     require(contactPoints.nonEmpty, "com.expedia.www.haystack.trace.storage.backends.cassandra contact points can't be empty!!!")
 

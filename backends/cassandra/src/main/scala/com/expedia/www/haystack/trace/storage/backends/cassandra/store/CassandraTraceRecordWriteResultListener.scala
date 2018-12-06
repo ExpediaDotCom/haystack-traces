@@ -26,17 +26,17 @@ import org.slf4j.{Logger, LoggerFactory}
 
 import scala.collection.JavaConverters._
 
-object CassandraTraceRecordsWriteResultListener extends MetricsSupport {
-  protected val LOGGER: Logger = LoggerFactory.getLogger(CassandraTraceRecordsWriteResultListener.getClass)
+object CassandraTraceRecordWriteResultListener extends MetricsSupport {
+  protected val LOGGER: Logger = LoggerFactory.getLogger(CassandraTraceRecordWriteResultListener.getClass)
   protected val writeFailures: Meter = metricRegistry.meter(AppMetricNames.CASSANDRA_WRITE_FAILURE)
   protected val writeWarnings: Meter = metricRegistry.meter(AppMetricNames.CASSANDRA_WRITE_WARNINGS)
 }
 
-class CassandraTraceRecordsWriteResultListener(asyncResult: ResultSetFuture,
-                                               timer: Timer.Context,
-                                               retryOp: RetryOperation.Callback) extends Runnable {
+class CassandraTraceRecordWriteResultListener(asyncResult: ResultSetFuture,
+                                              timer: Timer.Context,
+                                              retryOp: RetryOperation.Callback) extends Runnable {
 
-  import CassandraTraceRecordsWriteResultListener._
+  import CassandraTraceRecordWriteResultListener._
 
   /**
     * this is invoked when the cassandra aysnc write completes.

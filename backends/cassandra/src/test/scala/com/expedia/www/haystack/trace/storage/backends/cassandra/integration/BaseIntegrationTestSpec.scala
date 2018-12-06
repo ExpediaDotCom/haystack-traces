@@ -26,6 +26,7 @@ import com.expedia.open.tracing.Span
 import com.expedia.open.tracing.backend.StorageBackendGrpc
 import com.expedia.open.tracing.buffer.SpanBuffer
 import com.expedia.www.haystack.trace.storage.backends.cassandra.Service
+import com.expedia.www.haystack.trace.storage.backends.cassandra.client.CassandraTableSchema
 import io.grpc.ManagedChannelBuilder
 import io.grpc.health.v1.HealthGrpc
 import org.scalatest._
@@ -33,7 +34,6 @@ import org.scalatest._
 import scala.collection.JavaConverters._
 
 trait BaseIntegrationTestSpec extends FunSpec with GivenWhenThen with Matchers with BeforeAndAfterAll with BeforeAndAfterEach  {
-  protected implicit val formats: Formats = DefaultFormats + new EnumNameSerializer(IndexFieldType)
   protected var client: StorageBackendGrpc.StorageBackendBlockingStub = _
 
   protected var healthCheckClient: HealthGrpc.HealthBlockingStub = _
@@ -101,9 +101,9 @@ trait BaseIntegrationTestSpec extends FunSpec with GivenWhenThen with Matchers w
 
     cassandraSession.execute(QueryBuilder
       .insertInto(CASSANDRA_TABLE)
-      .value(ID_COLUMN_NAME, traceId)
-      .value(TIMESTAMP_COLUMN_NAME, new Date())
-      .value(SPANS_COLUMN_NAME, ByteBuffer.wrap(spanBuffer.toByteArray)))
+      .value(CassandraTableSchema.ID_COLUMN_NAME, traceId)
+      .value(CassandraTableSchema.TIMESTAMP_COLUMN_NAME, new Date())
+      .value(CassandraTableSchema.SPANS_COLUMN_NAME, ByteBuffer.wrap(spanBuffer.toByteArray)))
   }
 
   private def createSpanBufferWithSingleSpan(traceId: String,

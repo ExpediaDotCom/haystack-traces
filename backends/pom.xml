@@ -10,9 +10,16 @@
         <artifactId>haystack-traces</artifactId>
         <groupId>com.expedia.www</groupId>
         <version>1.0.0-SNAPSHOT</version>
+        <relativePath>../pom.xml</relativePath>
     </parent>
+
+
     <modules>
         <module>cassandra</module>
     </modules>
+
+    <properties>
+        <scalastyle.config.location>${basedir}/../../checkstyles/scalastyle_config.xml</scalastyle.config.location>
+    </properties>
 
 </project>

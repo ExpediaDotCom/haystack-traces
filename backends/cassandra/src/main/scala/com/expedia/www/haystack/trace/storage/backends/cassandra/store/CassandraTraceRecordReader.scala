@@ -16,33 +16,31 @@
 
 package com.expedia.www.haystack.trace.storage.backends.cassandra.store
 
-import com.expedia.open.tracing.api.Trace
 import com.expedia.open.tracing.backend.TraceRecord
 import com.expedia.www.haystack.commons.metrics.MetricsSupport
 import com.expedia.www.haystack.trace.storage.backends.cassandra.client.CassandraSession
-import com.expedia.www.haystack.trace.storage.backends.cassandra.config.entities.CassandraConfiguration
+import com.expedia.www.haystack.trace.storage.backends.cassandra.config.entities.ClientConfiguration
 import com.expedia.www.haystack.trace.storage.backends.cassandra.metrics.AppMetricNames
 import org.slf4j.LoggerFactory
 
 import scala.concurrent.{ExecutionContextExecutor, Future, Promise}
 
-class CassandraTraceRecordReader(cassandra: CassandraSession, config: CassandraConfiguration)
+class CassandraTraceRecordReader(cassandra: CassandraSession, config: ClientConfiguration)
                                 (implicit val dispatcher: ExecutionContextExecutor) extends MetricsSupport with AutoCloseable {
   private val LOGGER = LoggerFactory.getLogger(classOf[CassandraTraceRecordReader])
 
   private val readTimer = metricRegistry.timer(AppMetricNames.CASSANDRA_READ_TIME)
   private val readFailures = metricRegistry.meter(AppMetricNames.CASSANDRA_READ_FAILURES)
-  private val tracesFailures = metricRegistry.meter(AppMetricNames.CASSANDRA_TRACES_FAILURE)
 
 
   def readTraceRecords(traceIds: List[String]): Future[Seq[TraceRecord]] = {
     val timer = readTimer.time()
-    val promise = Promise[Seq[Trace]]
+    val promise = Promise[Seq[TraceRecord]]
 
     try {
       val statement = cassandra.newSelectRawTracesBoundStatement(traceIds)
       val asyncResult = cassandra.executeAsync(statement)
-      asyncResult.addListener(new CassandraTraceRecordsReadResultListener(asyncResult, promise, timer, readFailures, tracesFailures, traceIds.size), dispatcher)
+      asyncResult.addListener(new CassandraTraceRecordReadResultListener(asyncResult, timer, readFailures, promise), dispatcher)
       promise.future
     } catch {
       case ex: Exception =>

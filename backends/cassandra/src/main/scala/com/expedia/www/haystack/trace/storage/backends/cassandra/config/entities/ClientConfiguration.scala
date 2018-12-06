@@ -38,7 +38,7 @@ case class KeyspaceConfiguration(name: String,
 }
 
 /**
-  * defines the configuration parameters for cassandra
+  * defines the configuration parameters for cassandra client
   *
   * @param endpoints                : list of cassandra endpoints
   * @param autoDiscoverEnabled      : if autodiscovery is enabled, then 'endpoints' config parameter will be ignored
@@ -46,12 +46,12 @@ case class KeyspaceConfiguration(name: String,
   * @param tracesKeyspace           : cassandra keyspace for traces
   * @param socket                   : socket configuration like maxConnections, timeouts and keepAlive
   */
-case class CassandraConfiguration(endpoints: List[String],
-                                  autoDiscoverEnabled: Boolean,
-                                  awsNodeDiscovery: Option[AwsNodeDiscoveryConfiguration],
-                                  plaintextCredentials: Option[CredentialsConfiguration],
-                                  tracesKeyspace: KeyspaceConfiguration,
-                                  socket: SocketConfiguration)
+case class ClientConfiguration(endpoints: List[String],
+                               autoDiscoverEnabled: Boolean,
+                               awsNodeDiscovery: Option[AwsNodeDiscoveryConfiguration],
+                               plaintextCredentials: Option[CredentialsConfiguration],
+                               tracesKeyspace: KeyspaceConfiguration,
+                               socket: SocketConfiguration)
 
 /**
   * @param consistencyLevel: consistency level of writes
@@ -59,11 +59,11 @@ case class CassandraConfiguration(endpoints: List[String],
   * @param retryConfig retry configuration if writes fail
   * @param consistencyLevelOnError: downgraded consistency level on write error
   */
-case class CassandraWriteConfiguration(clientConfig: CassandraConfiguration,
-                                       consistencyLevel: ConsistencyLevel,
-                                       maxInFlightRequests: Int,
-                                       retryConfig: RetryOperation.Config,
-                                       consistencyLevelOnError: List[(Class[_], ConsistencyLevel)]) {
+case class CassandraConfiguration(clientConfig: ClientConfiguration,
+                                  consistencyLevel: ConsistencyLevel,
+                                  maxInFlightRequests: Int,
+                                  retryConfig: RetryOperation.Config,
+                                  consistencyLevelOnError: List[(Class[_], ConsistencyLevel)]) {
   def writeConsistencyLevel(error: Throwable): ConsistencyLevel = {
     if (error == null) {
       consistencyLevel

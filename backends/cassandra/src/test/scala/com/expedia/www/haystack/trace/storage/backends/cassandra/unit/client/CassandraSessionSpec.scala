@@ -15,12 +15,12 @@
  *
  */
 
-package com.expedia.www.haystack.trace.storage.backends.cassandra.unit
+package com.expedia.www.haystack.trace.storage.backends.cassandra.unit.client
 
 import com.datastax.driver.core._
 import com.datastax.driver.core.querybuilder.{Insert, Select}
 import com.expedia.www.haystack.trace.storage.backends.cassandra.client.{CassandraClusterFactory, CassandraSession}
-import com.expedia.www.haystack.trace.storage.backends.cassandra.config.entities.{CassandraConfiguration, KeyspaceConfiguration, SocketConfiguration}
+import com.expedia.www.haystack.trace.storage.backends.cassandra.config.entities.{ClientConfiguration, KeyspaceConfiguration, SocketConfiguration}
 import org.easymock.EasyMock
 import org.scalatest.easymock.EasyMockSugar
 import org.scalatest.{FunSpec, Matchers}
@@ -40,7 +40,7 @@ class CassandraSessionSpec extends FunSpec with Matchers with EasyMockSugar {
       val insertPrepStatement = mock[PreparedStatement]
       val keyspaceConfig = KeyspaceConfiguration(keyspaceName, tableName, 100, None)
 
-      val config = CassandraConfiguration(List("cassandra1"),
+      val config = ClientConfiguration(List("cassandra1"),
         autoDiscoverEnabled = false,
         None,
         None,
@@ -83,7 +83,7 @@ class CassandraSessionSpec extends FunSpec with Matchers with EasyMockSugar {
       val selectPrepStatement = mock[PreparedStatement]
       val keyspaceConfig = KeyspaceConfiguration(keyspaceName, tableName, 100, None)
 
-      val config = CassandraConfiguration(List("cassandra1"),
+      val config = ClientConfiguration(List("cassandra1"),
         autoDiscoverEnabled = false,
         None,
         None,

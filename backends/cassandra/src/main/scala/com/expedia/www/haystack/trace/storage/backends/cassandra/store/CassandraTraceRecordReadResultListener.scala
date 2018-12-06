@@ -21,32 +21,34 @@ import com.datastax.driver.core.exceptions.NoHostAvailableException
 import com.datastax.driver.core.{ResultSet, ResultSetFuture, Row}
 import com.expedia.open.tracing.api.Trace
 import com.expedia.open.tracing.backend.TraceRecord
+import com.expedia.www.haystack.trace.storage.backends.cassandra.client.CassandraTableSchema
+import com.google.protobuf.ByteString
 import org.slf4j.{Logger, LoggerFactory}
 
 import scala.collection.JavaConverters._
 import scala.concurrent.Promise
 import scala.util.{Failure, Success, Try}
 
-object CassandraTraceRecordsReadResultListener {
-  protected val LOGGER: Logger = LoggerFactory.getLogger(classOf[CassandraTraceRecordsReadResultListener])
+object CassandraTraceRecordReadResultListener {
+  protected val LOGGER: Logger = LoggerFactory.getLogger(classOf[CassandraTraceRecordReadResultListener])
 }
 
-class CassandraTraceRecordsReadResultListener(asyncResult: ResultSetFuture,
-                                              timer: Timer.Context,
-                                              failure: Meter,
-                                              promise: Promise[Trace]) extends Runnable {
+class CassandraTraceRecordReadResultListener(asyncResult: ResultSetFuture,
+                                             timer: Timer.Context,
+                                             failure: Meter,
+                                             promise: Promise[Seq[TraceRecord]]) extends Runnable {
 
-  import CassandraTraceRecordsReadResultListener._
+  import CassandraTraceRecordReadResultListener._
 
   override def run(): Unit = {
     timer.close()
 
     Try(asyncResult.get)
       .flatMap(tryGetTraceRows)
-      .flatMap(tryDeserialize)
+      .flatMap(mapTraceRecords)
     match {
-      case Success(trace) =>
-        promise.success(trace)
+      case Success(records) =>
+        promise.success(records)
       case Failure(ex) =>
         if (fatalError(ex)) {
           LOGGER.error("Fatal error in reading from cassandra, tearing down the app", ex)
@@ -64,15 +66,23 @@ class CassandraTraceRecordsReadResultListener(asyncResult: ResultSetFuture,
 
   private def tryGetTraceRows(resultSet: ResultSet): Try[Seq[Row]] = {
     val rows = resultSet.all().asScala
-    if (rows.isEmpty) Failure(new TraceNotFoundException) else Success(rows)
+    if (rows.isEmpty) Failure(new RuntimeException()) else Success(rows)
   }
 
-  private def tryDeserialize(rows: Seq[Row]): List[TraceRecord] = {
-    var deserFailed: Failure[Trace] = null
-
-    rows.map(row => {
-      val record = TraceRecord.newBuilder().build()
-      record
-    }).toList
+  private def mapTraceRecords(rows: Seq[Row]): Try[List[TraceRecord]] = {
+    Try {
+      rows.map(row => {
+        val spanBytes = row.getBytes(CassandraTableSchema.SPANS_COLUMN_NAME).array()
+        val timeStamp = row.getDate(CassandraTableSchema.TIMESTAMP_COLUMN_NAME)
+        val traceId = row.getString(CassandraTableSchema.ID_COLUMN_NAME)
+        val record = TraceRecord.newBuilder()
+          .setSpans(ByteString.copyFrom(spanBytes))
+          //TODO: Review this code to see if the timestamp returned by the backend should be millis or microseconds
+          .setTimestamp(timeStamp.getMillisSinceEpoch)
+          .setTraceId(traceId)
+          .build()
+        record
+      }).toList
+    }
   }
 }

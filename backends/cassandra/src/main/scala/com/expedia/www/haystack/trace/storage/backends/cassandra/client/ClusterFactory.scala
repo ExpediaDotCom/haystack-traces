@@ -18,11 +18,11 @@
 package com.expedia.www.haystack.trace.storage.backends.cassandra.client
 
 import com.datastax.driver.core.Cluster
-import com.expedia.www.haystack.trace.storage.backends.cassandra.config.entities.CassandraConfiguration
+import com.expedia.www.haystack.trace.storage.backends.cassandra.config.entities.ClientConfiguration
 
 /**
   * factory that builds the cluster. this is useful for testing other classes
   */
 trait ClusterFactory {
-  def buildCluster(config: CassandraConfiguration): Cluster
+  def buildCluster(config: ClientConfiguration): Cluster
 }

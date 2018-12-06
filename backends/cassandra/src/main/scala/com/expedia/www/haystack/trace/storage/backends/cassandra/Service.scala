@@ -21,7 +21,10 @@ import java.io.File
 import com.codahale.metrics.JmxReporter
 import com.expedia.www.haystack.commons.logger.LoggerUtils
 import com.expedia.www.haystack.commons.metrics.MetricsSupport
-import com.expedia.www.haystack.trace.storage.backends.cassandra.services.GrpcHealthService
+import com.expedia.www.haystack.trace.storage.backends.cassandra.client.{CassandraClusterFactory, CassandraSession}
+import com.expedia.www.haystack.trace.storage.backends.cassandra.config.ProjectConfiguration
+import com.expedia.www.haystack.trace.storage.backends.cassandra.services.{GrpcHealthService, SpansPersistenceService}
+import com.expedia.www.haystack.trace.storage.backends.cassandra.store.{CassandraTraceRecordReader, CassandraTraceRecordWriter}
 import io.grpc.netty.NettyServerBuilder
 import org.slf4j.{Logger, LoggerFactory}
 
@@ -36,7 +39,7 @@ object Service extends MetricsSupport {
     startService()
   }
 
-  private def startJmxReporter() = {
+  private def startJmxReporter(): Unit = {
     JmxReporter
       .forRegistry(metricRegistry)
       .build()
@@ -45,19 +48,29 @@ object Service extends MetricsSupport {
 
   private def startService(): Unit = {
     try {
+      val config = new ProjectConfiguration
+      val serviceConfig = config.serviceConfig
+      val cassandraSession = new CassandraSession(config.cassandraConfig.clientConfig, new CassandraClusterFactory)
 
-
+      val tracerRecordWriter = new CassandraTraceRecordWriter(cassandraSession, config.cassandraConfig)
+      val tracerRecordReader = new CassandraTraceRecordReader(cassandraSession, config.cassandraConfig.clientConfig)
 
       val serverBuilder = NettyServerBuilder
-        .forPort(8080)
+        .forPort(serviceConfig.port)
         .directExecutor()
         .addService(new GrpcHealthService())
+        .addService(new SpansPersistenceService(reader = tracerRecordReader, writer = tracerRecordWriter)(executor))
 
+
+      // enable ssl if enabled
+      if (serviceConfig.ssl.enabled) {
+        serverBuilder.useTransportSecurity(new File(serviceConfig.ssl.certChainFilePath), new File(serviceConfig.ssl.privateKeyPath))
+      }
 
 
       val server = serverBuilder.build().start()
 
-      LOGGER.info(s"server started, listening on ${8080}")
+      LOGGER.info(s"server started, listening on ${serviceConfig.port}")
 
       Runtime.getRuntime.addShutdownHook(new Thread() {
         override def run(): Unit = {

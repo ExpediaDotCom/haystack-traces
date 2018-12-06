@@ -45,7 +45,7 @@ class SpansPersistenceService(reader: CassandraTraceRecordReader, writer: Cassan
   override def readSpans(request: ReadSpansRequest, responseObserver: StreamObserver[ReadSpansResponse]): Unit = {
 
     handleReadSpansResponse.handle(request, responseObserver) {
-      reader.readTraceRecords(request.getTraceIdsList.asByteStringList().asScala.map(_.toString).toList).map {
+      reader.readTraceRecords(request.getTraceIdsList.iterator().asScala.toList).map {
         records => {
           ReadSpansResponse.newBuilder()
             .addAllRecords(records.asJava)

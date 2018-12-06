@@ -30,9 +30,11 @@ class SpansPersistenceService(store: InMemoryTraceRecordStore)
 
   override def writeSpans(request: WriteSpansRequest, responseObserver: StreamObserver[WriteSpansResponse]): Unit = {
     store.writeTraceRecords(request.getRecordsList.asScala.toList)
-    WriteSpansResponse.newBuilder().setCode(
+    val response =  WriteSpansResponse.newBuilder().setCode(
       ResultCode.SUCCESS
     ).build()
+    responseObserver.onNext(response)
+    responseObserver.onCompleted()
   }
 
   /**
@@ -42,7 +44,7 @@ class SpansPersistenceService(store: InMemoryTraceRecordStore)
     */
   override def readSpans(request: ReadSpansRequest, responseObserver: StreamObserver[ReadSpansResponse]): Unit = {
 
-    val records = store.readTraceRecords(request.getTraceIdsList.asByteStringList().asScala.map(_.toString).toList)
+    val records = store.readTraceRecords(request.getTraceIdsList.iterator().asScala.toList)
     val response = ReadSpansResponse.newBuilder()
       .addAllRecords(records.asJava)
       .build()

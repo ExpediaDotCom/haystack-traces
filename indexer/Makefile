@@ -19,7 +19,7 @@ integration_test: prepare_integration_test_env
 		-v ~/.m2:/root/.m2 \
 		-w /src \
 		maven:3.5.0-jdk-8 \
-		./mvnw scoverage:integration-check -pl indexer -am
+		./mvnw clean scoverage:integration-check -pl indexer -am
 
 	# clean up the docker
 	docker-compose -f build/integration-tests/docker-compose.yml -p sandbox stop

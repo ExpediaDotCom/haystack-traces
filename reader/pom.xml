@@ -90,7 +90,6 @@
             <groupId>com.expedia.www</groupId>
             <artifactId>haystack-trace-backend-memory</artifactId>
             <version>${project.version}</version>
-            <scope>test</scope>
         </dependency>
     </dependencies>
 

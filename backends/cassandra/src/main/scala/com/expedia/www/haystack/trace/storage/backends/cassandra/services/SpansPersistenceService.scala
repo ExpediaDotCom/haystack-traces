@@ -32,9 +32,12 @@ class SpansPersistenceService(reader: CassandraTraceRecordReader, writer: Cassan
 
   override def writeSpans(request: WriteSpansRequest, responseObserver: StreamObserver[WriteSpansResponse]): Unit = {
     writer.writeTraceRecords(request.getRecordsList.asScala.toList)
-    WriteSpansResponse.newBuilder().setCode(
+    val response = WriteSpansResponse.newBuilder().setCode(
       ResultCode.SUCCESS
     ).build()
+
+    responseObserver.onNext(response)
+    responseObserver.onCompleted()
   }
 
   /**

@@ -15,7 +15,7 @@
 
     <properties>
         <mainClass>com.expedia.www.haystack.trace.backend.com.expedia.www.haystack.trace.storage.backends.memory.Service</mainClass>
-        <finalName>${project.artifactId}-${project.version}</finalName>
+        <finalName>haystack-trace-backends-1.0.0-SNAPSHOT</finalName>
         <maven-protobuf-plugin.version>3.3.0.1</maven-protobuf-plugin.version>
     </properties>
 

@@ -17,7 +17,6 @@ prepare_integration_test_env: docker_build
 integration_test: prepare_integration_test_env
 	# run tests in a separate container and join the docker-compose network
 	docker run \
-		-it \
 		--network=sandbox_default \
 		-v $(PWD)/..:/src \
 		-v ~/.m2:/root/.m2 \

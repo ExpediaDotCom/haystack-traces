@@ -33,7 +33,7 @@ class GrpcTestClient {
 
   private val executors = Executors.newSingleThreadExecutor()
 
-  val port = 8088
+  val port = 8090
 
   val storageBackendClient = StorageBackendGrpc.newBlockingStub(ManagedChannelBuilder.forAddress("localhost", port)
     .usePlaintext(true)
@@ -41,7 +41,7 @@ class GrpcTestClient {
 
   def prepare(): Unit = {
     executors.submit(new Runnable {
-      override def run(): Unit = Service.main(null)
+      override def run(): Unit = Service.main(Array{port.toString})
     })
   }
 

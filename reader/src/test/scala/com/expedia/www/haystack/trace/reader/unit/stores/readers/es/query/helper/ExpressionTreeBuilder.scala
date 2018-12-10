@@ -42,7 +42,7 @@ object ExpressionTreeBuilder {
     .build()
 
 
-  val operandLevelExpressionTree = ExpressionTree
+  val operandLevelExpressionTree: ExpressionTree = ExpressionTree
     .newBuilder()
     .setOperator(Operator.AND)
     .addOperands(Operand.newBuilder().setField(Field.newBuilder().setName(fieldKey).setValue(fieldValue)))
@@ -51,7 +51,7 @@ object ExpressionTreeBuilder {
     .addOperands(Operand.newBuilder().setField(Field.newBuilder().setName("3").setValue("3")))
     .build()
 
-  val spanLevelExpressionTree = ExpressionTree
+  val spanLevelExpressionTree: ExpressionTree = ExpressionTree
     .newBuilder()
     .setOperator(Operator.AND)
     .setIsSpanLevelExpression(true)
@@ -61,5 +61,43 @@ object ExpressionTreeBuilder {
     .addOperands(Operand.newBuilder().setExpression(spanLevelTreeSecond))
     .build()
 
+  val expressionTreeWithDurationFields: ExpressionTree = ExpressionTree
+    .newBuilder()
+    .setOperator(Operator.AND)
+    .setIsSpanLevelExpression(true)
+    .addOperands(Operand.newBuilder().setField(Field.newBuilder().setName(fieldKey).setValue(fieldValue)))
+    .addOperands(Operand.newBuilder().setField(Field.newBuilder().setName("duration").setValue("500ms").setOperator(Field.Operator.GREATER_THAN).setVType(Field.ValueType.DURATION)))
+    .addOperands(Operand.newBuilder().setExpression(spanLevelTreeFirst))
+    .addOperands(Operand.newBuilder().setExpression(spanLevelTreeSecond))
+    .build()
 
+  val anotherExpressionTreeWithDurationFields: ExpressionTree = ExpressionTree
+    .newBuilder()
+    .setOperator(Operator.AND)
+    .setIsSpanLevelExpression(true)
+    .addOperands(Operand.newBuilder().setField(Field.newBuilder().setName(fieldKey).setValue(fieldValue)))
+    .addOperands(Operand.newBuilder().setField(Field.newBuilder().setName("duration").setOperator(Field.Operator.LESS_THAN).setValue("3m").setVType(Field.ValueType.DURATION)))
+    .addOperands(Operand.newBuilder().setExpression(spanLevelTreeFirst))
+    .addOperands(Operand.newBuilder().setExpression(spanLevelTreeSecond))
+    .build()
+
+  val oneMoreExpressionTreeWithDurationFields: ExpressionTree = ExpressionTree
+    .newBuilder()
+    .setOperator(Operator.AND)
+    .setIsSpanLevelExpression(true)
+    .addOperands(Operand.newBuilder().setField(Field.newBuilder().setName(fieldKey).setValue(fieldValue).setOperator(Field.Operator.EQUAL)))
+    .addOperands(Operand.newBuilder().setField(Field.newBuilder().setName("duration").setOperator(Field.Operator.LESS_THAN).setValue("2sec").setVType(Field.ValueType.DURATION)))
+    .addOperands(Operand.newBuilder().setExpression(spanLevelTreeFirst))
+    .addOperands(Operand.newBuilder().setExpression(spanLevelTreeSecond))
+    .build()
+
+  val expressionTreeWithGreaterThanOperator: ExpressionTree = ExpressionTree
+    .newBuilder()
+    .setOperator(Operator.AND)
+    .setIsSpanLevelExpression(true)
+    .addOperands(Operand.newBuilder().setField(Field.newBuilder().setName(fieldKey).setValue(fieldValue).setOperator(Field.Operator.EQUAL)))
+    .addOperands(Operand.newBuilder().setField(Field.newBuilder().setName("duration").setOperator(Field.Operator.GREATER_THAN).setValue("240000")))
+    .addOperands(Operand.newBuilder().setExpression(spanLevelTreeFirst))
+    .addOperands(Operand.newBuilder().setExpression(spanLevelTreeSecond))
+    .build()
 }

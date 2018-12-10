@@ -17,7 +17,8 @@
 package com.expedia.www.haystack.trace.reader.readers.transformers
 
 import com.expedia.open.tracing.Span
-import com.expedia.www.haystack.trace.reader.readers.utils.{MutableSpanForest, SpanTree, SpanUtils}
+import com.expedia.www.haystack.trace.commons.utils.SpanUtils
+import com.expedia.www.haystack.trace.reader.readers.utils.{MutableSpanForest, SpanTree}
 
 
 /**

@@ -17,7 +17,8 @@
 package com.expedia.www.haystack.trace.reader.readers.transformers
 
 import com.expedia.open.tracing.Span
-import com.expedia.www.haystack.trace.reader.readers.utils.{MutableSpanForest, SpanTree, SpanUtils}
+import com.expedia.www.haystack.trace.commons.utils.SpanUtils
+import com.expedia.www.haystack.trace.reader.readers.utils.{MutableSpanForest, SpanTree}
 
 import scala.annotation.tailrec
 import scala.collection.mutable.ListBuffer
@@ -46,7 +47,7 @@ class ClockSkewFromParentTransformer extends SpanTreeTransformer {
   private def adjustSkew(fixedSpans: ListBuffer[Span], spanTrees: Seq[SpanTreeWithParent]): Unit = {
     if (spanTrees.isEmpty) return
 
-    // collect the child trees that need to be corrected for clockskew
+    // collect the child trees that need to be corrected for clock skew
     val childTrees = mutable.ListBuffer[SpanTreeWithParent]()
 
     spanTrees.foreach(e => {

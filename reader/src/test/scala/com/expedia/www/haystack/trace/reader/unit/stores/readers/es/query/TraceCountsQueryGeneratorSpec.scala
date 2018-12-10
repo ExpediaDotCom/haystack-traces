@@ -24,7 +24,7 @@ import com.expedia.www.haystack.trace.commons.config.entities.WhitelistIndexFiel
 import com.expedia.www.haystack.trace.reader.config.entities.SpansIndexConfiguration
 import com.expedia.www.haystack.trace.reader.stores.readers.es.query.TraceCountsQueryGenerator
 import com.expedia.www.haystack.trace.reader.unit.BaseUnitTestSpec
-import com.expedia.www.haystack.trace.reader.unit.stores.readers.es.query.helper.ExpressionTreeBuilder.{operandLevelExpressionTree, spanLevelExpressionTree}
+import com.expedia.www.haystack.trace.reader.unit.stores.readers.es.query.helper.ExpressionTreeBuilder._
 import com.google.gson.Gson
 import io.searchbox.core.Search
 
@@ -197,5 +197,34 @@ class TraceCountsQueryGeneratorSpec extends BaseUnitTestSpec {
     }
 
 
+    it("should generate valid count query for expression tree with duration field types") {
+      Given("a trace count request")
+      val queryGenerator = new TraceCountsQueryGenerator(spansIndexConfiguration, "spans", new WhitelistIndexFieldConfiguration)
+      val startTime = 1529418475791000l // Tuesday, June 19, 2018 2:27:55.791 PM
+      val endTime = 1529419075791000l
+
+      val requests = Seq(expressionTreeWithDurationFields, anotherExpressionTreeWithDurationFields, oneMoreExpressionTreeWithDurationFields, expressionTreeWithGreaterThanOperator) map {
+        expression => {
+          TraceCountsRequest
+            .newBuilder()
+            .setFilterExpression(expression)
+            .setStartTime(startTime)
+            .setEndTime(endTime)
+            .setInterval(interval)
+            .build()
+        }
+      }
+      When("generating query")
+      val queries: Seq[Search] = requests.map(req => queryGenerator.generate(req))
+
+      Then("generate a valid query")
+      queries.map(query => query.getData(new Gson()).replaceAll("\n", "").replaceAll(" ", "")) shouldEqual Seq(
+        "{\"size\":0,\"query\":{\"bool\":{\"must\":[{\"range\":{\"starttime\":{\"from\":1529418475791000,\"to\":1529419075791000,\"include_lower\":true,\"include_upper\":true,\"boost\":1.0}}}],\"filter\":[{\"nested\":{\"query\":{\"bool\":{\"filter\":[{\"term\":{\"spans.1\":{\"value\":\"1\",\"boost\":1.0}}},{\"term\":{\"spans.2\":{\"value\":\"2\",\"boost\":1.0}}},{\"term\":{\"spans.3\":{\"value\":\"3\",\"boost\":1.0}}}],\"adjust_pure_negative\":true,\"boost\":1.0}},\"path\":\"spans\",\"ignore_unmapped\":false,\"score_mode\":\"none\",\"boost\":1.0}},{\"nested\":{\"query\":{\"bool\":{\"filter\":[{\"term\":{\"spans.4\":{\"value\":\"4\",\"boost\":1.0}}},{\"term\":{\"spans.5\":{\"value\":\"5\",\"boost\":1.0}}}],\"adjust_pure_negative\":true,\"boost\":1.0}},\"path\":\"spans\",\"ignore_unmapped\":false,\"score_mode\":\"none\",\"boost\":1.0}},{\"nested\":{\"query\":{\"bool\":{\"filter\":[{\"term\":{\"spans.svcname\":{\"value\":\"svcValue\",\"boost\":1.0}}}],\"adjust_pure_negative\":true,\"boost\":1.0}},\"path\":\"spans\",\"ignore_unmapped\":false,\"score_mode\":\"none\",\"boost\":1.0}},{\"nested\":{\"query\":{\"bool\":{\"filter\":[{\"range\":{\"spans.duration\":{\"from\":500000,\"to\":null,\"include_lower\":false,\"include_upper\":true,\"boost\":1.0}}}],\"adjust_pure_negative\":true,\"boost\":1.0}},\"path\":\"spans\",\"ignore_unmapped\":false,\"score_mode\":\"none\",\"boost\":1.0}}],\"adjust_pure_negative\":true,\"boost\":1.0}},\"aggregations\":{\"countagg\":{\"histogram\":{\"field\":\"starttime\",\"interval\":6.0E7,\"offset\":0.0,\"order\":{\"_key\":\"asc\"},\"keyed\":false,\"min_doc_count\":0,\"extended_bounds\":{\"min\":1.529418475791E15,\"max\":1.529419075791E15}}}}}",
+        "{\"size\":0,\"query\":{\"bool\":{\"must\":[{\"range\":{\"starttime\":{\"from\":1529418475791000,\"to\":1529419075791000,\"include_lower\":true,\"include_upper\":true,\"boost\":1.0}}}],\"filter\":[{\"nested\":{\"query\":{\"bool\":{\"filter\":[{\"term\":{\"spans.1\":{\"value\":\"1\",\"boost\":1.0}}},{\"term\":{\"spans.2\":{\"value\":\"2\",\"boost\":1.0}}},{\"term\":{\"spans.3\":{\"value\":\"3\",\"boost\":1.0}}}],\"adjust_pure_negative\":true,\"boost\":1.0}},\"path\":\"spans\",\"ignore_unmapped\":false,\"score_mode\":\"none\",\"boost\":1.0}},{\"nested\":{\"query\":{\"bool\":{\"filter\":[{\"term\":{\"spans.4\":{\"value\":\"4\",\"boost\":1.0}}},{\"term\":{\"spans.5\":{\"value\":\"5\",\"boost\":1.0}}}],\"adjust_pure_negative\":true,\"boost\":1.0}},\"path\":\"spans\",\"ignore_unmapped\":false,\"score_mode\":\"none\",\"boost\":1.0}},{\"nested\":{\"query\":{\"bool\":{\"filter\":[{\"term\":{\"spans.svcname\":{\"value\":\"svcValue\",\"boost\":1.0}}}],\"adjust_pure_negative\":true,\"boost\":1.0}},\"path\":\"spans\",\"ignore_unmapped\":false,\"score_mode\":\"none\",\"boost\":1.0}},{\"nested\":{\"query\":{\"bool\":{\"filter\":[{\"range\":{\"spans.duration\":{\"from\":null,\"to\":180000000,\"include_lower\":true,\"include_upper\":false,\"boost\":1.0}}}],\"adjust_pure_negative\":true,\"boost\":1.0}},\"path\":\"spans\",\"ignore_unmapped\":false,\"score_mode\":\"none\",\"boost\":1.0}}],\"adjust_pure_negative\":true,\"boost\":1.0}},\"aggregations\":{\"countagg\":{\"histogram\":{\"field\":\"starttime\",\"interval\":6.0E7,\"offset\":0.0,\"order\":{\"_key\":\"asc\"},\"keyed\":false,\"min_doc_count\":0,\"extended_bounds\":{\"min\":1.529418475791E15,\"max\":1.529419075791E15}}}}}",
+        "{\"size\":0,\"query\":{\"bool\":{\"must\":[{\"range\":{\"starttime\":{\"from\":1529418475791000,\"to\":1529419075791000,\"include_lower\":true,\"include_upper\":true,\"boost\":1.0}}}],\"filter\":[{\"nested\":{\"query\":{\"bool\":{\"filter\":[{\"term\":{\"spans.1\":{\"value\":\"1\",\"boost\":1.0}}},{\"term\":{\"spans.2\":{\"value\":\"2\",\"boost\":1.0}}},{\"term\":{\"spans.3\":{\"value\":\"3\",\"boost\":1.0}}}],\"adjust_pure_negative\":true,\"boost\":1.0}},\"path\":\"spans\",\"ignore_unmapped\":false,\"score_mode\":\"none\",\"boost\":1.0}},{\"nested\":{\"query\":{\"bool\":{\"filter\":[{\"term\":{\"spans.4\":{\"value\":\"4\",\"boost\":1.0}}},{\"term\":{\"spans.5\":{\"value\":\"5\",\"boost\":1.0}}}],\"adjust_pure_negative\":true,\"boost\":1.0}},\"path\":\"spans\",\"ignore_unmapped\":false,\"score_mode\":\"none\",\"boost\":1.0}},{\"nested\":{\"query\":{\"bool\":{\"filter\":[{\"term\":{\"spans.svcname\":{\"value\":\"svcValue\",\"boost\":1.0}}}],\"adjust_pure_negative\":true,\"boost\":1.0}},\"path\":\"spans\",\"ignore_unmapped\":false,\"score_mode\":\"none\",\"boost\":1.0}},{\"nested\":{\"query\":{\"bool\":{\"filter\":[{\"range\":{\"spans.duration\":{\"from\":null,\"to\":2000000,\"include_lower\":true,\"include_upper\":false,\"boost\":1.0}}}],\"adjust_pure_negative\":true,\"boost\":1.0}},\"path\":\"spans\",\"ignore_unmapped\":false,\"score_mode\":\"none\",\"boost\":1.0}}],\"adjust_pure_negative\":true,\"boost\":1.0}},\"aggregations\":{\"countagg\":{\"histogram\":{\"field\":\"starttime\",\"interval\":6.0E7,\"offset\":0.0,\"order\":{\"_key\":\"asc\"},\"keyed\":false,\"min_doc_count\":0,\"extended_bounds\":{\"min\":1.529418475791E15,\"max\":1.529419075791E15}}}}}",
+        "{\"size\":0,\"query\":{\"bool\":{\"must\":[{\"range\":{\"starttime\":{\"from\":1529418475791000,\"to\":1529419075791000,\"include_lower\":true,\"include_upper\":true,\"boost\":1.0}}}],\"filter\":[{\"nested\":{\"query\":{\"bool\":{\"filter\":[{\"term\":{\"spans.1\":{\"value\":\"1\",\"boost\":1.0}}},{\"term\":{\"spans.2\":{\"value\":\"2\",\"boost\":1.0}}},{\"term\":{\"spans.3\":{\"value\":\"3\",\"boost\":1.0}}}],\"adjust_pure_negative\":true,\"boost\":1.0}},\"path\":\"spans\",\"ignore_unmapped\":false,\"score_mode\":\"none\",\"boost\":1.0}},{\"nested\":{\"query\":{\"bool\":{\"filter\":[{\"term\":{\"spans.4\":{\"value\":\"4\",\"boost\":1.0}}},{\"term\":{\"spans.5\":{\"value\":\"5\",\"boost\":1.0}}}],\"adjust_pure_negative\":true,\"boost\":1.0}},\"path\":\"spans\",\"ignore_unmapped\":false,\"score_mode\":\"none\",\"boost\":1.0}},{\"nested\":{\"query\":{\"bool\":{\"filter\":[{\"term\":{\"spans.svcname\":{\"value\":\"svcValue\",\"boost\":1.0}}}],\"adjust_pure_negative\":true,\"boost\":1.0}},\"path\":\"spans\",\"ignore_unmapped\":false,\"score_mode\":\"none\",\"boost\":1.0}},{\"nested\":{\"query\":{\"bool\":{\"filter\":[{\"range\":{\"spans.duration\":{\"from\":240000,\"to\":null,\"include_lower\":false,\"include_upper\":true,\"boost\":1.0}}}],\"adjust_pure_negative\":true,\"boost\":1.0}},\"path\":\"spans\",\"ignore_unmapped\":false,\"score_mode\":\"none\",\"boost\":1.0}}],\"adjust_pure_negative\":true,\"boost\":1.0}},\"aggregations\":{\"countagg\":{\"histogram\":{\"field\":\"starttime\",\"interval\":6.0E7,\"offset\":0.0,\"order\":{\"_key\":\"asc\"},\"keyed\":false,\"min_doc_count\":0,\"extended_bounds\":{\"min\":1.529418475791E15,\"max\":1.529419075791E15}}}}}")
+
+      queries.map(query => query.getURI).toSet shouldEqual Set("haystack-spans-2018-06-19-2/spans/_search")
+    }
   }
 }

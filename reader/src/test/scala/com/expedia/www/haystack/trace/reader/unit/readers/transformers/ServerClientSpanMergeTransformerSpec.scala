@@ -19,7 +19,7 @@ package com.expedia.www.haystack.trace.reader.unit.readers.transformers
 
 import com.expedia.open.tracing.Span
 import com.expedia.www.haystack.trace.reader.readers.transformers.ServerClientSpanMergeTransformer
-import com.expedia.www.haystack.trace.reader.readers.utils.{AuxiliaryTags, MutableSpanForest, SpanMarkers}
+import com.expedia.www.haystack.trace.reader.readers.utils.{AuxiliaryTags, MutableSpanForest}
 import com.expedia.www.haystack.trace.reader.unit.BaseUnitTestSpec
 import com.expedia.www.haystack.trace.reader.unit.readers.builders.ValidTraceBuilder
 

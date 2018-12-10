@@ -17,8 +17,8 @@
 package com.expedia.www.haystack.trace.reader.unit.readers.transformers
 
 import com.expedia.open.tracing.{Log, Span, Tag}
+import com.expedia.www.haystack.trace.commons.utils.SpanMarkers
 import com.expedia.www.haystack.trace.reader.readers.transformers.ClientServerEventLogTransformer
-import com.expedia.www.haystack.trace.reader.readers.utils.SpanMarkers
 import com.expedia.www.haystack.trace.reader.unit.BaseUnitTestSpec
 
 import scala.collection.JavaConverters._

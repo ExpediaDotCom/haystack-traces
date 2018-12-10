@@ -16,8 +16,6 @@
 
 package com.expedia.www.haystack.trace.reader.integration
 
-import java.nio.ByteBuffer
-import java.sql.ResultSet
 import java.text.SimpleDateFormat
 import java.util.concurrent.{Executors, TimeUnit}
 import java.util.{Date, UUID}
@@ -30,19 +28,21 @@ import com.expedia.open.tracing.backend.{StorageBackendGrpc, TraceRecord, WriteS
 import com.expedia.open.tracing.buffer.SpanBuffer
 import com.expedia.www.haystack.trace.commons.clients.es.document.TraceIndexDoc
 import com.expedia.www.haystack.trace.commons.config.entities.{IndexFieldType, WhiteListIndexFields, WhitelistIndexField}
-import  com.expedia.www.haystack.trace.reader.{Service => BackendService}
+import com.expedia.www.haystack.trace.commons.packer.{PackerFactory, PackerType}
+import com.expedia.www.haystack.trace.reader.Service
 import com.expedia.www.haystack.trace.reader.unit.readers.builders.ValidTraceBuilder
-import com.expedia.www.haystack.trace.storage.backends.memory.Service
+import com.expedia.www.haystack.trace.storage.backends.memory.{Service => BackendService}
+import com.google.protobuf.ByteString
 import io.grpc.ManagedChannelBuilder
 import io.grpc.health.v1.HealthGrpc
 import io.searchbox.client.config.HttpClientConfig
 import io.searchbox.client.{JestClient, JestClientFactory}
 import io.searchbox.core.Index
 import io.searchbox.indices.CreateIndex
-import org.scalatest._
 import org.json4s.ext.EnumNameSerializer
 import org.json4s.jackson.Serialization
 import org.json4s.{DefaultFormats, Formats}
+import org.scalatest._
 
 import scala.collection.JavaConverters._
 import scala.collection.mutable
@@ -160,12 +160,14 @@ trait BaseIntegrationTestSpec extends FunSpec with GivenWhenThen with Matchers w
   private var traceBackendClient: StorageBackendBlockingStub = _
 
   def setupTraceBackend(): StorageBackendBlockingStub = {
-
+    val port = 8090
     executors.submit(new Runnable {
-      override def run(): Unit = BackendService.main(null)
+      override def run(): Unit = BackendService.main(Array {
+        port.toString
+      })
     })
     traceBackendClient = StorageBackendGrpc.newBlockingStub(
-      ManagedChannelBuilder.forAddress("localhost", 8080)
+      ManagedChannelBuilder.forAddress("localhost", port)
         .usePlaintext(true)
         .build())
     traceBackendClient
@@ -173,7 +175,7 @@ trait BaseIntegrationTestSpec extends FunSpec with GivenWhenThen with Matchers w
 
   override def beforeAll() {
     // setup traceBackend
-    traceBackendClient =  setupTraceBackend()
+    traceBackendClient = setupTraceBackend()
 
     // setup elasticsearch
     val factory = new JestClientFactory()
@@ -291,8 +293,13 @@ trait BaseIntegrationTestSpec extends FunSpec with GivenWhenThen with Matchers w
   }
 
   private def writeToBackend(spanBuffer: SpanBuffer, traceId: String): WriteSpansResponse = {
+    val packer = PackerFactory.spanBufferPacker(PackerType.NONE)
 
-    val traceRecord = TraceRecord.newBuilder().setTraceId(traceId).build()
+    val traceRecord = TraceRecord
+      .newBuilder()
+      .setTraceId(traceId)
+      .setSpans(ByteString.copyFrom(packer.apply(spanBuffer).packedDataBytes))
+      .build()
 
 
     val writeSpanRequest = WriteSpansRequest.newBuilder()

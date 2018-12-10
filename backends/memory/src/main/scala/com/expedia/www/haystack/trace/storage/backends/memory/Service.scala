@@ -28,14 +28,14 @@ import io.grpc.netty.NettyServerBuilder
 import org.slf4j.{Logger, LoggerFactory}
 
 object Service extends MetricsSupport {
-  private val LOGGER: Logger = LoggerFactory.getLogger("TraceReader")
+  private val LOGGER: Logger = LoggerFactory.getLogger("MemoryBackend")
 
   // primary executor for service's async tasks
   implicit private val executor = scala.concurrent.ExecutionContext.global
 
   def main(args: Array[String]): Unit = {
     startJmxReporter()
-    startService()
+    startService(args)
   }
 
   private def startJmxReporter(): Unit = {
@@ -45,15 +45,19 @@ object Service extends MetricsSupport {
       .start()
   }
 
-  private def startService(): Unit = {
+  private def startService(args: Array[String]): Unit = {
     try {
       val config = new ProjectConfiguration
       val serviceConfig = config.serviceConfig
+      var port = serviceConfig.port
+      if(args!=null && args.length!=0) {
+        port = args(0).toInt
+      }
 
       val tracerRecordStore = new InMemoryTraceRecordStore()
 
       val serverBuilder = NettyServerBuilder
-        .forPort(serviceConfig.port)
+        .forPort(port)
         .directExecutor()
         .addService(new GrpcHealthService())
         .addService(new SpansPersistenceService(store = tracerRecordStore)(executor))

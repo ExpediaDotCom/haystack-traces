@@ -31,19 +31,17 @@ import scala.collection.JavaConverters._
 
 class GrpcTestClient {
 
-  private val executors = Executors.newSingleThreadExecutor()
 
-  val port = 8090
+  var storageBackendClient: StorageBackendGrpc.StorageBackendBlockingStub = _
 
-  val storageBackendClient = StorageBackendGrpc.newBlockingStub(ManagedChannelBuilder.forAddress("localhost", port)
-    .usePlaintext(true)
-    .build())
 
   def prepare(): Unit = {
-    executors.submit(new Runnable {
-      override def run(): Unit = Service.main(Array{port.toString})
-    })
+    storageBackendClient = StorageBackendGrpc.newBlockingStub(ManagedChannelBuilder.forAddress("localhost", port)
+      .usePlaintext(true)
+      .build())
   }
+
+  import GrpcTestClient._
 
   def buildConfig = TraceBackendConfiguration(
     TraceBackendClientConfiguration("localhost", port),
@@ -54,4 +52,16 @@ class GrpcTestClient {
     storageBackendClient.readSpans(ReadSpansRequest.newBuilder().addAllTraceIds(traceIds.asJava).build()).getRecordsList.asScala
   }
 
+}
+
+object GrpcTestClient {
+
+  val port = 8090
+
+  private val executors = Executors.newSingleThreadExecutor()
+  executors.submit(new Runnable {
+    override def run(): Unit = Service.main(Array {
+      port.toString
+    })
+  })
 }

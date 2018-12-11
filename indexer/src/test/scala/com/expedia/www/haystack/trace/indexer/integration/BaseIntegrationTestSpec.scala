@@ -118,7 +118,7 @@ abstract class BaseIntegrationTestSpec extends WordSpec with GivenWhenThen with 
   def verifyBackendWrites(traceDescriptions: Seq[TraceDescription], minSpansPerTrace: Int, maxSpansPerTrace: Int): Unit = {
     val traceRecords = traceBackendClient.queryTraces(traceDescriptions)
 
-    traceRecords should have size traceDescriptions.size
+    traceRecords.groupBy(_.getTraceId) should have size traceDescriptions.size
 
     traceRecords.foreach(record => {
       val spanBuffer = Unpacker.readSpanBuffer(record.getSpans.toByteArray)

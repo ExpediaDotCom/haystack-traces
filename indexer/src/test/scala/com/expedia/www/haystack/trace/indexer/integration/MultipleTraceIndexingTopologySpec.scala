@@ -29,9 +29,9 @@ import scala.concurrent.duration._
 
 class MultipleTraceIndexingTopologySpec extends BaseIntegrationTestSpec {
   private val MAX_CHILD_SPANS_PER_TRACE = 5
-  private val TRACE_ID_4 = "traceid-4"
+  private val TRACE_ID_9 = "traceid-9"
   private val TRACE_ID_5 = "traceid-5"
-  private val SPAN_ID_PREFIX_1 = TRACE_ID_4 + "span-id-"
+  private val SPAN_ID_PREFIX_1 = TRACE_ID_9 + "span-id-"
   private val SPAN_ID_PREFIX_2 = TRACE_ID_5 + "span-id-"
 
   "Trace Indexing Topology" should {
@@ -44,13 +44,13 @@ class MultipleTraceIndexingTopologySpec extends BaseIntegrationTestSpec {
       val serviceMetadataConfig = elastic.buildServiceMetadataConfig
 
       When(s"spans are produced in '${kafka.INPUT_TOPIC}' topic async, and kafka-streams topology is started")
-      val traceDescriptions = List(TraceDescription(TRACE_ID_4, SPAN_ID_PREFIX_1), TraceDescription(TRACE_ID_5, SPAN_ID_PREFIX_2))
+      val traceDescriptions = List(TraceDescription(TRACE_ID_5, SPAN_ID_PREFIX_2),TraceDescription(TRACE_ID_9, SPAN_ID_PREFIX_1))
 
       produceSpansAsync(MAX_CHILD_SPANS_PER_TRACE,
         1.seconds,
         traceDescriptions,
-        0,
-        spanAccumulatorConfig.bufferingWindowMillis)
+        startRecordTimestamp = 0,
+        maxRecordTimestamp = spanAccumulatorConfig.bufferingWindowMillis)
 
       val topology = new StreamRunner(kafkaConfig, spanAccumulatorConfig, esConfig, backendConfig, serviceMetadataConfig, indexTagsConfig)
       topology.start()
@@ -60,11 +60,11 @@ class MultipleTraceIndexingTopologySpec extends BaseIntegrationTestSpec {
         val result: util.List[KeyValue[String, SpanBuffer]] =
           IntegrationTestUtils.waitUntilMinKeyValueRecordsReceived(kafka.RESULT_CONSUMER_CONFIG, kafka.OUTPUT_TOPIC, 2, MAX_WAIT_FOR_OUTPUT_MS)
 
-        validateKafkaOutput(result.asScala, MAX_CHILD_SPANS_PER_TRACE)
+        validateKafkaOutput(result.asScala,MAX_CHILD_SPANS_PER_TRACE)
 
         Thread.sleep(6000)
         verifyBackendWrites(traceDescriptions, MAX_CHILD_SPANS_PER_TRACE, MAX_CHILD_SPANS_PER_TRACE)
-        verifyElasticSearchWrites(Seq(TRACE_ID_4, TRACE_ID_5))
+        verifyElasticSearchWrites(Seq(TRACE_ID_9, TRACE_ID_5))
       } finally {
         topology.close()
       }
@@ -76,12 +76,12 @@ class MultipleTraceIndexingTopologySpec extends BaseIntegrationTestSpec {
     records.size shouldBe 2
 
     // both traceIds should be present as different span buffer objects
-    records.map(_.key) should contain allOf (TRACE_ID_4, TRACE_ID_5)
+    records.map(_.key) should contain allOf (TRACE_ID_9, TRACE_ID_5)
 
     records.foreach(record => {
       record.key match {
-        case TRACE_ID_4 => validateChildSpans(record.value, TRACE_ID_4, SPAN_ID_PREFIX_1, MAX_CHILD_SPANS_PER_TRACE)
-        case TRACE_ID_5 => validateChildSpans(record.value, TRACE_ID_5, SPAN_ID_PREFIX_2, MAX_CHILD_SPANS_PER_TRACE)
+        case TRACE_ID_9 => validateChildSpans(record.value, TRACE_ID_9, SPAN_ID_PREFIX_1, childSpanCount)
+        case TRACE_ID_5 => validateChildSpans(record.value, TRACE_ID_5, SPAN_ID_PREFIX_2, childSpanCount)
       }
     })
   }

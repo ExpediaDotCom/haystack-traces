@@ -66,7 +66,9 @@ abstract class BaseIntegrationTestSpec extends WordSpec with GivenWhenThen with 
                                    childSpanCount: Int): Unit = {
     spanBuffer.getTraceId shouldBe traceId
 
+  withClue(s"the trace-id $traceId has lesser spans than expected"){
     spanBuffer.getChildSpansCount shouldBe childSpanCount
+  }
 
     (0 until spanBuffer.getChildSpansCount).toList foreach { idx =>
       spanBuffer.getChildSpans(idx).getSpanId shouldBe s"$spanIdPrefix-$idx"

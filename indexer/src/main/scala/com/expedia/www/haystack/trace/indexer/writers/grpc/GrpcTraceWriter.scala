@@ -40,10 +40,10 @@ class GrpcTraceWriter(config: TraceBackendConfiguration)(implicit val dispatcher
   extends TraceWriter with MetricsSupport {
 
   private val LOGGER = LoggerFactory.getLogger(classOf[GrpcTraceWriter])
-  val client: StorageBackendGrpc.StorageBackendFutureStub = StorageBackendGrpc.newFutureStub(
-    ManagedChannelBuilder.forAddress(config.clientConfig.host,config.clientConfig.port)
-      .usePlaintext(true)
-      .build())
+  private val channel =  ManagedChannelBuilder.forAddress(config.clientConfig.host,config.clientConfig.port)
+    .usePlaintext(true)
+    .build()
+  val client: StorageBackendGrpc.StorageBackendFutureStub = StorageBackendGrpc.newFutureStub(channel)
 
 
   private val writeTimer = metricRegistry.timer(AppMetricNames.GRPC_WRITE_TIME)
@@ -107,7 +107,6 @@ class GrpcTraceWriter(config: TraceBackendConfiguration)(implicit val dispatcher
 
   override def close(): Unit = {
     LOGGER.info("Closing backend client now..")
-    //TODO : Add code to gracefully close grpc client
-    Try(client)
+    Try(channel.shutdown())
   }
 }

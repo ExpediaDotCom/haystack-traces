@@ -15,6 +15,7 @@
         <kafka-version>0.11.0.0</kafka-version>
         <mainClass>com.expedia.www.haystack.trace.indexer.App</mainClass>
         <finalName>${project.artifactId}-${project.version}</finalName>
+        <skip.unit.tests>false</skip.unit.tests>
     </properties>
 
     <dependencies>
@@ -164,6 +165,7 @@
                                 <HAYSTACK_PROP_ELASTICSEARCH_INDEX_NAME_PREFIX>haystack-test</HAYSTACK_PROP_ELASTICSEARCH_INDEX_NAME_PREFIX>
                             </environmentVariables>
                             <wildcardSuites>com.expedia.www.haystack.trace.indexer.unit</wildcardSuites>
+                            <skipTests>${skip.unit.tests}</skipTests>
                         </configuration>
                     </execution>
                     <execution>

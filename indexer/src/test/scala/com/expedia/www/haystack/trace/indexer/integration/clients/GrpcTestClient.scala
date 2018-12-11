@@ -34,6 +34,8 @@ class GrpcTestClient {
 
   var storageBackendClient: StorageBackendGrpc.StorageBackendBlockingStub = _
 
+  import GrpcTestClient._
+
 
   def prepare(): Unit = {
     storageBackendClient = StorageBackendGrpc.newBlockingStub(ManagedChannelBuilder.forAddress("localhost", port)
@@ -41,7 +43,6 @@ class GrpcTestClient {
       .build())
   }
 
-  import GrpcTestClient._
 
   def buildConfig = TraceBackendConfiguration(
     TraceBackendClientConfiguration("localhost", port),

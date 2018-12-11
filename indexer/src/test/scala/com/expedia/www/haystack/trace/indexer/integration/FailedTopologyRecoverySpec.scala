@@ -29,9 +29,9 @@ import scala.concurrent.duration._
 
 class FailedTopologyRecoverySpec extends BaseIntegrationTestSpec {
   private val MAX_CHILD_SPANS_PER_TRACE = 5
-  private val TRACE_ID_1 = "traceid-1"
+  private val TRACE_ID_3 = "traceid-3"
   private val SPAN_ID_PREFIX = "span-id-"
-  private val TRACE_DESCRIPTIONS = List(TraceDescription(TRACE_ID_1, SPAN_ID_PREFIX))
+  private val TRACE_DESCRIPTIONS = List(TraceDescription(TRACE_ID_3, SPAN_ID_PREFIX))
 
   "Trace Indexing Topology" should {
     s"consume spans from input '${kafka.INPUT_TOPIC}', buffer them together keyed by unique TraceId and write to trace-backend and elastic even if crashed in between" in {
@@ -80,7 +80,7 @@ class FailedTopologyRecoverySpec extends BaseIntegrationTestSpec {
         Thread.sleep(5000)
         validateKafkaOutput(records.asScala, MAX_CHILD_SPANS_PER_TRACE)
         verifyBackendWrites(TRACE_DESCRIPTIONS, MAX_CHILD_SPANS_PER_TRACE, MAX_CHILD_SPANS_PER_TRACE + 1) // 1 extra record for trigger
-        verifyElasticSearchWrites(Seq(TRACE_ID_1))
+        verifyElasticSearchWrites(Seq(TRACE_ID_3))
       } finally {
         topology.close()
       }
@@ -91,7 +91,7 @@ class FailedTopologyRecoverySpec extends BaseIntegrationTestSpec {
   private def validateKafkaOutput(records: Iterable[KeyValue[String, SpanBuffer]], minChildSpanCount: Int) = {
     // expect only one span buffer
     records.size shouldBe 1
-    records.head.key shouldBe TRACE_ID_1
+    records.head.key shouldBe TRACE_ID_3
     records.head.value.getChildSpansCount should be >=minChildSpanCount
   }
 }

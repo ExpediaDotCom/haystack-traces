@@ -28,10 +28,10 @@ import scala.concurrent.duration._
 
 class ServiceMetadataIndexingTopologySpec extends BaseIntegrationTestSpec {
   private val MAX_CHILD_SPANS_PER_TRACE = 5
-  private val TRACE_ID_1 = "traceid-1"
-  private val TRACE_ID_2 = "traceid-2"
-  private val SPAN_ID_PREFIX_1 = TRACE_ID_1 + "span-id-"
-  private val SPAN_ID_PREFIX_2 = TRACE_ID_2 + "span-id-"
+  private val TRACE_ID_6 = "traceid-6"
+  private val TRACE_ID_7 = "traceid-7"
+  private val SPAN_ID_PREFIX_1 = TRACE_ID_6 + "span-id-"
+  private val SPAN_ID_PREFIX_2 = TRACE_ID_7 + "span-id-"
 
   "Trace Indexing Topology" should {
     s"consume spans from input '${kafka.INPUT_TOPIC}' and buffer them together for every service operation combination and write to elastic search elastic" in {
@@ -43,7 +43,7 @@ class ServiceMetadataIndexingTopologySpec extends BaseIntegrationTestSpec {
       val serviceMetadataConfig = elastic.buildServiceMetadataConfig
 
       When(s"spans are produced in '${kafka.INPUT_TOPIC}' topic async, and kafka-streams topology is started")
-      val traceDescriptions = List(TraceDescription(TRACE_ID_1, SPAN_ID_PREFIX_1), TraceDescription(TRACE_ID_2, SPAN_ID_PREFIX_2))
+      val traceDescriptions = List(TraceDescription(TRACE_ID_6, SPAN_ID_PREFIX_1), TraceDescription(TRACE_ID_7, SPAN_ID_PREFIX_2))
 
       produceSpansAsync(MAX_CHILD_SPANS_PER_TRACE,
         1.seconds,

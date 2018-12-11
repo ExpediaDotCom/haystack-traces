@@ -29,10 +29,10 @@ import scala.concurrent.duration._
 
 class MultipleTraceIndexingTopologySpec extends BaseIntegrationTestSpec {
   private val MAX_CHILD_SPANS_PER_TRACE = 5
-  private val TRACE_ID_1 = "traceid-1"
-  private val TRACE_ID_2 = "traceid-2"
-  private val SPAN_ID_PREFIX_1 = TRACE_ID_1 + "span-id-"
-  private val SPAN_ID_PREFIX_2 = TRACE_ID_2 + "span-id-"
+  private val TRACE_ID_4 = "traceid-4"
+  private val TRACE_ID_5 = "traceid-5"
+  private val SPAN_ID_PREFIX_1 = TRACE_ID_4 + "span-id-"
+  private val SPAN_ID_PREFIX_2 = TRACE_ID_5 + "span-id-"
 
   "Trace Indexing Topology" should {
     s"consume spans from input '${kafka.INPUT_TOPIC}' and buffer them together for every unique traceId and write to trace-backend and elastic search" in {
@@ -44,7 +44,7 @@ class MultipleTraceIndexingTopologySpec extends BaseIntegrationTestSpec {
       val serviceMetadataConfig = elastic.buildServiceMetadataConfig
 
       When(s"spans are produced in '${kafka.INPUT_TOPIC}' topic async, and kafka-streams topology is started")
-      val traceDescriptions = List(TraceDescription(TRACE_ID_1, SPAN_ID_PREFIX_1), TraceDescription(TRACE_ID_2, SPAN_ID_PREFIX_2))
+      val traceDescriptions = List(TraceDescription(TRACE_ID_4, SPAN_ID_PREFIX_1), TraceDescription(TRACE_ID_5, SPAN_ID_PREFIX_2))
 
       produceSpansAsync(MAX_CHILD_SPANS_PER_TRACE,
         1.seconds,
@@ -64,7 +64,7 @@ class MultipleTraceIndexingTopologySpec extends BaseIntegrationTestSpec {
 
         Thread.sleep(6000)
         verifyBackendWrites(traceDescriptions, MAX_CHILD_SPANS_PER_TRACE, MAX_CHILD_SPANS_PER_TRACE)
-        verifyElasticSearchWrites(Seq(TRACE_ID_1, TRACE_ID_2))
+        verifyElasticSearchWrites(Seq(TRACE_ID_4, TRACE_ID_5))
       } finally {
         topology.close()
       }
@@ -76,12 +76,12 @@ class MultipleTraceIndexingTopologySpec extends BaseIntegrationTestSpec {
     records.size shouldBe 2
 
     // both traceIds should be present as different span buffer objects
-    records.map(_.key) should contain allOf (TRACE_ID_1, TRACE_ID_2)
+    records.map(_.key) should contain allOf (TRACE_ID_4, TRACE_ID_5)
 
     records.foreach(record => {
       record.key match {
-        case TRACE_ID_1 => validateChildSpans(record.value, TRACE_ID_1, SPAN_ID_PREFIX_1, MAX_CHILD_SPANS_PER_TRACE)
-        case TRACE_ID_2 => validateChildSpans(record.value, TRACE_ID_2, SPAN_ID_PREFIX_2, MAX_CHILD_SPANS_PER_TRACE)
+        case TRACE_ID_4 => validateChildSpans(record.value, TRACE_ID_4, SPAN_ID_PREFIX_1, MAX_CHILD_SPANS_PER_TRACE)
+        case TRACE_ID_5 => validateChildSpans(record.value, TRACE_ID_5, SPAN_ID_PREFIX_2, MAX_CHILD_SPANS_PER_TRACE)
       }
     })
   }

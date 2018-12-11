@@ -24,7 +24,5 @@ integration_test: prepare_integration_test_env
 	# clean up the docker
 	docker-compose -f build/integration-tests/docker-compose.yml -p sandbox stop
 	docker rm $(shell docker ps -a -q)
-	docker volume rm $(shell docker volume ls -q)
-
 release:
 	../deployment/scripts/publish-to-docker-hub.sh

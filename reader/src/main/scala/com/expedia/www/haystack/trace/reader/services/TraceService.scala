@@ -73,7 +73,7 @@ class TraceService(traceStore: TraceStore,
     * @param responseObserver response observer will stream out [[Span]] object
     *                         or will error out with [[com.expedia.www.haystack.trace.reader.exceptions.SpanNotFoundException]]
     */
-  override def getRawSpan(request: SpanRequest, responseObserver: StreamObserver[Span]): Unit = {
+  override def getRawSpan(request: SpanRequest, responseObserver: StreamObserver[SpanResponse]): Unit = {
     handleGetRawSpanResponse.handle(request, responseObserver) {
       traceReader.getRawSpan(request)
     }

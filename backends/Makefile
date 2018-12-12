@@ -2,7 +2,7 @@
 
 PWD := $(shell pwd)
 
-all: cassandra memory
+all: cassandra
 
 cassandra: build_cassandra
 	cd cassandra && $(MAKE) integration_test

@@ -18,26 +18,17 @@
 package com.expedia.www.haystack.trace.indexer.writers.es
 
 import com.codahale.metrics.{Meter, Timer}
-import com.expedia.www.haystack.commons.metrics.MetricsSupport
 import com.expedia.www.haystack.commons.retries.RetryOperation
-import com.expedia.www.haystack.trace.indexer.metrics.AppMetricNames
 import io.searchbox.client.JestResultHandler
 import io.searchbox.core.BulkResult
 import org.slf4j.{Logger, LoggerFactory}
 
 import scala.collection.JavaConverters._
 
-object TraceIndexResultHandler extends MetricsSupport {
-  protected val LOGGER: Logger = LoggerFactory.getLogger(TraceIndexResultHandler.getClass)
-  val esWriteFailureMeter: Meter = metricRegistry.meter(AppMetricNames.ES_WRITE_FAILURE)
-}
-
-class TraceIndexResultHandler(timer: Timer.Context, retryOp: RetryOperation.Callback)
-
+class ElasticSearchResultHandler(timer: Timer.Context, failureMeter: Meter, retryOp: RetryOperation.Callback)
   extends JestResultHandler[BulkResult] {
 
-  import TraceIndexResultHandler._
-
+  protected val LOGGER: Logger = LoggerFactory.getLogger(classOf[ElasticSearchResultHandler])
 
   /**
     * this callback is invoked when the elastic search writes is completed with success or warnings
@@ -51,7 +42,7 @@ class TraceIndexResultHandler(timer: Timer.Context, retryOp: RetryOperation.Call
     if (result.getFailedItems != null) {
       result.getFailedItems.asScala.groupBy(_.status) foreach {
         case (statusCode, failedItems) =>
-          esWriteFailureMeter.mark(failedItems.size)
+          failureMeter.mark(failedItems.size)
           LOGGER.error(s"Index operation has failed with status=$statusCode, totalFailedItems=${failedItems.size}, " +
             s"errorReason=${failedItems.head.errorReason}, errorType=${failedItems.head.errorType}")
       }
@@ -66,7 +57,7 @@ class TraceIndexResultHandler(timer: Timer.Context, retryOp: RetryOperation.Call
     */
   def failed(ex: Exception): Unit = {
     timer.close()
-    esWriteFailureMeter.mark()
+    failureMeter.mark()
     LOGGER.error("Fail to write the documents in elastic search with reason:", ex)
     retryOp.onError(ex, retry = true)
   }

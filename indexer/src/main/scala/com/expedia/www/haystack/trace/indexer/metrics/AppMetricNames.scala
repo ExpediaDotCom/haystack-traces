@@ -33,5 +33,8 @@ object AppMetricNames {
   val ES_WRITE_FAILURE = "es.write.failure"
   val ES_WRITE_TIME = "es.writer.time"
 
+  val METADATA_WRITE_TIME = "metadata.write.time"
+  val METADATA_WRITE_FAILURE = "metadata.write.failure"
+
   val KAFKA_PRODUCE_FAILURES = "kafka.produce.failure"
 }

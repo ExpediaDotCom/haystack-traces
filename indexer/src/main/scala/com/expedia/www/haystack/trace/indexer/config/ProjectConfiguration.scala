@@ -231,7 +231,6 @@ class ProjectConfiguration extends AutoCloseable {
       indexName = es.getString("index.name"),
       indexType = es.getString("index.type"),
       indexTemplateJson = indexTemplateJson,
-
       connectionTimeoutMillis = es.getInt("conn.timeout.ms"),
       readTimeoutMillis = es.getInt("read.timeout.ms"),
       maxInFlightBulkRequests = es.getInt("bulk.max.inflight"),
@@ -273,6 +272,7 @@ class ProjectConfiguration extends AutoCloseable {
       indexType = indexConfig.getString("type"),
       connectionTimeoutMillis = es.getInt("conn.timeout.ms"),
       readTimeoutMillis = es.getInt("read.timeout.ms"),
+      maxConnectionsPerRoute = es.getInt("max.connections.per.route"),
       maxInFlightBulkRequests = es.getInt("bulk.max.inflight"),
       maxDocsInBulk = es.getInt("bulk.max.docs.count"),
       maxBulkDocSizeInBytes = es.getInt("bulk.max.docs.size.kb") * 1000,

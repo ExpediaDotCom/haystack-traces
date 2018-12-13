@@ -8,14 +8,14 @@ cassandra: build_cassandra
 	cd cassandra && $(MAKE) integration_test
 
 build_cassandra:
-	cd ../ && ./mvnw clean package -DfinalName=haystack-trace-backend-cassandra -pl backends/cassandra -am
+	cd ../ && ./mvnw package -DfinalName=haystack-trace-backend-cassandra -pl backends/cassandra -am
 
 
 memory: build_memory
 	cd memory && $(MAKE) integration_test
 
 build_memory:
-	cd ../ && ./mvnw clean package -DfinalName=haystack-trace-backend-memory -pl backends/memory -am
+	cd ../ && ./mvnw package -DfinalName=haystack-trace-backend-memory -pl backends/memory -am
 
 # release all backends
 release:

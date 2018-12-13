@@ -46,8 +46,8 @@ class GrpcTraceWriter(config: TraceBackendConfiguration)(implicit val dispatcher
   val client: StorageBackendGrpc.StorageBackendFutureStub = StorageBackendGrpc.newFutureStub(channel)
 
 
-  private val writeTimer = metricRegistry.timer(AppMetricNames.GRPC_WRITE_TIME)
-  private val writeFailures = metricRegistry.meter(AppMetricNames.GRPC_WRITE_FAILURE)
+  private val writeTimer = metricRegistry.timer(AppMetricNames.BACKEND_WRITE_TIME)
+  private val writeFailures = metricRegistry.meter(AppMetricNames.BACKEND_WRITE_FAILURE)
 
 
   // this semaphore controls the parallel writes to trace-backend

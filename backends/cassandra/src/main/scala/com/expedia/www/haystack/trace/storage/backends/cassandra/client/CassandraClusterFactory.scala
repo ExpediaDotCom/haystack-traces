@@ -19,6 +19,7 @@ package com.expedia.www.haystack.trace.storage.backends.cassandra.client
 
 import com.datastax.driver.core._
 import com.datastax.driver.core.policies.{DefaultRetryPolicy, LatencyAwarePolicy, RoundRobinPolicy, TokenAwarePolicy}
+import com.datastax.driver.extras.codecs.date.SimpleTimestampCodec
 import com.expedia.www.haystack.trace.storage.backends.cassandra.config.entities.{AwsNodeDiscoveryConfiguration, ClientConfiguration, CredentialsConfiguration}
 
 class CassandraClusterFactory extends ClusterFactory {
@@ -37,7 +38,7 @@ class CassandraClusterFactory extends ClusterFactory {
 
     val tokenAwarePolicy = new TokenAwarePolicy(new LatencyAwarePolicy.Builder(new RoundRobinPolicy()).build())
     val authProvider = fetchAuthProvider(config.plaintextCredentials)
-    Cluster.builder()
+    val cluster = Cluster.builder()
       .withClusterName("com.expedia.www.haystack.trace.storage.backends.cassandra-cluster")
       .addContactPoints(contactPoints: _*)
       .withRetryPolicy(DefaultRetryPolicy.INSTANCE)
@@ -49,6 +50,9 @@ class CassandraClusterFactory extends ClusterFactory {
       .withLoadBalancingPolicy(tokenAwarePolicy)
       .withPoolingOptions(new PoolingOptions().setMaxConnectionsPerHost(HostDistance.LOCAL, config.socket.maxConnectionPerHost))
       .build()
+    cluster.getConfiguration.getCodecRegistry.register(SimpleTimestampCodec.instance)
+
+    cluster
   }
 
   private def fetchAuthProvider(plaintextCredentials: Option[CredentialsConfiguration]): AuthProvider = {

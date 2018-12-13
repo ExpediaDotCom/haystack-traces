@@ -28,7 +28,7 @@ import org.slf4j.{Logger, LoggerFactory}
 
 object TraceWriteResultListener extends MetricsSupport {
   protected val LOGGER: Logger = LoggerFactory.getLogger(TraceWriteResultListener.getClass)
-  protected val writeFailures: Meter = metricRegistry.meter(AppMetricNames.GRPC_WRITE_FAILURE)
+  protected val writeFailures: Meter = metricRegistry.meter(AppMetricNames.BACKEND_WRITE_FAILURE)
 }
 
 class TraceWriteResultListener(result: Future[WriteSpansResponse],

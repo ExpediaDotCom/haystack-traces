@@ -26,9 +26,9 @@ object AppMetricNames {
   val STATE_STORE_EVICTION = "state.store.eviction"
   val SPAN_PROTO_DESER_FAILURE = "span.proto.deser.failure"
 
-  val GRPC_WRITE_TIME = "grpc.write.time"
-  val GRPC_WRITE_FAILURE = "grpc.write.failure"
-  val GRPC_WRITE_WARNINGS = "grpc.write.warnings"
+  val BACKEND_WRITE_TIME = "backend.write.time"
+  val BACKEND_WRITE_FAILURE = "backend.write.failure"
+  val BACKEND_WRITE_WARNINGS = "backend.write.warnings"
 
   val ES_WRITE_FAILURE = "es.write.failure"
   val ES_WRITE_TIME = "es.writer.time"

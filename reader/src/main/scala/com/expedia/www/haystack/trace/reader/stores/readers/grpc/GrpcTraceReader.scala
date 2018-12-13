@@ -34,11 +34,10 @@ class GrpcTraceReader(config: TraceBackendClientConfiguration)
   private val readTimer = metricRegistry.timer(AppMetricNames.BACKEND_READ_TIME)
   private val readFailures = metricRegistry.meter(AppMetricNames.BACKEND_READ_FAILURES)
   private val tracesFailures = metricRegistry.meter(AppMetricNames.BACKEND_TRACES_FAILURE)
-
-  val client: StorageBackendGrpc.StorageBackendFutureStub = StorageBackendGrpc.newFutureStub(
-    ManagedChannelBuilder.forAddress(config.host, config.port)
-      .usePlaintext(true)
-      .build())
+  private val channel = ManagedChannelBuilder.forAddress(config.host, config.port)
+    .usePlaintext(true)
+    .build()
+  val client: StorageBackendGrpc.StorageBackendFutureStub = StorageBackendGrpc.newFutureStub(channel)
 
 
   def readTraces(traceIds: List[String]): Future[Seq[Trace]] = {
@@ -59,5 +58,7 @@ class GrpcTraceReader(config: TraceBackendClientConfiguration)
     }
   }
 
-  override def close(): Unit = ()
+  override def close(): Unit = {
+    channel.shutdown()
+  }
 }

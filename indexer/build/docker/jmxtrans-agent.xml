@@ -10,6 +10,7 @@
 
         <!-- backend metrics coming from our code -->
         <query objectName="metrics:name=backend.write.failure" attributes="OneMinuteRate" resultAlias="backend.write.failure.#attribute#"/>
+        <query objectName="metrics:name=backend.write.time" attributes="50thPercentile,99thPercentile,OneMinuteRate" resultAlias="backend.write.time.#attribute#"/>
 
         <query objectName="metrics:name=state.store.eviction" attributes="OneMinuteRate" resultAlias="span-state-store.eviction.#attribute#"/>
         <query objectName="metrics:name=span.proto.deser.failure" attributes="OneMinuteRate" resultAlias="span-proto-deserializer.failure.#attribute#"/>

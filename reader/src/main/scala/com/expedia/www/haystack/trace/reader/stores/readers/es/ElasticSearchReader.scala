@@ -55,7 +55,7 @@ class ElasticSearchReader(config: ElasticSearchClientConfiguration)(implicit val
     val promise = Promise[SearchResult]()
     val time = readTimer.time()
     try {
-      LOGGER.info(s"elastic search query requested: ${request.toString}', query: '${request.toJson}'")
+      LOGGER.debug(s"elastic search query requested: ${request.toString}', query: '${request.toJson}'")
       esClient.executeAsync(request, new ElasticSearchReadResultListener(request, promise, time, readFailures))
       promise.future
     } catch {
@@ -71,7 +71,7 @@ class ElasticSearchReader(config: ElasticSearchClientConfiguration)(implicit val
     val promise = Promise[SearchResult]()
     val time = readTimer.time()
     try {
-      LOGGER.info(s"elastic count query requested: ${request.toString}', query: '${request.toJson}'")
+      LOGGER.debug(s"elastic count query requested: ${request.toString}', query: '${request.toJson}'")
       esClient.executeAsync(request, new ElasticSearchCountResultListener(request, promise, time, readFailures))
       promise.future
     } catch {

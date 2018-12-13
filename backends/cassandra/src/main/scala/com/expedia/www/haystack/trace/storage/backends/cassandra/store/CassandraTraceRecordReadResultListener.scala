@@ -73,12 +73,11 @@ class CassandraTraceRecordReadResultListener(asyncResult: ResultSetFuture,
     Try {
       rows.map(row => {
         val spanBytes = row.getBytes(CassandraTableSchema.SPANS_COLUMN_NAME).array()
-        val timeStamp = row.getDate(CassandraTableSchema.TIMESTAMP_COLUMN_NAME)
+        val timeStamp = row.getLong(CassandraTableSchema.TIMESTAMP_COLUMN_NAME)
         val traceId = row.getString(CassandraTableSchema.ID_COLUMN_NAME)
         val record = TraceRecord.newBuilder()
           .setSpans(ByteString.copyFrom(spanBytes))
-          //TODO: Review this code to see if the timestamp returned by the backend should be millis or microseconds
-          .setTimestamp(timeStamp.getMillisSinceEpoch)
+          .setTimestamp(timeStamp)
           .setTraceId(traceId)
           .build()
         record

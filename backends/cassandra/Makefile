@@ -15,7 +15,7 @@ prepare_integration_test_env: docker_build
 	sleep 30
 
 integration_test: prepare_integration_test_env
-	cd ../../ &&./mvnw clean integration-test -pl backends/cassandra -am
+	cd ../../ && ./mvnw scoverage:integration-check -pl backends/cassandra -am
 	docker-compose -f build/integration-tests/docker-compose.yml -p sandbox stop
 	docker rm $(shell docker ps -a -q)
 	docker volume rm $(shell docker volume ls -q)

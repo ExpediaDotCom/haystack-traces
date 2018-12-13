@@ -22,9 +22,9 @@ object AppMetricNames {
   val ELASTIC_SEARCH_READ_TIME = "elasticsearch.read.time"
   val ELASTIC_SEARCH_READ_FAILURES = "elasticsearch.read.failures"
 
-  val CASSANDRA_READ_TIME = "cassandra.read.time"
-  val CASSANDRA_READ_FAILURES = "cassandra.read.failures"
-  val CASSANDRA_TRACES_FAILURE = "cassandra.traces.failures"
+  val BACKEND_READ_TIME = "backend.read.time"
+  val BACKEND_READ_FAILURES = "backend.read.failures"
+  val BACKEND_TRACES_FAILURE = "backend.traces.failures"
 
   val SEARCH_TRACE_REJECTED = "search.trace.rejected"
   val COUNT_BUCKET_REJECTED = "count.bucket.rejected"

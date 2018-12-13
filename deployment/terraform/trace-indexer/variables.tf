@@ -1,4 +1,5 @@
-variable "image" {}
+variable "storage_backend_image" {}
+variable "indexer_image" {}
 variable "replicas" {}
 variable "namespace" {}
 variable "kafka_endpoint" {}

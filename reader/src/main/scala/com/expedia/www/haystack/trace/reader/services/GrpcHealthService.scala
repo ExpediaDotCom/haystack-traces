@@ -15,6 +15,7 @@
  */
 
 package com.expedia.www.haystack.trace.reader.services
+
 import io.grpc.health.v1.{HealthCheckRequest, HealthCheckResponse, HealthGrpc}
 import io.grpc.stub.StreamObserver
 

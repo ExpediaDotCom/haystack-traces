@@ -7,19 +7,10 @@
         <query objectName="kafka.consumer:type=consumer-fetch-manager-metrics,client-id=*" attribute="records-lag-max" resultAlias="kafka-consumer-%client-id%.records-lag.max"/>
         <query objectName="kafka.consumer:type=consumer-fetch-manager-metrics,client-id=*" attribute="records-consumed-rate" resultAlias="kafka-consumer-%client-id%.records-consumed.rate"/>
 
-        <!-- cassandra metrics coming from driver-->
-        <query objectName="cassandra-cluster-metrics:name=connection-errors" attribute="Count" resultAlias="cassandra.errors.count"/>
-        <query objectName="cassandra-cluster-metrics:name=read-timeouts" attribute="Count" resultAlias="cassandra.read-timeouts.count"/>
-        <query objectName="cassandra-cluster-metrics:name=client-timeouts" attribute="Count" resultAlias="cassandra.client-timeouts.count"/>
-        <query objectName="cassandra-cluster-metrics:name=requests" attribute="OneMinuteRate" resultAlias="cassandra.requests.rate"/>
-        <query objectName="cassandra-cluster-metrics:name=requests" attribute="99thPercentile" resultAlias="cassandra.requests.99thPercentile"/>
-        <query objectName="cassandra-cluster-metrics:name=write-timeouts" attribute="Count" resultAlias="cassandra.write-timeouts.count"/>
-        <query objectName="cassandra-cluster-metrics:name=open-connections" attribute="Value" resultAlias="cassandra.open-connections.value"/>
-        <query objectName="cassandra-cluster-metrics:name=other-errors" attribute="Count" resultAlias="cassandra.other-errors.count"/>
 
-        <!-- cassandra metrics coming from our code -->
-        <query objectName="metrics:name=cassandra.write.failure" attributes="OneMinuteRate" resultAlias="cassandra.write.failure.#attribute#"/>
-        <query objectName="metrics:name=cassandra.write.warnings" attributes="OneMinuteRate" resultAlias="cassandra.write.warnings.#attribute#"/>
+        <!-- backend metrics coming from our code -->
+        <query objectName="metrics:name=backend.write.failure" attributes="OneMinuteRate" resultAlias="backend.write.failure.#attribute#"/>
+        <query objectName="metrics:name=backend.write.time" attributes="50thPercentile,99thPercentile,OneMinuteRate" resultAlias="backend.write.time.#attribute#"/>
 
         <query objectName="metrics:name=state.store.eviction" attributes="OneMinuteRate" resultAlias="span-state-store.eviction.#attribute#"/>
         <query objectName="metrics:name=span.proto.deser.failure" attributes="OneMinuteRate" resultAlias="span-proto-deserializer.failure.#attribute#"/>

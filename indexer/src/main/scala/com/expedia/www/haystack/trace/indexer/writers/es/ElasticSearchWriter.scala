@@ -66,7 +66,7 @@ class ElasticSearchWriter(esConfig: ElasticSearchConfiguration, indexConf: White
   // converts a span into an indexable document
   private val documentGenerator = new IndexDocumentGenerator(indexConf)
 
-  // this semaphore controls the parallel writes to cassandra
+  // this semaphore controls the parallel writes to index store
   private val inflightRequestsSemaphore = new Semaphore(esConfig.maxInFlightBulkRequests, true)
 
   // initialize the elastic search client

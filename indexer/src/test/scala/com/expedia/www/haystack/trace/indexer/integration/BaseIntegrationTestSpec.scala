@@ -25,7 +25,7 @@ import com.expedia.open.tracing.buffer.SpanBuffer
 import com.expedia.open.tracing.{Log, Span, Tag}
 import com.expedia.www.haystack.trace.commons.packer.{PackerType, Unpacker}
 import com.expedia.www.haystack.trace.indexer.config.entities.SpanAccumulatorConfiguration
-import com.expedia.www.haystack.trace.indexer.integration.clients.{CassandraTestClient, ElasticSearchTestClient, KafkaTestClient}
+import com.expedia.www.haystack.trace.indexer.integration.clients.{ElasticSearchTestClient, GrpcTestClient, KafkaTestClient}
 import org.apache.kafka.streams.KeyValue
 import org.apache.kafka.streams.integration.utils.IntegrationTestUtils
 import org.scalatest._
@@ -48,13 +48,13 @@ abstract class BaseIntegrationTestSpec extends WordSpec with GivenWhenThen with 
   protected var scheduler: ScheduledExecutorService = _
 
   val kafka = new KafkaTestClient
-  val cassandra = new CassandraTestClient
+  val traceBackendClient = new GrpcTestClient
   val elastic = new ElasticSearchTestClient
 
   override def beforeAll() {
     scheduler = Executors.newSingleThreadScheduledExecutor()
     kafka.prepare(getClass.getSimpleName)
-    cassandra.prepare()
+    traceBackendClient.prepare()
     elastic.prepare()
   }
 
@@ -66,7 +66,9 @@ abstract class BaseIntegrationTestSpec extends WordSpec with GivenWhenThen with 
                                    childSpanCount: Int): Unit = {
     spanBuffer.getTraceId shouldBe traceId
 
+  withClue(s"the trace-id $traceId has lesser spans than expected"){
     spanBuffer.getChildSpansCount shouldBe childSpanCount
+  }
 
     (0 until spanBuffer.getChildSpansCount).toList foreach { idx =>
       spanBuffer.getChildSpans(idx).getSpanId shouldBe s"$spanIdPrefix-$idx"
@@ -115,18 +117,19 @@ abstract class BaseIntegrationTestSpec extends WordSpec with GivenWhenThen with 
     }, 0, produceInterval.toMillis, TimeUnit.MILLISECONDS)
   }
 
-  def verifyCassandraWrites(traceDescriptions: Seq[TraceDescription], minSpansPerTrace: Int, maxSpansPerTrace: Int): Unit = {
-    val rows = cassandra.queryAllTraces((data) => Unpacker.readSpanBuffer(data))
+  def verifyBackendWrites(traceDescriptions: Seq[TraceDescription], minSpansPerTrace: Int, maxSpansPerTrace: Int): Unit = {
+    val traceRecords = traceBackendClient.queryTraces(traceDescriptions)
 
-    rows should have size traceDescriptions.size
+    traceRecords should have size traceDescriptions.size
 
-    rows.foreach(row => {
-      val descr = traceDescriptions.find(_.traceId == row.id).get
-      row.spanBuffer should not be null
-      row.spanBuffer.getChildSpansCount should be >= minSpansPerTrace
-      row.spanBuffer.getChildSpansCount should be <= maxSpansPerTrace
+    traceRecords.foreach(record => {
+      val spanBuffer = Unpacker.readSpanBuffer(record.getSpans.toByteArray)
+      val descr = traceDescriptions.find(_.traceId == record.getTraceId).get
+      record.getSpans should not be null
+      spanBuffer.getChildSpansCount should be >= minSpansPerTrace
+      spanBuffer.getChildSpansCount should be <= maxSpansPerTrace
 
-      row.spanBuffer.getChildSpansList.asScala.zipWithIndex foreach {
+      spanBuffer.getChildSpansList.asScala.zipWithIndex foreach {
         case (sp, idx) =>
           sp.getSpanId shouldBe s"${descr.spanIdPrefix}-$idx"
           sp.getServiceName shouldBe s"service$idx"

@@ -17,10 +17,6 @@
 
 package com.expedia.www.haystack.trace.indexer.unit
 
-import com.datastax.driver.core.ConsistencyLevel
-import com.datastax.driver.core.exceptions.UnavailableException
-import com.expedia.www.haystack.commons.retries.RetryOperation
-import com.expedia.www.haystack.trace.commons.config.entities.KeyspaceConfiguration
 import com.expedia.www.haystack.trace.commons.packer.PackerType
 import com.expedia.www.haystack.trace.indexer.config.ProjectConfiguration
 import org.apache.kafka.clients.consumer.ConsumerConfig
@@ -88,35 +84,13 @@ class ConfigurationLoaderSpec extends FunSpec with Matchers {
       config.retryConfig.backoffFactor shouldBe 2
     }
 
-    it("should load the cassandra config from base.conf and few properties overridden from env variable") {
-      val cassandraWriteConfig = project.cassandraWriteConfig
-      val clientConfig = cassandraWriteConfig.clientConfig
+    it("should load the trace backend config from base.conf and few properties overridden from env variable") {
+      val backendConfiguration = project.backendConfig
 
-      cassandraWriteConfig.consistencyLevel shouldEqual ConsistencyLevel.ONE
-      clientConfig.autoDiscoverEnabled shouldBe false
-      // this will fail if run inside an editor, we override this config using env variable inside pom.xml
-      clientConfig.endpoints should contain allOf("cass1", "cass2")
-      clientConfig.tracesKeyspace.autoCreateSchema shouldBe Some("cassandra_cql_schema_1")
-      clientConfig.tracesKeyspace.name shouldBe "haystack"
-      clientConfig.tracesKeyspace.table shouldBe "traces"
-      clientConfig.tracesKeyspace.recordTTLInSec shouldBe 86400
-
-      clientConfig.awsNodeDiscovery shouldBe empty
-      clientConfig.socket.keepAlive shouldBe true
-      clientConfig.socket.maxConnectionPerHost shouldBe 100
-      clientConfig.socket.readTimeoutMills shouldBe 5000
-      clientConfig.socket.connectionTimeoutMillis shouldBe 10000
-      cassandraWriteConfig.maxInFlightRequests shouldBe 100
-      cassandraWriteConfig.retryConfig.maxRetries shouldBe 10
-      cassandraWriteConfig.retryConfig.backOffInMillis shouldBe 250
-      cassandraWriteConfig.retryConfig.backoffFactor shouldBe 2
-
-      // test consistency level on error
-      val writeError = new UnavailableException(ConsistencyLevel.ONE, 0, 0)
-      cassandraWriteConfig.writeConsistencyLevel(writeError) shouldEqual ConsistencyLevel.ANY
-      cassandraWriteConfig.writeConsistencyLevel(new RuntimeException(writeError)) shouldEqual ConsistencyLevel.ANY
-      cassandraWriteConfig.writeConsistencyLevel(null) shouldEqual ConsistencyLevel.ONE
-      cassandraWriteConfig.writeConsistencyLevel(new RuntimeException) shouldEqual ConsistencyLevel.ONE
+      backendConfiguration.maxInFlightRequests shouldBe 100
+      backendConfiguration.retryConfig.maxRetries shouldBe 10
+      backendConfiguration.retryConfig.backOffInMillis shouldBe 250
+      backendConfiguration.retryConfig.backoffFactor shouldBe 2
     }
 
     it("should load the elastic search config from base.conf and one property overridden from env variable") {

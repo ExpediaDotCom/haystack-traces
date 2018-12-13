@@ -25,6 +25,7 @@ import io.grpc.health.v1.{HealthCheckRequest, HealthCheckResponse}
 import io.grpc.{Status, StatusRuntimeException}
 
 import scala.collection.JavaConverters._
+import scala.collection.mutable
 
 class TraceServiceIntegrationTestSpec extends BaseIntegrationTestSpec {
 
@@ -145,18 +146,26 @@ class TraceServiceIntegrationTestSpec extends BaseIntegrationTestSpec {
       Given("trace in trace-backend")
       val traceId = UUID.randomUUID().toString
       val spanId = UUID.randomUUID().toString
-      putTraceInBackend(traceId, spanId)
+      putTraceInBackend(traceId, spanId, "svc1")
+      putTraceInBackend(traceId, spanId, "svc2")
+
 
       When("getRawSpan is invoked")
-      val span = client.getRawSpan(SpanRequest
+      val spanResponse = client.getRawSpan(SpanRequest
         .newBuilder()
         .setTraceId(traceId)
         .setSpanId(spanId)
         .build())
 
       Then("should return the trace")
-      span.getTraceId shouldBe traceId
-      span.getSpanId shouldBe spanId
+      spanResponse.getSpansCount shouldBe 2
+      val servicesObserved = mutable.Set[String]()
+      spanResponse.getSpansList.asScala foreach { span =>
+        span.getTraceId shouldBe traceId
+        span.getSpanId shouldBe spanId
+        servicesObserved += span.getServiceName
+      }
+      servicesObserved should contain allOf("svc1", "svc2")
     }
 
     it("should return TraceNotFound exception if traceID is not in trace-backend") {

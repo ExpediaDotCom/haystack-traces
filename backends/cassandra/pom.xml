@@ -26,6 +26,12 @@
             <groupId>com.datastax.cassandra</groupId>
             <artifactId>cassandra-driver-core</artifactId>
             <version>${cassandra.driver.version}</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>com.google.guava</groupId>
+                    <artifactId>guava</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
         <dependency>
             <groupId>com.google.protobuf</groupId>
@@ -55,11 +61,6 @@
         <dependency>
             <groupId>io.netty</groupId>
             <artifactId>netty-handler</artifactId>
-        </dependency>
-
-        <dependency>
-            <groupId>io.searchbox</groupId>
-            <artifactId>jest</artifactId>
         </dependency>
 
         <dependency>
@@ -103,7 +104,8 @@
                         </goals>
                         <configuration>
                             <environmentVariables>
-                                <HAYSTACK_OVERRIDES_CONFIG_PATH>/src/reader/build/integration-tests/docker-app.conf</HAYSTACK_OVERRIDES_CONFIG_PATH>
+                                <HAYSTACK_OVERRIDES_CONFIG_PATH>/src/reader/build/integration-tests/docker-app.conf
+                                </HAYSTACK_OVERRIDES_CONFIG_PATH>
                             </environmentVariables>
                             <wildcardSuites>com.expedia.www.haystack.trace.reader.integration</wildcardSuites>
                         </configuration>
@@ -135,10 +137,12 @@
                         </goals>
                         <configuration>
                             <transformers>
-                                <transformer implementation="org.apache.maven.plugins.shade.resource.AppendingTransformer">
+                                <transformer
+                                        implementation="org.apache.maven.plugins.shade.resource.AppendingTransformer">
                                     <resource>reference.conf</resource>
                                 </transformer>
-                                <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+                                <transformer
+                                        implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
                                     <mainClass>${mainClass}</mainClass>
                                 </transformer>
                             </transformers>

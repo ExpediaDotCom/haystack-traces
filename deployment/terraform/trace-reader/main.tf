@@ -24,7 +24,6 @@ data "template_file" "config_data" {
 
   vars {
     elasticsearch_endpoint = "${var.elasticsearch_endpoint}"
-    cassandra_hostname = "${var.cassandra_hostname}"
   }
 }
 
@@ -37,7 +36,9 @@ data "template_file" "deployment_yaml" {
     graphite_host = "${var.graphite_hostname}"
     graphite_enabled = "${var.graphite_enabled}"
     node_selecter_label = "${var.node_selector_label}"
-    image = "${var.image}"
+    reader_image = "${var.reader_image}"
+    storage_backend_image = "${var.storage_backend_image}"
+    cassandra_hostname = "${var.cassandra_hostname}"
     replicas = "${var.replicas}"
     memory_limit = "${var.memory_limit}"
     memory_request = "${var.memory_request}"

@@ -1,4 +1,5 @@
-variable "image" {}
+variable "reader_image" {}
+variable "storage_backend_image" {}
 variable "replicas" {}
 variable "namespace" {}
 variable "elasticsearch_endpoint" {}

@@ -160,7 +160,7 @@ trait BaseIntegrationTestSpec extends FunSpec with GivenWhenThen with Matchers w
   private var traceBackendClient: StorageBackendBlockingStub = _
 
   def setupTraceBackend(): StorageBackendBlockingStub = {
-    val port = 8090
+    val port = 8088
     executors.submit(new Runnable {
       override def run(): Unit = BackendService.main(Array {
         port.toString

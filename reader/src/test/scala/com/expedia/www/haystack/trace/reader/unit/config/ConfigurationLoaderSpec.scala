@@ -75,7 +75,7 @@ class ConfigurationLoaderSpec extends BaseUnitTestSpec {
     it("should load trace backend configuration") {
       val traceBackendConfig = new ProviderConfiguration().traceBackendConfiguration
       traceBackendConfig.host shouldEqual "localhost"
-      traceBackendConfig.port shouldEqual 8090
+      traceBackendConfig.port shouldEqual 8088
     }
   }
 }

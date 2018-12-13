@@ -26,7 +26,7 @@ class ConfigurationLoaderSpec extends BaseUnitTestSpec {
     val project = new ProjectConfiguration()
     it("should load the service config from base.conf") {
       val serviceConfig: ServiceConfiguration = project.serviceConfig
-      serviceConfig.port shouldBe 8088
+      serviceConfig.port shouldBe 8090
       serviceConfig.ssl.enabled shouldBe true
       serviceConfig.ssl.certChainFilePath shouldBe "/ssl/cert"
       serviceConfig.ssl.privateKeyPath shouldBe "/ssl/private-key"

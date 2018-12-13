@@ -80,7 +80,7 @@ spec:
           exec:
             command:
             - /bin/grpc_health_probe
-            - "-addr=:8088"
+            - "-addr=:8090"
           initialDelaySeconds: 30
           periodSeconds: 15
           failureThreshold: 3

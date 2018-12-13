@@ -57,7 +57,7 @@ class GrpcTestClient {
 
 object GrpcTestClient {
 
-  val port = 8088
+  val port = 8090
 
   private val executors = Executors.newSingleThreadExecutor()
   executors.submit(new Runnable {

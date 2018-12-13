@@ -20,6 +20,6 @@ ADD https://github.com/jmxtrans/jmxtrans-agent/releases/download/${JMXTRANS_AGEN
 
 WORKDIR ${APP_HOME}
 
-EXPOSE 8088
+EXPOSE 8090
 
 ENTRYPOINT ["./start-app.sh"]

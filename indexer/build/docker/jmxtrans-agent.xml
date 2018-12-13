@@ -1,7 +1,5 @@
 <jmxtrans-agent>
     <queries>
-
-
         <!-- kafka consumer metrics -->
         <query objectName="kafka.consumer:type=consumer-metrics,client-id=*" attribute="request-rate" resultAlias="kafka-consumer-%client-id%.request.rate"/>
         <query objectName="kafka.consumer:type=consumer-metrics,client-id=*" attribute="response-rate" resultAlias="kafka-consumer-%client-id%.response.rate"/>

@@ -46,7 +46,7 @@ trait BaseIntegrationTestSpec extends FunSpec with GivenWhenThen with Matchers w
 
     Thread.sleep(5000)
 
-    client = StorageBackendGrpc.newBlockingStub(ManagedChannelBuilder.forAddress("localhost", 8088)
+    client = StorageBackendGrpc.newBlockingStub(ManagedChannelBuilder.forAddress("localhost", 8090)
       .usePlaintext(true)
       .build())
   }

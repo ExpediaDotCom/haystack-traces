@@ -160,7 +160,7 @@ trait BaseIntegrationTestSpec extends FunSpec with GivenWhenThen with Matchers w
   private var traceBackendClient: StorageBackendBlockingStub = _
 
   def setupTraceBackend(): StorageBackendBlockingStub = {
-    val port = 8088
+    val port = 8090
     executors.submit(new Runnable {
       override def run(): Unit = BackendService.main(Array {
         port.toString
@@ -194,11 +194,11 @@ trait BaseIntegrationTestSpec extends FunSpec with GivenWhenThen with Matchers w
 
     Thread.sleep(5000)
 
-    client = TraceReaderGrpc.newBlockingStub(ManagedChannelBuilder.forAddress("localhost", 8088)
+    client = TraceReaderGrpc.newBlockingStub(ManagedChannelBuilder.forAddress("localhost", 8080)
       .usePlaintext(true)
       .build())
 
-    healthCheckClient = HealthGrpc.newBlockingStub(ManagedChannelBuilder.forAddress("localhost", 8088)
+    healthCheckClient = HealthGrpc.newBlockingStub(ManagedChannelBuilder.forAddress("localhost", 8080)
       .usePlaintext(true)
       .build())
   }

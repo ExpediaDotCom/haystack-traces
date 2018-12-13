@@ -5,4 +5,4 @@ services:
      environment:
        ES_JAVA_OPTS: "-Xms256m -Xmx256m"
      ports:
-       - "9200"
+       - "9200:9200"

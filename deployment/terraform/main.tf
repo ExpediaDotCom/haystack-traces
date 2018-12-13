@@ -1,6 +1,7 @@
 module "trace-indexer" {
   source = "trace-indexer"
-  image = "expediadotcom/haystack-trace-indexer:${var.traces["version"]}"
+  indexer_image = "expediadotcom/haystack-trace-indexer:${var.traces["version"]}"
+  storage_backend_image = "expediadotcom/haystack-trace-backend-cassandra:${var.traces["version"]}"
   replicas = "${var.traces["indexer_instances"]}"
   enabled = "${var.traces["enabled"]}"
   cpu_limit = "${var.traces["indexer_cpu_limit"]}"
@@ -25,7 +26,8 @@ module "trace-indexer" {
 
 module "trace-reader" {
   source = "trace-reader"
-  image = "expediadotcom/haystack-trace-reader:${var.traces["version"]}"
+  reader_image = "expediadotcom/haystack-trace-reader:${var.traces["version"]}"
+  storage_backend_image = "expediadotcom/haystack-trace-backend-cassandra:${var.traces["version"]}"
   replicas = "${var.traces["reader_instances"]}"
   namespace = "${var.namespace}"
   elasticsearch_endpoint = "${var.elasticsearch_hostname}:${var.elasticsearch_port}"

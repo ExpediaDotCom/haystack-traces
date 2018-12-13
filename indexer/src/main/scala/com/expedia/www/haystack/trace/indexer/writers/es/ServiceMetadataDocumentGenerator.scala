@@ -55,9 +55,9 @@ class ServiceMetadataDocumentGenerator(config: ServiceMetadataWriteConfiguration
   }
 
   /**
-    * get or update the cassandra statements that need to be executed
+    * get the list of unique service metadata documents contained in the list of spans
     *
-    * @param spans : list of spans
+    * @param spans : list of service metadata
     * @return
     */
   def getAndUpdateServiceMetadata(spans: Iterable[Span]): Seq[ServiceMetadataDoc] = {

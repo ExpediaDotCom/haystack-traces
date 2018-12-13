@@ -20,10 +20,10 @@ import java.io.File
 
 import com.codahale.metrics.JmxReporter
 import com.expedia.www.haystack.commons.logger.LoggerUtils
+import com.expedia.www.haystack.commons.metrics.MetricsSupport
 import com.expedia.www.haystack.trace.reader.config.ProviderConfiguration
-import com.expedia.www.haystack.trace.reader.metrics.MetricsSupport
 import com.expedia.www.haystack.trace.reader.services.{GrpcHealthService, TraceService}
-import com.expedia.www.haystack.trace.reader.stores.CassandraEsTraceStore
+import com.expedia.www.haystack.trace.reader.stores.EsIndexedTraceStore
 import io.grpc.netty.NettyServerBuilder
 import org.slf4j.{Logger, LoggerFactory}
 
@@ -49,8 +49,8 @@ object Service extends MetricsSupport {
     try {
       val config = new ProviderConfiguration
 
-      val store = new CassandraEsTraceStore(
-        config.cassandraConfig,
+      val store = new EsIndexedTraceStore(
+        config.traceBackendConfiguration,
         config.elasticSearchConfiguration,
         config.whitelistedFieldsConfig)(executor)
 

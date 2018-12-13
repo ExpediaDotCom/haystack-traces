@@ -15,6 +15,7 @@
         <kafka-version>0.11.0.0</kafka-version>
         <mainClass>com.expedia.www.haystack.trace.indexer.App</mainClass>
         <finalName>${project.artifactId}-${project.version}</finalName>
+        <skip.unit.tests>false</skip.unit.tests>
     </properties>
 
     <dependencies>
@@ -29,6 +30,25 @@
             <artifactId>protobuf-java</artifactId>
         </dependency>
 
+        <dependency>
+            <groupId>io.grpc</groupId>
+            <artifactId>grpc-protobuf</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>io.grpc</groupId>
+            <artifactId>grpc-stub</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>io.grpc</groupId>
+            <artifactId>grpc-services</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>io.grpc</groupId>
+            <artifactId>grpc-netty</artifactId>
+        </dependency>
         <dependency>
             <groupId>io.searchbox</groupId>
             <artifactId>jest</artifactId>
@@ -52,12 +72,6 @@
         <dependency>
             <groupId>com.amazonaws</groupId>
             <artifactId>aws-java-sdk-ec2</artifactId>
-        </dependency>
-
-        <!-- cassandra client-->
-        <dependency>
-            <groupId>com.datastax.cassandra</groupId>
-            <artifactId>cassandra-driver-core</artifactId>
         </dependency>
 
         <dependency>
@@ -98,6 +112,12 @@
             <scope>test</scope>
         </dependency>
 
+        <dependency>
+            <groupId>com.expedia.www</groupId>
+            <artifactId>haystack-trace-backend-memory</artifactId>
+            <version>${project.version}</version>
+            <scope>test</scope>
+        </dependency>
         <dependency>
             <groupId>org.apache.kafka</groupId>
             <artifactId>kafka-streams</artifactId>
@@ -142,11 +162,10 @@
                         <configuration>
                             <environmentVariables>
                                 <HAYSTACK_PROP_KAFKA_CONSUMER_AUTO_OFFSET_RESET>earliest</HAYSTACK_PROP_KAFKA_CONSUMER_AUTO_OFFSET_RESET>
-                                <HAYSTACK_PROP_CASSANDRA_CONNECTIONS_MAX_PER_HOST>100</HAYSTACK_PROP_CASSANDRA_CONNECTIONS_MAX_PER_HOST>
-                                <HAYSTACK_PROP_CASSANDRA_ENDPOINTS>cass1,cass2</HAYSTACK_PROP_CASSANDRA_ENDPOINTS>
                                 <HAYSTACK_PROP_ELASTICSEARCH_INDEX_NAME_PREFIX>haystack-test</HAYSTACK_PROP_ELASTICSEARCH_INDEX_NAME_PREFIX>
                             </environmentVariables>
                             <wildcardSuites>com.expedia.www.haystack.trace.indexer.unit</wildcardSuites>
+                            <skipTests>${skip.unit.tests}</skipTests>
                         </configuration>
                     </execution>
                     <execution>

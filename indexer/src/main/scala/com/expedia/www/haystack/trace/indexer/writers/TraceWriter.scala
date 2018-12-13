@@ -23,7 +23,7 @@ import com.expedia.www.haystack.trace.commons.packer.PackedMessage
 trait TraceWriter extends AutoCloseable {
 
   /**
-    * writes the span buffer to external store like cassandra, elastic, or kafka
+    * writes the span buffer to external store like grpc, elastic, or kafka
     * @param traceId trace id
     * @param packedSpanBuffer compressed serialized bytes of the span buffer object
     * @param isLastSpanBuffer tells if this is the last record, so the writer can flush

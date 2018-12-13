@@ -53,9 +53,9 @@ class SpanIndexProcessorSpec extends FunSpec with Matchers with EasyMockSugar {
         override def get(): SpanBufferKeyValueStore = mockStore
       }
 
-      val mockCassandra = mock[TraceWriter]
+      val mockBackend = mock[TraceWriter]
 
-      val processor = new SpanIndexProcessor(accumulatorConfig, storeSupplier, Seq(mockCassandra), new NoopPacker[SpanBuffer])(executor)
+      val processor = new SpanIndexProcessor(accumulatorConfig, storeSupplier, Seq(mockBackend), new NoopPacker[SpanBuffer])(executor)
       val (spanBufferWithMetadata, records) = createConsumerRecordsAndSetStoreExpectation(maxSpans, startRecordTimestamp, timestampInterval, startRecordOffset, mockStore)
       val finalStreamTimestamp = startRecordTimestamp + ((maxSpans - 1) * timestampInterval)
 
@@ -67,11 +67,11 @@ class SpanIndexProcessorSpec extends FunSpec with Matchers with EasyMockSugar {
         mockStore.addEvictionListener(processor)
         mockStore.init()
         mockStore.getAndRemoveSpanBuffersOlderThan(finalStreamTimestamp - bufferingWindow).andReturn(mutable.ListBuffer(spanBufferWithMetadata))
-        mockCassandra.writeAsync(capture(writeTraceIdCapture), capture(packedMessage), capture(writeLastRecordCapture))
+        mockBackend.writeAsync(capture(writeTraceIdCapture), capture(packedMessage), capture(writeLastRecordCapture))
         mockStore.close()
       }
 
-      whenExecuting(mockStore, mockCassandra) {
+      whenExecuting(mockStore, mockBackend) {
         processor.init()
         val offsets = processor.process(records)
         SpanBuffer.parseFrom(packedMessage.getValue.packedDataBytes).getChildSpansCount shouldBe maxSpans
@@ -90,9 +90,9 @@ class SpanIndexProcessorSpec extends FunSpec with Matchers with EasyMockSugar {
         override def get(): SpanBufferKeyValueStore = mockStore
       }
 
-      val mockCassandra = mock[TraceWriter]
+      val mockBackend = mock[TraceWriter]
 
-      val processor = new SpanIndexProcessor(accumulatorConfig, storeSupplier, Seq(mockCassandra), new NoopPacker)(executor)
+      val processor = new SpanIndexProcessor(accumulatorConfig, storeSupplier, Seq(mockBackend), new NoopPacker)(executor)
       val (_, records) = createConsumerRecordsAndSetStoreExpectation(maxSpans, startRecordTimestamp, timestampInterval, startRecordOffset, mockStore)
       val finalStreamTimestamp = startRecordTimestamp + ((maxSpans - 1) * timestampInterval)
 
@@ -102,7 +102,7 @@ class SpanIndexProcessorSpec extends FunSpec with Matchers with EasyMockSugar {
         mockStore.getAndRemoveSpanBuffersOlderThan(finalStreamTimestamp - bufferingWindow).andReturn(mutable.ListBuffer())
       }
 
-      whenExecuting(mockStore, mockCassandra) {
+      whenExecuting(mockStore, mockBackend) {
         processor.init()
         val offsets = processor.process(records)
         offsets shouldBe 'empty

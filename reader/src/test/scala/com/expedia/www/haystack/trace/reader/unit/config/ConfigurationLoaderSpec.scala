@@ -25,7 +25,7 @@ class ConfigurationLoaderSpec extends BaseUnitTestSpec {
     it("should load the service config from base.conf") {
       val serviceConfig: ServiceConfiguration = new ProviderConfiguration().serviceConfig
       serviceConfig.port shouldBe 8088
-      serviceConfig.ssl.enabled shouldBe true
+      serviceConfig.ssl.enabled shouldBe false
       serviceConfig.ssl.certChainFilePath shouldBe "/ssl/cert"
       serviceConfig.ssl.privateKeyPath shouldBe "/ssl/private-key"
     }
@@ -70,6 +70,12 @@ class ConfigurationLoaderSpec extends BaseUnitTestSpec {
       elasticSearchConfig.serviceMetadataIndexConfiguration.enabled shouldEqual false
       elasticSearchConfig.serviceMetadataIndexConfiguration.indexName shouldEqual "service_metadata"
       elasticSearchConfig.serviceMetadataIndexConfiguration.indexType shouldEqual "metadata"
+    }
+
+    it("should load trace backend configuration") {
+      val traceBackendConfig = new ProviderConfiguration().traceBackendConfiguration
+      traceBackendConfig.host shouldEqual "localhost"
+      traceBackendConfig.port shouldEqual 8090
     }
   }
 }

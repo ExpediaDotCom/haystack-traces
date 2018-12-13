@@ -1,19 +1,5 @@
 <jmxtrans-agent>
     <queries>
-        <!-- kafka producer metrics -->
-        <!--<query objectName="kafka.producer:type=producer-metrics,client-id=*" attribute="record-send-rate" resultAlias="kafka-producer-%client-id%.record-send.rate"/>-->
-        <!--<query objectName="kafka.producer:type=producer-metrics,client-id=*" attribute="buffer-exhausted-rate" resultAlias="kafka-producer-%client-id%.buffer-exhausted.rate"/>-->
-        <!--<query objectName="kafka.producer:type=producer-metrics,client-id=*" attribute="record-retry-rate" resultAlias="kafka-producer-%client-id%.record-retry.rate"/>-->
-        <!--<query objectName="kafka.producer:type=producer-metrics,client-id=*" attribute="request-latency-avg" resultAlias="kafka-producer-%client-id%.request-latency.avg"/>-->
-        <!--<query objectName="kafka.producer:type=producer-metrics,client-id=*" attribute="buffer-available-bytes" resultAlias="kafka-producer-%client-id%.buffer-bytes.available"/>-->
-        <!--<query objectName="kafka.producer:type=producer-metrics,client-id=*" attribute="request-size-max" resultAlias="kafka-producer-%client-id%.request-size.max"/>-->
-        <!--<query objectName="kafka.producer:type=producer-metrics,client-id=*" attribute="request-rate" resultAlias="kafka-producer-%client-id%.request.rate"/>-->
-        <!--<query objectName="kafka.producer:type=producer-metrics,client-id=*" attribute="response-rate" resultAlias="kafka-producer-%client-id%.response.rate"/>-->
-        <!--<query objectName="kafka.producer:type=producer-metrics,client-id=*" attribute="record-error-rate" resultAlias="kafka-producer-%client-id%.record-error.rate"/>-->
-        <!--<query objectName="kafka.producer:type=producer-metrics,client-id=*" attribute="requests-in-flight" resultAlias="kafka-producer-%client-id%.request-in-flight.count"/>-->
-        <!--<query objectName="kafka.producer:type=producer-metrics,client-id=*" attribute="batch-size-avg" resultAlias="kafka-producer-%client-id%.batch-size.avg"/>-->
-        <!--<query objectName="metrics:name=kafka.produce.failure" attributes="OneMinuteRate" resultAlias="kafka-producer.failure.#attribute#"/>-->
-
         <!-- kafka consumer metrics -->
         <query objectName="kafka.consumer:type=consumer-metrics,client-id=*" attribute="request-rate" resultAlias="kafka-consumer-%client-id%.request.rate"/>
         <query objectName="kafka.consumer:type=consumer-metrics,client-id=*" attribute="response-rate" resultAlias="kafka-consumer-%client-id%.response.rate"/>
@@ -21,19 +7,10 @@
         <query objectName="kafka.consumer:type=consumer-fetch-manager-metrics,client-id=*" attribute="records-lag-max" resultAlias="kafka-consumer-%client-id%.records-lag.max"/>
         <query objectName="kafka.consumer:type=consumer-fetch-manager-metrics,client-id=*" attribute="records-consumed-rate" resultAlias="kafka-consumer-%client-id%.records-consumed.rate"/>
 
-        <!-- cassandra metrics coming from driver-->
-        <query objectName="cassandra-cluster-metrics:name=connection-errors" attribute="Count" resultAlias="cassandra.errors.count"/>
-        <query objectName="cassandra-cluster-metrics:name=read-timeouts" attribute="Count" resultAlias="cassandra.read-timeouts.count"/>
-        <query objectName="cassandra-cluster-metrics:name=client-timeouts" attribute="Count" resultAlias="cassandra.client-timeouts.count"/>
-        <query objectName="cassandra-cluster-metrics:name=requests" attribute="OneMinuteRate" resultAlias="cassandra.requests.rate"/>
-        <query objectName="cassandra-cluster-metrics:name=requests" attribute="99thPercentile" resultAlias="cassandra.requests.99thPercentile"/>
-        <query objectName="cassandra-cluster-metrics:name=write-timeouts" attribute="Count" resultAlias="cassandra.write-timeouts.count"/>
-        <query objectName="cassandra-cluster-metrics:name=open-connections" attribute="Value" resultAlias="cassandra.open-connections.value"/>
-        <query objectName="cassandra-cluster-metrics:name=other-errors" attribute="Count" resultAlias="cassandra.other-errors.count"/>
 
-        <!-- cassandra metrics coming from our code -->
-        <query objectName="metrics:name=cassandra.write.failure" attributes="OneMinuteRate" resultAlias="cassandra.write.failure.#attribute#"/>
-        <query objectName="metrics:name=cassandra.write.warnings" attributes="OneMinuteRate" resultAlias="cassandra.write.warnings.#attribute#"/>
+        <!-- backend metrics coming from our code -->
+        <query objectName="metrics:name=backend.write.failure" attributes="OneMinuteRate" resultAlias="backend.write.failure.#attribute#"/>
+        <query objectName="metrics:name=backend.write.time" attributes="50thPercentile,99thPercentile,OneMinuteRate" resultAlias="backend.write.time.#attribute#"/>
 
         <query objectName="metrics:name=state.store.eviction" attributes="OneMinuteRate" resultAlias="span-state-store.eviction.#attribute#"/>
         <query objectName="metrics:name=span.proto.deser.failure" attributes="OneMinuteRate" resultAlias="span-proto-deserializer.failure.#attribute#"/>

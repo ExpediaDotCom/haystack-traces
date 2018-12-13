@@ -31,7 +31,7 @@ class TraceServiceIntegrationTestSpec extends BaseIntegrationTestSpec {
 
   describe("TraceReader.getFieldNames") {
     it("should return names of enabled fields") {
-      Given("trace in cassandra and elasticsearch")
+      Given("trace in trace-backend and elasticsearch")
       val field1 = "abc"
       val field2 = "def"
       putWhitelistIndexFieldsInEs(List(field1, field2))
@@ -47,9 +47,9 @@ class TraceServiceIntegrationTestSpec extends BaseIntegrationTestSpec {
 
   describe("TraceReader.getFieldValues") {
     it("should return values of a given fields") {
-      Given("trace in cassandra and elasticsearch")
+      Given("trace in trace-backend and elasticsearch")
       val serviceName = "get_values_servicename"
-      putTraceInCassandraAndEs(UUID.randomUUID().toString, UUID.randomUUID().toString, serviceName, "op")
+      putTraceInEsAndTraceBackend(UUID.randomUUID().toString, UUID.randomUUID().toString, serviceName, "op")
       val request = FieldValuesRequest.newBuilder()
         .setFieldName(TraceIndexDoc.SERVICE_KEY_NAME)
         .build()
@@ -62,14 +62,14 @@ class TraceServiceIntegrationTestSpec extends BaseIntegrationTestSpec {
     }
 
     it("should return values of a given fields with filters") {
-      Given("trace in cassandra and elasticsearch")
+      Given("trace in trace-backend and elasticsearch")
       val serviceName = "get_values_with_filters_servicename"
       val op1 = "get_values_with_filters_operationname_1"
       val op2 = "get_values_with_filters_operationname_2"
 
-      putTraceInCassandraAndEs(UUID.randomUUID().toString, UUID.randomUUID().toString, serviceName, op1)
-      putTraceInCassandraAndEs(UUID.randomUUID().toString, UUID.randomUUID().toString, serviceName, op2)
-      putTraceInCassandraAndEs(UUID.randomUUID().toString, UUID.randomUUID().toString, "non_matching_servicename", "non_matching_operationname")
+      putTraceInEsAndTraceBackend(UUID.randomUUID().toString, UUID.randomUUID().toString, serviceName, op1)
+      putTraceInEsAndTraceBackend(UUID.randomUUID().toString, UUID.randomUUID().toString, serviceName, op2)
+      putTraceInEsAndTraceBackend(UUID.randomUUID().toString, UUID.randomUUID().toString, "non_matching_servicename", "non_matching_operationname")
 
       val request = FieldValuesRequest.newBuilder()
         .addFilters(Field.newBuilder().setName(TraceIndexDoc.SERVICE_KEY_NAME).setValue(serviceName))
@@ -86,10 +86,10 @@ class TraceServiceIntegrationTestSpec extends BaseIntegrationTestSpec {
   }
 
   describe("TraceReader.getTrace") {
-    it("should get trace for given traceID from cassandra") {
-      Given("trace in cassandra")
+    it("should get trace for given traceID from trace-backend") {
+      Given("trace in trace-backend")
       val traceId = UUID.randomUUID().toString
-      putTraceInCassandra(traceId)
+      putTraceInBackend(traceId)
 
       When("getTrace is invoked")
       val trace = client.getTrace(TraceRequest.newBuilder().setTraceId(traceId).build())
@@ -98,9 +98,9 @@ class TraceServiceIntegrationTestSpec extends BaseIntegrationTestSpec {
       trace.getTraceId shouldBe traceId
     }
 
-    it("should return TraceNotFound exception if traceID is not in cassandra") {
-      Given("trace in cassandra")
-      putTraceInCassandra(UUID.randomUUID().toString)
+    it("should return TraceNotFound exception if traceID is not in trace-backend") {
+      Given("trace in trace-backend")
+      putTraceInBackend(UUID.randomUUID().toString)
 
       When("getTrace is invoked")
       val thrown = the[StatusRuntimeException] thrownBy {
@@ -114,10 +114,10 @@ class TraceServiceIntegrationTestSpec extends BaseIntegrationTestSpec {
   }
 
   describe("TraceReader.getRawTrace") {
-    it("should get trace for given traceID from cassandra") {
-      Given("trace in cassandra")
+    it("should get trace for given traceID from trace-backend") {
+      Given("trace in trace-backend")
       val traceId = UUID.randomUUID().toString
-      putTraceInCassandra(traceId)
+      putTraceInBackend(traceId)
 
       When("getRawTrace is invoked")
       val trace = client.getRawTrace(TraceRequest.newBuilder().setTraceId(traceId).build())
@@ -126,9 +126,9 @@ class TraceServiceIntegrationTestSpec extends BaseIntegrationTestSpec {
       trace.getTraceId shouldBe traceId
     }
 
-    it("should return TraceNotFound exception if traceID is not in cassandra") {
-      Given("trace in cassandra")
-      putTraceInCassandra(UUID.randomUUID().toString)
+    it("should return TraceNotFound exception if traceID is not in trace-backend") {
+      Given("trace in trace-backend")
+      putTraceInBackend(UUID.randomUUID().toString)
 
       When("getRawTrace is invoked")
       val thrown = the[StatusRuntimeException] thrownBy {
@@ -142,12 +142,13 @@ class TraceServiceIntegrationTestSpec extends BaseIntegrationTestSpec {
   }
 
   describe("TraceReader.getRawSpan") {
-    it("should get spanId for given traceID-spanId from cassandra") {
-      Given("trace in cassandra")
+    it("should get spanId for given traceID-spanId from trace-backend") {
+      Given("trace in trace-backend")
       val traceId = UUID.randomUUID().toString
       val spanId = UUID.randomUUID().toString
-      putTraceInCassandra(traceId, spanId, "svc1")
-      putTraceInCassandra(traceId, spanId, "svc2")
+      putTraceInBackend(traceId, spanId, "svc1")
+      putTraceInBackend(traceId, spanId, "svc2")
+
 
       When("getRawSpan is invoked")
       val spanResponse = client.getRawSpan(SpanRequest
@@ -167,9 +168,9 @@ class TraceServiceIntegrationTestSpec extends BaseIntegrationTestSpec {
       servicesObserved should contain allOf("svc1", "svc2")
     }
 
-    it("should return TraceNotFound exception if traceID is not in cassandra") {
-      Given("trace in cassandra")
-      putTraceInCassandra(UUID.randomUUID().toString)
+    it("should return TraceNotFound exception if traceID is not in trace-backend") {
+      Given("trace in trace-backend")
+      putTraceInBackend(UUID.randomUUID().toString)
 
       When("getRawSpan is invoked")
       val thrown = the[StatusRuntimeException] thrownBy {
@@ -186,9 +187,9 @@ class TraceServiceIntegrationTestSpec extends BaseIntegrationTestSpec {
     }
 
     it("should return SpanNotFound exception if spanId is not part of Trace") {
-      Given("trace in cassandra")
+      Given("trace in trace-backend")
       val traceId = UUID.randomUUID().toString
-      putTraceInCassandra(traceId)
+      putTraceInBackend(traceId)
 
       When("getRawSpan is invoked")
       val thrown = the[StatusRuntimeException] thrownBy {
@@ -207,14 +208,14 @@ class TraceServiceIntegrationTestSpec extends BaseIntegrationTestSpec {
 
   describe("TraceReader.searchTraces") {
     it("should search traces for given service and operation") {
-      Given("trace in cassandra and elasticsearch")
+      Given("trace in trace-backend and elasticsearch")
       val traceId = UUID.randomUUID().toString
       val spanId = UUID.randomUUID().toString
       val serviceName = "svcName"
       val operationName = "opName"
       val startTime = 1
       val endTime = (System.currentTimeMillis() + 10000000) * 1000
-      putTraceInCassandraAndEs(traceId, spanId, serviceName, operationName)
+      putTraceInEsAndTraceBackend(traceId, spanId, serviceName, operationName)
 
       When("searching traces for service and operation")
       val traces = client.searchTraces(TracesSearchRequest
@@ -234,15 +235,15 @@ class TraceServiceIntegrationTestSpec extends BaseIntegrationTestSpec {
     }
 
     it("should search traces for given service") {
-      Given("traces in cassandra and elasticsearch")
+      Given("traces in trace-backend and elasticsearch")
       val traceId1 = UUID.randomUUID().toString
       val traceId2 = UUID.randomUUID().toString
       val serviceName = "serviceToSearch"
       val operationName = "opName"
       val startTime = 1
       val endTime = (System.currentTimeMillis() + 10000000) * 1000
-      putTraceInCassandraAndEs(traceId1, UUID.randomUUID().toString, serviceName, operationName)
-      putTraceInCassandraAndEs(traceId2, UUID.randomUUID().toString, serviceName, operationName)
+      putTraceInEsAndTraceBackend(traceId1, UUID.randomUUID().toString, serviceName, operationName)
+      putTraceInEsAndTraceBackend(traceId2, UUID.randomUUID().toString, serviceName, operationName)
 
       When("searching traces for service")
       val traces = client.searchTraces(TracesSearchRequest
@@ -260,7 +261,7 @@ class TraceServiceIntegrationTestSpec extends BaseIntegrationTestSpec {
     }
 
     it("should not return traces for unavailable searches") {
-      Given("traces in cassandra and elasticsearch")
+      Given("traces in trace-backend and elasticsearch")
 
       When("searching traces for service")
       val traces = client.searchTraces(TracesSearchRequest
@@ -276,14 +277,14 @@ class TraceServiceIntegrationTestSpec extends BaseIntegrationTestSpec {
     }
 
     it("should search traces for given whitelisted tags") {
-      Given("traces with tags in cassandra and elasticsearch")
+      Given("traces with tags in trace-backend and elasticsearch")
       val traceId = UUID.randomUUID().toString
       val serviceName = "svcWhitelisteTags"
       val operationName = "opWhitelisteTags"
       val tags = Map("aKey" -> "aValue", "bKey" -> "bValue")
       val startTime = 1
       val endTime = (System.currentTimeMillis() + 10000000) * 1000
-      putTraceInCassandraAndEs(traceId, UUID.randomUUID().toString, serviceName, operationName, tags)
+      putTraceInEsAndTraceBackend(traceId, UUID.randomUUID().toString, serviceName, operationName, tags)
 
       When("searching traces for tags")
       val traces = client.searchTraces(TracesSearchRequest
@@ -301,14 +302,14 @@ class TraceServiceIntegrationTestSpec extends BaseIntegrationTestSpec {
     }
 
     it("should not return traces if tags are not available") {
-      Given("traces with tags in cassandra and elasticsearch")
+      Given("traces with tags in trace-backend and elasticsearch")
       val traceId = UUID.randomUUID().toString
       val serviceName = "svcWhitelisteTags"
       val operationName = "opWhitelisteTags"
       val tags = Map("cKey" -> "cValue", "dKey" -> "dValue")
       val startTime = 1
       val endTime = (System.currentTimeMillis() + 10000000) * 1000
-      putTraceInCassandraAndEs(traceId, UUID.randomUUID().toString, serviceName, operationName, tags)
+      putTraceInEsAndTraceBackend(traceId, UUID.randomUUID().toString, serviceName, operationName, tags)
 
       When("searching traces for tags")
       val traces = client.searchTraces(TracesSearchRequest
@@ -326,14 +327,14 @@ class TraceServiceIntegrationTestSpec extends BaseIntegrationTestSpec {
     }
 
     it("should return traces for expression tree based search targeting ") {
-      Given("traces with tags in cassandra and elasticsearch")
+      Given("traces with tags in trace-backend and elasticsearch")
       val traceId = UUID.randomUUID().toString
       val serviceName = "expressionTraceSvc"
       val operationName = "expressionTraceOp"
       val tags = Map("uKey" -> "uValue", "vKey" -> "vValue")
       val startTime = 1
       val endTime = (System.currentTimeMillis() + 10000000) * 1000
-      putTraceInCassandraAndEs(traceId, UUID.randomUUID().toString, serviceName, operationName, tags)
+      putTraceInEsAndTraceBackend(traceId, UUID.randomUUID().toString, serviceName, operationName, tags)
 
       When("searching traces for tags using expression tree")
       val expression = ExpressionTree
@@ -355,14 +356,14 @@ class TraceServiceIntegrationTestSpec extends BaseIntegrationTestSpec {
 
 
     it("should return traces for expression tree with duration filter") {
-      Given("traces with tags in cassandra and elasticsearch")
+      Given("traces with tags in trace-backend and elasticsearch")
       val traceId = UUID.randomUUID().toString
       val serviceName = "expressionTraceSvc"
       val operationName = "expressionTraceOp"
       val tags = Map("uKey" -> "uValue", "vKey" -> "vValue")
       val startTime = 1
       val endTime = (System.currentTimeMillis() + 10000000) * 1000
-      putTraceInCassandraAndEs(traceId, UUID.randomUUID().toString, serviceName, operationName, tags)
+      putTraceInEsAndTraceBackend(traceId, UUID.randomUUID().toString, serviceName, operationName, tags)
 
       When("searching traces for tags using expression tree")
       val baseExpr = ExpressionTree
@@ -396,10 +397,10 @@ class TraceServiceIntegrationTestSpec extends BaseIntegrationTestSpec {
   }
 
   describe("TraceReader.getTraceCallGraph") {
-    it("should get trace  for given traceID from cassandra") {
-      Given("trace in cassandra")
+    it("should get trace  for given traceID from trace-backend") {
+      Given("trace in trace-backend")
       val traceId = "traceId"
-      putTraceInCassandraWithPartialSpans(traceId)
+      putTraceInBackendWithPartialSpans(traceId)
 
       When("getTrace is invoked")
       val traceCallGraph = client.getTraceCallGraph(TraceRequest.newBuilder().setTraceId(traceId).build())
@@ -423,7 +424,7 @@ class TraceServiceIntegrationTestSpec extends BaseIntegrationTestSpec {
       val endTimeInMicroSec = currentTimeMicros
 
       randomStartTimes.foreach(startTime =>
-        putTraceInCassandraAndEs(serviceName = serviceName, operationName = operationName, startTime = startTime, sleep = false))
+        putTraceInEsAndTraceBackend(serviceName = serviceName, operationName = operationName, startTime = startTime, sleep = false))
       Thread.sleep(5000)
 
       When("calling getTraceCounts")
@@ -445,17 +446,17 @@ class TraceServiceIntegrationTestSpec extends BaseIntegrationTestSpec {
   }
 
   describe("TraceReader.getRawTraces") {
-    it("should get raw traces for given traceIds from cassandra") {
-      Given("traces in cassandra")
+    it("should get raw traces for given traceIds from trace-backend") {
+      Given("traces in trace-backend")
       val traceId1 = UUID.randomUUID().toString
       val spanId1 = UUID.randomUUID().toString
       val spanId2 = UUID.randomUUID().toString
-      putTraceInCassandra(traceId1, spanId1, "svc1", "oper1")
-      putTraceInCassandra(traceId1, spanId2, "svc2", "oper2")
+      putTraceInBackend(traceId1, spanId1, "svc1", "oper1")
+      putTraceInBackend(traceId1, spanId2, "svc2", "oper2")
 
       val traceId2 = UUID.randomUUID().toString
       val spanId3 = UUID.randomUUID().toString
-      putTraceInCassandra(traceId2, spanId3, "svc1", "oper1")
+      putTraceInBackend(traceId2, spanId3, "svc1", "oper1")
 
       When("getRawTraces is invoked")
       val tracesResult = client.getRawTraces(RawTracesRequest.newBuilder().addAllTraceId(Seq(traceId1, traceId2).asJava).build())

@@ -10,11 +10,8 @@ docker_build:
 prepare_integration_test_env: docker_build
 	docker-compose -f build/integration-tests/docker-compose.yml -p sandbox up -d
 
-	# cassandra takes time to start
-	sleep 10
-
 integration_test: prepare_integration_test_env
-	# run tests in a container so that we can join the docker-compose network and talk to kafka, elasticsearch and cassandra
+	# run tests in a container so that we can join the docker-compose network and talk to kafka, elasticsearch and trace-backend
 	docker run \
 		--rm \
 		--network=sandbox_default \
@@ -22,12 +19,10 @@ integration_test: prepare_integration_test_env
 		-v ~/.m2:/root/.m2 \
 		-w /src \
 		maven:3.5.0-jdk-8 \
-		./mvnw scoverage:integration-check -pl indexer -am
+		./mvnw clean integration-test -pl indexer -am
 
 	# clean up the docker
 	docker-compose -f build/integration-tests/docker-compose.yml -p sandbox stop
 	docker rm $(shell docker ps -a -q)
-	docker volume rm $(shell docker volume ls -q)
-
 release:
 	../deployment/scripts/publish-to-docker-hub.sh

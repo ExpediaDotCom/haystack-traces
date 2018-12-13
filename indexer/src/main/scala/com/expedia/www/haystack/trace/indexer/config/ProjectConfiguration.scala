@@ -19,7 +19,6 @@ package com.expedia.www.haystack.trace.indexer.config
 
 import java.util.Properties
 
-import com.datastax.driver.core.ConsistencyLevel
 import com.expedia.www.haystack.commons.config.ConfigurationLoader
 import com.expedia.www.haystack.commons.retries.RetryOperation
 import com.expedia.www.haystack.trace.commons.config.entities._
@@ -121,88 +120,25 @@ class ProjectConfiguration extends AutoCloseable {
       wakeupTimeoutInMillis = kafka.getInt("wakeup.timeout.ms"))
   }
 
-  private def keyspaceConfig(kConfig: Config, ttl: Int): KeyspaceConfiguration = {
-    val autoCreateSchemaField = "auto.create.schema"
-    val autoCreateSchema = if (kConfig.hasPath(autoCreateSchemaField)
-      && StringUtils.isNotEmpty(kConfig.getString(autoCreateSchemaField))) {
-      Some(kConfig.getString(autoCreateSchemaField))
-    } else {
-      None
-    }
-
-    KeyspaceConfiguration(kConfig.getString("name"), kConfig.getString("table.name"), ttl, autoCreateSchema)
-  }
 
   /**
     *
-    * cassandra configuration object
+    * trace backend configuration object
     */
-  val cassandraWriteConfig: CassandraWriteConfiguration = {
+  val backendConfig: TraceBackendConfiguration = {
 
-    def toConsistencyLevel(level: String) = ConsistencyLevel.values().find(_.toString.equalsIgnoreCase(level)).get
 
-    def consistencyLevelOnErrors(cs: Config) = {
-      val consistencyLevelOnErrors = cs.getStringList("on.error.consistency.level")
-      val consistencyLevelOnErrorList = scala.collection.mutable.ListBuffer[(Class[_], ConsistencyLevel)]()
+    val traceBackendConfig = config.getConfig("backend")
+    val clientConfig = traceBackendConfig.getConfig("client")
 
-      var idx = 0
-      while (idx < consistencyLevelOnErrors.size()) {
-        val errorClass = consistencyLevelOnErrors.get(idx)
-        val level = consistencyLevelOnErrors.get(idx + 1)
-        consistencyLevelOnErrorList.+=((Class.forName(errorClass), toConsistencyLevel(level)))
-        idx = idx + 2
-      }
-
-      consistencyLevelOnErrorList.toList
-    }
-
-    val cs = config.getConfig("cassandra")
-
-    val awsConfig: Option[AwsNodeDiscoveryConfiguration] =
-      if (cs.hasPath("auto.discovery.aws")) {
-        val aws = cs.getConfig("auto.discovery.aws")
-        val tags = aws.getConfig("tags")
-          .entrySet()
-          .asScala
-          .map(elem => elem.getKey -> elem.getValue.unwrapped().toString)
-          .toMap
-        Some(AwsNodeDiscoveryConfiguration(aws.getString("region"), tags))
-      } else {
-        None
-      }
-
-    val credentialsConfig: Option[CredentialsConfiguration] =
-      if (cs.hasPath("credentials")) {
-        Some(CredentialsConfiguration(cs.getString("credentials.username"), cs.getString("credentials.password")))
-      } else {
-        None
-      }
-
-    val socketConfig = cs.getConfig("connections")
-
-    val socket = SocketConfiguration(
-      socketConfig.getInt("max.per.host"),
-      socketConfig.getBoolean("keep.alive"),
-      socketConfig.getInt("conn.timeout.ms"),
-      socketConfig.getInt("read.timeout.ms"))
-
-    val consistencyLevel = toConsistencyLevel(cs.getString("consistency.level"))
-
-    CassandraWriteConfiguration(
-      clientConfig = CassandraConfiguration(
-        if (cs.hasPath("endpoints")) cs.getString("endpoints").split(",").toList else Nil,
-        cs.getBoolean("auto.discovery.enabled"),
-        awsConfig,
-        credentialsConfig,
-        keyspaceConfig(cs.getConfig("keyspace"), cs.getInt("ttl.sec")),
-        socket),
-      consistencyLevel = consistencyLevel,
-      maxInFlightRequests = cs.getInt("max.inflight.requests"),
+    TraceBackendConfiguration(
+      TraceBackendClientConfiguration(clientConfig.getString("host"),clientConfig.getInt("port")),
+      maxInFlightRequests = traceBackendConfig.getInt("max.inflight.requests"),
       retryConfig = RetryOperation.Config(
-        cs.getInt("retries.max"),
-        cs.getLong("retries.backoff.initial.ms"),
-        cs.getDouble("retries.backoff.factor")),
-      consistencyLevelOnErrors(cs))
+        traceBackendConfig.getInt("retries.max"),
+        traceBackendConfig.getLong("retries.backoff.initial.ms"),
+        traceBackendConfig.getDouble("retries.backoff.factor"))
+    )
   }
 
   /**

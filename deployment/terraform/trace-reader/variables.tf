@@ -1,4 +1,5 @@
-variable "image" {}
+variable "reader_image" {}
+variable "storage_backend_image" {}
 variable "replicas" {}
 variable "namespace" {}
 variable "elasticsearch_endpoint" {}
@@ -25,5 +26,5 @@ variable "service_port" {
   default = 8080
 }
 variable "container_port" {
-  default = 8080
+  default = 8088
 }

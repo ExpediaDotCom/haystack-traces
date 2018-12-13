@@ -42,7 +42,7 @@ object App extends MetricsSupport {
         appConfig.kafkaConfig,
         appConfig.spanAccumulateConfig,
         appConfig.elasticSearchConfig,
-        appConfig.cassandraWriteConfig,
+        appConfig.backendConfig,
         appConfig.serviceMetadataWriteConfig,
         appConfig.indexConfig)
 

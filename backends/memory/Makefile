@@ -10,7 +10,7 @@ docker_build:
 	docker build -t $(DOCKER_IMAGE_NAME) -f build/docker/Dockerfile .
 
 integration_test:
-	cd ../../ && ./mvnw clean integration-test -pl backends/memory -am
+	cd ../../ && ./mvnw integration-test -pl backends/memory -am
 
 release:
 	../../deployment/scripts/publish-to-docker-hub.sh

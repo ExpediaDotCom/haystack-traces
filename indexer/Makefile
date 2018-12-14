@@ -1,7 +1,7 @@
 .PHONY: docker_build integration_test release
 
 export DOCKER_ORG := expediadotcom
-export DOCKER_IMAGE_NAME := haystack-trace-indexer
+export DOCKER_IMAGE_NAME := ayansen89/haystack-trace-indexer
 PWD := $(shell pwd)
 
 docker_build:

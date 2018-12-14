@@ -29,14 +29,13 @@ class SpansPersistenceService(reader: CassandraTraceRecordReader,
                              (implicit val executor: ExecutionContextExecutor) extends StorageBackendGrpc.StorageBackendImplBase {
 
   private val handleReadSpansResponse = new GrpcHandler(StorageBackendGrpc.METHOD_READ_SPANS.getFullMethodName)
+  private val handleWriteSpansResponse = new GrpcHandler(StorageBackendGrpc.METHOD_WRITE_SPANS.getFullMethodName)
 
   override def writeSpans(request: WriteSpansRequest, responseObserver: StreamObserver[WriteSpansResponse]): Unit = {
-    writer.writeTraceRecords(request.getRecordsList.asScala.toList, (ex) => {
-      val statusCode = if (ex == null) ResultCode.SUCCESS else ResultCode.UNKNOWN_ERROR
-      val response = WriteSpansResponse.newBuilder().setCode(statusCode).build()
-      responseObserver.onNext(response)
-      responseObserver.onCompleted()
-    })
+    handleWriteSpansResponse.handle(request, responseObserver) {
+      writer.writeTraceRecords(request.getRecordsList.asScala.toList) map (_ =>
+        WriteSpansResponse.newBuilder().setCode(ResultCode.SUCCESS).build())
+    }
   }
 
   /**

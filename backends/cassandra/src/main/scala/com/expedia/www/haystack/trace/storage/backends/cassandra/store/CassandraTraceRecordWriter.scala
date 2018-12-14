@@ -27,7 +27,8 @@ import com.expedia.www.haystack.trace.storage.backends.cassandra.config.entities
 import com.expedia.www.haystack.trace.storage.backends.cassandra.metrics.AppMetricNames
 import org.slf4j.LoggerFactory
 
-import scala.concurrent.ExecutionContextExecutor
+import scala.concurrent.{ExecutionContextExecutor, Future, Promise}
+import scala.util.{Failure, Success}
 
 class CassandraTraceRecordWriter(cassandra: CassandraSession,
                                  config: CassandraConfiguration)(implicit val dispatcher: ExecutionContextExecutor)
@@ -40,7 +41,9 @@ class CassandraTraceRecordWriter(cassandra: CassandraSession,
   cassandra.ensureKeyspace(config.clientConfig.tracesKeyspace)
   private val spanInsertPreparedStmt = cassandra.createSpanInsertPreparedStatement(config.clientConfig.tracesKeyspace)
 
-  private def execute(record: TraceRecord, callback: (Exception) => Unit): Unit = {
+  private def execute(record: TraceRecord): Future[Unit] = {
+
+    val promise = Promise[Unit]
     // execute the request async with retry
     withRetryBackoff(retryCallback => {
       val timer = writeTimer.time()
@@ -55,11 +58,13 @@ class CassandraTraceRecordWriter(cassandra: CassandraSession,
       asyncResult.addListener(new CassandraTraceRecordWriteResultListener(asyncResult, timer, retryCallback), dispatcher)
     },
       config.retryConfig,
-      onSuccess = (_: Any) => callback(null),
+      onSuccess = (_: Any) => promise.success(),
       onFailure = ex => {
-        callback(ex)
+        writeFailures.mark()
         LOGGER.error(s"Fail to write to cassandra after ${config.retryConfig.maxRetries} retry attempts for ${record.getTraceId}", ex)
+        promise.failure(ex)
       })
+    promise.future
   }
 
   /**
@@ -70,22 +75,21 @@ class CassandraTraceRecordWriter(cassandra: CassandraSession,
     * @param traceRecords : trace records which need to be written
     * @return
     */
-  def writeTraceRecords(traceRecords: List[TraceRecord], callback: (Exception) => Unit): Unit = {
+  def writeTraceRecords(traceRecords: List[TraceRecord]): Future[Unit] = {
+    val promise = Promise[Unit]
     val writableRecordsLatch = new AtomicInteger(traceRecords.size)
     traceRecords.foreach(record => {
-      try {
-        /* write spanBuffer for a given traceId */
-        execute(record, (ex) => {
+      /* write spanBuffer for a given traceId */
+      execute(record).onComplete {
+        case Success(_) => writableRecordsLatch.decrementAndGet()
+        case Failure(ex) =>
+          //TODO: We fail the response only if the last cassandra write fails, ideally we should be failing if any of the cassandra writes fail
           if (writableRecordsLatch.decrementAndGet() == 0) {
-            callback(ex)
+            promise.failure(ex)
           }
-        })
-      } catch {
-        case ex: Exception =>
-          LOGGER.error("Fail to write the spans to cassandra with exception", ex)
-          writeFailures.mark()
-          callback(ex)
       }
     })
+    promise.future
+
   }
 }

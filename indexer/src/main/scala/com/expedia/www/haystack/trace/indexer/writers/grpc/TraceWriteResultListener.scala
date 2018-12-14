@@ -21,6 +21,7 @@ import java.util.concurrent.Future
 
 import com.codahale.metrics.{Meter, Timer}
 import com.expedia.open.tracing.backend.WriteSpansResponse
+import com.expedia.open.tracing.backend.WriteSpansResponse.ResultCode
 import com.expedia.www.haystack.commons.metrics.MetricsSupport
 import com.expedia.www.haystack.commons.retries.RetryOperation
 import com.expedia.www.haystack.trace.indexer.metrics.AppMetricNames
@@ -39,21 +40,22 @@ class TraceWriteResultListener(result: Future[WriteSpansResponse],
     * this is invoked when the grpc aysnc write completes.
     * We measure the time write operation takes and records any warnings or errors
     */
-
   import com.expedia.www.haystack.trace.indexer.writers.grpc.TraceWriteResultListener._
 
   override def run(): Unit = {
     try {
       timer.close()
-
       val writeSpanResponse = result.get()
-      if (writeSpanResponse != null &&
-        writeSpanResponse.getErrorMessage != null &&
-        !writeSpanResponse.getErrorMessage.isEmpty) {
-        LOGGER.error(s"Fail to write the record to trace backend with error {}", writeSpanResponse.getErrorMessage)
+      if (writeSpanResponse != null && writeSpanResponse.getCode == ResultCode.SUCCESS) {
+        if (retryOp != null) {
+          retryOp.onResult(writeSpanResponse)
+        }
+      } else {
         writeFailures.mark()
+        if (retryOp != null) {
+          retryOp.onError(new RuntimeException("Fail to write the record to trace backend with error"), retry = true)
+        }
       }
-      if (retryOp != null) retryOp.onResult(writeSpanResponse)
     } catch {
       case ex: Exception =>
         LOGGER.error("Fail to write the record to trace backend with exception", ex)

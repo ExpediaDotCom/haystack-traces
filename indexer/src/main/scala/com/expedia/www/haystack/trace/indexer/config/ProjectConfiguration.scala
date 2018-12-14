@@ -132,13 +132,9 @@ class ProjectConfiguration extends AutoCloseable {
     val clientConfig = traceBackendConfig.getConfig("client")
 
     TraceBackendConfiguration(
-      TraceBackendClientConfiguration(clientConfig.getString("host"),clientConfig.getInt("port")),
-      maxInFlightRequests = traceBackendConfig.getInt("max.inflight.requests"),
-      retryConfig = RetryOperation.Config(
-        traceBackendConfig.getInt("retries.max"),
-        traceBackendConfig.getLong("retries.backoff.initial.ms"),
-        traceBackendConfig.getDouble("retries.backoff.factor"))
-    )
+      TraceBackendClientConfiguration(clientConfig.getString("host"), clientConfig.getInt("port")),
+      maxInFlightRequests = traceBackendConfig.getInt("max.inflight.requests"))
+
   }
 
   /**

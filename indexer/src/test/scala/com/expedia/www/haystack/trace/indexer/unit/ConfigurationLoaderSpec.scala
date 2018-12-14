@@ -88,9 +88,6 @@ class ConfigurationLoaderSpec extends FunSpec with Matchers {
       val backendConfiguration = project.backendConfig
 
       backendConfiguration.maxInFlightRequests shouldBe 100
-      backendConfiguration.retryConfig.maxRetries shouldBe 10
-      backendConfiguration.retryConfig.backOffInMillis shouldBe 250
-      backendConfiguration.retryConfig.backoffFactor shouldBe 2
     }
 
     it("should load the elastic search config from base.conf and one property overridden from env variable") {

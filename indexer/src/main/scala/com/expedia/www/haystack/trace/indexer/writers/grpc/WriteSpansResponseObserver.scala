@@ -17,15 +17,20 @@
 
 package com.expedia.www.haystack.trace.indexer.writers.grpc
 
+import java.util.concurrent.Semaphore
+
 import com.codahale.metrics.Timer
 import com.expedia.open.tracing.backend.WriteSpansResponse
-import com.expedia.www.haystack.commons.retries.RetryOperation
+import com.expedia.www.haystack.commons.metrics.MetricsSupport
+import com.expedia.www.haystack.trace.indexer.metrics.AppMetricNames
 import io.grpc.stub.StreamObserver
+import org.slf4j.LoggerFactory
 
 
+class WriteSpansResponseObserver(timer:Timer.Context, inflightRequest: Semaphore) extends StreamObserver[WriteSpansResponse] with MetricsSupport {
 
-class WriteSpansResponseObserver(timer: Timer.Context,
-                                 retryOp: RetryOperation.Callback) extends StreamObserver[WriteSpansResponse] {
+  private val LOGGER = LoggerFactory.getLogger(classOf[WriteSpansResponseObserver])
+  private val writeFailures = metricRegistry.meter(AppMetricNames.BACKEND_WRITE_FAILURE)
 
   /**
     * this is invoked when the grpc aysnc write completes.
@@ -34,14 +39,18 @@ class WriteSpansResponseObserver(timer: Timer.Context,
 
   override def onNext(writeSpanResponse: WriteSpansResponse): Unit = {
     timer.close()
-    retryOp.onResult(writeSpanResponse)
+    inflightRequest.release()
+
   }
 
   override def onError(error: Throwable): Unit = {
     timer.close()
-    retryOp.onError(error, retry = true)
+    inflightRequest.release()
+    writeFailures.mark()
+    LOGGER.error(s"Fail to write to trace-backend with exception ", error)
   }
 
   override def onCompleted(): Unit = {
+    LOGGER.info(s"Closing WriteSpans Trace Observer")
   }
 }

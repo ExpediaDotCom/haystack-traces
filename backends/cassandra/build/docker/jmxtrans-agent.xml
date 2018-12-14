@@ -2,10 +2,10 @@
     <queries>
 
         <!-- grpc endpoint metrics -->
-        <query objectName="metrics:name=StorageBackend.writeSpans" attributes="50thPercentile,99thPercentile,OneMinuteRate" resultAlias="trace.reader.getFieldNames.#attribute#"/>
-        <query objectName="metrics:name=StorageBackend.writeSpans.failures" attributes="OneMinuteRate" resultAlias="trace.reader.getFieldNames.failures.#attribute#"/>
-        <query objectName="metrics:name=StorageBackend.readSpans" attributes="50thPercentile,99thPercentile,OneMinuteRate" resultAlias="trace.reader.getFieldValues.#attribute#"/>
-        <query objectName="metrics:name=StorageBackend.readSpans.failures" attributes="OneMinuteRate" resultAlias="trace.reader.getFieldValues.failures.#attribute#"/>
+        <query objectName="metrics:name=StorageBackend.writeSpans" attributes="50thPercentile,99thPercentile,OneMinuteRate" resultAlias="endpoint.writeSpans.#attribute#"/>
+        <query objectName="metrics:name=StorageBackend.writeSpans.failures" attributes="OneMinuteRate" resultAlias="endpoint.writeSpans.failures.#attribute#"/>
+        <query objectName="metrics:name=StorageBackend.readSpans" attributes="50thPercentile,99thPercentile,OneMinuteRate" resultAlias="endpoint.readSpans.#attribute#"/>
+        <query objectName="metrics:name=StorageBackend.readSpans.failures" attributes="OneMinuteRate" resultAlias="endpoint.readSpans.failures.#attribute#"/>
 
         <query objectName="metrics:name=cassandra.read.time"
                attributes="99thPercentile,50thPercentile,OneMinuteRate"

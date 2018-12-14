@@ -43,8 +43,7 @@ class GrpcTraceWriter(config: TraceBackendConfiguration)(implicit val dispatcher
   private val channel =  ManagedChannelBuilder.forAddress(config.clientConfig.host,config.clientConfig.port)
     .usePlaintext(true)
     .build()
-  val client: StorageBackendGrpc.StorageBackendFutureStub = StorageBackendGrpc.newFutureStub(channel)
-
+  val client: StorageBackendGrpc.StorageBackendStub = StorageBackendGrpc.newStub(channel)
 
   private val writeTimer = metricRegistry.timer(AppMetricNames.BACKEND_WRITE_TIME)
   private val writeFailures = metricRegistry.meter(AppMetricNames.BACKEND_WRITE_FAILURE)
@@ -54,9 +53,10 @@ class GrpcTraceWriter(config: TraceBackendConfiguration)(implicit val dispatcher
   private val inflightRequestsSemaphore = new Semaphore(config.maxInFlightRequests, true)
 
   private def execute(traceId: String, packedSpanBuffer: PackedMessage[SpanBuffer]): Unit = {
+    val timer = writeTimer.time()
+
     // execute the request async with retry
     withRetryBackoff(retryCallback => {
-      val timer = writeTimer.time()
 
       val singleRecord = TraceRecord
         .newBuilder()
@@ -65,12 +65,15 @@ class GrpcTraceWriter(config: TraceBackendConfiguration)(implicit val dispatcher
         .setSpans(ByteString.copyFrom(packedSpanBuffer.packedDataBytes))
 
       val writeSpansRequest = WriteSpansRequest.newBuilder().addRecords(singleRecord).build()
-      val response: ListenableFuture[WriteSpansResponse] = client.writeSpans(writeSpansRequest)
-      response.addListener(new TraceWriteResultListener(response, timer, retryCallback), dispatcher)
+      client.writeSpans(writeSpansRequest,new WriteSpansResponseObserver(timer, retryCallback))
     },
       config.retryConfig,
-      onSuccess = (_: Any) => inflightRequestsSemaphore.release(),
+      onSuccess = (_: Any) => {
+        timer.close()
+        inflightRequestsSemaphore.release()
+      },
       onFailure = ex => {
+        writeFailures.mark()
         inflightRequestsSemaphore.release()
         LOGGER.error(s"Fail to write to trace-backend after ${config.retryConfig.maxRetries} retry attempts for $traceId, ${packedSpanBuffer.protoObj.getChildSpans(0).getServiceName}, ${packedSpanBuffer.protoObj.getChildSpans(0).getOperationName}", ex)
       })

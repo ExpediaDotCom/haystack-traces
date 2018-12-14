@@ -18,7 +18,7 @@ package com.expedia.www.haystack.trace.storage.backends.cassandra.integration
 
 import java.util.UUID
 
-import com.expedia.open.tracing.backend.ReadSpansRequest
+import com.expedia.open.tracing.backend.{ReadSpansRequest, WriteSpansRequest}
 
 class CassandraStorageBackendServiceIntegrationTestSpec extends BaseIntegrationTestSpec {
 
@@ -36,8 +36,26 @@ class CassandraStorageBackendServiceIntegrationTestSpec extends BaseIntegrationT
 
       Then("should return the trace")
       traceRecords.getRecordsList should not be empty
-      traceRecords.getRecordsCount shouldEqual  1
+      traceRecords.getRecordsCount shouldEqual 1
       traceRecords.getRecordsList.get(0).getTraceId shouldEqual traceId
     }
+    it("should write trace records for given traceID to cassandra") {
+      Given("trace in cassandra")
+      val traceId = UUID.randomUUID().toString
+      val record = createTraceRecord(traceId)
+      val writeSpansRequest = WriteSpansRequest.newBuilder().addRecords(record).build()
+
+      When("writespans is invoked")
+      val traceRecords = client.writeSpans(writeSpansRequest)
+
+      Then("should write the trace")
+      val readSpansRequest = ReadSpansRequest.newBuilder().addTraceIds(traceId).build()
+      val retrievedRecord = client.readSpans(readSpansRequest)
+
+      retrievedRecord.getRecordsList should not be empty
+      retrievedRecord.getRecordsCount shouldEqual 1
+      retrievedRecord.getRecordsList.get(0).getTraceId shouldEqual traceId
+    }
+
   }
 }

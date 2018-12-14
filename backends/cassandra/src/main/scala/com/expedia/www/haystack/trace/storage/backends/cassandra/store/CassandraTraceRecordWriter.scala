@@ -81,7 +81,9 @@ class CassandraTraceRecordWriter(cassandra: CassandraSession,
     traceRecords.foreach(record => {
       /* write spanBuffer for a given traceId */
       execute(record).onComplete {
-        case Success(_) => writableRecordsLatch.decrementAndGet()
+        case Success(_) => if (writableRecordsLatch.decrementAndGet() == 0) {
+          promise.success()
+        }
         case Failure(ex) =>
           //TODO: We fail the response only if the last cassandra write fails, ideally we should be failing if any of the cassandra writes fail
           if (writableRecordsLatch.decrementAndGet() == 0) {

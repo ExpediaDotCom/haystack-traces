@@ -20,7 +20,6 @@ package com.expedia.www.haystack.trace.indexer.integration.clients
 import java.util.concurrent.Executors
 
 import com.expedia.open.tracing.backend.{ReadSpansRequest, StorageBackendGrpc, TraceRecord}
-import com.expedia.www.haystack.commons.retries.RetryOperation
 import com.expedia.www.haystack.trace.commons.config.entities.TraceBackendClientConfiguration
 import com.expedia.www.haystack.trace.indexer.config.entities.TraceBackendConfiguration
 import com.expedia.www.haystack.trace.indexer.integration.TraceDescription
@@ -45,8 +44,7 @@ class GrpcTestClient {
 
 
   def buildConfig = TraceBackendConfiguration(
-    TraceBackendClientConfiguration("localhost", port),
-    10, RetryOperation.Config(10, 250, 2))
+    TraceBackendClientConfiguration("localhost", port), 10)
 
   def queryTraces(traceDescriptions: Seq[TraceDescription]): Seq[TraceRecord] = {
     val traceIds = traceDescriptions.map(traceDescription => traceDescription.traceId).toList

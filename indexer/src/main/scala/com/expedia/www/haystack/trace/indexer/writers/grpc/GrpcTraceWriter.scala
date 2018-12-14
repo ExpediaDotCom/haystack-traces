@@ -20,15 +20,13 @@ package com.expedia.www.haystack.trace.indexer.writers.grpc
 
 import java.util.concurrent.Semaphore
 
-import com.expedia.open.tracing.backend.{StorageBackendGrpc, TraceRecord, WriteSpansRequest, WriteSpansResponse}
+import com.expedia.open.tracing.backend.{StorageBackendGrpc, TraceRecord, WriteSpansRequest}
 import com.expedia.open.tracing.buffer.SpanBuffer
 import com.expedia.www.haystack.commons.metrics.MetricsSupport
-import com.expedia.www.haystack.commons.retries.RetryOperation._
 import com.expedia.www.haystack.trace.commons.packer.PackedMessage
 import com.expedia.www.haystack.trace.indexer.config.entities.TraceBackendConfiguration
 import com.expedia.www.haystack.trace.indexer.metrics.AppMetricNames
 import com.expedia.www.haystack.trace.indexer.writers.TraceWriter
-import com.google.common.util.concurrent.ListenableFuture
 import com.google.protobuf.ByteString
 import io.grpc.ManagedChannelBuilder
 import org.slf4j.LoggerFactory
@@ -43,21 +41,16 @@ class GrpcTraceWriter(config: TraceBackendConfiguration)(implicit val dispatcher
   private val channel =  ManagedChannelBuilder.forAddress(config.clientConfig.host,config.clientConfig.port)
     .usePlaintext(true)
     .build()
-  val client: StorageBackendGrpc.StorageBackendFutureStub = StorageBackendGrpc.newFutureStub(channel)
-
+  val client: StorageBackendGrpc.StorageBackendStub = StorageBackendGrpc.newStub(channel)
 
   private val writeTimer = metricRegistry.timer(AppMetricNames.BACKEND_WRITE_TIME)
   private val writeFailures = metricRegistry.meter(AppMetricNames.BACKEND_WRITE_FAILURE)
-
 
   // this semaphore controls the parallel writes to trace-backend
   private val inflightRequestsSemaphore = new Semaphore(config.maxInFlightRequests, true)
 
   private def execute(traceId: String, packedSpanBuffer: PackedMessage[SpanBuffer]): Unit = {
-    // execute the request async with retry
-    withRetryBackoff(retryCallback => {
       val timer = writeTimer.time()
-
       val singleRecord = TraceRecord
         .newBuilder()
         .setTraceId(traceId)
@@ -65,15 +58,7 @@ class GrpcTraceWriter(config: TraceBackendConfiguration)(implicit val dispatcher
         .setSpans(ByteString.copyFrom(packedSpanBuffer.packedDataBytes))
 
       val writeSpansRequest = WriteSpansRequest.newBuilder().addRecords(singleRecord).build()
-      val response: ListenableFuture[WriteSpansResponse] = client.writeSpans(writeSpansRequest)
-      response.addListener(new TraceWriteResultListener(response, timer, retryCallback), dispatcher)
-    },
-      config.retryConfig,
-      onSuccess = (_: Any) => inflightRequestsSemaphore.release(),
-      onFailure = ex => {
-        inflightRequestsSemaphore.release()
-        LOGGER.error(s"Fail to write to trace-backend after ${config.retryConfig.maxRetries} retry attempts for $traceId, ${packedSpanBuffer.protoObj.getChildSpans(0).getServiceName}, ${packedSpanBuffer.protoObj.getChildSpans(0).getOperationName}", ex)
-      })
+      client.writeSpans(writeSpansRequest,new WriteSpansResponseObserver(timer,inflightRequestsSemaphore))
   }
 
   /**

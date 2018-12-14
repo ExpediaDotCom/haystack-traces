@@ -23,9 +23,6 @@ import com.expedia.www.haystack.trace.commons.config.entities.TraceBackendClient
 /**
   * @param clientConfig defines the grpc client configuration for connecting to the trace backend
   * @param maxInFlightRequests defines the max parallel writes to trace-backend
-  * @param retryConfig         retry configuration if writes fail
   */
 case class TraceBackendConfiguration(clientConfig: TraceBackendClientConfiguration,
-                                     maxInFlightRequests: Int,
-                                     retryConfig: RetryOperation.Config
-                                    )
+                                     maxInFlightRequests: Int)

@@ -23,17 +23,18 @@ import java.util.{Date, UUID}
 import com.datastax.driver.core.querybuilder.QueryBuilder
 import com.datastax.driver.core.{Cluster, ResultSet, Session, SimpleStatement}
 import com.expedia.open.tracing.Span
-import com.expedia.open.tracing.backend.StorageBackendGrpc
+import com.expedia.open.tracing.backend.{StorageBackendGrpc, TraceRecord}
 import com.expedia.open.tracing.buffer.SpanBuffer
 import com.expedia.www.haystack.trace.storage.backends.cassandra.Service
 import com.expedia.www.haystack.trace.storage.backends.cassandra.client.CassandraTableSchema
+import com.google.protobuf.ByteString
 import io.grpc.ManagedChannelBuilder
 import io.grpc.health.v1.HealthGrpc
 import org.scalatest._
 
 import scala.collection.JavaConverters._
 
-trait BaseIntegrationTestSpec extends FunSpec with GivenWhenThen with Matchers with BeforeAndAfterAll with BeforeAndAfterEach  {
+trait BaseIntegrationTestSpec extends FunSpec with GivenWhenThen with Matchers with BeforeAndAfterAll with BeforeAndAfterEach {
   protected var client: StorageBackendGrpc.StorageBackendBlockingStub = _
 
   protected var healthCheckClient: HealthGrpc.HealthBlockingStub = _
@@ -84,7 +85,17 @@ trait BaseIntegrationTestSpec extends FunSpec with GivenWhenThen with Matchers w
                                     sleep: Boolean = true): Unit = {
     insertTraceInCassandra(traceId, spanId, serviceName, operationName, tags, startTime)
     // wait for few sec to let ES refresh its index
-    if(sleep) Thread.sleep(5000)
+    if (sleep) Thread.sleep(5000)
+  }
+
+  protected def createTraceRecord(traceId: String = UUID.randomUUID().toString,
+                                 ): TraceRecord = {
+    val spans = "random span".getBytes
+    TraceRecord
+      .newBuilder()
+      .setTraceId(traceId)
+      .setTimestamp(System.currentTimeMillis())
+      .setSpans(ByteString.copyFrom(spans)).build()
   }
 
   private def insertTraceInCassandra(traceId: String,

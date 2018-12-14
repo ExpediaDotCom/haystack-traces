@@ -53,10 +53,9 @@ class GrpcTraceWriter(config: TraceBackendConfiguration)(implicit val dispatcher
   private val inflightRequestsSemaphore = new Semaphore(config.maxInFlightRequests, true)
 
   private def execute(traceId: String, packedSpanBuffer: PackedMessage[SpanBuffer]): Unit = {
-    val timer = writeTimer.time()
-
     // execute the request async with retry
     withRetryBackoff(retryCallback => {
+      val timer = writeTimer.time()
 
       val singleRecord = TraceRecord
         .newBuilder()
@@ -69,7 +68,6 @@ class GrpcTraceWriter(config: TraceBackendConfiguration)(implicit val dispatcher
     },
       config.retryConfig,
       onSuccess = (_: Any) => {
-        timer.close()
         inflightRequestsSemaphore.release()
       },
       onFailure = ex => {

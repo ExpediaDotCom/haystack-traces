@@ -33,10 +33,12 @@ class WriteSpansResponseObserver(timer: Timer.Context,
     */
 
   override def onNext(writeSpanResponse: WriteSpansResponse): Unit = {
+    timer.close()
     retryOp.onResult(writeSpanResponse)
   }
 
   override def onError(error: Throwable): Unit = {
+    timer.close()
     retryOp.onError(error, retry = true)
   }
 

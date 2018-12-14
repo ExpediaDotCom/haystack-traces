@@ -19,6 +19,10 @@
         <query objectName="metrics:name=es.write.failure" attributes="OneMinuteRate" resultAlias="elasticsearch.writer.failure.#attribute#"/>
         <query objectName="metrics:name=es.writer.time" attributes="50thPercentile,99thPercentile,OneMinuteRate" resultAlias="elasticsearch.writer.time.#attribute#"/>
 
+        <!-- service metadata metrics -->
+        <query objectName="metrics:name=metadata.write.failure" attributes="OneMinuteRate" resultAlias="metadata.writer.failure.#attribute#"/>
+        <query objectName="metrics:name=metadata.write.time" attributes="50thPercentile,99thPercentile,OneMinuteRate" resultAlias="metadata.writer.time.#attribute#"/>
+
         <query objectName="metrics:name=buffered.spans.count" attributes="50thPercentile,99thPercentile,Max" resultAlias="span-processor.buffer-size.#attribute#"/>
         <query objectName="metrics:name=buffer.process" attributes="50thPercentile,99thPercentile" resultAlias="span-processor.process-time.#attribute#"/>
     </queries>

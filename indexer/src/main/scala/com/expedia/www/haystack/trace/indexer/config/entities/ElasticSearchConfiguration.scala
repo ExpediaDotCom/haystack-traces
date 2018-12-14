@@ -30,6 +30,7 @@ import com.expedia.www.haystack.commons.retries.RetryOperation
   * @param indexType: elastic search index type
   * @param connectionTimeoutMillis: connection timeout in millis
   * @param readTimeoutMillis: read timeout in millis
+  * @param maxConnectionsPerRoute: max connections per http route
   * @param maxInFlightBulkRequests: max bulk writes that can be run in parallel
   * @param maxDocsInBulk maximum number of index documents in a single bulk
   * @param maxBulkDocSizeInBytes maximum size (in bytes) of a single bulk request
@@ -45,6 +46,7 @@ case class ElasticSearchConfiguration(endpoint: String,
                                       indexType: String,
                                       connectionTimeoutMillis: Int,
                                       readTimeoutMillis: Int,
+                                      maxConnectionsPerRoute: Int,
                                       maxInFlightBulkRequests: Int,
                                       maxDocsInBulk: Int,
                                       maxBulkDocSizeInBytes: Int,

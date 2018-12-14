@@ -1,4 +1,5 @@
-# haystack-storage-backend-com.expedia.www.haystack.trace.storage.backends.cassandra
+# Storage Backend - Cassandra
+
 
 Grpc service which can read a write spans to a cassandra cluster 
 

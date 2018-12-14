@@ -4,17 +4,21 @@ import java.util
 import java.util.Collections
 
 import com.codahale.metrics.Timer
+import com.expedia.www.haystack.commons.metrics.MetricsSupport
 import com.expedia.www.haystack.commons.retries.RetryOperation
-import com.expedia.www.haystack.trace.indexer.writers.es.TraceIndexResultHandler
+import com.expedia.www.haystack.trace.indexer.metrics.AppMetricNames
+import com.expedia.www.haystack.trace.indexer.writers.es.ElasticSearchResultHandler
 import com.google.gson.Gson
 import io.searchbox.core.BulkResult
 import org.elasticsearch.common.util.concurrent.EsRejectedExecutionException
 import org.scalatest.easymock.EasyMockSugar
 import org.scalatest.{FunSpec, Matchers}
 
-class TraceIndexResultHandlerSpec extends FunSpec with Matchers with EasyMockSugar {
+class ElasticSearchResultHandlerSpec extends FunSpec with Matchers with EasyMockSugar with MetricsSupport {
+  private val esWriteFailureMeter = metricRegistry.meter(AppMetricNames.ES_WRITE_FAILURE)
 
   describe("Trace Index Result Handler") {
+
     it("should complete with success if no failures reported") {
       val retryCallback = mock[RetryOperation.Callback]
       val timer = mock[Timer.Context]
@@ -27,9 +31,9 @@ class TraceIndexResultHandlerSpec extends FunSpec with Matchers with EasyMockSug
       }
 
       whenExecuting(retryCallback, timer, bulkResult) {
-        val handler = new TraceIndexResultHandler(timer, retryCallback)
+        val handler = new ElasticSearchResultHandler(timer, esWriteFailureMeter, retryCallback)
         handler.completed(bulkResult)
-        TraceIndexResultHandler.esWriteFailureMeter.getCount shouldBe 0
+        esWriteFailureMeter.getCount shouldBe 0
       }
     }
 
@@ -48,10 +52,10 @@ class TraceIndexResultHandlerSpec extends FunSpec with Matchers with EasyMockSug
       }
 
       whenExecuting(retryCallback, timer, bulkResult) {
-        val handler = new TraceIndexResultHandler(timer, retryCallback)
-        val initialFailures = TraceIndexResultHandler.esWriteFailureMeter.getCount
+        val handler = new ElasticSearchResultHandler(timer, esWriteFailureMeter, retryCallback)
+        val initialFailures = esWriteFailureMeter.getCount
         handler.completed(bulkResult)
-        TraceIndexResultHandler.esWriteFailureMeter.getCount - initialFailures shouldBe 1
+        esWriteFailureMeter.getCount - initialFailures shouldBe 1
       }
     }
 
@@ -67,10 +71,10 @@ class TraceIndexResultHandlerSpec extends FunSpec with Matchers with EasyMockSug
       }
 
       whenExecuting(retryCallback, timer, bulkResult) {
-        val handler = new TraceIndexResultHandler(timer, retryCallback)
-        val initialFailures = TraceIndexResultHandler.esWriteFailureMeter.getCount
+        val handler = new ElasticSearchResultHandler(timer, esWriteFailureMeter, retryCallback)
+        val initialFailures = esWriteFailureMeter.getCount
         handler.failed(error)
-        TraceIndexResultHandler.esWriteFailureMeter.getCount - initialFailures shouldBe 1
+        esWriteFailureMeter.getCount - initialFailures shouldBe 1
       }
     }
 
@@ -87,10 +91,10 @@ class TraceIndexResultHandlerSpec extends FunSpec with Matchers with EasyMockSug
       }
 
       whenExecuting(retryCallback, timer, bulkResult) {
-        val handler = new TraceIndexResultHandler(timer, retryCallback)
-        val initialFailures = TraceIndexResultHandler.esWriteFailureMeter.getCount
+        val handler = new ElasticSearchResultHandler(timer, esWriteFailureMeter, retryCallback)
+        val initialFailures = esWriteFailureMeter.getCount
         handler.failed(error)
-        TraceIndexResultHandler.esWriteFailureMeter.getCount - initialFailures shouldBe 1
+        esWriteFailureMeter.getCount - initialFailures shouldBe 1
       }
     }
   }

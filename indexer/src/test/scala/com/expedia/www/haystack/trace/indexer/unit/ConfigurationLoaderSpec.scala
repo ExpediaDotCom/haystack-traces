@@ -109,6 +109,7 @@ class ConfigurationLoaderSpec extends FunSpec with Matchers {
       elastic.retryConfig.backOffInMillis shouldBe 1000
       elastic.retryConfig.backoffFactor shouldBe 2
       elastic.indexHourBucket shouldBe 6
+      elastic.maxConnectionsPerRoute shouldBe 10
     }
   }
 }

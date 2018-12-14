@@ -26,12 +26,11 @@ import org.slf4j.LoggerFactory
 import scala.concurrent.{ExecutionContextExecutor, Future, Promise}
 
 class CassandraTraceRecordReader(cassandra: CassandraSession, config: ClientConfiguration)
-                                (implicit val dispatcher: ExecutionContextExecutor) extends MetricsSupport with AutoCloseable {
+                                (implicit val dispatcher: ExecutionContextExecutor) extends MetricsSupport {
   private val LOGGER = LoggerFactory.getLogger(classOf[CassandraTraceRecordReader])
 
-  private val readTimer = metricRegistry.timer(AppMetricNames.CASSANDRA_READ_TIME)
-  private val readFailures = metricRegistry.meter(AppMetricNames.CASSANDRA_READ_FAILURES)
-
+  private lazy val readTimer = metricRegistry.timer(AppMetricNames.CASSANDRA_READ_TIME)
+  private lazy val readFailures = metricRegistry.meter(AppMetricNames.CASSANDRA_READ_FAILURES)
 
   def readTraceRecords(traceIds: List[String]): Future[Seq[TraceRecord]] = {
     val timer = readTimer.time()
@@ -50,6 +49,4 @@ class CassandraTraceRecordReader(cassandra: CassandraSession, config: ClientConf
         Future.failed(ex)
     }
   }
-
-  override def close(): Unit = ()
 }

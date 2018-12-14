@@ -49,7 +49,6 @@ class ConfigurationLoaderSpec extends BaseUnitTestSpec {
       clientConfig.socket.maxConnectionPerHost shouldBe 100
       clientConfig.socket.readTimeoutMills shouldBe 5000
       clientConfig.socket.connectionTimeoutMillis shouldBe 10000
-      cassandraWriteConfig.maxInFlightRequests shouldBe 100
       cassandraWriteConfig.retryConfig.maxRetries shouldBe 10
       cassandraWriteConfig.retryConfig.backOffInMillis shouldBe 250
       cassandraWriteConfig.retryConfig.backoffFactor shouldBe 2

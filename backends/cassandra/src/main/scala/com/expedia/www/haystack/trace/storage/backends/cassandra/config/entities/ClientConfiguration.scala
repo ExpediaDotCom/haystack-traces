@@ -55,13 +55,11 @@ case class ClientConfiguration(endpoints: List[String],
 
 /**
   * @param consistencyLevel: consistency level of writes
-  * @param maxInFlightRequests defines the max parallel writes to cassandra
   * @param retryConfig retry configuration if writes fail
   * @param consistencyLevelOnError: downgraded consistency level on write error
   */
 case class CassandraConfiguration(clientConfig: ClientConfiguration,
                                   consistencyLevel: ConsistencyLevel,
-                                  maxInFlightRequests: Int,
                                   retryConfig: RetryOperation.Config,
                                   consistencyLevelOnError: List[(Class[_], ConsistencyLevel)]) {
   def writeConsistencyLevel(error: Throwable): ConsistencyLevel = {

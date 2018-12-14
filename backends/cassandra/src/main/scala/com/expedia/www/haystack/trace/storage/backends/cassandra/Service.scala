@@ -61,12 +61,10 @@ object Service extends MetricsSupport {
         .addService(new GrpcHealthService())
         .addService(new SpansPersistenceService(reader = tracerRecordReader, writer = tracerRecordWriter)(executor))
 
-
       // enable ssl if enabled
       if (serviceConfig.ssl.enabled) {
         serverBuilder.useTransportSecurity(new File(serviceConfig.ssl.certChainFilePath), new File(serviceConfig.ssl.privateKeyPath))
       }
-
 
       val server = serverBuilder.build().start()
 
@@ -75,6 +73,7 @@ object Service extends MetricsSupport {
       Runtime.getRuntime.addShutdownHook(new Thread() {
         override def run(): Unit = {
           LOGGER.info("shutting down gRPC server since JVM is shutting down")
+          cassandraSession.close()
           server.shutdown()
           LOGGER.info("server has been shutdown now")
         }

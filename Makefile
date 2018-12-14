@@ -8,7 +8,7 @@ clean:
 build: clean
 	./mvnw package
 
-all: clean reader indexer backends report-coverage
+all: clean reader indexer  backends
 
 report-coverage:
 	./mvnw scoverage:report-only
@@ -33,6 +33,6 @@ backends:
 release: clean indexer reader backends
 	cd indexer && $(MAKE) docker_build && $(MAKE) release
 	cd reader && $(MAKE) docker_build && $(MAKE) release
-	cd backends && (MAKE) release
+	cd backends && $(MAKE) release
 	./.travis/deploy.sh
 

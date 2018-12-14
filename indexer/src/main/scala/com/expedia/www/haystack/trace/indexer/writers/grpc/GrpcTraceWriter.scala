@@ -53,23 +53,20 @@ class GrpcTraceWriter(config: TraceBackendConfiguration)(implicit val dispatcher
   // this semaphore controls the parallel writes to trace-backend
   private val inflightRequestsSemaphore = new Semaphore(config.maxInFlightRequests, true)
 
-
   private def execute(traceId: String, packedSpanBuffer: PackedMessage[SpanBuffer]): Unit = {
     // execute the request async with retry
     withRetryBackoff(retryCallback => {
       val timer = writeTimer.time()
 
-      val writeSpansRequest = WriteSpansRequest.newBuilder()
-        .addRecords(TraceRecord
-          .newBuilder()
-          .setTraceId(traceId)
-          .setTimestamp(System.currentTimeMillis())
-          .setSpans(ByteString.copyFrom(packedSpanBuffer.packedDataBytes))
-        ).build()
+      val singleRecord = TraceRecord
+        .newBuilder()
+        .setTraceId(traceId)
+        .setTimestamp(System.currentTimeMillis())
+        .setSpans(ByteString.copyFrom(packedSpanBuffer.packedDataBytes))
 
+      val writeSpansRequest = WriteSpansRequest.newBuilder().addRecords(singleRecord).build()
       val response: ListenableFuture[WriteSpansResponse] = client.writeSpans(writeSpansRequest)
       response.addListener(new TraceWriteResultListener(response, timer, retryCallback), dispatcher)
-
     },
       config.retryConfig,
       onSuccess = (_: Any) => inflightRequestsSemaphore.release(),

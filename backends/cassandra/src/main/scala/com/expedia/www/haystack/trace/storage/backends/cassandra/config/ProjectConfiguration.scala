@@ -115,7 +115,6 @@ class ProjectConfiguration {
         keyspaceConfig(cs.getConfig("keyspace"), cs.getInt("ttl.sec")),
         socket),
       consistencyLevel = consistencyLevel,
-      maxInFlightRequests = cs.getInt("max.inflight.requests"),
       retryConfig = RetryOperation.Config(
         cs.getInt("retries.max"),
         cs.getLong("retries.backoff.initial.ms"),

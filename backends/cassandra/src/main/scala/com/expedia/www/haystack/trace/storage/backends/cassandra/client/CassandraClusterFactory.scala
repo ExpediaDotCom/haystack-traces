@@ -34,12 +34,12 @@ class CassandraClusterFactory extends ClusterFactory {
 
   override def buildCluster(config: ClientConfiguration): Cluster = {
     val contactPoints = if (config.autoDiscoverEnabled) discoverNodes(config.awsNodeDiscovery) else config.endpoints
-    require(contactPoints.nonEmpty, "com.expedia.www.haystack.trace.storage.backends.cassandra contact points can't be empty!!!")
+    require(contactPoints.nonEmpty, "cassandra contact points can't be empty!!!")
 
     val tokenAwarePolicy = new TokenAwarePolicy(new LatencyAwarePolicy.Builder(new RoundRobinPolicy()).build())
     val authProvider = fetchAuthProvider(config.plaintextCredentials)
     val cluster = Cluster.builder()
-      .withClusterName("com.expedia.www.haystack.trace.storage.backends.cassandra-cluster")
+      .withClusterName("cassandra-cluster")
       .addContactPoints(contactPoints: _*)
       .withRetryPolicy(DefaultRetryPolicy.INSTANCE)
       .withAuthProvider(authProvider)

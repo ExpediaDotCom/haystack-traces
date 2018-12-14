@@ -26,5 +26,5 @@ variable "service_port" {
   default = 8080
 }
 variable "container_port" {
-  default = 8088
+  default = 8080
 }

@@ -17,7 +17,7 @@
 
 package com.expedia.www.haystack.trace.indexer.writers.es
 
-import java.util.concurrent.Semaphore
+import java.util.concurrent.{Semaphore, TimeUnit}
 
 import com.expedia.open.tracing.buffer.SpanBuffer
 import com.expedia.www.haystack.commons.metrics.MetricsSupport
@@ -42,19 +42,17 @@ class ServiceMetadataWriter(config: ServiceMetadataWriteConfiguration)
 
   private val LOGGER = LoggerFactory.getLogger(classOf[ServiceMetadataWriter])
 
-
   // a timer that measures the amount of time it takes to complete one bulk write
-  private val esWriteTime = metricRegistry.timer(AppMetricNames.ES_WRITE_TIME)
-
+  private val writeTimer = metricRegistry.timer(AppMetricNames.METADATA_WRITE_TIME)
 
   // meter that measures the write failures
-  private val esWriteFailureMeter = metricRegistry.meter(AppMetricNames.ES_WRITE_FAILURE)
+  private val failureMeter = metricRegistry.meter(AppMetricNames.METADATA_WRITE_FAILURE)
 
   // converts a serviceMetadata object into an indexable document
   private val documentGenerator = new ServiceMetadataDocumentGenerator(config)
 
 
-  // this semaphore controls the parallel writes to cassandra
+  // this semaphore controls the parallel writes to service metadata index
   private val inflightRequestsSemaphore = new Semaphore(config.maxInFlightBulkRequests, true)
 
   // initialize the elastic search client
@@ -62,7 +60,9 @@ class ServiceMetadataWriter(config: ServiceMetadataWriteConfiguration)
     LOGGER.info("Initializing the http elastic search client with endpoint={}", config.esEndpoint)
 
     val factory = new JestClientFactory()
-    val builder = new HttpClientConfig.Builder(config.esEndpoint).multiThreaded(true)
+    val builder = new HttpClientConfig.Builder(config.esEndpoint)
+      .multiThreaded(true)
+      .maxConnectionIdleTime(config.flushIntervalInSec + 10, TimeUnit.SECONDS)
       .connTimeout(config.connectionTimeoutMillis)
       .readTimeout(config.readTimeoutMillis)
 
@@ -105,7 +105,7 @@ class ServiceMetadataWriter(config: ServiceMetadataWriteConfiguration)
 
             // execute the request async with retry
             withRetryBackoff(retryCallback => {
-              esClient.executeAsync(bulkToDispatch, new TraceIndexResultHandler(esWriteTime.time(), retryCallback))
+              esClient.executeAsync(bulkToDispatch, new ElasticSearchResultHandler(writeTimer.time(), failureMeter, retryCallback))
             },
               config.retryConfig,
               onSuccess = (_: Any) => inflightRequestsSemaphore.release(),
@@ -118,7 +118,7 @@ class ServiceMetadataWriter(config: ServiceMetadataWriteConfiguration)
       } catch {
         case ex: Exception =>
           if (isSemaphoreAcquired) inflightRequestsSemaphore.release()
-          esWriteFailureMeter.mark()
+          failureMeter.mark()
           LOGGER.error("Failed to write spans to elastic search with exception", ex)
       }
     })

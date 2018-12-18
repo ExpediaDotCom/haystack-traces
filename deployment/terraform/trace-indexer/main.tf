@@ -27,7 +27,6 @@ data "template_file" "config_data" {
     kafka_endpoint = "${var.kafka_endpoint}"
     elasticsearch_endpoint = "${local.elasticsearch_endpoint}"
     elasticsearch_template = "${var.elasticsearch_template}"
-    cassandra_hostname = "${var.cassandra_hostname}"
     span_produce_topic = "${local.span_produce_topic}"
   }
 }
@@ -40,8 +39,10 @@ data "template_file" "deployment_yaml" {
     graphite_port = "${var.graphite_port}"
     graphite_host = "${var.graphite_hostname}"
     graphite_enabled = "${var.graphite_enabled}"
+    cassandra_hostname = "${var.cassandra_hostname}"
     node_selecter_label = "${var.node_selector_label}"
-    image = "${var.image}"
+    storage_backend_image = "${var.storage_backend_image}"
+    indexer_image = "${var.indexer_image}"
     replicas = "${var.replicas}"
     memory_limit = "${var.memory_limit}"
     memory_request = "${var.memory_request}"

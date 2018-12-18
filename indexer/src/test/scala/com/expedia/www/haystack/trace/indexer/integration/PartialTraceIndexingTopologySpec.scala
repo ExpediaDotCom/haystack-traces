@@ -32,13 +32,13 @@ class PartialTraceIndexingTopologySpec extends BaseIntegrationTestSpec {
   private val TRACE_ID = "unique-trace-id"
 
   "Trace Indexing Topology" should {
-    s"consume spans from '${kafka.INPUT_TOPIC}' topic, buffer them together for every unique traceId and write to cassandra and elastic search" in {
+    s"consume spans from '${kafka.INPUT_TOPIC}' topic, buffer them together for every unique traceId and write to trace-backend and elastic search" in {
       Given("a set of spans with all configurations")
       val SPAN_ID_PREFIX = "span-id"
       val kafkaConfig = kafka.buildConfig
       val esConfig = elastic.buildConfig
       val indexTagsConfig = elastic.indexingConfig
-      val cassandraConfig = cassandra.buildConfig
+      val backendConfig = traceBackendClient.buildConfig
       val serviceMetadataConfig = elastic.buildServiceMetadataConfig
       val traceDescription = List(TraceDescription(TRACE_ID, SPAN_ID_PREFIX))
 
@@ -50,10 +50,10 @@ class PartialTraceIndexingTopologySpec extends BaseIntegrationTestSpec {
         0L,
         spanAccumulatorConfig.bufferingWindowMillis)
 
-      val topology = new StreamRunner(kafkaConfig, spanAccumulatorConfig, esConfig, cassandraConfig, serviceMetadataConfig, indexTagsConfig)
+      val topology = new StreamRunner(kafkaConfig, spanAccumulatorConfig, esConfig, backendConfig, serviceMetadataConfig, indexTagsConfig)
       topology.start()
 
-      Then(s"we should read one span buffer object from '${kafka.OUTPUT_TOPIC}' topic and the same should be searchable in cassandra and elastic search")
+      Then(s"we should read one span buffer object from '${kafka.OUTPUT_TOPIC}' topic and the same should be searchable in trace-backend and elastic search")
       try {
         val result: util.List[KeyValue[String, SpanBuffer]] =
           IntegrationTestUtils.waitUntilMinKeyValueRecordsReceived(kafka.RESULT_CONSUMER_CONFIG, kafka.OUTPUT_TOPIC, 1, MAX_WAIT_FOR_OUTPUT_MS)
@@ -61,7 +61,7 @@ class PartialTraceIndexingTopologySpec extends BaseIntegrationTestSpec {
 
         // give a sleep to let elastic search results become searchable
         Thread.sleep(6000)
-        verifyCassandraWrites(traceDescription, MAX_CHILD_SPANS_PER_TRACE, MAX_CHILD_SPANS_PER_TRACE)
+        verifyBackendWrites(traceDescription, MAX_CHILD_SPANS_PER_TRACE, MAX_CHILD_SPANS_PER_TRACE)
         verifyElasticSearchWrites(Seq(TRACE_ID))
 
         repeatTestWithNewerSpanIds()

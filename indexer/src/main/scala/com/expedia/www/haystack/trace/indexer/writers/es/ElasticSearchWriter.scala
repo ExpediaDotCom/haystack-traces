@@ -17,7 +17,7 @@
 
 package com.expedia.www.haystack.trace.indexer.writers.es
 
-import java.util.concurrent.Semaphore
+import java.util.concurrent.{Semaphore, TimeUnit}
 import java.util.{Calendar, Locale, TimeZone}
 
 import com.expedia.open.tracing.buffer.SpanBuffer
@@ -66,7 +66,7 @@ class ElasticSearchWriter(esConfig: ElasticSearchConfiguration, indexConf: White
   // converts a span into an indexable document
   private val documentGenerator = new IndexDocumentGenerator(indexConf)
 
-  // this semaphore controls the parallel writes to cassandra
+  // this semaphore controls the parallel writes to index store
   private val inflightRequestsSemaphore = new Semaphore(esConfig.maxInFlightBulkRequests, true)
 
   // initialize the elastic search client
@@ -74,9 +74,11 @@ class ElasticSearchWriter(esConfig: ElasticSearchConfiguration, indexConf: White
     LOGGER.info("Initializing the http elastic search client with endpoint={}", esConfig.endpoint)
 
     val factory = new JestClientFactory()
-    val builder = new HttpClientConfig.Builder(esConfig.endpoint).multiThreaded(true)
-                                      .connTimeout(esConfig.connectionTimeoutMillis)
-                                      .readTimeout(esConfig.readTimeoutMillis)
+    val builder = new HttpClientConfig.Builder(esConfig.endpoint)
+      .multiThreaded(true)
+      .connTimeout(esConfig.connectionTimeoutMillis)
+      .readTimeout(esConfig.readTimeoutMillis)
+      .defaultMaxTotalConnectionPerRoute(esConfig.maxConnectionsPerRoute)
 
     if (esConfig.username.isDefined && esConfig.password.isDefined){
       builder.defaultCredentials(esConfig.username.get, esConfig.password.get)
@@ -115,7 +117,7 @@ class ElasticSearchWriter(esConfig: ElasticSearchConfiguration, indexConf: White
 
           // execute the request async with retry
           withRetryBackoff((retryCallback) => {
-            esClient.executeAsync(bulkToDispatch, new TraceIndexResultHandler(esWriteTime.time(), retryCallback))
+            esClient.executeAsync(bulkToDispatch, new ElasticSearchResultHandler(esWriteTime.time(), esWriteFailureMeter, retryCallback))
           },
             esConfig.retryConfig,
             onSuccess = (_: Any) => inflightRequestsSemaphore.release(),

@@ -14,30 +14,10 @@ prepare_integration_test_env: docker_build
 	docker-compose -f build/integration-tests/docker-compose.yml -p sandbox up -d
 	sleep 30
 
-	# prepare cassandra table for haystack-trace-reader to run against
-	docker run \
-		-it \
-		--rm \
-		--network=sandbox_default \
-		-v $(PWD)/build/integration-tests:/src \
-		-w /src \
-		node:alpine \
-		/bin/sh -c 'npm install && node create-cassandra-table.js'
-
 integration_test: prepare_integration_test_env
-	# run tests in a separate container and join the docker-compose network
-	docker run \
-		-it \
-		--network=sandbox_default \
-		-v $(PWD)/..:/src \
-		-v ~/.m2:/root/.m2 \
-		-w /src \
-		maven:3.5.0-jdk-8 \
-		./mvnw scoverage:integration-check -pl reader -am
-
+	cd ../ && ./mvnw integration-test -pl reader -am
 	docker-compose -f build/integration-tests/docker-compose.yml -p sandbox stop
 	docker rm $(shell docker ps -a -q)
-	docker volume rm $(shell docker volume ls -q)
 
 release:
 	../deployment/scripts/publish-to-docker-hub.sh

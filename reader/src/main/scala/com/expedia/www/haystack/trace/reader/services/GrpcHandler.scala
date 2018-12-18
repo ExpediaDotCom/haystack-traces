@@ -16,8 +16,7 @@
 
 package com.expedia.www.haystack.trace.reader.services
 
-import com.expedia.www.haystack.trace.reader.metrics.MetricsSupport
-import com.expedia.www.haystack.trace.reader.services.GrpcHandler._
+import com.expedia.www.haystack.commons.metrics.MetricsSupport
 import com.google.protobuf.GeneratedMessageV3
 import io.grpc.Status
 import io.grpc.stub.StreamObserver
@@ -34,14 +33,17 @@ object GrpcHandler {
   * Handler for Grpc response
   * populates responseObserver with response object or error accordingly
   * takes care of corresponding logging and updating counters
-  * @param operationName: name of operation
-  * @param executor: executor service on which handler is invoked
+  *
+  * @param operationName : name of operation
+  * @param executor      : executor service on which handler is invoked
   */
 
 class GrpcHandler(operationName: String)(implicit val executor: ExecutionContextExecutor) extends MetricsSupport {
   private val metricFriendlyOperationName = operationName.replace('/', '.')
   private val timer = metricRegistry.timer(metricFriendlyOperationName)
   private val failureMeter = metricRegistry.meter(s"$metricFriendlyOperationName.failures")
+
+  import GrpcHandler._
 
   def handle[Rs](request: GeneratedMessageV3, responseObserver: StreamObserver[Rs])(op: => Future[Rs]): Unit = {
     val time = timer.time()
@@ -50,7 +52,7 @@ class GrpcHandler(operationName: String)(implicit val executor: ExecutionContext
         responseObserver.onNext(response)
         responseObserver.onCompleted()
         time.stop()
-        LOGGER.info(s"service invocation for operation=$operationName and request=${request.toString} completed successfully")
+        LOGGER.debug(s"service invocation for operation=$operationName and request=${request.toString} completed successfully")
 
       case Failure(ex) =>
         responseObserver.onError(Status.fromThrowable(ex).asRuntimeException())

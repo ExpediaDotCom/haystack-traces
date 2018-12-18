@@ -72,6 +72,7 @@ class ElasticSearchTestClient {
     SPANS_INDEX_TYPE,
     3000,
     3000,
+    5,
     10,
     10,
     10,

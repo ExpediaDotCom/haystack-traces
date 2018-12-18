@@ -40,7 +40,6 @@ class WriteSpansResponseObserver(timer:Timer.Context, inflightRequest: Semaphore
   override def onNext(writeSpanResponse: WriteSpansResponse): Unit = {
     timer.close()
     inflightRequest.release()
-
   }
 
   override def onError(error: Throwable): Unit = {
@@ -51,6 +50,6 @@ class WriteSpansResponseObserver(timer:Timer.Context, inflightRequest: Semaphore
   }
 
   override def onCompleted(): Unit = {
-    LOGGER.info(s"Closing WriteSpans Trace Observer")
+    LOGGER.debug(s"Closing WriteSpans Trace Observer")
   }
 }

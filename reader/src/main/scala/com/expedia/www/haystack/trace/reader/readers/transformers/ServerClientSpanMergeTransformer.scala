@@ -16,13 +16,22 @@
 
 package com.expedia.www.haystack.trace.reader.readers.transformers
 
+import com.expedia.open.tracing.Span
 import com.expedia.www.haystack.trace.reader.readers.utils.{MutableSpanForest, SpanMerger}
 
 class ServerClientSpanMergeTransformer extends SpanTreeTransformer {
+
+  private def shouldMerge(parentSpan: Span, childSpan: Span) = {
+    childSpan.getServiceName != parentSpan.getServiceName &&
+      !SpanMerger.isAlreadyMergedSpan(parentSpan) &&
+      !SpanMerger.isAlreadyMergedSpan(childSpan) &&
+      SpanMerger.areDifferentSpanKinds(parentSpan, childSpan)
+  }
+
   override def transform(spanForest: MutableSpanForest): MutableSpanForest = {
     spanForest.collapse((tree) =>
       tree.children match {
-        case Seq(singleChild) if singleChild.span.getServiceName != tree.span.getServiceName && !SpanMerger.isAlreadyMergedSpan(tree.span) &&  !SpanMerger.isAlreadyMergedSpan(singleChild.span) =>
+        case Seq(singleChild) if shouldMerge(tree.span, singleChild.span) =>
           Some(SpanMerger.mergeParentChildSpans(tree.span, singleChild.span))
         case _ => None
       })

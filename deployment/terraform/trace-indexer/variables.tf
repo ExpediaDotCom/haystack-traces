@@ -19,6 +19,11 @@ variable "memory_limit"{}
 variable "jvm_memory_limit"{}
 variable "cpu_request"{}
 variable "cpu_limit"{}
+variable "backend_memory_request"{}
+variable "backend_memory_limit"{}
+variable "backend_jvm_memory_limit"{}
+variable "backend_cpu_request"{}
+variable "backend_cpu_limit"{}
 variable "env_vars" {}
 variable "enable_kafka_sink" {
   default = false

@@ -38,27 +38,28 @@ class GrpcTraceWriter(config: TraceBackendConfiguration)(implicit val dispatcher
   extends TraceWriter with MetricsSupport {
 
   private val LOGGER = LoggerFactory.getLogger(classOf[GrpcTraceWriter])
+  private val writeTimer = metricRegistry.timer(AppMetricNames.BACKEND_WRITE_TIME)
+  private val writeFailures = metricRegistry.meter(AppMetricNames.BACKEND_WRITE_FAILURE)
+
   private val channel =  ManagedChannelBuilder.forAddress(config.clientConfig.host,config.clientConfig.port)
     .usePlaintext(true)
     .build()
-  val client: StorageBackendGrpc.StorageBackendStub = StorageBackendGrpc.newStub(channel)
-
-  private val writeTimer = metricRegistry.timer(AppMetricNames.BACKEND_WRITE_TIME)
-  private val writeFailures = metricRegistry.meter(AppMetricNames.BACKEND_WRITE_FAILURE)
+  private val client = StorageBackendGrpc.newStub(channel)
 
   // this semaphore controls the parallel writes to trace-backend
   private val inflightRequestsSemaphore = new Semaphore(config.maxInFlightRequests, true)
 
   private def execute(traceId: String, packedSpanBuffer: PackedMessage[SpanBuffer]): Unit = {
-      val timer = writeTimer.time()
-      val singleRecord = TraceRecord
-        .newBuilder()
-        .setTraceId(traceId)
-        .setTimestamp(System.currentTimeMillis())
-        .setSpans(ByteString.copyFrom(packedSpanBuffer.packedDataBytes))
+    val timer = writeTimer.time()
+    val singleRecord = TraceRecord
+      .newBuilder()
+      .setTraceId(traceId)
+      .setTimestamp(System.currentTimeMillis())
+      .setSpans(ByteString.copyFrom(packedSpanBuffer.packedDataBytes))
+    val writeSpansRequest = WriteSpansRequest.newBuilder().addRecords(singleRecord).build()
 
-      val writeSpansRequest = WriteSpansRequest.newBuilder().addRecords(singleRecord).build()
-      client.writeSpans(writeSpansRequest,new WriteSpansResponseObserver(timer,inflightRequestsSemaphore))
+    // execute the request async with retry
+    client.writeSpans(writeSpansRequest, new WriteSpansResponseObserver(timer, inflightRequestsSemaphore))
   }
 
   /**

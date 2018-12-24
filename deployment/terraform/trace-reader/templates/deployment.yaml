@@ -48,6 +48,7 @@ spec:
             - "-addr=:8090"
           initialDelaySeconds: 30
           periodSeconds: 15
+          timeoutSeconds: 5
           failureThreshold: 3
       - name: ${app_name}
         image: ${reader_image}
@@ -83,6 +84,7 @@ spec:
             - "-addr=:${container_port}"
           initialDelaySeconds: 30
           periodSeconds: 15
+          timeoutSeconds: 5
           failureThreshold: 3
       nodeSelector:
         ${node_selecter_label}

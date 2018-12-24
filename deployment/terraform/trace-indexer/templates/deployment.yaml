@@ -48,6 +48,7 @@ spec:
             - "-addr=:8090"
           initialDelaySeconds: 30
           periodSeconds: 15
+          timeoutSeconds: 5
           failureThreshold: 3
       - name: ${app_name}
         image: ${indexer_image}
@@ -84,6 +85,7 @@ spec:
             - /app/isHealthy
           initialDelaySeconds: 30
           periodSeconds: 5
+          timeoutSeconds: 5
           failureThreshold: 6
       nodeSelector:
         ${node_selecter_label}

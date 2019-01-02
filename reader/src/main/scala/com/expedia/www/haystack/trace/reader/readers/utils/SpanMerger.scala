@@ -17,6 +17,7 @@
 package com.expedia.www.haystack.trace.reader.readers.utils
 
 import com.expedia.open.tracing.{Span, Tag}
+import com.expedia.www.haystack.trace.commons.utils.{SpanMarkers, SpanUtils}
 import com.expedia.www.haystack.trace.reader.readers.utils.TagBuilders.{buildBoolTag, buildLongTag, buildStringTag}
 import com.expedia.www.haystack.trace.reader.readers.utils.TagExtractors.extractTagStringValue
 
@@ -54,11 +55,11 @@ object SpanMerger {
       .newBuilder(serverSpan)
       .setParentSpanId(clientSpan.getParentSpanId) // use the parentSpanId of the client span to stitch in the client's trace tree
       .addAllTags((clientSpan.getTagsList.asScala
-                ++ auxiliaryCommonTags(clientSpan, serverSpan)
-                ++ auxiliaryClientTags(clientSpan)
-                ++ auxiliaryServerTags(serverSpan)).asJavaCollection)
+      ++ auxiliaryCommonTags(clientSpan, serverSpan)
+      ++ auxiliaryClientTags(clientSpan)
+      ++ auxiliaryServerTags(serverSpan)).asJavaCollection)
       .clearLogs().addAllLogs((clientSpan.getLogsList.asScala
-                            ++ serverSpan.getLogsList.asScala.sortBy(_.getTimestamp)).asJavaCollection)
+      ++ serverSpan.getLogsList.asScala.sortBy(_.getTimestamp)).asJavaCollection)
       .build()
   }
 
@@ -104,7 +105,7 @@ object SpanMerger {
     }
   }
 
-  private def auxiliaryCommonTags(clientSpan: Span, serverSpan: Span): List[Tag]  =
+  private def auxiliaryCommonTags(clientSpan: Span, serverSpan: Span): List[Tag] =
     List(
       buildBoolTag(AuxiliaryTags.IS_MERGED_SPAN, tagValue = true),
       buildLongTag(AuxiliaryTags.NETWORK_DELTA, calculateNetworkDelta(clientSpan, serverSpan).getOrElse(-1))
@@ -112,7 +113,7 @@ object SpanMerger {
 
   private def auxiliaryClientTags(span: Span): List[Tag] =
     List(
-      buildStringTag(AuxiliaryTags.CLIENT_SERVICE_NAME, SpanUtils.getEffectiveServiceName(span)),
+      buildStringTag(AuxiliaryTags.CLIENT_SERVICE_NAME, span.getServiceName),
       buildStringTag(AuxiliaryTags.CLIENT_OPERATION_NAME, span.getOperationName),
       buildStringTag(AuxiliaryTags.CLIENT_SPAN_ID, span.getSpanId),
       buildStringTag(AuxiliaryTags.CLIENT_INFRASTRUCTURE_PROVIDER, extractTagStringValue(span, AuxiliaryTags.INFRASTRUCTURE_PROVIDER)),
@@ -123,7 +124,7 @@ object SpanMerger {
 
   private def auxiliaryServerTags(span: Span): List[Tag] = {
     List(
-      buildStringTag(AuxiliaryTags.SERVER_SERVICE_NAME, SpanUtils.getEffectiveServiceName(span)),
+      buildStringTag(AuxiliaryTags.SERVER_SERVICE_NAME, span.getServiceName),
       buildStringTag(AuxiliaryTags.SERVER_OPERATION_NAME, span.getOperationName),
       buildStringTag(AuxiliaryTags.SERVER_INFRASTRUCTURE_PROVIDER, extractTagStringValue(span, AuxiliaryTags.INFRASTRUCTURE_PROVIDER)),
       buildStringTag(AuxiliaryTags.SERVER_INFRASTRUCTURE_LOCATION, extractTagStringValue(span, AuxiliaryTags.INFRASTRUCTURE_LOCATION)),
@@ -134,5 +135,17 @@ object SpanMerger {
 
   def isAlreadyMergedSpan(span: Span): Boolean = {
     span.getTagsList.asScala.exists(tag => tag.getKey.equals(AuxiliaryTags.IS_MERGED_SPAN))
+  }
+
+  def areDifferentSpanKinds(spanA: Span, spanB: Span): Boolean = {
+    val spanAKind = SpanUtils.spanKind(spanA)
+    val spanBKind = SpanUtils.spanKind(spanB)
+    // if we find the span kind correctly(non-empty), then return false if they are same
+    // for all other cases, return true.
+    if (spanAKind != "" && spanBKind != "" && spanAKind == spanBKind) {
+      false
+    } else {
+      true
+    }
   }
 }

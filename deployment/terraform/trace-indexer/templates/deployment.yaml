@@ -19,8 +19,39 @@ spec:
         k8s-app: ${app_name}
     spec:
       containers:
+      - name: storage-backend-cassandra
+        image: ${storage_backend_image}
+        resources:
+          limits:
+            cpu: ${backend_cpu_limit}
+            memory: ${backend_memory_limit}Mi
+          requests:
+            cpu: ${backend_cpu_request}
+            memory: ${backend_memory_request}Mi
+        env:
+        - name: "HAYSTACK_PROP_CASSANDRA_ENDPOINTS"
+          value: "${cassandra_hostname}"
+        - name: "HAYSTACK_GRAPHITE_HOST"
+          value: "${graphite_host}"
+        - name: "HAYSTACK_GRAPHITE_PORT"
+          value: "${graphite_port}"
+        - name: "HAYSTACK_GRAPHITE_ENABLED"
+          value: "${graphite_enabled}"
+        - name: "JAVA_XMS"
+          value: "${backend_jvm_memory_limit}m"
+        - name: "JAVA_XMX"
+          value: "${backend_jvm_memory_limit}m"
+        livenessProbe:
+          exec:
+            command:
+            - /bin/grpc_health_probe
+            - "-addr=:8090"
+          initialDelaySeconds: 30
+          periodSeconds: 15
+          timeoutSeconds: 5
+          failureThreshold: 3
       - name: ${app_name}
-        image: ${image}
+        image: ${indexer_image}
         volumeMounts:
           # Create on-disk volume to store exec logs
         - mountPath: /config
@@ -54,6 +85,7 @@ spec:
             - /app/isHealthy
           initialDelaySeconds: 30
           periodSeconds: 5
+          timeoutSeconds: 5
           failureThreshold: 6
       nodeSelector:
         ${node_selecter_label}

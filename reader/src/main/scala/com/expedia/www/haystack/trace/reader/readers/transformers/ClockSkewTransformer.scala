@@ -17,7 +17,8 @@
 package com.expedia.www.haystack.trace.reader.readers.transformers
 
 import com.expedia.open.tracing.Span
-import com.expedia.www.haystack.trace.reader.readers.utils.{MutableSpanForest, SpanMarkers, SpanTree, SpanUtils}
+import com.expedia.www.haystack.trace.commons.utils.{SpanMarkers, SpanUtils}
+import com.expedia.www.haystack.trace.reader.readers.utils.{MutableSpanForest, SpanTree}
 
 /**
   * Fixes clock skew between parent and child spans

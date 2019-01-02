@@ -55,17 +55,16 @@ class ServiceMetadataDocumentGenerator(config: ServiceMetadataWriteConfiguration
   }
 
   /**
-    * get or update the cassandra statements that need to be executed
+    * get the list of unique service metadata documents contained in the list of spans
     *
-    * @param spans : list of spans
+    * @param spans : list of service metadata
     * @return
     */
   def getAndUpdateServiceMetadata(spans: Iterable[Span]): Seq[ServiceMetadataDoc] = {
     this.synchronized {
       spans.foreach(span => {
-        val serviceName = SpanUtils.getEffectiveServiceName(span)
-        if (StringUtils.isNotEmpty(serviceName) && StringUtils.isNotEmpty(span.getOperationName)) {
-          val operationsList = serviceMetadataMap.getOrElseUpdate(serviceName, mutable.Set[String]())
+        if (StringUtils.isNotEmpty(span.getServiceName) && StringUtils.isNotEmpty(span.getOperationName)) {
+          val operationsList = serviceMetadataMap.getOrElseUpdate(span.getServiceName, mutable.Set[String]())
           if (operationsList.add(span.getOperationName)) {
             allOperationCount += 1
           }
@@ -82,6 +81,4 @@ class ServiceMetadataDocumentGenerator(config: ServiceMetadataWriteConfiguration
     operationList.map(operationName => ServiceMetadataDoc(serviceName, operationName)).toList
 
   }
-
-
 }

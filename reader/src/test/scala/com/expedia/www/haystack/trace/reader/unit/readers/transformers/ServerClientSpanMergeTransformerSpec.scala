@@ -17,9 +17,10 @@
 package com.expedia.www.haystack.trace.reader.unit.readers.transformers
 
 
-import com.expedia.open.tracing.Span
+import com.expedia.open.tracing.{Span, Tag}
+import com.expedia.www.haystack.trace.commons.utils.SpanMarkers
 import com.expedia.www.haystack.trace.reader.readers.transformers.ServerClientSpanMergeTransformer
-import com.expedia.www.haystack.trace.reader.readers.utils.{AuxiliaryTags, MutableSpanForest, SpanMarkers}
+import com.expedia.www.haystack.trace.reader.readers.utils.{AuxiliaryTags, MutableSpanForest}
 import com.expedia.www.haystack.trace.reader.unit.BaseUnitTestSpec
 import com.expedia.www.haystack.trace.reader.unit.readers.builders.ValidTraceBuilder
 
@@ -94,7 +95,47 @@ class ServerClientSpanMergeTransformerSpec extends BaseUnitTestSpec with ValidTr
       .setDuration(100)
       .build()
 
-    List(serverSpanA, clientSpanA, serverSpanB, clientSpanB_1, clientSpanB_2, serverSpanC_1, serverSpanC_2)
+    val serverSpanC_3 = Span.newBuilder()
+      .setSpanId("sc3")
+      .setParentSpanId("p1")
+      .setServiceName("cSvc")
+      .addTags(Tag.newBuilder().setKey(SpanMarkers.SPAN_KIND_TAG_KEY).setVStr(SpanMarkers.SERVER_SPAN_KIND))
+      .setTraceId(traceId)
+      .setStartTime(timestamp + 600)
+      .setDuration(100)
+      .build()
+
+    val serverSpanD_1 = Span.newBuilder()
+      .setSpanId("sd1")
+      .setParentSpanId("sc3")
+      .setServiceName("dSvc")
+      .addTags(Tag.newBuilder().setKey(SpanMarkers.SPAN_KIND_TAG_KEY).setVStr(SpanMarkers.SERVER_SPAN_KIND))
+      .setTraceId(traceId)
+      .setStartTime(timestamp + 600)
+      .setDuration(100)
+      .build()
+
+    val serverSpanD_2 = Span.newBuilder()
+      .setSpanId("sd2")
+      .setParentSpanId("sc3")
+      .setServiceName("dSvc")
+      .addTags(Tag.newBuilder().setKey(SpanMarkers.SPAN_KIND_TAG_KEY).setVStr(SpanMarkers.CLIENT_SPAN_KIND))
+      .setTraceId(traceId)
+      .setStartTime(timestamp + 600)
+      .setDuration(100)
+      .build()
+
+    val serverSpanE_1 = Span.newBuilder()
+      .setSpanId("se1")
+      .setParentSpanId("sd2")
+      .setServiceName("eSvc")
+      .addTags(Tag.newBuilder().setKey(SpanMarkers.SPAN_KIND_TAG_KEY).setVStr(SpanMarkers.SERVER_SPAN_KIND))
+      .setTraceId(traceId)
+      .setStartTime(timestamp + 600)
+      .setDuration(100)
+      .build()
+
+    List(serverSpanA, clientSpanA, serverSpanB, clientSpanB_1, clientSpanB_2, serverSpanC_1, serverSpanC_2, serverSpanC_3, serverSpanD_1, serverSpanD_2, serverSpanE_1)
   }
 
   describe("ServerClientSpanMergeTransformer") {
@@ -109,7 +150,7 @@ class ServerClientSpanMergeTransformerSpec extends BaseUnitTestSpec with ValidTr
       val underlyingSpans = mergedSpans.getUnderlyingSpans
 
       Then("return partial spans merged with server span being primary")
-      underlyingSpans.length should be(4)
+      underlyingSpans.length should be(7)
       underlyingSpans.foreach(span => span.getTraceId shouldBe traceId)
       underlyingSpans.head.getSpanId shouldBe "sa"
       underlyingSpans.head.getParentSpanId shouldBe ""
@@ -117,22 +158,35 @@ class ServerClientSpanMergeTransformerSpec extends BaseUnitTestSpec with ValidTr
       underlyingSpans.apply(1).getSpanId shouldBe "sb"
       underlyingSpans.apply(1).getParentSpanId shouldBe "sa"
       underlyingSpans.apply(1).getServiceName shouldBe "bSvc"
-      underlyingSpans.apply(1).getTagsList.asScala.find(tag => tag.getKey.equals(AuxiliaryTags.IS_MERGED_SPAN)).get.getVBool shouldBe true
+      getTag(underlyingSpans.apply(1), AuxiliaryTags.IS_MERGED_SPAN).getVBool shouldBe true
       underlyingSpans.apply(1).getLogsCount shouldBe 4
 
       underlyingSpans.apply(2).getSpanId shouldBe "sc1"
       underlyingSpans.apply(2).getParentSpanId shouldBe "sb"
       underlyingSpans.apply(2).getServiceName shouldBe "cSvc"
-      underlyingSpans.apply(2).getTagsList.asScala.find(tag => tag.getKey.equals(AuxiliaryTags.IS_MERGED_SPAN)).get.getVBool shouldBe true
+      getTag(underlyingSpans.apply(2), AuxiliaryTags.IS_MERGED_SPAN).getVBool shouldBe true
       underlyingSpans.apply(2).getLogsCount shouldBe 4
 
       underlyingSpans.apply(3).getSpanId shouldBe "sc2"
       underlyingSpans.apply(3).getParentSpanId shouldBe "sb"
       underlyingSpans.apply(3).getServiceName shouldBe "cSvc"
-      underlyingSpans.apply(3).getTagsList.asScala.find(tag => tag.getKey.equals(AuxiliaryTags.IS_MERGED_SPAN)).get.getVBool shouldBe true
+      getTag(underlyingSpans.apply(3), AuxiliaryTags.IS_MERGED_SPAN).getVBool shouldBe true
       underlyingSpans.apply(3).getLogsCount shouldBe 4
 
-      mergedSpans.countTrees shouldBe 1
+      underlyingSpans.apply(4).getSpanId shouldBe "sc3"
+      getTag(underlyingSpans.apply(4), AuxiliaryTags.IS_MERGED_SPAN) shouldBe null
+
+      underlyingSpans.apply(5).getSpanId shouldBe "sd1"
+      getTag(underlyingSpans.apply(5), AuxiliaryTags.IS_MERGED_SPAN) shouldBe null
+
+      underlyingSpans.apply(6).getSpanId shouldBe "se1"
+      underlyingSpans.apply(6).getServiceName shouldBe "eSvc"
+      getTag(underlyingSpans.apply(6), AuxiliaryTags.IS_MERGED_SPAN).getVBool shouldBe true
+      getTag(underlyingSpans.apply(6), AuxiliaryTags.CLIENT_SERVICE_NAME).getVStr shouldBe "dSvc"
+      getTag(underlyingSpans.apply(6), AuxiliaryTags.CLIENT_SPAN_ID).getVStr shouldBe "sd2"
+      getTag(underlyingSpans.apply(6), AuxiliaryTags.CLIENT_OPERATION_NAME).getVStr shouldBe empty
+
+      mergedSpans.countTrees shouldBe 2
       val spanTree = mergedSpans.getAllTrees.head
       spanTree.span shouldBe underlyingSpans.head
       spanTree.children.size shouldBe 1
@@ -141,5 +195,9 @@ class ServerClientSpanMergeTransformerSpec extends BaseUnitTestSpec with ValidTr
       spanTree.children.head.children.map(_.span) should contain allOf(underlyingSpans.apply(2), underlyingSpans.apply(3))
       spanTree.children.head.children.foreach(tree => tree.children.size shouldBe 0)
     }
+  }
+
+  private def getTag(span: Span, tagKey: String): Tag = {
+    span.getTagsList.asScala.find(tag => tag.getKey.equals(tagKey)).orNull
   }
 }

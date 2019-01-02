@@ -24,7 +24,7 @@ import com.expedia.www.haystack.trace.commons.packer.PackerType.PackerType
   * @param maxEntriesAllStores maximum number of records across all state stores, one record is one span buffer object
   * @param pollIntervalMillis poll interval to gather the buffered-spans that are ready to emit out to sink
   * @param bufferingWindowMillis time window for which unique traceId will be hold to gather its child spans
-  * @param packerType apply the compression on the spanbuffer before storing to Cassandra
+  * @param packerType apply the compression on the spanbuffer before storing to trace-backend
   */
 case class SpanAccumulatorConfiguration(minTracesPerCache: Int,
                                         maxEntriesAllStores: Int,

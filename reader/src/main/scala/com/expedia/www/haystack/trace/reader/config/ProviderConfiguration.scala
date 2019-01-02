@@ -42,47 +42,11 @@ class ProviderConfiguration {
   }
 
   /**
-    * Cassandra configuration object
+    * trace backend configuration object
     */
-  val cassandraConfig: CassandraConfiguration = {
-    val cs = config.getConfig("cassandra")
-
-    val awsConfig =
-      if (cs.hasPath("auto.discovery.aws")) {
-        val aws = cs.getConfig("auto.discovery.aws")
-        val tags = aws.getConfig("tags")
-          .entrySet()
-          .asScala
-          .map(elem => elem.getKey -> elem.getValue.unwrapped().toString)
-          .toMap
-        Some(AwsNodeDiscoveryConfiguration(aws.getString("region"), tags))
-      } else {
-        None
-      }
-    val credentialsConfig: Option[CredentialsConfiguration] =
-      if (cs.hasPath("credentials")) {
-        Some(CredentialsConfiguration(cs.getString("credentials.username"), cs.getString("credentials.password")))
-      } else {
-        None
-      }
-
-    val socketConfig = cs.getConfig("connections")
-
-    val socket = SocketConfiguration(
-      socketConfig.getInt("max.per.host"),
-      socketConfig.getBoolean("keep.alive"),
-      socketConfig.getInt("conn.timeout.ms"),
-      socketConfig.getInt("read.timeout.ms"))
-
-    val tracesKeyspace = cs.getConfig("keyspace")
-
-    CassandraConfiguration(
-      if (cs.hasPath("endpoints")) cs.getString("endpoints").split(",").toList else Nil,
-      cs.getBoolean("auto.discovery.enabled"),
-      awsConfig,
-      credentialsConfig,
-      KeyspaceConfiguration(tracesKeyspace.getString("name"), tracesKeyspace.getString("table.name"), -1),
-      socket)
+  val traceBackendConfiguration: TraceBackendClientConfiguration = {
+    val clientConfig = config.getConfig("backend.client")
+    TraceBackendClientConfiguration(clientConfig.getString("host"), clientConfig.getInt("port"))
   }
 
 

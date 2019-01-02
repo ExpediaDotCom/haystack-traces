@@ -17,11 +17,10 @@
 package com.expedia.www.haystack.trace.reader.readers
 
 import com.codahale.metrics.Meter
-import com.expedia.open.tracing.Span
 import com.expedia.open.tracing.api.{FieldNames, _}
+import com.expedia.www.haystack.commons.metrics.MetricsSupport
 import com.expedia.www.haystack.trace.reader.config.entities.{TraceTransformersConfiguration, TraceValidatorsConfiguration}
 import com.expedia.www.haystack.trace.reader.exceptions.SpanNotFoundException
-import com.expedia.www.haystack.trace.reader.metrics.MetricsSupport
 import com.expedia.www.haystack.trace.reader.readers.utils.AuxiliaryTags
 import com.expedia.www.haystack.trace.reader.readers.utils.TagExtractors._
 import com.expedia.www.haystack.trace.reader.stores.TraceStore
@@ -55,16 +54,15 @@ class TraceReader(traceStore: TraceStore,
     traceStore.getTrace(request.getTraceId)
   }
 
-  def getRawSpan(request: SpanRequest): Future[Span] = {
+  def getRawSpan(request: SpanRequest): Future[SpanResponse] = {
     traceStore
       .getTrace(request.getTraceId)
       .flatMap(trace => {
-        val spanOption = trace.getChildSpansList.asScala
-          .find(span => span.getSpanId.equals(request.getSpanId))
-
-        spanOption match {
-          case Some(span) => Future.successful(span)
-          case None => Future.failed(new SpanNotFoundException)
+        val spans = trace.getChildSpansList.asScala.filter(_.getSpanId == request.getSpanId)
+        if (spans.isEmpty) {
+          Future.failed(new SpanNotFoundException)
+        } else {
+          Future.successful(SpanResponse.newBuilder().addAllSpans(spans.asJava).build())
         }
       })
   }
@@ -93,7 +91,7 @@ class TraceReader(traceStore: TraceStore,
 
   def getFieldNames: Future[FieldNames] = {
     traceStore
-      .getFieldNames()
+      .getFieldNames
       .map(names =>
         FieldNames
           .newBuilder()

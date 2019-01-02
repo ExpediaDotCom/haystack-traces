@@ -1,10 +1,14 @@
 package com.expedia.www.haystack.trace.reader.unit.readers
 
+import com.expedia.open.tracing.api.Trace
 import com.expedia.www.haystack.trace.reader.readers.TraceProcessor
 import com.expedia.www.haystack.trace.reader.readers.transformers._
 import com.expedia.www.haystack.trace.reader.readers.validators._
 import com.expedia.www.haystack.trace.reader.unit.BaseUnitTestSpec
 import com.expedia.www.haystack.trace.reader.unit.readers.builders.{ClockSkewedTraceBuilder, MultiRootTraceBuilder, MultiServerSpanTraceBuilder, ValidTraceBuilder}
+import com.google.protobuf.util.JsonFormat
+
+import scala.io.Source
 
 class TraceProcessorSpec
   extends BaseUnitTestSpec
@@ -12,6 +16,45 @@ class TraceProcessorSpec
     with MultiServerSpanTraceBuilder
     with MultiRootTraceBuilder
     with ClockSkewedTraceBuilder {
+
+  /**
+    * This test can be used to debug the prod issue using the raw trace.
+    * Copy-paste the raw trace under the child spans in the json file. And update
+    * the traceId which is at the first level in the json file.
+    * Also, make sure to set the same transformers (in same sequence) which are applied in your prod env.
+    */
+  describe("TraceProcessor for well-formed raw trace from json file") {
+
+    val traceProcessor = new TraceProcessor(
+      Seq(new TraceIdValidator),
+      Seq(new DeDuplicateSpanTransformer, new ClientServerEventLogTransformer),
+      Seq(new PartialSpanTransformer, new ServerClientSpanMergeTransformer, new InvalidRootTransformer,
+        new InvalidParentTransformer, new ClockSkewTransformer, new SortSpanTransformer))
+
+    it("should successfully process a simple valid raw trace from json") {
+      Given("a raw trace from json file")
+      val trace = getTraceFromJson(jsonFile = "raw_trace.json")
+
+      When("invoking process")
+      val processedTraceOption = traceProcessor.process(trace)
+
+      Then("successfully process trace")
+      processedTraceOption.isSuccess should be(true)
+      val processedTrace = processedTraceOption.get
+
+      processedTrace.getChildSpansList.size() should be(13)
+    }
+  }
+
+  private def getTraceFromJson(jsonFile: String): Trace = {
+    val stringJson = Source.fromResource(jsonFile).mkString
+
+    // replace "value" with proto supported "vStr" for tags and log
+    val replacedStringJson = stringJson.replaceAll("value", "vStr")
+    val builder = Trace.newBuilder()
+    JsonFormat.parser().merge(replacedStringJson, builder)
+    builder.build()
+  }
 
   describe("TraceProcessor for well-formed traces") {
     val traceProcessor = new TraceProcessor(
@@ -69,7 +112,7 @@ class TraceProcessorSpec
       getSpanById(processedTrace, "c").getStartTime should be(startTimestamp + 500)
       getSpanById(processedTrace, "c").getServiceName should be("x")
 
-      getSpanById(processedTrace, "d").getStartTime should be(startTimestamp )
+      getSpanById(processedTrace, "d").getStartTime should be(startTimestamp)
       getSpanById(processedTrace, "d").getServiceName should be("y")
 
       getSpanById(processedTrace, "e").getStartTime should be(startTimestamp + 200)
@@ -97,7 +140,7 @@ class TraceProcessorSpec
       getSpanById(processedTrace, "c").getStartTime should be(startTimestamp + 500)
       getSpanById(processedTrace, "c").getServiceName should be("x")
 
-      getSpanById(processedTrace, "d").getStartTime should be(startTimestamp )
+      getSpanById(processedTrace, "d").getStartTime should be(startTimestamp)
       getSpanById(processedTrace, "d").getServiceName should be("y")
 
       getSpanById(processedTrace, "e").getStartTime should be(startTimestamp + 200)
@@ -125,7 +168,7 @@ class TraceProcessorSpec
       getSpanById(processedTrace, "c").getStartTime should be(startTimestamp + 500)
       getSpanById(processedTrace, "c").getServiceName should be("x")
 
-      getSpanById(processedTrace, "d").getStartTime should be(startTimestamp )
+      getSpanById(processedTrace, "d").getStartTime should be(startTimestamp)
       getSpanById(processedTrace, "d").getServiceName should be("y")
 
       getSpanById(processedTrace, "e").getStartTime should be(startTimestamp + 200)
@@ -227,7 +270,7 @@ class TraceProcessorSpec
       getSpanById(processedTrace, "c").getStartTime should be(startTimestamp + 500)
       getSpanById(processedTrace, "c").getServiceName should be("x")
 
-      getSpanById(processedTrace, "d").getStartTime should be(startTimestamp )
+      getSpanById(processedTrace, "d").getStartTime should be(startTimestamp)
       getSpanById(processedTrace, "d").getServiceName should be("y")
 
       getSpanById(processedTrace, "e").getStartTime should be(startTimestamp + 200)
@@ -255,7 +298,7 @@ class TraceProcessorSpec
       getSpanById(processedTrace, "c").getStartTime should be(startTimestamp + 500)
       getSpanById(processedTrace, "c").getServiceName should be("x")
 
-      getSpanById(processedTrace, "d").getStartTime should be(startTimestamp )
+      getSpanById(processedTrace, "d").getStartTime should be(startTimestamp)
       getSpanById(processedTrace, "d").getServiceName should be("y")
 
       getSpanById(processedTrace, "e").getStartTime should be(startTimestamp + 200)
@@ -283,7 +326,7 @@ class TraceProcessorSpec
       getSpanById(processedTrace, "c").getStartTime should be(startTimestamp + 500)
       getSpanById(processedTrace, "c").getServiceName should be("x")
 
-      getSpanById(processedTrace, "d").getStartTime should be(startTimestamp )
+      getSpanById(processedTrace, "d").getStartTime should be(startTimestamp)
       getSpanById(processedTrace, "d").getServiceName should be("y")
 
       getSpanById(processedTrace, "e").getStartTime should be(startTimestamp + 200)

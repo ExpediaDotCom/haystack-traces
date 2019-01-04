@@ -1,0 +1,9 @@
+version: '3'
+services:
+   mysql:
+     image: mysql:8.0.13
+     environment:
+       MAX_HEAP_SIZE: 256m
+       HEAP_NEWSIZE: 256m
+     ports:
+       - "9042:9042"

@@ -15,8 +15,6 @@
  */
 package com.expedia.www.haystack.trace.storage.backends.mysql.unit.config
 
-import com.datastax.driver.core.ConsistencyLevel
-import com.datastax.driver.core.exceptions.UnavailableException
 import com.expedia.www.haystack.trace.storage.backends.mysql.config.ProjectConfiguration
 import com.expedia.www.haystack.trace.storage.backends.mysql.config.entities.ServiceConfiguration
 import com.expedia.www.haystack.trace.storage.backends.mysql.unit.BaseUnitTestSpec
@@ -31,26 +29,23 @@ class ConfigurationLoaderSpec extends BaseUnitTestSpec {
       serviceConfig.ssl.certChainFilePath shouldBe "/ssl/cert"
       serviceConfig.ssl.privateKeyPath shouldBe "/ssl/private-key"
     }
-    it("should load the cassandra config from base.conf and few properties overridden from env variable") {
-      val cassandraWriteConfig = project.mysqlConfig
-      val clientConfig = cassandraWriteConfig.clientConfig
+    it("should load the mysql config from base.conf and few properties overridden from env variable") {
+      val mysqlConfig = project.mysqlConfig
+      val clientConfig = mysqlConfig.clientConfig
 
-      clientConfig.autoDiscoverEnabled shouldBe false
       // this will fail if run inside an editor, we override this config using env variable inside pom.xml
-      clientConfig.endpoints should contain allOf("cass1", "cass2")
-      clientConfig.tracesKeyspace.autoCreateSchema shouldBe Some("cassandra_cql_schema_1")
-      clientConfig.tracesKeyspace.name shouldBe "haystack"
-      clientConfig.tracesKeyspace.table shouldBe "traces"
-      clientConfig.tracesKeyspace.recordTTLInSec shouldBe 86400
+      clientConfig.url shouldBe "mysql"
+      clientConfig.spansTable.autoCreateSchema shouldBe Some("mysql_table_schema")
+      clientConfig.spansTable.name shouldBe "spans"
+      clientConfig.spansTable.recordTTLInSec shouldBe 86400
 
-      clientConfig.awsNodeDiscovery shouldBe empty
       clientConfig.socket.keepAlive shouldBe true
       clientConfig.socket.maxConnectionPerHost shouldBe 100
       clientConfig.socket.readTimeoutMills shouldBe 5000
       clientConfig.socket.connectionTimeoutMillis shouldBe 10000
-      cassandraWriteConfig.retryConfig.maxRetries shouldBe 10
-      cassandraWriteConfig.retryConfig.backOffInMillis shouldBe 250
-      cassandraWriteConfig.retryConfig.backoffFactor shouldBe 2    }
+      mysqlConfig.retryConfig.maxRetries shouldBe 10
+      mysqlConfig.retryConfig.backOffInMillis shouldBe 100
+      mysqlConfig.retryConfig.backoffFactor shouldBe 2    }
 
   }
 }

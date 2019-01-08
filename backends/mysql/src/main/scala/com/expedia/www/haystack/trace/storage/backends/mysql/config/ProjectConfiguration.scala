@@ -17,14 +17,11 @@
 
 package com.expedia.www.haystack.trace.storage.backends.mysql.config
 
-import com.datastax.driver.core.ConsistencyLevel
 import com.expedia.www.haystack.commons.config.ConfigurationLoader
 import com.expedia.www.haystack.commons.retries.RetryOperation
 import com.expedia.www.haystack.trace.storage.backends.mysql.config.entities._
 import com.typesafe.config.Config
 import org.apache.commons.lang3.StringUtils
-
-import scala.collection.JavaConverters._
 
 class ProjectConfiguration {
   private val config = ConfigurationLoader.loadConfigFileWithEnvOverrides()
@@ -41,62 +38,34 @@ class ProjectConfiguration {
   }
   /**
     *
-    * cassandra configuration object
+    * mysql configuration object
     */
   val mysqlConfig: MysqlConfiguration = {
 
-    def toConsistencyLevel(level: String) = ConsistencyLevel.values().find(_.toString.equalsIgnoreCase(level)).get
 
-    def consistencyLevelOnErrors(cs: Config) = {
-      val consistencyLevelOnErrors = cs.getStringList("on.error.consistency.level")
-      val consistencyLevelOnErrorList = scala.collection.mutable.ListBuffer[(Class[_], ConsistencyLevel)]()
-
-      var idx = 0
-      while (idx < consistencyLevelOnErrors.size()) {
-        val errorClass = consistencyLevelOnErrors.get(idx)
-        val level = consistencyLevelOnErrors.get(idx + 1)
-        consistencyLevelOnErrorList.+=((Class.forName(errorClass), toConsistencyLevel(level)))
-        idx = idx + 2
-      }
-
-      consistencyLevelOnErrorList.toList
-    }
-
-    def keyspaceConfig(kConfig: Config, ttl: Int): KeyspaceConfiguration = {
+    def tableConfiguration(tableConfig: Config): TableConfiguration = {
       val autoCreateSchemaField = "auto.create.schema"
-      val autoCreateSchema = if (kConfig.hasPath(autoCreateSchemaField)
-        && StringUtils.isNotEmpty(kConfig.getString(autoCreateSchemaField))) {
-        Some(kConfig.getString(autoCreateSchemaField))
+      val autoCreateSchema: Option[String] = if (tableConfig.hasPath(autoCreateSchemaField)
+        && StringUtils.isNotEmpty(tableConfig.getString(autoCreateSchemaField))) {
+        Some(tableConfig.getString(autoCreateSchemaField))
       } else {
         None
       }
 
-      KeyspaceConfiguration(kConfig.getString("name"), kConfig.getString("table.name"), ttl, autoCreateSchema)
+      TableConfiguration(tableConfig.getString("name"), tableConfig.getInt("ttl.sec"), autoCreateSchema)
     }
 
-    val cs = config.getConfig("cassandra")
+    val mysqlConfig = config.getConfig("mysql")
 
-    val awsConfig: Option[AwsNodeDiscoveryConfiguration] =
-      if (cs.hasPath("auto.discovery.aws")) {
-        val aws = cs.getConfig("auto.discovery.aws")
-        val tags = aws.getConfig("tags")
-          .entrySet()
-          .asScala
-          .map(elem => elem.getKey -> elem.getValue.unwrapped().toString)
-          .toMap
-        Some(AwsNodeDiscoveryConfiguration(aws.getString("region"), tags))
-      } else {
-        None
-      }
 
     val credentialsConfig: Option[CredentialsConfiguration] =
-      if (cs.hasPath("credentials")) {
-        Some(CredentialsConfiguration(cs.getString("credentials.username"), cs.getString("credentials.password")))
+      if (mysqlConfig.hasPath("credentials")) {
+        Some(CredentialsConfiguration(mysqlConfig.getString("credentials.username"), mysqlConfig.getString("credentials.password")))
       } else {
         None
       }
 
-    val socketConfig = cs.getConfig("connections")
+    val socketConfig = mysqlConfig.getConfig("connections")
 
     val socket = SocketConfiguration(
       socketConfig.getInt("max.per.host"),
@@ -104,22 +73,17 @@ class ProjectConfiguration {
       socketConfig.getInt("conn.timeout.ms"),
       socketConfig.getInt("read.timeout.ms"))
 
-    val consistencyLevel = cs.getString("consistency.level")
-
     MysqlConfiguration(
       clientConfig = ClientConfiguration(
-        if (cs.hasPath("endpoints")) cs.getString("endpoints").split(",").toList else Nil,
-        cs.getBoolean("auto.discovery.enabled"),
-        awsConfig,
+        mysqlConfig.getString("url"),
+        mysqlConfig.getString("driver"),
         credentialsConfig,
-        keyspaceConfig(cs.getConfig("keyspace"), cs.getInt("ttl.sec")),
+        tableConfiguration(mysqlConfig.getConfig("table")),
         socket),
-      consistencyLevel = consistencyLevel,
       retryConfig = RetryOperation.Config(
-        cs.getInt("retries.max"),
-        cs.getLong("retries.backoff.initial.ms"),
-        cs.getDouble("retries.backoff.factor")),
-      consistencyLevelOnErrors(cs))
+        mysqlConfig.getInt("retries.max"),
+        mysqlConfig.getLong("retries.backoff.initial.ms"),
+        mysqlConfig.getDouble("retries.backoff.factor")))
   }
 
 }

@@ -21,35 +21,29 @@ import com.expedia.www.haystack.commons.retries.RetryOperation
 import org.apache.commons.lang3.StringUtils
 
 
-/** define the keyspace and table information in cassandra
+/** define the table information in mysql
   *
-  * @param name              : name of cassandra keyspace
-  * @param table             : name of cassandra table
-  * @param recordTTLInSec    : ttl of record in sec
-  * @param autoCreateSchema  : apply cql and create keyspace and tables if not exist, optional
+  * @param name        : name of mysql table
+  * @param recordTTLInSec   : ttl of record in sec
+  * @param autoCreateSchema : apply sql and create table if not exist, optional
   */
-case class KeyspaceConfiguration(name: String,
-                                 table: String,
-                                 recordTTLInSec: Int = -1,
-                                 autoCreateSchema: Option[String] = None) {
+case class TableConfiguration(name: String,
+                              recordTTLInSec: Int = -1,
+                              autoCreateSchema: Option[String] = None) {
   require(StringUtils.isNotEmpty(name))
-  require(StringUtils.isNotEmpty(table))
 }
 
 /**
-  * defines the configuration parameters for cassandra client
+  * defines the configuration parameters for mysql client
   *
-  * @param endpoints                : list of cassandra endpoints
-  * @param autoDiscoverEnabled      : if autodiscovery is enabled, then 'endpoints' config parameter will be ignored
-  * @param awsNodeDiscovery         : discovery configuration for aws, optional. This is applied only if autoDiscoverEnabled is true
-  * @param tracesKeyspace           : cassandra keyspace for traces
-  * @param socket                   : socket configuration like maxConnections, timeouts and keepAlive
+  * @param url    : list of mysql endpoints
+  * @param driver : Sql Driver Implementation Class
+  * @param socket : socket configuration like maxConnections, timeouts and keepAlive
   */
-case class ClientConfiguration(endpoints: List[String],
-                               autoDiscoverEnabled: Boolean,
-                               awsNodeDiscovery: Option[AwsNodeDiscoveryConfiguration],
+case class ClientConfiguration(url: String,
+                               driver: String,
                                plaintextCredentials: Option[CredentialsConfiguration],
-                               tracesKeyspace: KeyspaceConfiguration,
+                               spansTable: TableConfiguration,
                                socket: SocketConfiguration)
 
 /**

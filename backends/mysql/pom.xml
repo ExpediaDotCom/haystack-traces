@@ -17,12 +17,24 @@
         <mainClass>com.expedia.www.haystack.trace.storage.backends.mysql.Service</mainClass>
         <finalName>${project.artifactId}-${project.version}</finalName>
         <maven-protobuf-plugin.version>3.3.0.1</maven-protobuf-plugin.version>
+        <mysql.connector.version>8.0.13</mysql.connector.version>
+        <apache.commons.dhcp.version>1.4</apache.commons.dhcp.version>
     </properties>
 
     <dependencies>
         <dependency>
             <groupId>com.google.protobuf</groupId>
             <artifactId>protobuf-java</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>mysql</groupId>
+            <artifactId>mysql-connector-java</artifactId>
+            <version>${mysql.connector.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>commons-dbcp</groupId>
+            <artifactId>commons-dbcp</artifactId>
+            <version>${apache.commons.dhcp.version}</version>
         </dependency>
 
         <dependency>

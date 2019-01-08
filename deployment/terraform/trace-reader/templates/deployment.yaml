@@ -23,11 +23,11 @@ spec:
         image: ${storage_backend_image}
         resources:
           limits:
-            cpu: 1
-            memory: 500Mi
+            cpu: ${backend_cpu_limit}
+            memory: ${backend_memory_limit}Mi
           requests:
-            cpu: 500m
-            memory: 500Mi
+            cpu: ${backend_cpu_request}
+            memory: ${backend_memory_request}Mi
         env:
         - name: "HAYSTACK_PROP_CASSANDRA_ENDPOINTS"
           value: "${cassandra_hostname}"
@@ -38,9 +38,9 @@ spec:
         - name: "HAYSTACK_GRAPHITE_ENABLED"
           value: "${graphite_enabled}"
         - name: "JAVA_XMS"
-          value: "256m"
+          value: "${backend_jvm_memory_limit}m"
         - name: "JAVA_XMX"
-          value: "256m"
+          value: "${backend_jvm_memory_limit}m"
         livenessProbe:
           exec:
             command:
@@ -48,6 +48,7 @@ spec:
             - "-addr=:8090"
           initialDelaySeconds: 30
           periodSeconds: 15
+          timeoutSeconds: 5
           failureThreshold: 3
       - name: ${app_name}
         image: ${reader_image}
@@ -83,6 +84,7 @@ spec:
             - "-addr=:${container_port}"
           initialDelaySeconds: 30
           periodSeconds: 15
+          timeoutSeconds: 5
           failureThreshold: 3
       nodeSelector:
         ${node_selecter_label}

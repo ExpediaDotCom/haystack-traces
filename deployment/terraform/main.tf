@@ -22,6 +22,11 @@ module "trace-indexer" {
   node_selector_label = "${var.node_selector_label}"
   kubectl_executable_name = "${var.kubectl_executable_name}"
   kubectl_context_name = "${var.kubectl_context_name}"
+  backend_cpu_limit = "${var.traces["backend_cpu_limit"]}"
+  backend_cpu_request = "${var.traces["backend_cpu_request"]}"
+  backend_memory_limit = "${var.traces["backend_memory_limit"]}"
+  backend_memory_request = "${var.traces["backend_memory_request"]}"
+  backend_jvm_memory_limit = "${var.traces["backend_jvm_memory_limit"]}"
 }
 
 module "trace-reader" {
@@ -44,6 +49,11 @@ module "trace-reader" {
   memory_limit = "${var.traces["reader_memory_limit"]}"
   memory_request = "${var.traces["reader_memory_request"]}"
   jvm_memory_limit = "${var.traces["reader_jvm_memory_limit"]}"
+  backend_cpu_limit = "${var.traces["backend_cpu_limit"]}"
+  backend_cpu_request = "${var.traces["backend_cpu_request"]}"
+  backend_memory_limit = "${var.traces["backend_memory_limit"]}"
+  backend_memory_request = "${var.traces["backend_memory_request"]}"
+  backend_jvm_memory_limit = "${var.traces["backend_jvm_memory_limit"]}"
   env_vars = "${var.traces["reader_environment_overrides"]}"
 }
 

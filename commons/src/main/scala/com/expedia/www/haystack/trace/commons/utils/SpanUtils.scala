@@ -42,6 +42,18 @@ object SpanUtils {
     containsClientLogTag(span) && containsServerLogTag(span)
   }
 
+  def spanKind(span: Span): String = {
+    val kind = span.getTagsList.asScala.find(_.getKey == SpanMarkers.SPAN_KIND_TAG_KEY).map(_.getVStr).getOrElse("")
+    if (kind == "") {
+      if (containsServerLogTag(span)) {
+        return SERVER_SPAN_KIND
+      } else if (containsClientLogTag(span)) {
+        return CLIENT_SPAN_KIND
+      }
+    }
+    kind
+  }
+
   def containsServerLogTag(span: Span): Boolean = {
     containsLogTag(span, SERVER_RECV_EVENT) && containsLogTag(span, SERVER_SEND_EVENT)
   }

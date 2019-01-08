@@ -49,6 +49,12 @@ data "template_file" "deployment_yaml" {
     jvm_memory_limit = "${var.jvm_memory_limit}"
     cpu_limit = "${var.cpu_limit}"
     cpu_request = "${var.cpu_request}"
+    backend_memory_limit = "${var.backend_memory_limit}"
+    backend_memory_request = "${var.backend_memory_request}"
+    backend_jvm_memory_limit = "${var.backend_jvm_memory_limit}"
+    backend_cpu_limit = "${var.backend_cpu_limit}"
+    backend_cpu_request = "${var.backend_cpu_request}"
+
     configmap_name = "${local.configmap_name}"
     env_vars= "${indent(9,"${var.env_vars}")}"
 

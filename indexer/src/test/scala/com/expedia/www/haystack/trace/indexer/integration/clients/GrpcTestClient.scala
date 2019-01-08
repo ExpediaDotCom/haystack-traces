@@ -44,7 +44,7 @@ class GrpcTestClient {
 
 
   def buildConfig = TraceBackendConfiguration(
-    TraceBackendClientConfiguration("localhost", port), 10)
+    TraceBackendClientConfiguration("localhost", port, 1048576), 10)
 
   def queryTraces(traceDescriptions: Seq[TraceDescription]): Seq[TraceRecord] = {
     val traceIds = traceDescriptions.map(traceDescription => traceDescription.traceId).toList

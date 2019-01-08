@@ -12,7 +12,7 @@
     <packaging>jar</packaging>
 
     <properties>
-        <kafka-version>0.11.0.0</kafka-version>
+        <kafka-version>1.1.1</kafka-version>
         <mainClass>com.expedia.www.haystack.trace.indexer.App</mainClass>
         <finalName>${project.artifactId}-${project.version}</finalName>
         <skip.unit.tests>false</skip.unit.tests>

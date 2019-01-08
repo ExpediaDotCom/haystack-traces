@@ -36,7 +36,7 @@ class GrpcTraceReader(config: TraceBackendClientConfiguration)
   private val tracesFailures = metricRegistry.meter(AppMetricNames.BACKEND_TRACES_FAILURE)
   private val channel = ManagedChannelBuilder
     .forAddress(config.host, config.port)
-    .maxInboundMessageSize(config.maxByteSize)
+    .maxInboundMessageSize(config.maxMessageSizeInBytes)
     .usePlaintext(true)
     .build()
 

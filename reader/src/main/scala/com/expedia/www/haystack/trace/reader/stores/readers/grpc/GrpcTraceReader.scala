@@ -34,9 +34,12 @@ class GrpcTraceReader(config: TraceBackendClientConfiguration)
   private val readTimer = metricRegistry.timer(AppMetricNames.BACKEND_READ_TIME)
   private val readFailures = metricRegistry.meter(AppMetricNames.BACKEND_READ_FAILURES)
   private val tracesFailures = metricRegistry.meter(AppMetricNames.BACKEND_TRACES_FAILURE)
-  private val channel = ManagedChannelBuilder.forAddress(config.host, config.port)
+  private val channel = ManagedChannelBuilder
+    .forAddress(config.host, config.port)
+    .maxInboundMessageSize(config.maxByteSize)
     .usePlaintext(true)
     .build()
+
   val client: StorageBackendGrpc.StorageBackendFutureStub = StorageBackendGrpc.newFutureStub(channel)
 
 

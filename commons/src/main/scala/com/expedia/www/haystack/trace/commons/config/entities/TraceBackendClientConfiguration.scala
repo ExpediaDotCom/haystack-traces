@@ -17,12 +17,10 @@
 
 package com.expedia.www.haystack.trace.commons.config.entities
 
-import org.apache.commons.lang3.StringUtils
-
-
 /**
   * defines the configuration parameters for trace-backend  *
   * @param host              : trace backend grpc hostname
   * @param port              : trace backend grpc port
+  * @param maxMessageSizeInBytes       : maximum payload size to be received from backend server
   */
-case class TraceBackendClientConfiguration(host: String, port:Int)
+case class TraceBackendClientConfiguration(host: String, port:Int, maxMessageSizeInBytes: Int)

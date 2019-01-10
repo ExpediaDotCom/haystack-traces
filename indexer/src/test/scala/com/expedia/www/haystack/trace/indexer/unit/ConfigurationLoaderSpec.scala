@@ -57,7 +57,6 @@ class ConfigurationLoaderSpec extends FunSpec with Matchers {
       kafkaConfig.consumerProps.getProperty(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG) shouldBe "false"
       kafkaConfig.consumerProps.getProperty(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG) shouldBe "org.apache.kafka.common.serialization.StringDeserializer"
       kafkaConfig.consumerProps.getProperty(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG) shouldBe "com.expedia.www.haystack.trace.indexer.serde.SpanDeserializer"
-      kafkaConfig.consumerProps.getProperty(ConsumerConfig.PARTITION_ASSIGNMENT_STRATEGY_CONFIG) shouldBe "org.apache.kafka.clients.consumer.StickyAssignor"
 
       kafkaConfig.consumerCloseTimeoutInMillis shouldBe 30000
 

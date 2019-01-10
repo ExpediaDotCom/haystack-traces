@@ -36,6 +36,7 @@ import scala.collection.JavaConverters._
 import scala.collection.mutable
 import scala.util.Try
 
+
 class StreamTaskRunnable(taskId: Int, kafkaConfig: KafkaConfiguration, processorSupplier: StreamProcessorSupplier[String, Span])
   extends Runnable with AutoCloseable {
 
@@ -45,6 +46,7 @@ class StreamTaskRunnable(taskId: Int, kafkaConfig: KafkaConfiguration, processor
     * consumer rebalance listener
     */
   private class RebalanceListener extends ConsumerRebalanceListener {
+    private var lastAssignment: List[TopicPartition] = Nil
 
     /**
       * close the running processors for the revoked partitions
@@ -53,12 +55,7 @@ class StreamTaskRunnable(taskId: Int, kafkaConfig: KafkaConfiguration, processor
       */
     override def onPartitionsRevoked(revokedPartitions: util.Collection[TopicPartition]): Unit = {
       LOGGER.info("Partitions {} revoked at the beginning of consumer rebalance for taskId={}", revokedPartitions, taskId)
-
-      revokedPartitions.asScala.foreach(
-        p => {
-          val processor = processors.remove(p)
-          if (processor != null) processor.close()
-        })
+      revokedPartitions.asScala.foreach(revoke)
     }
 
     /**
@@ -69,13 +66,28 @@ class StreamTaskRunnable(taskId: Int, kafkaConfig: KafkaConfiguration, processor
     override def onPartitionsAssigned(assignedPartitions: util.Collection[TopicPartition]): Unit = {
       LOGGER.info("Partitions {} assigned at the beginning of consumer rebalance for taskId={}", assignedPartitions, taskId)
 
-      assignedPartitions.asScala foreach {
+      val currentAssignment = assignedPartitions.asScala.toList
+
+      difference(lastAssignment, currentAssignment).foreach(revoke)
+
+      difference(currentAssignment, lastAssignment) foreach {
         partition => {
           val processor = processorSupplier.get()
           val previousProcessor = processors.putIfAbsent(partition, processor)
           if (previousProcessor == null) processor.init()
         }
       }
+
+      this.lastAssignment = currentAssignment
+    }
+
+    private def difference(lastAssignment: List[TopicPartition], currentAssignment: List[TopicPartition]):  List[TopicPartition] = {
+      lastAssignment.diff(currentAssignment)
+    }
+
+    private def revoke(partition: TopicPartition): Unit = {
+      val processor = processors.remove(partition)
+      if (processor != null) processor.close()
     }
   }
 

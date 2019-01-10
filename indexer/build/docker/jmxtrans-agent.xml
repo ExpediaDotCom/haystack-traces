@@ -7,6 +7,8 @@
         <query objectName="kafka.consumer:type=consumer-fetch-manager-metrics,client-id=*" attribute="records-lag-max" resultAlias="kafka-consumer-%client-id%.records-lag.max"/>
         <query objectName="kafka.consumer:type=consumer-fetch-manager-metrics,client-id=*" attribute="records-consumed-rate" resultAlias="kafka-consumer-%client-id%.records-consumed.rate"/>
 
+        <!-- iterator age using span event time -->
+        <query objectName="metrics:name=kafka.iterator.age.ms" attributes="50thPercentile,99thPercentile" resultAlias="kafka.iterator.age.ms.#attribute#"/>
 
         <!-- backend metrics coming from our code -->
         <query objectName="metrics:name=backend.write.failure" attributes="OneMinuteRate" resultAlias="backend.write.failure.#attribute#"/>

@@ -23,7 +23,7 @@ import com.expedia.open.tracing.buffer.SpanBuffer
 import com.expedia.www.haystack.commons.metrics.MetricsSupport
 import com.expedia.www.haystack.trace.commons.packer.Packer
 import com.expedia.www.haystack.trace.indexer.config.entities.SpanAccumulatorConfiguration
-import com.expedia.www.haystack.trace.indexer.metrics.AppMetricNames.{BUFFERED_SPANS_COUNT, PROCESS_TIMER}
+import com.expedia.www.haystack.trace.indexer.metrics.AppMetricNames.{BUFFERED_SPANS_COUNT, KAFKA_ITERATOR_AGE_MS, PROCESS_TIMER}
 import com.expedia.www.haystack.trace.indexer.store.SpanBufferMemoryStoreSupplier
 import com.expedia.www.haystack.trace.indexer.store.data.model.SpanBufferWithMetadata
 import com.expedia.www.haystack.trace.indexer.store.traits.{EldestBufferedSpanEvictionListener, SpanBufferKeyValueStore}
@@ -38,6 +38,7 @@ object SpanIndexProcessor extends MetricsSupport {
 
   protected val processTimer: Timer = metricRegistry.timer(PROCESS_TIMER)
   protected val bufferedSpansHistogram: Histogram = metricRegistry.histogram(BUFFERED_SPANS_COUNT)
+  protected val iteratorAge: Histogram = metricRegistry.histogram(KAFKA_ITERATOR_AGE_MS)
 }
 
 class SpanIndexProcessor(accumulatorConfig: SpanAccumulatorConfiguration,
@@ -69,15 +70,23 @@ class SpanIndexProcessor(accumulatorConfig: SpanAccumulatorConfiguration,
     val timer = processTimer.time()
     try {
       var currentTimestamp = 0L
+      var minEventTime = Long.MaxValue
+
       records
         .filter(_ != null)
         .foreach {
           record => {
             spanBufferMemStore.addOrUpdateSpanBuffer(record.key(), record.value(), record.timestamp(), record.offset())
             currentTimestamp = Math.max(record.timestamp(), currentTimestamp)
+
+            // record the smallest event timestamp observed across the spans
+            if (record.value().getStartTime > 0) {
+              minEventTime = Math.min(record.value().getStartTime, minEventTime) // this is in micros
+            }
           }
         }
 
+      iteratorAge.update(System.currentTimeMillis() - (minEventTime/1000l))
       mayBeEmit(currentTimestamp)
     } finally {
       timer.stop()

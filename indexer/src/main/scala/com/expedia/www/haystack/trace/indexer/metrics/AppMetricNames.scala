@@ -22,6 +22,8 @@ package com.expedia.www.haystack.trace.indexer.metrics
   */
 object AppMetricNames {
   val PROCESS_TIMER = "buffer.process"
+  val KAFKA_ITERATOR_AGE_MS = "kafka.iterator.age.ms"
+
   val BUFFERED_SPANS_COUNT = "buffered.spans.count"
   val STATE_STORE_EVICTION = "state.store.eviction"
   val SPAN_PROTO_DESER_FAILURE = "span.proto.deser.failure"

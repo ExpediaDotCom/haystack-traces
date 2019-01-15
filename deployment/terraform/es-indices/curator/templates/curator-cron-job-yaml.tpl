@@ -1,10 +1,10 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: curator-es-index-store
+  name: curator-es-haystack-traces-index-store
   namespace: ${app_namespace}
   labels:
-    app:  curator-es-index-store
+    app:  curator-es-haystack-traces-index-store
 data:
   curator.yml: |-
     client:
@@ -53,7 +53,7 @@ data:
 apiVersion: batch/v1beta1
 kind: CronJob
 metadata:
-  name: curator-es-index-store
+  name: curator-es-haystack-traces-index-store
   namespace: ${app_namespace}
 
 spec:
@@ -63,7 +63,7 @@ spec:
       template:
         spec:
           containers:
-          - name: curator-es-index-store
+          - name: curator-es-haystack-traces-index-store
             image: bobrik/curator:5.4.0
             args:
              - --config
@@ -76,4 +76,4 @@ spec:
           volumes:
           - name: config
             configMap:
-              name: curator-es-index-store
+              name: curator-es-haystack-traces-index-store

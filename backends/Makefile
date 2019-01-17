@@ -20,3 +20,4 @@ build_memory:
 # release all backends
 release:
 	cd cassandra && $(MAKE) docker_build && $(MAKE) release
+	cd memory && $(MAKE) docker_build && $(MAKE) release

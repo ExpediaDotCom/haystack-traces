@@ -5,6 +5,15 @@ Currently we publish the repo to docker hub and nexus central repository.
 
 * Git tagging: 
 
-```git tag -a 1.x.x -m "Release description..."```
+```
+git tag -a <tag name> -m "Release description..."
+git push origin <tag name>
+```
 
-Or you can also tag using UI: https://github.com/ExpediaDotCom/haystack-traces/releases
+`<tag name>` must follow semantic versioning scheme.
+
+Or one can also tag using UI: https://github.com/ExpediaDotCom/haystack-traces/releases
+
+It is preferred to create an annotated tag using `git tag -a` and then use the release UI to add release notes for the tag.
+
+* After the release is completed, please update the `pom.xml` files to next `-SNAPSHOT` version to match the next release

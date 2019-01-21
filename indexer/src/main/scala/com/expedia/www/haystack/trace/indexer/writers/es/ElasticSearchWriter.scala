@@ -70,7 +70,7 @@ class ElasticSearchWriter(esConfig: ElasticSearchConfiguration, indexConf: White
   private val inflightRequestsSemaphore = new Semaphore(esConfig.maxInFlightBulkRequests, true)
 
   // initialize the elastic search client
-  private val esClient: JestClient = {
+  private lazy val esClient: JestClient = {
     LOGGER.info("Initializing the http elastic search client with endpoint={}", esConfig.endpoint)
 
     val factory = new JestClientFactory()
@@ -85,12 +85,20 @@ class ElasticSearchWriter(esConfig: ElasticSearchConfiguration, indexConf: White
     }
 
     factory.setHttpClientConfig(builder.build())
-    factory.getObject
+    val client = factory.getObject
+
+    if (esConfig.indexTemplateJson.isDefined) {
+      val putTemplateRequest = new PutTemplate.Builder("spans-index-template", esConfig.indexTemplateJson.get).build()
+      val result = client.execute(putTemplateRequest)
+      if (!result.isSucceeded) {
+        throw new RuntimeException(s"Fail to apply the following template to elastic search with reason=${result.getErrorMessage}")
+      }
+    }
+
+    client
   }
 
   private val bulkBuilder = new ThreadSafeBulkBuilder(esConfig.maxDocsInBulk, esConfig.maxBulkDocSizeInBytes)
-
-  if (esConfig.indexTemplateJson.isDefined) applyTemplate(esConfig.indexTemplateJson.get)
 
   override def close(): Unit = {
     LOGGER.info("Closing the elastic search client now.")

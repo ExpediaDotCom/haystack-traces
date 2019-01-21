@@ -93,7 +93,11 @@
                             <goal>test</goal>
                         </goals>
                         <configuration>
-                            <wildcardSuites>com.expedia.www.haystack.trace.reader.unit</wildcardSuites>
+                            <environmentVariables>
+                                <HAYSTACK_PROP_CASSANDRA_ENDPOINTS>cass1,cass2</HAYSTACK_PROP_CASSANDRA_ENDPOINTS>
+                                <HAYSTACK_PROP_CASSANDRA_KEYSPACE_AUTO_CREATE_SCHEMA>cassandra_cql_schema_1</HAYSTACK_PROP_CASSANDRA_KEYSPACE_AUTO_CREATE_SCHEMA>
+                            </environmentVariables>
+                            <wildcardSuites>com.expedia.www.haystack.trace.storage.backends.cassandra.unit</wildcardSuites>
                         </configuration>
                     </execution>
                     <execution>
@@ -104,10 +108,9 @@
                         </goals>
                         <configuration>
                             <environmentVariables>
-                                <HAYSTACK_OVERRIDES_CONFIG_PATH>/src/reader/build/integration-tests/docker-app.conf
-                                </HAYSTACK_OVERRIDES_CONFIG_PATH>
+                                <HAYSTACK_OVERRIDES_CONFIG_PATH>/src/backends/cassandra/build/integration-tests/docker-app.conf</HAYSTACK_OVERRIDES_CONFIG_PATH>
                             </environmentVariables>
-                            <wildcardSuites>com.expedia.www.haystack.trace.reader.integration</wildcardSuites>
+                            <wildcardSuites>com.expedia.www.haystack.trace.storage.backends.cassandra.integration</wildcardSuites>
                         </configuration>
                     </execution>
                 </executions>

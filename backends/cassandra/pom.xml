@@ -93,6 +93,9 @@
                             <goal>test</goal>
                         </goals>
                         <configuration>
+                            <environmentVariables>
+                                <HAYSTACK_PROP_CASSANDRA_ENDPOINTS>cass1,cass2</HAYSTACK_PROP_CASSANDRA_ENDPOINTS>
+                            </environmentVariables>
                             <wildcardSuites>com.expedia.www.haystack.trace.storage.backends.cassandra.unit</wildcardSuites>
                         </configuration>
                     </execution>

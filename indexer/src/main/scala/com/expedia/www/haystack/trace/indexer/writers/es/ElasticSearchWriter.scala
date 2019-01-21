@@ -160,12 +160,4 @@ class ElasticSearchWriter(esConfig: ElasticSearchConfiguration, indexConf: White
         None
     }
   }
-
-  private def applyTemplate(templateJson: String) {
-    val putTemplateRequest = new PutTemplate.Builder("spans-index-template", templateJson).build()
-    val result = esClient.execute(putTemplateRequest)
-    if (!result.isSucceeded) {
-      throw new RuntimeException(s"Fail to apply the following template to elastic search with reason=${result.getErrorMessage}")
-    }
-  }
 }

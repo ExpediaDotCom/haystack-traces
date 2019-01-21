@@ -93,7 +93,7 @@
                             <goal>test</goal>
                         </goals>
                         <configuration>
-                            <wildcardSuites>com.expedia.www.haystack.trace.reader.unit</wildcardSuites>
+                            <wildcardSuites>com.expedia.www.haystack.trace.storage.backends.cassandra.unit</wildcardSuites>
                         </configuration>
                     </execution>
                     <execution>
@@ -107,7 +107,7 @@
                                 <HAYSTACK_OVERRIDES_CONFIG_PATH>/src/reader/build/integration-tests/docker-app.conf
                                 </HAYSTACK_OVERRIDES_CONFIG_PATH>
                             </environmentVariables>
-                            <wildcardSuites>com.expedia.www.haystack.trace.reader.integration</wildcardSuites>
+                            <wildcardSuites>com.expedia.www.haystack.trace.storage.backends.cassandra.integration</wildcardSuites>
                         </configuration>
                     </execution>
                 </executions>

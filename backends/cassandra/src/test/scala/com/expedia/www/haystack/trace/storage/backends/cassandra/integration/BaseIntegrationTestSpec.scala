@@ -47,6 +47,12 @@ trait BaseIntegrationTestSpec extends FunSpec with GivenWhenThen with Matchers w
   private var cassandraSession: Session = _
 
   override def beforeAll() {
+    executors.submit(new Runnable {
+      override def run(): Unit = Service.main(null)
+    })
+    //waiting for the service to start up
+
+    Thread.sleep(5000)
     // setup cassandra
     cassandraSession = Cluster
       .builder()
@@ -54,15 +60,6 @@ trait BaseIntegrationTestSpec extends FunSpec with GivenWhenThen with Matchers w
       .build()
       .connect(CASSANDRA_KEYSPACE)
     deleteCassandraTableRows()
-
-
-
-    executors.submit(new Runnable {
-      override def run(): Unit = Service.main(null)
-    })
-
-    Thread.sleep(5000)
-
     client = StorageBackendGrpc.newBlockingStub(ManagedChannelBuilder.forAddress("localhost", 8090)
       .usePlaintext(true)
       .build())

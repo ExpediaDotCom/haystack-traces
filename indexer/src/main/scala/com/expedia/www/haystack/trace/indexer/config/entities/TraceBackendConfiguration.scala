@@ -17,7 +17,6 @@
 
 package com.expedia.www.haystack.trace.indexer.config.entities
 
-import com.expedia.www.haystack.commons.retries.RetryOperation
 import com.expedia.www.haystack.trace.commons.config.entities.TraceBackendClientConfiguration
 
 /**

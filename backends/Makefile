@@ -2,7 +2,7 @@
 
 PWD := $(shell pwd)
 
-all: cassandra
+all: cassandra memory
 
 cassandra: build_cassandra
 	cd cassandra && $(MAKE) integration_test
@@ -20,3 +20,4 @@ build_memory:
 # release all backends
 release:
 	cd cassandra && $(MAKE) docker_build && $(MAKE) release
+	cd memory && $(MAKE) docker_build && $(MAKE) release

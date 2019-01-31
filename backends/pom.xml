@@ -4,13 +4,13 @@
 
     <modelVersion>4.0.0</modelVersion>
     <artifactId>haystack-trace-backends</artifactId>
-    <version>1.0.0-SNAPSHOT</version>
+    <version>1.0.9-SNAPSHOT</version>
     <packaging>pom</packaging>
 
     <parent>
         <artifactId>haystack-traces</artifactId>
         <groupId>com.expedia.www</groupId>
-        <version>1.0.0-SNAPSHOT</version>
+        <version>1.0.9-SNAPSHOT</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
 

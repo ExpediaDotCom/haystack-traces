@@ -20,28 +20,45 @@ package com.expedia.www.haystack.trace.storage.backends.cassandra.client
 import java.nio.ByteBuffer
 import java.util.Date
 
-import com.datastax.driver.core.BatchStatement.Type
 import com.datastax.driver.core._
+import com.datastax.driver.core.exceptions.NoHostAvailableException
 import com.datastax.driver.core.querybuilder.QueryBuilder
 import com.expedia.www.haystack.trace.storage.backends.cassandra.config.entities.{ClientConfiguration, KeyspaceConfiguration}
 import org.slf4j.LoggerFactory
 import com.expedia.www.haystack.trace.storage.backends.cassandra.client.CassandraTableSchema._
 
 import scala.collection.JavaConverters._
-import scala.util.Try
+import scala.util.{Failure, Success, Try}
+
+object CassandraSession {
+  private val LOGGER = LoggerFactory.getLogger(classOf[CassandraSession])
+
+  def connect(config: ClientConfiguration,
+              factory: ClusterFactory): (Cluster, Session) = this.synchronized {
+    def tryConnect(): (Cluster, Session) = {
+      val cluster = factory.buildCluster(config)
+      Try(cluster.connect()) match {
+        case Success(session) => (cluster, session)
+        case Failure(e: NoHostAvailableException) =>
+          LOGGER.warn("Failed to connect to cassandra. Will try again", e)
+          Thread.sleep(5000)
+          tryConnect()
+        case Failure(e) => throw e
+      }
+    }
+
+    tryConnect()
+  }
+}
 
 class CassandraSession(config: ClientConfiguration, factory: ClusterFactory) {
-  private val LOGGER = LoggerFactory.getLogger(classOf[CassandraSession])
+  import CassandraSession._
 
   /**
     * builds a session object to interact with cassandra cluster
     * Also ensure that keyspace and table names exists in cassandra.
     */
-  private val (cluster, session) = {
-    val cluster = factory.buildCluster(config)
-    val newSession = cluster.connect()
-    (cluster, newSession)
-  }
+  lazy val (cluster, session) = connect(config, factory)
 
   def ensureKeyspace(keyspace: KeyspaceConfiguration): Unit = {
     LOGGER.info("ensuring kespace exists with {}", keyspace)
@@ -118,6 +135,4 @@ class CassandraSession(config: ClientConfiguration, factory: ClusterFactory) {
     * @return future object of ResultSet
     */
   def executeAsync(statement: Statement): ResultSetFuture = session.executeAsync(statement)
-
-
 }

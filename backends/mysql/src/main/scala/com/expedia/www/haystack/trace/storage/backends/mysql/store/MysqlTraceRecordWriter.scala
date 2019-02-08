@@ -17,33 +17,49 @@
 
 package com.expedia.www.haystack.trace.storage.backends.mysql.store
 
+import java.io.ByteArrayInputStream
+import java.sql.{Time, Timestamp}
 import java.util.concurrent.atomic.AtomicInteger
 
 import com.expedia.open.tracing.backend.TraceRecord
 import com.expedia.www.haystack.commons.metrics.MetricsSupport
 import com.expedia.www.haystack.commons.retries.RetryOperation._
+import com.expedia.www.haystack.trace.storage.backends.mysql.client.SqlConnectionManager
 import com.expedia.www.haystack.trace.storage.backends.mysql.config.entities.MysqlConfiguration
 import com.expedia.www.haystack.trace.storage.backends.mysql.metrics.AppMetricNames
 import org.slf4j.LoggerFactory
 
 import scala.concurrent.{ExecutionContextExecutor, Future, Promise}
-import scala.util.{Failure, Success}
+import scala.util.{Failure, Success, Try}
 
-class MysqlTraceRecordWriter(config: MysqlConfiguration)(implicit val dispatcher: ExecutionContextExecutor)
+class MysqlTraceRecordWriter(config: MysqlConfiguration, sqlConnectionManager: SqlConnectionManager)(implicit val dispatcher: ExecutionContextExecutor)
   extends MetricsSupport {
 
   private val LOGGER = LoggerFactory.getLogger(classOf[MysqlTraceRecordWriter])
   private lazy val writeTimer = metricRegistry.timer(AppMetricNames.MYSQL_WRITE_TIME)
   private lazy val writeFailures = metricRegistry.meter(AppMetricNames.MYSQL_WRITE_FAILURE)
 
+  val writeRecordSql = "insert into spans values(?,?,?)"
+
   private def execute(record: TraceRecord): Future[Unit] = {
 
     val promise = Promise[Unit]
     // execute the request async with retry
     withRetryBackoff(retryCallback => {
-      val timer = writeTimer.time()
+      Try {
+        val timer = writeTimer.time()
 
-      // prepare the statement
+        val connection = sqlConnectionManager.getConnection
+        val statement = connection.prepareStatement(writeRecordSql)
+        statement.setString(1, record.getTraceId)
+        statement.setBlob(2, new ByteArrayInputStream(record.getSpans.toByteArray))
+        statement.setTimestamp(3, new Timestamp(record.getTimestamp))
+        statement.execute()
+        statement.getResultSet
+      } match {
+        case Success(resultSet) => retryCallback.onResult(result = resultSet)
+        case Failure(ex) => retryCallback.onError(ex, true)
+      }
 
     },
       config.retryConfig,

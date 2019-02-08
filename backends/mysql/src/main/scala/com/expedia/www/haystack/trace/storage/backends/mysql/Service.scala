@@ -21,6 +21,7 @@ import java.io.File
 import com.codahale.metrics.JmxReporter
 import com.expedia.www.haystack.commons.logger.LoggerUtils
 import com.expedia.www.haystack.commons.metrics.MetricsSupport
+import com.expedia.www.haystack.trace.storage.backends.mysql.client.{MysqlTableSchema, SqlConnectionManager}
 import com.expedia.www.haystack.trace.storage.backends.mysql.config.ProjectConfiguration
 import com.expedia.www.haystack.trace.storage.backends.mysql.services.{GrpcHealthService, SpansPersistenceService}
 import com.expedia.www.haystack.trace.storage.backends.mysql.store.{MysqlTraceRecordReader, MysqlTraceRecordWriter}
@@ -49,9 +50,12 @@ object Service extends MetricsSupport {
     try {
       val config = new ProjectConfiguration
       val serviceConfig = config.serviceConfig
+      val sqlConnectionManager = new SqlConnectionManager(config.mysqlConfig.clientConfig)
 
-      val tracerRecordWriter = new MysqlTraceRecordWriter(config.mysqlConfig)
-      val tracerRecordReader = new MysqlTraceRecordReader(config.mysqlConfig.clientConfig)
+      MysqlTableSchema.ensureExists(config.mysqlConfig.databaseConfig.autoCreateSchema, sqlConnectionManager.getConnection)
+
+      val tracerRecordWriter = new MysqlTraceRecordWriter(config.mysqlConfig,sqlConnectionManager)
+      val tracerRecordReader = new MysqlTraceRecordReader(config.mysqlConfig.clientConfig,sqlConnectionManager)
 
       val serverBuilder = NettyServerBuilder
         .forPort(serviceConfig.port)

@@ -26,8 +26,6 @@ object CassandraTableSchema {
   val ID_COLUMN_NAME = "id"
   val TIMESTAMP_COLUMN_NAME = "ts"
   val SPANS_COLUMN_NAME = "spans"
-  val SERVICE_COLUMN_NAME = "service_name"
-  val OPERATION_COLUMN_NAME = "operation_name"
 
 
   /**

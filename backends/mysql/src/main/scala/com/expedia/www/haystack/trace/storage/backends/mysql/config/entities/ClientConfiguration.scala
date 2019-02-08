@@ -23,33 +23,33 @@ import org.apache.commons.lang3.StringUtils
 
 /** define the table information in mysql
   *
-  * @param name        : name of mysql table
+  * @param name             : name of mysql table
   * @param recordTTLInSec   : ttl of record in sec
   * @param autoCreateSchema : apply sql and create table if not exist, optional
   */
-case class TableConfiguration(name: String,
-                              recordTTLInSec: Int = -1,
-                              autoCreateSchema: Option[String] = None) {
+case class DatabaseConfiguration(name: String,
+                                 recordTTLInSec: Int = -1,
+                                 autoCreateSchema: Option[String] = None) {
   require(StringUtils.isNotEmpty(name))
 }
 
 /**
   * defines the configuration parameters for mysql client
   *
-  * @param url    : list of mysql endpoints
+  * @param endpoints    : list of mysql endpoints
   * @param driver : Sql Driver Implementation Class
   * @param socket : socket configuration like maxConnections, timeouts and keepAlive
   */
-case class ClientConfiguration(url: String,
+case class ClientConfiguration(endpoints: String,
                                driver: String,
                                plaintextCredentials: Option[CredentialsConfiguration],
-                               spansTable: TableConfiguration,
                                socket: SocketConfiguration)
 
 /**
   * @param retryConfig retry configuration if writes fail
   */
 case class MysqlConfiguration(clientConfig: ClientConfiguration,
-                              retryConfig: RetryOperation.Config) {
+                              retryConfig: RetryOperation.Config,
+                              databaseConfig: DatabaseConfiguration
+                             )
 
-}

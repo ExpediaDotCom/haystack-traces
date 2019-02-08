@@ -18,16 +18,19 @@ package com.expedia.www.haystack.trace.storage.backends.mysql.store
 
 import com.expedia.open.tracing.backend.TraceRecord
 import com.expedia.www.haystack.commons.metrics.MetricsSupport
+import com.expedia.www.haystack.trace.storage.backends.mysql.client.MysqlTableSchema._
+import com.expedia.www.haystack.trace.storage.backends.mysql.client.SqlConnectionManager
 import com.expedia.www.haystack.trace.storage.backends.mysql.config.entities.ClientConfiguration
 import com.expedia.www.haystack.trace.storage.backends.mysql.metrics.AppMetricNames
+import com.google.protobuf.ByteString
 import org.slf4j.LoggerFactory
 
 import scala.concurrent.{ExecutionContextExecutor, Future, Promise}
 
-class MysqlTraceRecordReader(config: ClientConfiguration)
+class MysqlTraceRecordReader(config: ClientConfiguration, sqlConnectionManager: SqlConnectionManager)
                             (implicit val dispatcher: ExecutionContextExecutor) extends MetricsSupport {
   private val LOGGER = LoggerFactory.getLogger(classOf[MysqlTraceRecordReader])
-
+  val readRecordSql = "SELECT * FROM spans WHERE id = ?"
   private lazy val readTimer = metricRegistry.timer(AppMetricNames.MYSQL_READ_TIME)
   private lazy val readFailures = metricRegistry.meter(AppMetricNames.MYSQL_READ_FAILURES)
 
@@ -36,8 +39,27 @@ class MysqlTraceRecordReader(config: ClientConfiguration)
     val promise = Promise[Seq[TraceRecord]]
 
     try {
+      val connection = sqlConnectionManager.getConnection
+      val statement = connection.prepareStatement(readRecordSql)
+      statement.setString(1, traceIds.head)
+      statement.execute()
+      val results = statement.getResultSet
+      var records: List[TraceRecord] = List()
+
+      while (results.next()) {
+        val spans = results.getBlob(SPANS_COLUMN_NAME)
+        val record = TraceRecord.newBuilder()
+          .setTraceId(results.getString(ID_COLUMN_NAME))
+          .setSpans(ByteString.copyFrom(spans.getBytes(1, spans.length().toInt)))
+          .setTimestamp(results.getTimestamp(TIMESTAMP_COLUMN_NAME).getTime)
+          .build()
+        records = record :: records
+
+      }
+      promise.success(records)
       promise.future
-    } catch {
+    }
+    catch {
       case ex: Exception =>
         readFailures.mark()
         timer.stop()
@@ -45,4 +67,5 @@ class MysqlTraceRecordReader(config: ClientConfiguration)
         Future.failed(ex)
     }
   }
+
 }

@@ -1,4 +1,4 @@
-.PHONY: all cassandra memory release
+.PHONY: all cassandra mysql memory release
 
 PWD := $(shell pwd)
 
@@ -9,6 +9,13 @@ cassandra: build_cassandra
 
 build_cassandra:
 	cd ../ && ./mvnw package -DfinalName=haystack-trace-backend-cassandra -pl backends/cassandra -am
+
+
+mysql: build_mysql
+	cd mysql && $(MAKE) integration_test
+
+build_mysql:
+	cd ../ && ./mvnw package -DfinalName=haystack-trace-backend-mysql -pl backends/mysql -am
 
 
 memory: build_memory

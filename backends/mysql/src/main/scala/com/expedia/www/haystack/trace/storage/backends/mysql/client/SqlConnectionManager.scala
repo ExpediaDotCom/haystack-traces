@@ -14,7 +14,7 @@ class SqlConnectionManager(config: ClientConfiguration) extends AutoCloseable {
 
     val basicDataSource = new BasicDataSource
     basicDataSource.setDriverClassName(config.driver)
-    basicDataSource.setUrl(config.url)
+    basicDataSource.setUrl(config.endpoints)
     basicDataSource.setMaxActive(config.socket.maxConnectionPerHost)
     config.plaintextCredentials.foreach { credentials =>
       basicDataSource.setPassword(credentials.password)

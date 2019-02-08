@@ -43,16 +43,16 @@ class ProjectConfiguration {
   val mysqlConfig: MysqlConfiguration = {
 
 
-    def tableConfiguration(tableConfig: Config): TableConfiguration = {
+    def databaseConfig(databaseConfig: Config): DatabaseConfiguration = {
       val autoCreateSchemaField = "auto.create.schema"
-      val autoCreateSchema: Option[String] = if (tableConfig.hasPath(autoCreateSchemaField)
-        && StringUtils.isNotEmpty(tableConfig.getString(autoCreateSchemaField))) {
-        Some(tableConfig.getString(autoCreateSchemaField))
+      val autoCreateSchema: Option[String] = if (databaseConfig.hasPath(autoCreateSchemaField)
+        && StringUtils.isNotEmpty(databaseConfig.getString(autoCreateSchemaField))) {
+        Some(databaseConfig.getString(autoCreateSchemaField))
       } else {
         None
       }
 
-      TableConfiguration(tableConfig.getString("name"), tableConfig.getInt("ttl.sec"), autoCreateSchema)
+      DatabaseConfiguration(databaseConfig.getString("name"), databaseConfig.getInt("ttl.sec"), autoCreateSchema)
     }
 
     val mysqlConfig = config.getConfig("mysql")
@@ -75,15 +75,16 @@ class ProjectConfiguration {
 
     MysqlConfiguration(
       clientConfig = ClientConfiguration(
-        mysqlConfig.getString("url"),
+        mysqlConfig.getString("endpoints"),
         mysqlConfig.getString("driver"),
         credentialsConfig,
-        tableConfiguration(mysqlConfig.getConfig("table")),
         socket),
       retryConfig = RetryOperation.Config(
         mysqlConfig.getInt("retries.max"),
         mysqlConfig.getLong("retries.backoff.initial.ms"),
-        mysqlConfig.getDouble("retries.backoff.factor")))
+        mysqlConfig.getDouble("retries.backoff.factor")),
+      databaseConfig =  databaseConfig(mysqlConfig.getConfig("database"))
+    )
   }
 
 }

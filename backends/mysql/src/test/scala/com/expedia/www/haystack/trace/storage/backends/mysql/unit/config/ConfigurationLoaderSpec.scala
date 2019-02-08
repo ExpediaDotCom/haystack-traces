@@ -25,7 +25,7 @@ class ConfigurationLoaderSpec extends BaseUnitTestSpec {
     it("should load the service config from base.conf") {
       val serviceConfig: ServiceConfiguration = project.serviceConfig
       serviceConfig.port shouldBe 8090
-      serviceConfig.ssl.enabled shouldBe true
+      serviceConfig.ssl.enabled shouldBe false
       serviceConfig.ssl.certChainFilePath shouldBe "/ssl/cert"
       serviceConfig.ssl.privateKeyPath shouldBe "/ssl/private-key"
     }
@@ -34,10 +34,7 @@ class ConfigurationLoaderSpec extends BaseUnitTestSpec {
       val clientConfig = mysqlConfig.clientConfig
 
       // this will fail if run inside an editor, we override this config using env variable inside pom.xml
-      clientConfig.url shouldBe "mysql"
-      clientConfig.spansTable.autoCreateSchema shouldBe Some("mysql_table_schema")
-      clientConfig.spansTable.name shouldBe "spans"
-      clientConfig.spansTable.recordTTLInSec shouldBe 86400
+      clientConfig.endpoints shouldBe "mysql"
 
       clientConfig.socket.keepAlive shouldBe true
       clientConfig.socket.maxConnectionPerHost shouldBe 100
@@ -45,7 +42,12 @@ class ConfigurationLoaderSpec extends BaseUnitTestSpec {
       clientConfig.socket.connectionTimeoutMillis shouldBe 10000
       mysqlConfig.retryConfig.maxRetries shouldBe 10
       mysqlConfig.retryConfig.backOffInMillis shouldBe 100
-      mysqlConfig.retryConfig.backoffFactor shouldBe 2    }
+      mysqlConfig.retryConfig.backoffFactor shouldBe 2
+
+      mysqlConfig.databaseConfig.autoCreateSchema should not be None
+      mysqlConfig.databaseConfig.name shouldBe "spans"
+      mysqlConfig.databaseConfig.recordTTLInSec shouldBe 86400
+    }
 
   }
 }

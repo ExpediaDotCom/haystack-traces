@@ -5,5 +5,8 @@ services:
      environment:
        MAX_HEAP_SIZE: 256m
        HEAP_NEWSIZE: 256m
+       MYSQL_ROOT_PASSWORD: root
+       MYSQL_DATABASE: haystack-spans
      ports:
-       - "9042:9042"
+      - "3306:3306"
+     command: --default-authentication-plugin=mysql_native_password

@@ -28,3 +28,4 @@ build_memory:
 release:
 	cd cassandra && $(MAKE) docker_build && $(MAKE) release
 	cd memory && $(MAKE) docker_build && $(MAKE) release
+	cd mysql && $(MAKE) docker_build && $(MAKE) release

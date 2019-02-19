@@ -18,7 +18,7 @@
 package com.expedia.www.haystack.trace.storage.backends.mysql.store
 
 import java.io.ByteArrayInputStream
-import java.sql.{Time, Timestamp}
+import java.sql.{Connection, Timestamp}
 import java.util.concurrent.atomic.AtomicInteger
 
 import com.expedia.open.tracing.backend.TraceRecord
@@ -30,7 +30,7 @@ import com.expedia.www.haystack.trace.storage.backends.mysql.metrics.AppMetricNa
 import org.slf4j.LoggerFactory
 
 import scala.concurrent.{ExecutionContextExecutor, Future, Promise}
-import scala.util.{Failure, Success, Try}
+import scala.util.{Failure, Success}
 
 class MysqlTraceRecordWriter(config: MysqlConfiguration, sqlConnectionManager: SqlConnectionManager)(implicit val dispatcher: ExecutionContextExecutor)
   extends MetricsSupport {
@@ -44,23 +44,25 @@ class MysqlTraceRecordWriter(config: MysqlConfiguration, sqlConnectionManager: S
   private def execute(record: TraceRecord): Future[Unit] = {
 
     val promise = Promise[Unit]
+
     // execute the request async with retry
     withRetryBackoff(retryCallback => {
-      Try {
+      var connection:Connection = null
+      try {
         val timer = writeTimer.time()
-
-        val connection = sqlConnectionManager.getConnection
+        connection = sqlConnectionManager.getConnection
         val statement = connection.prepareStatement(writeRecordSql)
         statement.setString(1, record.getTraceId)
         statement.setBlob(2, new ByteArrayInputStream(record.getSpans.toByteArray))
         statement.setTimestamp(3, new Timestamp(record.getTimestamp))
         statement.execute()
-        statement.getResultSet
-      } match {
-        case Success(resultSet) => retryCallback.onResult(result = resultSet)
-        case Failure(ex) => retryCallback.onError(ex, true)
+        retryCallback.onResult(statement.getResultSet)
+      } catch {
+        case ex: Exception => retryCallback.onError(ex, retry = true)
       }
-
+      finally {
+        if (connection != null) connection.close()
+      }
     },
       config.retryConfig,
       onSuccess = (_: Any) => promise.success(),

@@ -16,6 +16,8 @@
 
 package com.expedia.www.haystack.trace.storage.backends.mysql.store
 
+import java.sql.Connection
+
 import com.expedia.open.tracing.backend.TraceRecord
 import com.expedia.www.haystack.commons.metrics.MetricsSupport
 import com.expedia.www.haystack.trace.storage.backends.mysql.client.MysqlTableSchema._
@@ -37,9 +39,9 @@ class MysqlTraceRecordReader(config: ClientConfiguration, sqlConnectionManager: 
   def readTraceRecords(traceIds: List[String]): Future[Seq[TraceRecord]] = {
     val timer = readTimer.time()
     val promise = Promise[Seq[TraceRecord]]
-
+    var connection: Connection = null
     try {
-      val connection = sqlConnectionManager.getConnection
+      connection = sqlConnectionManager.getConnection
       val statement = connection.prepareStatement(readRecordSql)
       statement.setString(1, traceIds.head)
       statement.execute()
@@ -65,6 +67,9 @@ class MysqlTraceRecordReader(config: ClientConfiguration, sqlConnectionManager: 
         timer.stop()
         LOGGER.error("Failed to read raw traces with exception", ex)
         Future.failed(ex)
+    }
+    finally {
+      if (connection != null) connection.close()
     }
   }
 

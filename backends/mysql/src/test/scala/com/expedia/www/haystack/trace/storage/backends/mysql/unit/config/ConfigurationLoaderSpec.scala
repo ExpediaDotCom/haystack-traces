@@ -34,13 +34,13 @@ class ConfigurationLoaderSpec extends BaseUnitTestSpec {
       val clientConfig = mysqlConfig.clientConfig
 
       // this will fail if run inside an editor, we override this config using env variable inside pom.xml
-      clientConfig.endpoints shouldBe "mysql"
+      clientConfig.endpoints shouldBe "jdbc:mysql://mysql/haystack"
 
       clientConfig.socket.keepAlive shouldBe true
       clientConfig.socket.maxConnectionPerHost shouldBe 100
       clientConfig.socket.readTimeoutMills shouldBe 5000
       clientConfig.socket.connectionTimeoutMillis shouldBe 10000
-      mysqlConfig.retryConfig.maxRetries shouldBe 10
+      mysqlConfig.retryConfig.maxRetries shouldBe 2
       mysqlConfig.retryConfig.backOffInMillis shouldBe 100
       mysqlConfig.retryConfig.backoffFactor shouldBe 2
 

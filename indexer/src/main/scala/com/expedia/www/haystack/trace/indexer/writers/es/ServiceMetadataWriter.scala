@@ -17,6 +17,7 @@
 
 package com.expedia.www.haystack.trace.indexer.writers.es
 
+import java.util.{Calendar, Locale, TimeZone}
 import java.util.concurrent.{Semaphore, TimeUnit}
 
 import com.expedia.open.tracing.buffer.SpanBuffer
@@ -32,10 +33,25 @@ import io.searchbox.client.{JestClient, JestClientFactory}
 import io.searchbox.core.{Bulk, Index}
 import io.searchbox.indices.template.PutTemplate
 import io.searchbox.params.Parameters
+import org.apache.commons.lang3.time.FastDateFormat
 import org.slf4j.LoggerFactory
 
 import scala.collection.JavaConverters._
 import scala.util.Try
+
+object ServiceMetadataUtils {
+
+  private val timezone = TimeZone.getTimeZone("UTC")
+  private val format = FastDateFormat.getInstance("yyyy-MM-dd", timezone, Locale.US)
+
+  // creates an index name based on current date. following example illustrates the naming convention of
+  // elastic search indices for service metadata:
+  // service-metadata-2019-02-20
+  def indexName(prefix: String): String = {
+    val currentTime = Calendar.getInstance(timezone)
+    s"$prefix-${format.format(currentTime.getTime)}"
+  }
+}
 
 class ServiceMetadataWriter(config: ServiceMetadataWriteConfiguration)
   extends TraceWriter with MetricsSupport {
@@ -97,8 +113,7 @@ class ServiceMetadataWriter(config: ServiceMetadataWriteConfiguration)
     val idxDocument: Seq[ServiceMetadataDoc] = documentGenerator.getAndUpdateServiceMetadata(packedSpanBuffer.protoObj.getChildSpansList.asScala)
     idxDocument.foreach(document => {
       try {
-
-        addIndexOperation(traceId, document, config.indexName) match {
+        addIndexOperation(traceId, document, ServiceMetadataUtils.indexName(config.indexPrefixName)) match {
           case Some(bulkToDispatch) =>
             inflightRequestsSemaphore.acquire()
             isSemaphoreAcquired = true

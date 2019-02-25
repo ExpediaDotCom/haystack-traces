@@ -85,7 +85,7 @@ class ElasticSearchTestClient {
       password = None,
       consistencyLevel = "one",
       indexTemplateJson = Some(INDEX_TEMPLATE),
-      indexName = "service-metadata",
+      indexPrefixName = "service-metadata",
       indexType = "metadata",
       connectionTimeoutMillis = 3000,
       readTimeoutMillis = 3000,

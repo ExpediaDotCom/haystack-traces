@@ -37,6 +37,7 @@ import org.apache.commons.lang3.time.FastDateFormat
 import org.slf4j.LoggerFactory
 
 import scala.util.Try
+import scala.collection.JavaConverters._
 
 object ElasticSearchWriterUtils {
 
@@ -46,10 +47,11 @@ object ElasticSearchWriterUtils {
   // creates an index name based on current date. following example illustrates the naming convention of
   // elastic search indices:
   // haystack-span-2017-08-30-1
-  def indexName(prefix: String, indexHourBucket: Int): String = {
-    val currentTime = Calendar.getInstance(timezone)
-    val bucket: Int = currentTime.get(Calendar.HOUR_OF_DAY) / indexHourBucket
-    s"$prefix-${format.format(currentTime.getTime)}-$bucket"
+  def indexName(prefix: String, indexHourBucket: Int, eventTimeMicros: Long): String = {
+    val eventTimeCal = Calendar.getInstance(timezone)
+    eventTimeCal.setTimeInMillis(eventTimeMicros / 1000)
+    val bucket: Int = eventTimeCal.get(Calendar.HOUR_OF_DAY) / indexHourBucket
+    s"$prefix-${format.format(eventTimeCal.getTime)}-$bucket"
   }
 }
 class ElasticSearchWriter(esConfig: ElasticSearchConfiguration, indexConf: WhitelistIndexFieldConfiguration)
@@ -118,7 +120,8 @@ class ElasticSearchWriter(esConfig: ElasticSearchConfiguration, indexConf: White
     var isSemaphoreAcquired = false
 
     try {
-      addIndexOperation(traceId, packedSpanBuffer.protoObj, ElasticSearchWriterUtils.indexName(esConfig.indexNamePrefix, esConfig.indexHourBucket), isLastSpanBuffer) match {
+      val eventTimeInMicros = packedSpanBuffer.protoObj.getChildSpansList.asScala.map(_.getStartTime).fold(Long.MaxValue)(Math.min)
+      addIndexOperation(traceId, packedSpanBuffer.protoObj, ElasticSearchWriterUtils.indexName(esConfig.indexNamePrefix, esConfig.indexHourBucket, eventTimeInMicros), isLastSpanBuffer) match {
         case Some(bulkToDispatch) =>
           inflightRequestsSemaphore.acquire()
           isSemaphoreAcquired = true

@@ -160,7 +160,7 @@ class ProjectConfiguration extends AutoCloseable {
       username = username,
       password = password,
       consistencyLevel = es.getString("consistency.level"),
-      indexName = es.getString("index.name"),
+      indexPrefixName = es.getString("index.prefix.name"),
       indexType = es.getString("index.type"),
       indexTemplateJson = indexTemplateJson,
       connectionTimeoutMillis = es.getInt("conn.timeout.ms"),

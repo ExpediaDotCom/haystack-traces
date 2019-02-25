@@ -77,7 +77,7 @@ class ConfigurationLoaderSpec extends FunSpec with Matchers {
       config.consistencyLevel shouldBe "one"
       config.readTimeoutMillis shouldBe 5000
       config.connectionTimeoutMillis shouldBe 10000
-      config.indexName shouldBe "service-metadata"
+      config.indexPrefixName shouldBe "service-metadata"
       config.indexType shouldBe "metadata"
       config.retryConfig.maxRetries shouldBe 10
       config.retryConfig.backOffInMillis shouldBe 100

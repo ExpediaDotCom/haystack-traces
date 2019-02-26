@@ -36,6 +36,7 @@ class MysqlTraceRecordReader(config: ClientConfiguration, sqlConnectionManager: 
   private lazy val readTimer = metricRegistry.timer(AppMetricNames.MYSQL_READ_TIME)
   private lazy val readFailures = metricRegistry.meter(AppMetricNames.MYSQL_READ_FAILURES)
 
+  //We currently don't have a way to make an async jdbc call, we should investigate this further to see if its possible to make this call async.
   def readTraceRecords(traceIds: List[String]): Future[Seq[TraceRecord]] = {
     val timer = readTimer.time()
     val promise = Promise[Seq[TraceRecord]]

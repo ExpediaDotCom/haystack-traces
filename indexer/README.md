@@ -23,8 +23,5 @@ In order to understand the haystack, we recommend to read the details of [haysta
 Its written in kafka-streams(http://docs.confluent.io/current/streams/index.html) and hence some prior knowledge of kafka-streams would be useful.
  
 
-##Technical Details
-Fill this as we go along..
-
 ## Building
-Check the details on [Build Section](../README.md)
+Check the details on [Build Section](../CONTRIBUTING.md)

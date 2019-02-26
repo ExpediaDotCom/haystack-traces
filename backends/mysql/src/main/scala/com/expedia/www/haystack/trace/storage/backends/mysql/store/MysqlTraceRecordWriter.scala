@@ -41,6 +41,7 @@ class MysqlTraceRecordWriter(config: MysqlConfiguration, sqlConnectionManager: S
 
   val writeRecordSql = "insert into spans values(?,?,?)"
 
+  //We currently don't have a way to make an async jdbc call, we should investigate this further to see if its possible to make this call async.
   private def execute(record: TraceRecord): Future[Unit] = {
 
     val promise = Promise[Unit]
@@ -54,7 +55,7 @@ class MysqlTraceRecordWriter(config: MysqlConfiguration, sqlConnectionManager: S
         val statement = connection.prepareStatement(writeRecordSql)
         statement.setString(1, record.getTraceId)
         statement.setBlob(2, new ByteArrayInputStream(record.getSpans.toByteArray))
-        statement.setTimestamp(3, new Timestamp(record.getTimestamp))
+        statement.setTimestamp(3, new Timestamp(System.currentTimeMillis()))
         statement.execute()
         retryCallback.onResult(statement.getResultSet)
       } catch {

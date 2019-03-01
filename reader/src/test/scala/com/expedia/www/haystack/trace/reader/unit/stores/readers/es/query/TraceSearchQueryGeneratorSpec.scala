@@ -59,33 +59,13 @@ class TraceSearchQueryGeneratorSpec extends BaseUnitTestSpec with BeforeAndAfter
         .setEndTime(System.currentTimeMillis() * 1000)
         .setLimit(10)
         .build()
-      val queryGenerator = new TraceSearchQueryGenerator(spansIndexConfiguration, "spans", new WhitelistIndexFieldConfiguration)
+      val queryGenerator = new TraceSearchQueryGenerator(spansIndexConfiguration, "spans", WhitelistIndexFieldConfiguration())
 
       When("generating query")
       val query = queryGenerator.generate(request)
 
       Then("generate a valid query")
       query.getType should be("spans")
-    }
-
-    it("should generate caption independent search queries") {
-      Given("a trace search request")
-      val fieldKey = "svcName"
-      val fieldValue = "opName"
-      val request = TracesSearchRequest
-        .newBuilder()
-        .addFields(Field.newBuilder().setName(fieldKey).setValue(fieldValue).build())
-        .setStartTime(1)
-        .setEndTime(System.currentTimeMillis() * 1000)
-        .setLimit(10)
-        .build()
-      val queryGenerator = new TraceSearchQueryGenerator(spansIndexConfiguration, "spans", new WhitelistIndexFieldConfiguration)
-
-      When("generating query")
-      val query: Search = queryGenerator.generate(request)
-
-      Then("generate a valid query with fields in lowercase")
-      query.toJson.contains(fieldKey.toLowerCase()) should be(true)
     }
 
     it("should generate valid search queries for expression tree based searches") {
@@ -99,7 +79,7 @@ class TraceSearchQueryGeneratorSpec extends BaseUnitTestSpec with BeforeAndAfter
         .setLimit(10)
         .build()
 
-      val queryGenerator = new TraceSearchQueryGenerator(spansIndexConfiguration, "spans", new WhitelistIndexFieldConfiguration)
+      val queryGenerator = new TraceSearchQueryGenerator(spansIndexConfiguration, "spans", WhitelistIndexFieldConfiguration())
 
       When("generating query")
       val query: Search = queryGenerator.generate(request)
@@ -122,7 +102,7 @@ class TraceSearchQueryGeneratorSpec extends BaseUnitTestSpec with BeforeAndAfter
         .setLimit(10)
         .build()
 
-      val queryGenerator = new TraceSearchQueryGenerator(spansIndexConfiguration, "spans", new WhitelistIndexFieldConfiguration)
+      val queryGenerator = new TraceSearchQueryGenerator(spansIndexConfiguration, "spans", WhitelistIndexFieldConfiguration())
 
       When("generating query")
       val query: Search = queryGenerator.generate(request)
@@ -137,7 +117,7 @@ class TraceSearchQueryGeneratorSpec extends BaseUnitTestSpec with BeforeAndAfter
       System.setProperty("user.timezone", "CST")
 
       When("getting the indexes")
-      val esIndexes = new TraceSearchQueryGenerator(spansIndexConfiguration, "spans", new WhitelistIndexFieldConfiguration).getESIndexes(1530806291394000L, 1530820646394000L, "haystack-traces", 4, 24)
+      val esIndexes = new TraceSearchQueryGenerator(spansIndexConfiguration, "spans", WhitelistIndexFieldConfiguration()).getESIndexes(1530806291394000L, 1530820646394000L, "haystack-traces", 4, 24)
 
       Then("they are correct based off of UTC")
       esIndexes shouldBe Vector("haystack-traces-2018-07-05-3", "haystack-traces-2018-07-05-4")
@@ -154,7 +134,7 @@ class TraceSearchQueryGeneratorSpec extends BaseUnitTestSpec with BeforeAndAfter
         .setLimit(10)
         .build()
 
-      val queryGenerator = new TraceSearchQueryGenerator(spansIndexConfiguration, "spans", new WhitelistIndexFieldConfiguration)
+      val queryGenerator = new TraceSearchQueryGenerator(spansIndexConfiguration, "spans", WhitelistIndexFieldConfiguration())
 
       When("generating query")
       val query: Search = queryGenerator.generate(request, useSpecificIndices = false)
@@ -166,7 +146,7 @@ class TraceSearchQueryGeneratorSpec extends BaseUnitTestSpec with BeforeAndAfter
 
     it("should generate valid count query for expression tree with duration field types") {
       Given("a trace count request")
-      val queryGenerator = new TraceSearchQueryGenerator(spansIndexConfiguration, "spans", new WhitelistIndexFieldConfiguration)
+      val queryGenerator = new TraceSearchQueryGenerator(spansIndexConfiguration, "spans", WhitelistIndexFieldConfiguration())
       val requests = Seq(expressionTreeWithDurationFields) map {
         expression => {
           TracesSearchRequest

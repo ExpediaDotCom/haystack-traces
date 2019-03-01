@@ -34,8 +34,8 @@ object TraceCountsQueryGenerator {
 
 class TraceCountsQueryGenerator(config: SpansIndexConfiguration,
                                 nestedDocName: String,
-                                indexConfiguration: WhitelistIndexFieldConfiguration)
-  extends SpansIndexQueryGenerator(nestedDocName, indexConfiguration) {
+                                whitelistIndexFields: WhitelistIndexFieldConfiguration)
+  extends SpansIndexQueryGenerator(nestedDocName, whitelistIndexFields) {
 
   import TraceCountsQueryGenerator._
 
@@ -74,14 +74,7 @@ class TraceCountsQueryGenerator(config: SpansIndexConfiguration,
   }
 
   private def buildQueryString(request: TraceCountsRequest): String = {
-    val query: BoolQueryBuilder =
-      if(request.hasFilterExpression) {
-        createExpressionTreeBasedQuery(request.getFilterExpression)
-      }
-      else {
-        // this is deprecated
-        createFilterFieldBasedQuery(request.getFieldsList)
-      }
+    val query: BoolQueryBuilder = createExpressionTreeBasedQuery(request.getFilterExpression)
 
     query.must(QueryBuilders.rangeQuery(TraceIndexDoc.START_TIME_KEY_NAME).gte(request.getStartTime).lte(request.getEndTime))
 

@@ -20,7 +20,7 @@ package com.expedia.www.haystack.trace.reader.unit.stores.readers.es.query
 import com.codahale.metrics.{Meter, Timer}
 import com.expedia.open.tracing.api.{Field, TracesSearchRequest}
 import com.expedia.www.haystack.trace.commons.config.entities.{IndexFieldType, WhitelistIndexFieldConfiguration}
-import com.expedia.www.haystack.trace.reader.config.entities.{ElasticSearchClientConfiguration, SpansIndexConfiguration}
+import com.expedia.www.haystack.trace.reader.config.entities.SpansIndexConfiguration
 import com.expedia.www.haystack.trace.reader.exceptions.ElasticSearchClientError
 import com.expedia.www.haystack.trace.reader.stores.readers.es.ElasticSearchReadResultListener
 import com.expedia.www.haystack.trace.reader.stores.readers.es.query.TraceSearchQueryGenerator
@@ -46,7 +46,7 @@ class ElasticSearchReadResultListenerSpec extends BaseUnitTestSpec {
 
 
   private val searchRequest = {
-    val generator = new TraceSearchQueryGenerator(spansIndexConfiguration, "spans", new WhitelistIndexFieldConfiguration)
+    val generator = new TraceSearchQueryGenerator(spansIndexConfiguration, "spans", WhitelistIndexFieldConfiguration())
     val field = Field.newBuilder().setName("serviceName").setValue("expweb").build()
     generator.generate(TracesSearchRequest.newBuilder().setStartTime(1510469157572000l).setEndTime(1510469161172000l).setLimit(40).addFields(field).build(), true)
   }

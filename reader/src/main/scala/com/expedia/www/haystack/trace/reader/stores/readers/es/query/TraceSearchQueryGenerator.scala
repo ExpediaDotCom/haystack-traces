@@ -19,7 +19,7 @@ package com.expedia.www.haystack.trace.reader.stores.readers.es.query
 import com.expedia.open.tracing.api.TracesSearchRequest
 import com.expedia.www.haystack.trace.commons.clients.es.document.TraceIndexDoc._
 import com.expedia.www.haystack.trace.commons.config.entities.WhitelistIndexFieldConfiguration
-import com.expedia.www.haystack.trace.reader.config.entities.{ElasticSearchClientConfiguration, SpansIndexConfiguration}
+import com.expedia.www.haystack.trace.reader.config.entities.SpansIndexConfiguration
 import io.searchbox.core.Search
 import org.apache.lucene.search.join.ScoreMode
 import org.elasticsearch.index.query.QueryBuilders._
@@ -30,8 +30,8 @@ import scala.collection.JavaConverters._
 
 class TraceSearchQueryGenerator(config: SpansIndexConfiguration,
                                 nestedDocName: String,
-                                indexConfiguration: WhitelistIndexFieldConfiguration)
-  extends SpansIndexQueryGenerator(nestedDocName, indexConfiguration) {
+                                whitelistIndexFields: WhitelistIndexFieldConfiguration)
+  extends SpansIndexQueryGenerator(nestedDocName, whitelistIndexFields) {
 
   def generate(request: TracesSearchRequest, useSpecificIndices: Boolean): Search = {
     require(request.getStartTime > 0)
@@ -67,11 +67,7 @@ class TraceSearchQueryGenerator(config: SpansIndexConfiguration,
   }
 
   private def buildQueryString(request: TracesSearchRequest): String = {
-    val query =
-      if(request.hasFilterExpression)
-        createExpressionTreeBasedQuery(request.getFilterExpression)
-      else
-        createFilterFieldBasedQuery(request.getFieldsList)
+    val query = createExpressionTreeBasedQuery(request.getFilterExpression)
 
     if(config.useRootDocumentStartTime) {
       query

@@ -28,6 +28,7 @@ import org.json4s.{DefaultFormats, Formats}
 import org.slf4j.LoggerFactory
 
 import scala.collection.JavaConverters._
+import scala.collection.mutable
 
 object IndexFieldType extends Enumeration {
   type IndexFieldType = Value
@@ -37,6 +38,7 @@ object IndexFieldType extends Enumeration {
 case class WhitelistIndexField(name: String,
                                `type`: IndexFieldType,
                                aliases: Set[String] = Set(),
+                               enableRangeQuery: Boolean = false,
                                searchContext: String = "span",
                                enabled: Boolean = true)
 
@@ -53,6 +55,8 @@ case class WhitelistIndexFieldConfiguration() extends Reloadable {
   val indexFieldMap = new ConcurrentHashMap[String, WhitelistIndexField]()
 
   var reloadConfigTableName: Option[String] = None
+
+  private val onChangeListeners = mutable.ListBuffer[() => Unit]()
 
   // fail fast
   override def name: String = reloadConfigTableName
@@ -75,6 +79,16 @@ case class WhitelistIndexFieldConfiguration() extends Reloadable {
       updateIndexFieldMap(WhiteListIndexFields(lowercaseFieldNames))
       // set the current version to newer one
       currentVersion = configData.hashCode
+
+      this.synchronized {
+        onChangeListeners.foreach(l => l())
+      }
+    }
+  }
+
+  def addOnChangeListener(listener: () => Unit): Unit = {
+    this.synchronized {
+      onChangeListeners.append(listener)
     }
   }
 

@@ -21,7 +21,7 @@ import java.util.{Date, TimeZone}
 
 import com.expedia.open.tracing.api.Operand.OperandCase
 import com.expedia.open.tracing.api.{ExpressionTree, Field}
-import com.expedia.www.haystack.trace.commons.config.entities.WhitelistIndexFieldConfiguration
+import com.expedia.www.haystack.trace.commons.config.entities.{IndexFieldType, WhitelistIndexFieldConfiguration}
 import io.searchbox.strings.StringUtils
 import org.apache.lucene.search.join.ScoreMode
 import org.elasticsearch.index.query.QueryBuilders.{boolQuery, nestedQuery, termQuery}
@@ -35,31 +35,9 @@ import org.elasticsearch.search.aggregations.support.ValueType
 import scala.collection.JavaConverters._
 import scala.concurrent.duration.Duration
 
-abstract class SpansIndexQueryGenerator(nestedDocName: String, indexConfiguration: WhitelistIndexFieldConfiguration) {
+abstract class SpansIndexQueryGenerator(nestedDocName: String,
+                                        whitelistIndexFieldConfiguration: WhitelistIndexFieldConfiguration) {
   private final val TIME_ZONE = TimeZone.getTimeZone("UTC")
-
-  // create search query by using filters list
-  @deprecated
-  protected def createFilterFieldBasedQuery(filterFields: java.util.List[Field]): BoolQueryBuilder = {
-    val traceContextWhitelistFields = indexConfiguration.globalTraceContextIndexFieldNames
-    val (traceContextFields, serviceContextFields) = filterFields
-      .asScala
-      .partition(f => traceContextWhitelistFields.contains(f.getName.toLowerCase))
-
-    val query = boolQuery()
-
-    createNestedQuery(serviceContextFields).map(query.filter)
-
-    traceContextFields foreach {
-      field => {
-        createNestedQuery(Seq(field)) match {
-          case Some(nestedQuery) => query.filter(nestedQuery)
-          case _ => /* may be log ? */
-        }
-      }
-    }
-    query
-  }
 
   // create search query by using filters expression tree
   protected def createExpressionTreeBasedQuery(expression: ExpressionTree): BoolQueryBuilder = {
@@ -118,7 +96,22 @@ abstract class SpansIndexQueryGenerator(nestedDocName: String, indexConfiguratio
 
     val rangeValue = field.getVType match {
       case Field.ValueType.DURATION => convertToMicros(field.getValue)
-      case _ => field.getValue.toLong // TODO: may not be safe ?
+      case _ =>
+        if(field.getName == "duration" || field.getName == "starttime") {
+          field.getValue.toLong
+        } else {
+          val fieldType = whitelistIndexFieldConfiguration.whitelistIndexFields
+            .find(wf => wf.name.equalsIgnoreCase(field.getName))
+            .map(wf => wf.`type`)
+            .getOrElse(IndexFieldType.string)
+
+          fieldType match {
+            case IndexFieldType.int | IndexFieldType.long => field.getValue.toLong
+            case IndexFieldType.double => field.getValue.toDouble
+            case IndexFieldType.bool => field.getValue.toBoolean
+            case _ => field.getValue
+          }
+        }
     }
 
     field.getOperator match {

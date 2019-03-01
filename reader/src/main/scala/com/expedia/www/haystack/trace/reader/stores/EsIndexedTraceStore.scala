@@ -22,11 +22,10 @@ import com.expedia.www.haystack.trace.commons.clients.es.document.TraceIndexDoc
 import com.expedia.www.haystack.trace.commons.config.entities.{TraceBackendClientConfiguration, WhitelistIndexFieldConfiguration}
 import com.expedia.www.haystack.trace.reader.config.entities.ElasticSearchConfiguration
 import com.expedia.www.haystack.trace.reader.stores.readers.es.ElasticSearchReader
-import com.expedia.www.haystack.trace.reader.stores.readers.es.query.{FieldValuesQueryGenerator, ServiceMetadataQueryGenerator, TraceCountsQueryGenerator, TraceSearchQueryGenerator}
+import com.expedia.www.haystack.trace.reader.stores.readers.es.query.{ServiceMetadataQueryGenerator, TraceCountsQueryGenerator, TraceSearchQueryGenerator}
 import com.expedia.www.haystack.trace.reader.stores.readers.grpc.GrpcTraceReader
 import io.searchbox.core.SearchResult
 import org.elasticsearch.index.IndexNotFoundException
-import org.slf4j.LoggerFactory
 
 import scala.collection.JavaConverters._
 import scala.concurrent.{ExecutionContextExecutor, Future}
@@ -36,13 +35,10 @@ class EsIndexedTraceStore(traceBackendConfig: TraceBackendClientConfiguration,
                           whitelistedFieldsConfiguration: WhitelistIndexFieldConfiguration)(implicit val executor: ExecutionContextExecutor)
   extends TraceStore with MetricsSupport with ResponseParser {
 
-  private val LOGGER = LoggerFactory.getLogger(classOf[ElasticSearchReader])
-
   private val traceReader: GrpcTraceReader = new GrpcTraceReader(traceBackendConfig)
   private val esReader: ElasticSearchReader = new ElasticSearchReader(elasticSearchConfiguration.clientConfiguration)
   private val traceSearchQueryGenerator = new TraceSearchQueryGenerator(elasticSearchConfiguration.spansIndexConfiguration, ES_NESTED_DOC_NAME, whitelistedFieldsConfiguration)
   private val traceCountsQueryGenerator = new TraceCountsQueryGenerator(elasticSearchConfiguration.spansIndexConfiguration, ES_NESTED_DOC_NAME, whitelistedFieldsConfiguration)
-  private val fieldValuesQueryGenerator = new FieldValuesQueryGenerator(elasticSearchConfiguration.spansIndexConfiguration, ES_NESTED_DOC_NAME, whitelistedFieldsConfiguration)
   private val serviceMetadataQueryGenerator = new ServiceMetadataQueryGenerator(elasticSearchConfiguration.serviceMetadataIndexConfiguration)
 
   private val esCountTraces = (request: TraceCountsRequest, useSpecificIndices: Boolean) => {
@@ -92,34 +88,26 @@ class EsIndexedTraceStore(traceBackendConfig: TraceBackendClientConfiguration,
     Future.successful(whitelistedFieldsConfiguration.whitelistIndexFields.map(_.name).distinct.sorted)
   }
 
-  private def readFromServiceMetadata(request: FieldValuesRequest): Option[Future[Seq[String]]] = {
-    val serviceMetadataConfig = elasticSearchConfiguration.serviceMetadataIndexConfiguration
-    if (!serviceMetadataConfig.enabled) return None
-
+  private def readFromServiceMetadata(request: FieldValuesRequest): Future[Seq[String]] = {
     if (request.getFieldName.toLowerCase == TraceIndexDoc.SERVICE_KEY_NAME && request.getFiltersCount == 0) {
-      Some(esReader
+      esReader
         .search(serviceMetadataQueryGenerator.generateSearchServiceQuery())
         .map(extractServiceMetadata)
-      )
     } else if (request.getFieldName.toLowerCase == TraceIndexDoc.OPERATION_KEY_NAME
       && (request.getFiltersCount == 1)
       && request.getFiltersList.get(0).getName.toLowerCase == TraceIndexDoc.SERVICE_KEY_NAME) {
-      Some(esReader
+      esReader
         .search(serviceMetadataQueryGenerator.generateSearchOperationQuery(request.getFilters(0).getValue))
-        .map(extractOperationMetadataFromSource(_, request.getFieldName.toLowerCase)))
+        .map(extractOperationMetadataFromSource(_, request.getFieldName.toLowerCase))
 
     } else {
-      LOGGER.info("read from service metadata request isn't served by elasticsearch")
-      None
+      Future.failed(new RuntimeException(s"Fail to read the service metadata for the given request $request"))
     }
   }
 
 
   override def getFieldValues(request: FieldValuesRequest): Future[Seq[String]] = {
-    readFromServiceMetadata(request).getOrElse(
-      esReader
-        .search(fieldValuesQueryGenerator.generate(request))
-        .map(extractFieldValues(_, request.getFieldName.toLowerCase)))
+    readFromServiceMetadata(request)
   }
 
   override def getTraceCounts(request: TraceCountsRequest): Future[TraceCounts] = {

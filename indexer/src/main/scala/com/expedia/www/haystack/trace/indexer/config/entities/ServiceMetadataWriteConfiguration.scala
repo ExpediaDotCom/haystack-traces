@@ -25,7 +25,7 @@ import com.expedia.www.haystack.commons.retries.RetryOperation
   * @param indexTemplateJson: template as json that will be applied when the app runs, this is optional  * @param username
   * @param password: password for the es
   * @param consistencyLevel: consistency level of writes, for e.g. one, quoram
-  * @param indexPrefixName: prefix of the elastic search index name where the data is written
+  * @param indexName: name of the elastic search index where the data is written
   * @param indexType: elastic search index type
   * @param connectionTimeoutMillis : connection timeout in millis
   * @param readTimeoutMillis: read timeout in millis
@@ -43,7 +43,7 @@ case class ServiceMetadataWriteConfiguration(enabled: Boolean,
                                              password: Option[String],
                                              consistencyLevel: String,
                                              indexTemplateJson: Option[String],
-                                             indexPrefixName: String,
+                                             indexName: String,
                                              indexType: String,
                                              connectionTimeoutMillis: Int,
                                              readTimeoutMillis: Int,

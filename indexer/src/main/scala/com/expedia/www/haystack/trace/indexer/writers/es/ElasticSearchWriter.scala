@@ -17,8 +17,7 @@
 
 package com.expedia.www.haystack.trace.indexer.writers.es
 
-import java.util.concurrent.{Semaphore, TimeUnit}
-import java.util.{Calendar, Locale, TimeZone}
+import java.util.concurrent.Semaphore
 
 import com.expedia.open.tracing.buffer.SpanBuffer
 import com.expedia.www.haystack.commons.metrics.MetricsSupport
@@ -33,27 +32,26 @@ import io.searchbox.client.{JestClient, JestClientFactory}
 import io.searchbox.core._
 import io.searchbox.indices.template.PutTemplate
 import io.searchbox.params.Parameters
-import org.apache.commons.lang3.time.FastDateFormat
+import org.joda.time.format.DateTimeFormat
+import org.joda.time.{DateTime, DateTimeZone}
 import org.slf4j.LoggerFactory
 
-import scala.util.Try
 import scala.collection.JavaConverters._
+import scala.util.Try
 
 object ElasticSearchWriterUtils {
-
-  private val timezone = TimeZone.getTimeZone("UTC")
-  private val format = FastDateFormat.getInstance("yyyy-MM-dd", timezone, Locale.US)
 
   // creates an index name based on current date. following example illustrates the naming convention of
   // elastic search indices:
   // haystack-span-2017-08-30-1
   def indexName(prefix: String, indexHourBucket: Int, eventTimeMicros: Long): String = {
-    val eventTimeCal = Calendar.getInstance(timezone)
-    eventTimeCal.setTimeInMillis(eventTimeMicros / 1000)
-    val bucket: Int = eventTimeCal.get(Calendar.HOUR_OF_DAY) / indexHourBucket
-    s"$prefix-${format.format(eventTimeCal.getTime)}-$bucket"
+    val eventTime = new DateTime(eventTimeMicros / 1000, DateTimeZone.UTC)
+    val dataFormatter = DateTimeFormat.forPattern("yyyy-MM-dd")
+    val bucket: Int = eventTime.getHourOfDay / indexHourBucket
+    s"$prefix-${dataFormatter.print(eventTime)}-$bucket"
   }
 }
+
 class ElasticSearchWriter(esConfig: ElasticSearchConfiguration, indexConf: WhitelistIndexFieldConfiguration)
   extends TraceWriter with MetricsSupport {
 
@@ -82,7 +80,7 @@ class ElasticSearchWriter(esConfig: ElasticSearchConfiguration, indexConf: White
       .readTimeout(esConfig.readTimeoutMillis)
       .defaultMaxTotalConnectionPerRoute(esConfig.maxConnectionsPerRoute)
 
-    if (esConfig.username.isDefined && esConfig.password.isDefined){
+    if (esConfig.username.isDefined && esConfig.password.isDefined) {
       builder.defaultCredentials(esConfig.username.get, esConfig.password.get)
     }
 
@@ -112,7 +110,7 @@ class ElasticSearchWriter(esConfig: ElasticSearchConfiguration, indexConf: White
     * exceed the max inflight requests, then we block and this puts backpressure on upstream
     *
     * @param traceId          trace id
-    * @param packedSpanBuffer  list of spans belonging to this traceId - packed bytes of span buffer
+    * @param packedSpanBuffer list of spans belonging to this traceId - packed bytes of span buffer
     * @param isLastSpanBuffer tells if this is the last record, so the writer can flush
     * @return
     */
@@ -120,8 +118,9 @@ class ElasticSearchWriter(esConfig: ElasticSearchConfiguration, indexConf: White
     var isSemaphoreAcquired = false
 
     try {
-      val eventTimeInMicros = packedSpanBuffer.protoObj.getChildSpansList.asScala.map(_.getStartTime).fold(Long.MaxValue)(Math.min)
-      addIndexOperation(traceId, packedSpanBuffer.protoObj, ElasticSearchWriterUtils.indexName(esConfig.indexNamePrefix, esConfig.indexHourBucket, eventTimeInMicros), isLastSpanBuffer) match {
+      val eventTimeInMicros = packedSpanBuffer.protoObj.getChildSpansList.asScala.head.getStartTime
+      val indexName = ElasticSearchWriterUtils.indexName(esConfig.indexNamePrefix, esConfig.indexHourBucket, eventTimeInMicros)
+      addIndexOperation(traceId, packedSpanBuffer.protoObj, indexName, isLastSpanBuffer) match {
         case Some(bulkToDispatch) =>
           inflightRequestsSemaphore.acquire()
           isSemaphoreAcquired = true

@@ -30,7 +30,6 @@ import com.expedia.www.haystack.trace.indexer.writers.TraceWriter
 import io.searchbox.client.config.HttpClientConfig
 import io.searchbox.client.{JestClient, JestClientFactory}
 import io.searchbox.core._
-import io.searchbox.indices.template.PutTemplate
 import io.searchbox.params.Parameters
 import org.joda.time.format.DateTimeFormat
 import org.joda.time.{DateTime, DateTimeZone}
@@ -51,10 +50,8 @@ object ElasticSearchWriterUtils {
     s"$prefix-${dataFormatter.print(eventTime)}-$bucket"
   }
 }
-
-class ElasticSearchWriter(esConfig: ElasticSearchConfiguration, indexConf: WhitelistIndexFieldConfiguration)
+class ElasticSearchWriter(esConfig: ElasticSearchConfiguration, whitelistFieldConfig: WhitelistIndexFieldConfiguration)
   extends TraceWriter with MetricsSupport {
-
   private val LOGGER = LoggerFactory.getLogger(classOf[ElasticSearchWriter])
 
   // meter that measures the write failures
@@ -64,7 +61,7 @@ class ElasticSearchWriter(esConfig: ElasticSearchConfiguration, indexConf: White
   private val esWriteTime = metricRegistry.timer(AppMetricNames.ES_WRITE_TIME)
 
   // converts a span into an indexable document
-  private val documentGenerator = new IndexDocumentGenerator(indexConf)
+  private val documentGenerator = new IndexDocumentGenerator(whitelistFieldConfig)
 
   // this semaphore controls the parallel writes to index store
   private val inflightRequestsSemaphore = new Semaphore(esConfig.maxInFlightBulkRequests, true)
@@ -86,15 +83,7 @@ class ElasticSearchWriter(esConfig: ElasticSearchConfiguration, indexConf: White
 
     factory.setHttpClientConfig(builder.build())
     val client = factory.getObject
-
-    if (esConfig.indexTemplateJson.isDefined) {
-      val putTemplateRequest = new PutTemplate.Builder("spans-index-template", esConfig.indexTemplateJson.get).build()
-      val result = client.execute(putTemplateRequest)
-      if (!result.isSucceeded) {
-        throw new RuntimeException(s"Fail to apply the following template to elastic search with reason=${result.getErrorMessage}")
-      }
-    }
-
+    new IndexTemplateHandler(client, esConfig.indexTemplateJson, esConfig.indexType, whitelistFieldConfig).run()
     client
   }
 
@@ -127,7 +116,8 @@ class ElasticSearchWriter(esConfig: ElasticSearchConfiguration, indexConf: White
 
           // execute the request async with retry
           withRetryBackoff((retryCallback) => {
-            esClient.executeAsync(bulkToDispatch, new ElasticSearchResultHandler(esWriteTime.time(), esWriteFailureMeter, retryCallback))
+            esClient.executeAsync(bulkToDispatch,
+              new ElasticSearchResultHandler(esWriteTime.time(), esWriteFailureMeter, retryCallback))
           },
             esConfig.retryConfig,
             onSuccess = (_: Any) => inflightRequestsSemaphore.release(),

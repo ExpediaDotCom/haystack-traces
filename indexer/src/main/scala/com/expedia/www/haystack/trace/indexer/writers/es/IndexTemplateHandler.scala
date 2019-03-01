@@ -57,6 +57,7 @@ class IndexTemplateHandler(client: JestClient,
   private def esDataType(`type`: IndexFieldType): String = {
     `type` match {
       case IndexFieldType.int => "integer"
+      case IndexFieldType.string => "keyword"
       case _ => `type`.toString
     }
   }
@@ -75,7 +76,7 @@ class IndexTemplateHandler(client: JestClient,
       if (prop != null) {
         prop.asInstanceOf[util.HashMap[String, Object]].put("doc_values", Boolean.box(wf.enableRangeQuery))
       } else if (wf.enabled && wf.enableRangeQuery) {
-        propertyMap.put(wf.name, Map("type" -> esDataType(wf.`type`).toString, "doc_values" -> true).asJava)
+        propertyMap.put(wf.name, Map("type" -> esDataType(wf.`type`), "doc_values" -> true, "norms" -> false).asJava)
       }
     })
 

@@ -34,11 +34,12 @@ class ElasticSearchWriterUtilsSpec extends FunSpec with Matchers with GivenWhenT
     it("should use UTC when generating ES indexes") {
       Given("the system timezone is not UTC")
       System.setProperty("user.timezone", "CST")
+      val eventTimeInMicros = System.currentTimeMillis() * 1000
 
       When("the writer generates the ES indexes")
-      val cstName = ElasticSearchWriterUtils.indexName("haystack-traces", 6)
+      val cstName = ElasticSearchWriterUtils.indexName("haystack-traces", 6, eventTimeInMicros)
       System.setProperty("user.timezone", "UTC")
-      val utcName = ElasticSearchWriterUtils.indexName("haystack-traces", 6)
+      val utcName = ElasticSearchWriterUtils.indexName("haystack-traces", 6, eventTimeInMicros)
 
       Then("it should use UTC to get those indexes")
       cstName shouldBe utcName

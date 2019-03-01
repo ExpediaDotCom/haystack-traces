@@ -18,6 +18,10 @@
 package com.expedia.www.haystack.trace.indexer.writers.es
 
 import java.util.concurrent.Semaphore
+<<<<<<< HEAD
+import java.util.{Calendar, Locale, TimeZone}
+=======
+>>>>>>> e28d78b878c67617ae091888383c74022fdb8098
 
 import com.expedia.open.tracing.buffer.SpanBuffer
 import com.expedia.www.haystack.commons.metrics.MetricsSupport
@@ -50,7 +54,12 @@ object ElasticSearchWriterUtils {
     s"$prefix-${dataFormatter.print(eventTime)}-$bucket"
   }
 }
+<<<<<<< HEAD
 class ElasticSearchWriter(esConfig: ElasticSearchConfiguration, whitelistFieldConfig: WhitelistIndexFieldConfiguration)
+=======
+
+class ElasticSearchWriter(esConfig: ElasticSearchConfiguration, indexConf: WhitelistIndexFieldConfiguration)
+>>>>>>> e28d78b878c67617ae091888383c74022fdb8098
   extends TraceWriter with MetricsSupport {
 
   implicit val formats = org.json4s.DefaultFormats
@@ -119,8 +128,7 @@ class ElasticSearchWriter(esConfig: ElasticSearchConfiguration, whitelistFieldCo
 
           // execute the request async with retry
           withRetryBackoff((retryCallback) => {
-            esClient.executeAsync(bulkToDispatch,
-              new ElasticSearchResultHandler(esWriteTime.time(), esWriteFailureMeter, retryCallback))
+            esClient.executeAsync(bulkToDispatch, new ElasticSearchResultHandler(esWriteTime.time(), esWriteFailureMeter, retryCallback))
           },
             esConfig.retryConfig,
             onSuccess = (_: Any) => inflightRequestsSemaphore.release(),

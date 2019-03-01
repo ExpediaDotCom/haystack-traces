@@ -86,7 +86,7 @@ class ElasticSearchWriter(esConfig: ElasticSearchConfiguration, whitelistFieldCo
 
     factory.setHttpClientConfig(builder.build())
     val client = factory.getObject
-    new IndexTemplateHandler(esClient, esConfig.indexTemplateJson, esConfig.indexType, whitelistFieldConfig).run()
+    new IndexTemplateHandler(client, esConfig.indexTemplateJson, esConfig.indexType, whitelistFieldConfig).run()
     client
   }
 

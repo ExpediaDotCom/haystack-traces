@@ -84,7 +84,7 @@ class ElasticSearchTestClient {
       username = None,
       password = None,
       consistencyLevel = "one",
-      indexTemplateJson = Some(INDEX_TEMPLATE),
+      indexTemplateJson = Some(SERVICE_METADATA_INDEX_TEMPLATE),
       indexName = "service-metadata",
       indexType = "metadata",
       connectionTimeoutMillis = 3000,
@@ -207,6 +207,50 @@ class ElasticSearchTestClient {
       |            }]
       |        }
       |    }
+      |}
+      |""".stripMargin
+
+  private val SERVICE_METADATA_INDEX_TEMPLATE =
+    """{
+      |  "template": "service-metadata*",
+      |  "aliases": {
+      |    "service-metadata": {}
+      |  },
+      |  "settings": {
+      |    "number_of_shards": 4,
+      |    "index.mapping.ignore_malformed": true,
+      |    "analysis": {
+      |      "normalizer": {
+      |        "lowercase_normalizer": {
+      |          "type": "custom",
+      |          "filter": [
+      |            "lowercase"
+      |          ]
+      |        }
+      |      }
+      |    }
+      |  },
+      |  "mappings": {
+      |    "metadata": {
+      |      "_field_names": {
+      |        "enabled": false
+      |      },
+      |      "_all": {
+      |        "enabled": false
+      |      },
+      |      "properties": {
+      |        "servicename": {
+      |          "type": "keyword",
+      |          "norms": false
+      |        },
+      |        "operationname": {
+      |          "type": "keyword",
+      |          "doc_values": false,
+      |          "norms": false
+      |        }
+      |      }
+      |    }
+      |  }
       |}
       |""".stripMargin
 }

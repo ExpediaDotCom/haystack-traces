@@ -52,9 +52,6 @@ object ElasticSearchWriterUtils {
 }
 class ElasticSearchWriter(esConfig: ElasticSearchConfiguration, whitelistFieldConfig: WhitelistIndexFieldConfiguration)
   extends TraceWriter with MetricsSupport {
-
-  implicit val formats = org.json4s.DefaultFormats
-
   private val LOGGER = LoggerFactory.getLogger(classOf[ElasticSearchWriter])
 
   // meter that measures the write failures

@@ -42,6 +42,52 @@ class TraceCountsQueryGeneratorSpec extends BaseUnitTestSpec {
     useRootDocumentStartTime = true)
 
   describe("TraceSearchQueryGenerator") {
+    it("should generate valid search queries") {
+      Given("a trace search request")
+      val serviceName = "svcName"
+      val operationName = "opName"
+      val startTime = 1529418475791000l // Tuesday, June 19, 2018 2:27:55.791 PM
+      val endTime = 1529419075791000l // Tuesday, June 19, 2018 2:37:55.791 PM
+      val request = TraceCountsRequest
+        .newBuilder()
+        .addFields(Field.newBuilder().setName(TraceIndexDoc.SERVICE_KEY_NAME).setValue(serviceName).build())
+        .addFields(Field.newBuilder().setName(TraceIndexDoc.OPERATION_KEY_NAME).setValue(operationName).build())
+        .setStartTime(startTime)
+        .setEndTime(endTime)
+        .setInterval(interval)
+        .build()
+      val queryGenerator = new TraceCountsQueryGenerator(spansIndexConfiguration, "spans", new WhitelistIndexFieldConfiguration)
+
+      When("generating query")
+      val query = queryGenerator.generate(request)
+      Then("generate a valid query")
+      query.getData(new Gson()).replaceAll("\n", "").replaceAll(" ", "") shouldEqual "{\"size\":0,\"query\":{\"bool\":{\"must\":[{\"range\":{\"starttime\":{\"from\":1529418475791000,\"to\":1529419075791000,\"include_lower\":true,\"include_upper\":true,\"boost\":1.0}}}],\"filter\":[{\"nested\":{\"query\":{\"bool\":{\"filter\":[{\"term\":{\"spans.servicename\":{\"value\":\"svcName\",\"boost\":1.0}}},{\"term\":{\"spans.operationname\":{\"value\":\"opName\",\"boost\":1.0}}}],\"adjust_pure_negative\":true,\"boost\":1.0}},\"path\":\"spans\",\"ignore_unmapped\":false,\"score_mode\":\"none\",\"boost\":1.0}}],\"adjust_pure_negative\":true,\"boost\":1.0}},\"aggregations\":{\"countagg\":{\"histogram\":{\"field\":\"starttime\",\"interval\":6.0E7,\"offset\":0.0,\"order\":{\"_key\":\"asc\"},\"keyed\":false,\"min_doc_count\":0,\"extended_bounds\":{\"min\":1.529418475791E15,\"max\":1.529419075791E15}}}}}"
+      query.getURI shouldEqual "haystack-spans-2018-06-19-2/spans/_search"
+    }
+
+    it("should generate valid search queries for bucketed search count") {
+      Given("a trace search request")
+      val serviceName = "svcName"
+      val operationName = "opName"
+      val startTimeInMicros = 1
+      val endTimeInMicros = 1527487220L * 1000 * 1000 // May 28, 2018 6:00:20 AM
+      val request = TraceCountsRequest
+        .newBuilder()
+        .addFields(Field.newBuilder().setName(TraceIndexDoc.SERVICE_KEY_NAME).setValue(serviceName).build())
+        .addFields(Field.newBuilder().setName(TraceIndexDoc.OPERATION_KEY_NAME).setValue(operationName).build())
+        .setStartTime(startTimeInMicros)
+        .setEndTime(endTimeInMicros)
+        .setInterval(interval)
+        .build()
+      val queryGenerator = new TraceCountsQueryGenerator(spansIndexConfiguration, "spans", new WhitelistIndexFieldConfiguration)
+
+      When("generating query")
+      val query = queryGenerator.generate(request)
+
+      Then("generate a valid query")
+      query.getURI shouldEqual "haystack-spans/spans/_search"
+    }
+
     it("should return a valid list of indexes for overlapping time range") {
       Given("starttime and endtime")
       val startTimeInMicros = 1527501725L * 1000 * 1000 // Monday, May 28, 2018 10:03:36 AM

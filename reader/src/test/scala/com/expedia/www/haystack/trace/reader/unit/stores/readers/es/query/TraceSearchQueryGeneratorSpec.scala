@@ -68,6 +68,26 @@ class TraceSearchQueryGeneratorSpec extends BaseUnitTestSpec with BeforeAndAfter
       query.getType should be("spans")
     }
 
+    it("should generate caption independent search queries") {
+      Given("a trace search request")
+      val fieldKey = "svcName"
+      val fieldValue = "opName"
+      val request = TracesSearchRequest
+        .newBuilder()
+        .addFields(Field.newBuilder().setName(fieldKey).setValue(fieldValue).build())
+        .setStartTime(1)
+        .setEndTime(System.currentTimeMillis() * 1000)
+        .setLimit(10)
+        .build()
+      val queryGenerator = new TraceSearchQueryGenerator(spansIndexConfiguration, "spans", new WhitelistIndexFieldConfiguration)
+
+      When("generating query")
+      val query: Search = queryGenerator.generate(request)
+
+      Then("generate a valid query with fields in lowercase")
+      query.toJson.contains(fieldKey.toLowerCase()) should be(true)
+    }
+    
     it("should generate valid search queries for expression tree based searches") {
       Given("a trace search request")
 

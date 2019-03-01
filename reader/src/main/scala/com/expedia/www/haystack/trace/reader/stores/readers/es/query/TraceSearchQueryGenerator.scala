@@ -67,7 +67,11 @@ class TraceSearchQueryGenerator(config: SpansIndexConfiguration,
   }
 
   private def buildQueryString(request: TracesSearchRequest): String = {
-    val query = createExpressionTreeBasedQuery(request.getFilterExpression)
+    val query =
+      if(request.hasFilterExpression)
+        createExpressionTreeBasedQuery(request.getFilterExpression)
+      else
+        createFilterFieldBasedQuery(request.getFieldsList)
 
     if(config.useRootDocumentStartTime) {
       query

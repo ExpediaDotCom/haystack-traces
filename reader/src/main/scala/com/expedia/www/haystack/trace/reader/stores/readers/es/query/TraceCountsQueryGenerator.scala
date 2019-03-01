@@ -74,7 +74,14 @@ class TraceCountsQueryGenerator(config: SpansIndexConfiguration,
   }
 
   private def buildQueryString(request: TraceCountsRequest): String = {
-    val query: BoolQueryBuilder = createExpressionTreeBasedQuery(request.getFilterExpression)
+    val query: BoolQueryBuilder =
+      if(request.hasFilterExpression) {
+        createExpressionTreeBasedQuery(request.getFilterExpression)
+      }
+      else {
+        // this is deprecated
+        createFilterFieldBasedQuery(request.getFieldsList)
+      }
 
     query.must(QueryBuilders.rangeQuery(TraceIndexDoc.START_TIME_KEY_NAME).gte(request.getStartTime).lte(request.getEndTime))
 

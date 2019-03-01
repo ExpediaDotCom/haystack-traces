@@ -87,7 +87,7 @@ class TraceSearchQueryGeneratorSpec extends BaseUnitTestSpec with BeforeAndAfter
       Then("generate a valid query with fields in lowercase")
       query.toJson.contains(fieldKey.toLowerCase()) should be(true)
     }
-    
+
     it("should generate valid search queries for expression tree based searches") {
       Given("a trace search request")
 

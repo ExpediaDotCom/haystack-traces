@@ -26,7 +26,6 @@ import com.expedia.www.haystack.trace.commons.clients.es.document.TraceIndexDoc
 import com.expedia.www.haystack.trace.commons.clients.es.document.TraceIndexDoc.{OPERATION_KEY_NAME, SERVICE_KEY_NAME, TagValue}
 import com.expedia.www.haystack.trace.commons.config.entities.IndexFieldType.IndexFieldType
 import com.expedia.www.haystack.trace.commons.config.entities.{IndexFieldType, WhitelistIndexFieldConfiguration}
-import com.expedia.www.haystack.trace.commons.utils.SpanUtils
 import org.apache.commons.lang3.StringUtils
 
 import scala.collection.JavaConverters._

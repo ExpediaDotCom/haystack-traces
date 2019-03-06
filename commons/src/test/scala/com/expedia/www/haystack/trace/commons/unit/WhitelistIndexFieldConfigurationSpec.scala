@@ -37,7 +37,7 @@ class WhitelistIndexFieldConfigurationSpec extends FunSpec with Matchers {
     }
 
     it("a loaded configuration should return the non empty whitelist fields") {
-      val whitelistField_1 = WhitelistIndexField(name = "role", `type` = IndexFieldType.string)
+      val whitelistField_1 = WhitelistIndexField(name = "role", `type` = IndexFieldType.string, enableRangeQuery = true)
       val whitelistField_2 = WhitelistIndexField(name = "Errorcode", `type` = IndexFieldType.long)
 
       val config = WhitelistIndexFieldConfiguration()
@@ -47,6 +47,7 @@ class WhitelistIndexFieldConfigurationSpec extends FunSpec with Matchers {
       config.onReload(cfgJsonData)
 
       config.whitelistIndexFields.map(_.name) should contain allOf("role", "errorcode")
+      config.whitelistIndexFields.filter(r => r.name == "role").head.enableRangeQuery shouldBe true
       config.indexFieldMap.size() shouldBe 2
       config.indexFieldMap.keys().asScala.toList should contain allOf("role", "errorcode")
       config.globalTraceContextIndexFieldNames.size shouldBe 0

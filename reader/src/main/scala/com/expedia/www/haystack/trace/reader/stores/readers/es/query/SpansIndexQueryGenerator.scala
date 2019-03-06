@@ -21,7 +21,8 @@ import java.util.{Date, TimeZone}
 
 import com.expedia.open.tracing.api.Operand.OperandCase
 import com.expedia.open.tracing.api.{ExpressionTree, Field}
-import com.expedia.www.haystack.trace.commons.config.entities.WhitelistIndexFieldConfiguration
+import com.expedia.www.haystack.trace.commons.clients.es.document.TraceIndexDoc
+import com.expedia.www.haystack.trace.commons.config.entities.{IndexFieldType, WhitelistIndexFieldConfiguration}
 import io.searchbox.strings.StringUtils
 import org.apache.lucene.search.join.ScoreMode
 import org.elasticsearch.index.query.QueryBuilders.{boolQuery, nestedQuery, termQuery}
@@ -33,15 +34,15 @@ import org.elasticsearch.search.aggregations.bucket.terms.TermsAggregationBuilde
 import org.elasticsearch.search.aggregations.support.ValueType
 
 import scala.collection.JavaConverters._
-import scala.concurrent.duration.Duration
 
-abstract class SpansIndexQueryGenerator(nestedDocName: String, indexConfiguration: WhitelistIndexFieldConfiguration) {
+abstract class SpansIndexQueryGenerator(nestedDocName: String,
+                                        whitelistIndexFieldConfiguration: WhitelistIndexFieldConfiguration) {
   private final val TIME_ZONE = TimeZone.getTimeZone("UTC")
 
   // create search query by using filters list
   @deprecated
   protected def createFilterFieldBasedQuery(filterFields: java.util.List[Field]): BoolQueryBuilder = {
-    val traceContextWhitelistFields = indexConfiguration.globalTraceContextIndexFieldNames
+    val traceContextWhitelistFields = whitelistIndexFieldConfiguration.globalTraceContextIndexFieldNames
     val (traceContextFields, serviceContextFields) = filterFields
       .asScala
       .partition(f => traceContextWhitelistFields.contains(f.getName.toLowerCase))
@@ -107,23 +108,30 @@ abstract class SpansIndexQueryGenerator(nestedDocName: String, indexConfiguratio
     termQuery(withBaseDoc(field.getName.toLowerCase), field.getValue)
   }
 
-  private def convertToMicros(value: String): Long = {
-    // if value ends with 'm', it signifies min, so add 'in'
-    val adjustedValue = if (value.endsWith("m")) value + "in" else value
-    Duration(adjustedValue).toMicros
-  }
-
   private def buildNestedRangeQuery(field: Field): RangeQueryBuilder = {
-    val rangeQuery = QueryBuilders.rangeQuery(withBaseDoc(field.getName.toLowerCase))
+    def rangeValue(): Any = {
+      if(field.getName == TraceIndexDoc.DURATION_KEY_NAME || field.getName == TraceIndexDoc.START_TIME_KEY_NAME) {
+        field.getValue.toLong
+      } else {
+        val fieldType = whitelistIndexFieldConfiguration.whitelistIndexFields
+          .find(wf => wf.name.equalsIgnoreCase(field.getName))
+          .map(wf => wf.`type`)
+          .getOrElse(IndexFieldType.string)
 
-    val rangeValue = field.getVType match {
-      case Field.ValueType.DURATION => convertToMicros(field.getValue)
-      case _ => field.getValue.toLong // TODO: may not be safe ?
+        fieldType match {
+          case IndexFieldType.int | IndexFieldType.long => field.getValue.toLong
+          case IndexFieldType.double => field.getValue.toDouble
+          case IndexFieldType.bool => field.getValue.toBoolean
+          case _ => field.getValue
+        }
+      }
     }
 
+    val rangeQuery = QueryBuilders.rangeQuery(withBaseDoc(field.getName.toLowerCase))
+    val value = rangeValue()
     field.getOperator match {
-      case Field.Operator.GREATER_THAN => rangeQuery.gt(rangeValue)
-      case Field.Operator.LESS_THAN => rangeQuery.lt(rangeValue)
+      case Field.Operator.GREATER_THAN => rangeQuery.gt(value)
+      case Field.Operator.LESS_THAN => rangeQuery.lt(value)
       case _ => throw new RuntimeException("Fail to understand the operator -" + field.getOperator)
     }
     rangeQuery

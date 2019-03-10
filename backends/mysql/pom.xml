@@ -16,7 +16,6 @@
     <properties>
         <mainClass>com.expedia.www.haystack.trace.storage.backends.mysql.Service</mainClass>
         <finalName>${project.artifactId}-${project.version}</finalName>
-        <maven-protobuf-plugin.version>3.3.0.1</maven-protobuf-plugin.version>
         <mysql.connector.version>8.0.13</mysql.connector.version>
         <apache.commons.dhcp.version>1.4</apache.commons.dhcp.version>
     </properties>

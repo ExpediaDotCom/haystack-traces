@@ -1,7 +1,7 @@
 #!/bin/bash
 
-[ -z "$JAVA_XMS" ] && JAVA_XMS=1024m
-[ -z "$JAVA_XMX" ] && JAVA_XMX=1024m
+[ -z "$JAVA_XMS" ] && JAVA_XMS=256m
+[ -z "$JAVA_XMX" ] && JAVA_XMX=256m
 [ -z "$JAVA_GC_OPTS" ] && JAVA_GC_OPTS="-XX:+UseG1GC"
 
 set -e

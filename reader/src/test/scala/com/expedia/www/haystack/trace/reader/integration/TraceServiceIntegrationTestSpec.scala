@@ -372,7 +372,7 @@ class TraceServiceIntegrationTestSpec extends BaseIntegrationTestSpec {
         .setIsSpanLevelExpression(true)
         .addOperands(Operand.newBuilder().setField(Field.newBuilder().setName(TraceIndexDoc.SERVICE_KEY_NAME).setValue(serviceName)))
 
-      val greaterThanExpr = baseExpr.addOperands(Operand.newBuilder().setField(Field.newBuilder().setName(TraceIndexDoc.DURATION_KEY_NAME).setOperator(Field.Operator.GREATER_THAN).setVType(Field.ValueType.DURATION).setValue("300ms")))
+      val greaterThanExpr = baseExpr.addOperands(Operand.newBuilder().setField(Field.newBuilder().setName(TraceIndexDoc.DURATION_KEY_NAME).setOperator(Field.Operator.GREATER_THAN).setValue("300000")))
       val nonEmptyTraces = client.searchTraces(TracesSearchRequest
         .newBuilder()
         .setFilterExpression(greaterThanExpr)
@@ -381,7 +381,7 @@ class TraceServiceIntegrationTestSpec extends BaseIntegrationTestSpec {
         .setLimit(10)
         .build())
 
-      val lessThanExpr = baseExpr.addOperands(Operand.newBuilder().setField(Field.newBuilder().setName(TraceIndexDoc.DURATION_KEY_NAME).setOperator(Field.Operator.LESS_THAN).setVType(Field.ValueType.DURATION).setValue("300ms")))
+      val lessThanExpr = baseExpr.addOperands(Operand.newBuilder().setField(Field.newBuilder().setName(TraceIndexDoc.DURATION_KEY_NAME).setOperator(Field.Operator.LESS_THAN).setValue("300000")))
       val emptyTraces = client.searchTraces(TracesSearchRequest
         .newBuilder()
         .setFilterExpression(lessThanExpr)

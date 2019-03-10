@@ -92,7 +92,7 @@ class TraceCountsQueryGeneratorSpec extends BaseUnitTestSpec {
       Given("starttime and endtime")
       val startTimeInMicros = 1527501725L * 1000 * 1000 // Monday, May 28, 2018 10:03:36 AM
       val endTimeInMicros = 1527512524L * 1000 * 1000 // Monday, May 28, 2018 1:02:04 PM
-      val queryGenerator = new TraceCountsQueryGenerator(spansIndexConfiguration, "spans", new WhitelistIndexFieldConfiguration)
+      val queryGenerator = new TraceCountsQueryGenerator(spansIndexConfiguration, "spans", WhitelistIndexFieldConfiguration())
 
       When("retrieving index names")
       val indexNames = queryGenerator.getESIndexes(startTimeInMicros, endTimeInMicros, INDEX_NAME_PREFIX, ES_INDEX_HOUR_BUCKET, ES_INDEX_HOUR_TTL)
@@ -107,7 +107,7 @@ class TraceCountsQueryGeneratorSpec extends BaseUnitTestSpec {
       Given("starttime and endtime")
       val startTimeInMicros = 1527487200L * 1000 * 1000 // May 28, 2018 6:00:00 AM
       val endTimeInMicros = 1527508800L * 1000 * 1000 // May 28, 2018 12:00:00 PM
-      val queryGenerator = new TraceCountsQueryGenerator(spansIndexConfiguration, "spans", new WhitelistIndexFieldConfiguration)
+      val queryGenerator = new TraceCountsQueryGenerator(spansIndexConfiguration, "spans", WhitelistIndexFieldConfiguration())
 
       When("retrieving index names")
       val indexNames = queryGenerator.getESIndexes(startTimeInMicros, endTimeInMicros, INDEX_NAME_PREFIX, ES_INDEX_HOUR_BUCKET, ES_INDEX_HOUR_TTL)
@@ -122,7 +122,7 @@ class TraceCountsQueryGeneratorSpec extends BaseUnitTestSpec {
       Given("starttime and endtime")
       val starttimeInMicros = 1527487100L * 1000 * 1000 // May 28, 2018 5:58:20 AM
       val endtimeInMicros = 1527487120L * 1000 * 1000 // May 28, 2018 5:58:40 AM
-      val queryGenerator = new TraceCountsQueryGenerator(spansIndexConfiguration, "spans", new WhitelistIndexFieldConfiguration)
+      val queryGenerator = new TraceCountsQueryGenerator(spansIndexConfiguration, "spans", WhitelistIndexFieldConfiguration())
 
       When("retrieving index names")
       val indexNames = queryGenerator.getESIndexes(starttimeInMicros, endtimeInMicros, INDEX_NAME_PREFIX, ES_INDEX_HOUR_BUCKET, ES_INDEX_HOUR_TTL)
@@ -137,7 +137,7 @@ class TraceCountsQueryGeneratorSpec extends BaseUnitTestSpec {
       Given("starttime and endtime")
       val startTimeInMicros = 0
       val endTimeInMicros = 1527487220L * 1000 * 1000 // May 28, 2018 6:00:20 AM
-      val queryGenerator = new TraceCountsQueryGenerator(spansIndexConfiguration, "spans", new WhitelistIndexFieldConfiguration)
+      val queryGenerator = new TraceCountsQueryGenerator(spansIndexConfiguration, "spans", WhitelistIndexFieldConfiguration())
 
       When("retrieving index names")
       val indexNames = queryGenerator.getESIndexes(startTimeInMicros, endTimeInMicros, INDEX_NAME_PREFIX, ES_INDEX_HOUR_BUCKET, ES_INDEX_HOUR_TTL)
@@ -160,7 +160,7 @@ class TraceCountsQueryGeneratorSpec extends BaseUnitTestSpec {
         .setInterval(interval)
         .build()
 
-      val queryGenerator = new TraceCountsQueryGenerator(spansIndexConfiguration, "spans", new WhitelistIndexFieldConfiguration)
+      val queryGenerator = new TraceCountsQueryGenerator(spansIndexConfiguration, "spans", WhitelistIndexFieldConfiguration())
 
       When("generating query")
       val query: Search = queryGenerator.generate(request)
@@ -184,7 +184,7 @@ class TraceCountsQueryGeneratorSpec extends BaseUnitTestSpec {
         .setInterval(interval)
         .build()
 
-      val queryGenerator = new TraceCountsQueryGenerator(spansIndexConfiguration, "spans", new WhitelistIndexFieldConfiguration)
+      val queryGenerator = new TraceCountsQueryGenerator(spansIndexConfiguration, "spans", WhitelistIndexFieldConfiguration())
 
       When("generating query")
       val query: Search = queryGenerator.generate(request)
@@ -199,7 +199,7 @@ class TraceCountsQueryGeneratorSpec extends BaseUnitTestSpec {
 
     it("should generate valid count query for expression tree with duration field types") {
       Given("a trace count request")
-      val queryGenerator = new TraceCountsQueryGenerator(spansIndexConfiguration, "spans", new WhitelistIndexFieldConfiguration)
+      val queryGenerator = new TraceCountsQueryGenerator(spansIndexConfiguration, "spans", WhitelistIndexFieldConfiguration())
       val startTime = 1529418475791000l // Tuesday, June 19, 2018 2:27:55.791 PM
       val endTime = 1529419075791000l
 

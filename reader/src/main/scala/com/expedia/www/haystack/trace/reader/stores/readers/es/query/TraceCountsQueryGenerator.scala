@@ -34,8 +34,8 @@ object TraceCountsQueryGenerator {
 
 class TraceCountsQueryGenerator(config: SpansIndexConfiguration,
                                 nestedDocName: String,
-                                indexConfiguration: WhitelistIndexFieldConfiguration)
-  extends SpansIndexQueryGenerator(nestedDocName, indexConfiguration) {
+                                whitelistIndexFields: WhitelistIndexFieldConfiguration)
+  extends SpansIndexQueryGenerator(nestedDocName, whitelistIndexFields) {
 
   import TraceCountsQueryGenerator._
 

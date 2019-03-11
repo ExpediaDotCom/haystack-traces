@@ -37,7 +37,7 @@ class ProjectConfiguration {
     val ssl = serviceConfig.getConfig("ssl")
     val sslConfig = SslConfiguration(ssl.getBoolean("enabled"), ssl.getString("cert.path"), ssl.getString("private.key.path"))
 
-    ServiceConfiguration(serviceConfig.getInt("port"), sslConfig)
+    ServiceConfiguration(serviceConfig.getInt("port"), sslConfig, serviceConfig.getInt("max.message.size"))
   }
   /**
     *

@@ -67,6 +67,10 @@ object Service extends MetricsSupport {
         serverBuilder.useTransportSecurity(new File(serviceConfig.ssl.certChainFilePath), new File(serviceConfig.ssl.privateKeyPath))
       }
 
+      // default max message size in grpc is 4MB. if our max message size is greater than 4MB then we should configure this
+      // limit in the netty based grpc server.
+      if (serviceConfig.maxSizeInBytes > 4 * 1024 * 1024) serverBuilder.maxMessageSize(serviceConfig.maxSizeInBytes)
+
       val server = serverBuilder.build().start()
 
       LOGGER.info(s"server started, listening on ${serviceConfig.port}")

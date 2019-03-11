@@ -46,7 +46,7 @@ class ProviderConfiguration {
     */
   val traceBackendConfiguration: TraceBackendClientConfiguration = {
     val clientConfig = config.getConfig("backend.client")
-    TraceBackendClientConfiguration(clientConfig.getString("host"), clientConfig.getInt("port"), clientConfig.getInt("max.message.size"))
+    TraceBackendClientConfiguration(clientConfig.getString("host"), clientConfig.getInt("port"))
   }
 
 

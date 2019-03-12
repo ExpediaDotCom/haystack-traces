@@ -28,6 +28,7 @@ class ConfigurationLoaderSpec extends BaseUnitTestSpec {
       serviceConfig.ssl.enabled shouldBe false
       serviceConfig.ssl.certChainFilePath shouldBe "/ssl/cert"
       serviceConfig.ssl.privateKeyPath shouldBe "/ssl/private-key"
+      serviceConfig.maxSizeInBytes shouldBe 52428800
     }
 
     it("should load the trace transformers") {

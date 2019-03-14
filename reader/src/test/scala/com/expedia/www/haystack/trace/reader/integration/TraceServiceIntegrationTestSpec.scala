@@ -54,7 +54,7 @@ class TraceServiceIntegrationTestSpec extends BaseIntegrationTestSpec {
         .setFieldName(TraceIndexDoc.SERVICE_KEY_NAME)
         .build()
 
-      When("calling getFieldNames")
+      When("calling getFieldValues")
       val result = client.getFieldValues(request)
 
       Then("should return possible values for given field")
@@ -76,7 +76,7 @@ class TraceServiceIntegrationTestSpec extends BaseIntegrationTestSpec {
         .setFieldName(TraceIndexDoc.OPERATION_KEY_NAME)
         .build()
 
-      When("calling getFieldNames")
+      When("calling getFieldValues")
       val result = client.getFieldValues(request)
 
       Then("should return filtered values for given field")

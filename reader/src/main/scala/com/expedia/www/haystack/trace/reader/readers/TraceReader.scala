@@ -95,7 +95,8 @@ class TraceReader(traceStore: TraceStore,
       .map(names =>
         FieldNames
           .newBuilder()
-          .addAllNames(names.asJavaCollection)
+          .addAllNames(names.getNamesList)
+          .addAllFieldMetadata(names.getFieldMetadataList)
           .build())
   }
 

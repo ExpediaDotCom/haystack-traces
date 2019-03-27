@@ -87,8 +87,25 @@ class EsIndexedTraceStore(traceBackendConfig: TraceBackendClientConfiguration,
 
   override def getTrace(traceId: String): Future[Trace] = traceReader.readTraces(List(traceId)).map(_.head)
 
-  override def getFieldNames: Future[Seq[String]] = {
-    Future.successful(whitelistedFieldsConfiguration.whitelistIndexFields.map(_.name).distinct.sorted)
+  private def constructFieldMetadata(isRangeQuery: Boolean) = {
+    val fieldMetadataBuilder = FieldMetadata.newBuilder()
+    fieldMetadataBuilder.setIsRangeQuery(isRangeQuery)
+    fieldMetadataBuilder.build()
+  }
+
+  private def constructFieldNames(names: Iterable[String], metadata: Iterable[_ <: FieldMetadata]) = {
+    val fieldNamesBuilder = FieldNames.newBuilder()
+    fieldNamesBuilder.addAllNames(names.asJava)
+    fieldNamesBuilder.addAllFieldMetadata(metadata.asJava)
+    fieldNamesBuilder.build()
+  }
+
+  override def getFieldNames: Future[FieldNames] = {
+    val whitelistIndexFields = whitelistedFieldsConfiguration.whitelistIndexFields
+    val names = whitelistIndexFields.map(_.name)
+    val metadata: Iterable[_ <: FieldMetadata] = whitelistIndexFields.map(field => constructFieldMetadata(field.enableRangeQuery))
+
+    Future.successful(constructFieldNames(names, metadata))
   }
 
   private def readFromServiceMetadata(request: FieldValuesRequest): Option[Future[Seq[String]]] = {

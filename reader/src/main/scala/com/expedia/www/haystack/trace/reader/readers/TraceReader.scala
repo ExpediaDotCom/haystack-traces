@@ -92,12 +92,6 @@ class TraceReader(traceStore: TraceStore,
   def getFieldNames: Future[FieldNames] = {
     traceStore
       .getFieldNames
-      .map(names =>
-        FieldNames
-          .newBuilder()
-          .addAllNames(names.getNamesList)
-          .addAllFieldMetadata(names.getFieldMetadataList)
-          .build())
   }
 
   def getFieldValues(request: FieldValuesRequest): Future[FieldValues] = {

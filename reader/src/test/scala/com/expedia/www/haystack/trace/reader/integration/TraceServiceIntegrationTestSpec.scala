@@ -40,8 +40,9 @@ class TraceServiceIntegrationTestSpec extends BaseIntegrationTestSpec {
       val fieldNames = client.getFieldNames(Empty.newBuilder().build())
 
       Then("should return fieldNames available in index")
-      fieldNames.getNamesList.size() should be(2)
-      fieldNames.getNamesList.asScala.toList should contain allOf(field1, field2)
+      fieldNames.getNamesCount should be(2)
+      fieldNames.getFieldMetadataCount should be(2)
+      fieldNames.getNamesList.asScala.toList should contain allOf("abc", "def")
     }
   }
 

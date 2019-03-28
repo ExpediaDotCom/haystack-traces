@@ -32,16 +32,17 @@ class TraceServiceIntegrationTestSpec extends BaseIntegrationTestSpec {
   describe("TraceReader.getFieldNames") {
     it("should return names of enabled fields") {
       Given("trace in trace-backend and elasticsearch")
-      val field1 = "abc"
-      val field2 = "def"
+      val field1 = FieldWithMetadata("abc", isRangeQuery = true)
+      val field2 = FieldWithMetadata("def", isRangeQuery = false)
       putWhitelistIndexFieldsInEs(List(field1, field2))
 
       When("calling getFieldNames")
       val fieldNames = client.getFieldNames(Empty.newBuilder().build())
 
       Then("should return fieldNames available in index")
-      fieldNames.getNamesList.size() should be(2)
-      fieldNames.getNamesList.asScala.toList should contain allOf(field1, field2)
+      fieldNames.getNamesCount should be(2)
+      fieldNames.getFieldMetadataCount should be(2)
+      fieldNames.getNamesList.asScala.toList should contain allOf("abc", "def")
     }
   }
 

@@ -247,8 +247,10 @@ trait BaseIntegrationTestSpec extends FunSpec with GivenWhenThen with Matchers w
     }
   }
 
-  protected def putWhitelistIndexFieldsInEs(fields: List[String]): Unit = {
-    val whitelistFields = for (field <- fields) yield WhitelistIndexField(field, IndexFieldType.string, aliases = Set(s"_$field"))
+  case class FieldWithMetadata(name: String, isRangeQuery: Boolean)
+
+  protected def putWhitelistIndexFieldsInEs(fields: List[FieldWithMetadata]): Unit = {
+    val whitelistFields = for (field <- fields) yield WhitelistIndexField(field.name, IndexFieldType.string, aliases = Set(s"_${field.name}"), field.isRangeQuery)
     esClient.execute(new Index.Builder(Serialization.write(WhiteListIndexFields(whitelistFields)))
       .index(ELASTIC_SEARCH_WHITELIST_INDEX)
       .`type`(ELASTIC_SEARCH_WHITELIST_TYPE)

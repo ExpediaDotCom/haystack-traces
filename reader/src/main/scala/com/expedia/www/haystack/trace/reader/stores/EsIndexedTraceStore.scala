@@ -19,7 +19,7 @@ package com.expedia.www.haystack.trace.reader.stores
 import com.expedia.open.tracing.api._
 import com.expedia.www.haystack.commons.metrics.MetricsSupport
 import com.expedia.www.haystack.trace.commons.clients.es.document.TraceIndexDoc
-import com.expedia.www.haystack.trace.commons.config.entities.{TraceBackendClientConfiguration, WhitelistIndexFieldConfiguration}
+import com.expedia.www.haystack.trace.commons.config.entities.{TraceBackendClientConfiguration, WhitelistIndexField, WhitelistIndexFieldConfiguration}
 import com.expedia.www.haystack.trace.reader.config.entities.ElasticSearchConfiguration
 import com.expedia.www.haystack.trace.reader.stores.readers.es.ElasticSearchReader
 import com.expedia.www.haystack.trace.reader.stores.readers.es.query.{FieldValuesQueryGenerator, ServiceMetadataQueryGenerator, TraceCountsQueryGenerator, TraceSearchQueryGenerator}
@@ -87,8 +87,18 @@ class EsIndexedTraceStore(traceBackendConfig: TraceBackendClientConfiguration,
 
   override def getTrace(traceId: String): Future[Trace] = traceReader.readTraces(List(traceId)).map(_.head)
 
-  override def getFieldNames: Future[Seq[String]] = {
-    Future.successful(whitelistedFieldsConfiguration.whitelistIndexFields.map(_.name).distinct.sorted)
+  override def getFieldNames: Future[FieldNames] = {
+    val fields = whitelistedFieldsConfiguration.whitelistIndexFields.distinct.sortBy(_.name)
+    val builder = FieldNames.newBuilder()
+
+    fields.foreach {
+      f => {
+        builder.addNames(f.name)
+        builder.addFieldMetadata(FieldMetadata.newBuilder().setIsRangeQuery(f.enableRangeQuery))
+      }
+    }
+
+    Future.successful(builder.build())
   }
 
   private def readFromServiceMetadata(request: FieldValuesRequest): Option[Future[Seq[String]]] = {

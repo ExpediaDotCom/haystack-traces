@@ -17,9 +17,16 @@
 
 package com.expedia.www.haystack.trace.commons.config.entities
 
+
 /**
   * defines the configuration parameters for trace-backend  *
   * @param host              : trace backend grpc hostname
   * @param port              : trace backend grpc port
   */
-case class TraceBackendClientConfiguration(host: String, port:Int)
+case class GrpcClientConfig(host: String, port: Int)
+
+/**
+  * multiple store backends
+  * @param backends configuration of all trace store backends
+  */
+case class TraceStoreBackends(backends: Seq[GrpcClientConfig])

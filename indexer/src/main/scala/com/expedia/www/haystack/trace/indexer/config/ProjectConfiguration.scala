@@ -33,6 +33,7 @@ import org.apache.kafka.clients.producer.ProducerConfig
 import org.apache.kafka.common.serialization.{ByteArraySerializer, StringDeserializer, StringSerializer}
 
 import scala.collection.JavaConverters._
+import scala.collection.mutable
 import scala.util.Try
 
 class ProjectConfiguration extends AutoCloseable {
@@ -126,13 +127,19 @@ class ProjectConfiguration extends AutoCloseable {
     * trace backend configuration object
     */
   val backendConfig: TraceBackendConfiguration = {
-
-
     val traceBackendConfig = config.getConfig("backend")
-    val clientConfig = traceBackendConfig.getConfig("client")
+
+    val grpcClients = traceBackendConfig.entrySet().asScala
+      .map(k => StringUtils.split(k.getKey, '.')(0)).toSeq
+      .map(cl => traceBackendConfig.getConfig(cl))
+      .filter(cl => cl.hasPath("host") && cl.hasPath("port"))
+      .map(cl => GrpcClientConfig(cl.getString("host"), cl.getInt("port")))
+
+    // we dont support multiple backends for write operations
+    require(grpcClients.size == 1)
 
     TraceBackendConfiguration(
-      TraceBackendClientConfiguration(clientConfig.getString("host"), clientConfig.getInt("port")),
+      TraceStoreBackends(grpcClients),
       maxInFlightRequests = traceBackendConfig.getInt("max.inflight.requests"))
 
   }

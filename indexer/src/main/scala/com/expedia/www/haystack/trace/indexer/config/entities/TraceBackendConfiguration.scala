@@ -17,11 +17,11 @@
 
 package com.expedia.www.haystack.trace.indexer.config.entities
 
-import com.expedia.www.haystack.trace.commons.config.entities.TraceBackendClientConfiguration
+import com.expedia.www.haystack.trace.commons.config.entities.TraceStoreBackends
 
 /**
   * @param clientConfig defines the grpc client configuration for connecting to the trace backend
   * @param maxInFlightRequests defines the max parallel writes to trace-backend
   */
-case class TraceBackendConfiguration(clientConfig: TraceBackendClientConfiguration,
+case class TraceBackendConfiguration(clientConfig: TraceStoreBackends,
                                      maxInFlightRequests: Int)

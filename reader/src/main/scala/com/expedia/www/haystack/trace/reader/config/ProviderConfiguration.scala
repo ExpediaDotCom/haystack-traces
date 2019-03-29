@@ -25,6 +25,7 @@ import com.expedia.www.haystack.trace.reader.config.entities._
 import com.expedia.www.haystack.trace.reader.readers.transformers.{PartialSpanTransformer, SpanTreeTransformer, TraceTransformer}
 import com.expedia.www.haystack.trace.reader.readers.validators.TraceValidator
 import com.typesafe.config.Config
+import org.apache.commons.lang3.StringUtils
 
 import scala.collection.JavaConverters._
 import scala.reflect.ClassTag
@@ -44,9 +45,18 @@ class ProviderConfiguration {
   /**
     * trace backend configuration object
     */
-  val traceBackendConfiguration: TraceBackendClientConfiguration = {
-    val clientConfig = config.getConfig("backend.client")
-    TraceBackendClientConfiguration(clientConfig.getString("host"), clientConfig.getInt("port"))
+  val traceBackendConfiguration: TraceStoreBackends = {
+    val traceBackendConfig = config.getConfig("backend")
+
+    val grpcClients = traceBackendConfig.entrySet().asScala
+      .map(k => StringUtils.split(k.getKey, '.')(0)).toSeq
+      .map(cl => traceBackendConfig.getConfig(cl))
+      .filter(cl => cl.hasPath("host") && cl.hasPath("port"))
+      .map(cl => GrpcClientConfig(cl.getString("host"), cl.getInt("port")))
+
+    require(grpcClients.nonEmpty)
+
+    TraceStoreBackends(grpcClients)
   }
 
 

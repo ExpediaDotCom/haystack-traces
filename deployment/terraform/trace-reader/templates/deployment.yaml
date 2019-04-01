@@ -41,6 +41,7 @@ spec:
           value: "${backend_jvm_memory_limit}m"
         - name: "JAVA_XMX"
           value: "${backend_jvm_memory_limit}m"
+        ${backend_env_vars}
         livenessProbe:
           exec:
             command:

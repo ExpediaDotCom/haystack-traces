@@ -27,9 +27,7 @@ module "trace-indexer" {
   backend_memory_limit = "${var.traces["backend_memory_limit"]}"
   backend_memory_request = "${var.traces["backend_memory_request"]}"
   backend_jvm_memory_limit = "${var.traces["backend_jvm_memory_limit"]}"
-  cassandra_retries_max = "${var.traces["backend_cassandra_retries_max"]}"
-  cassandra_backoff_initial_ms = "${var.traces["backend_cassandra_backoff_initial_ms"]}"
-  cassandra_backoff_factor = "${var.traces["backend_cassandra_backoff_factor"]}"
+  backend_env_vars = "${var.traces["backend_environment_overrides"]}"
 }
 
 module "trace-reader" {
@@ -58,6 +56,7 @@ module "trace-reader" {
   backend_memory_request = "${var.traces["backend_memory_request"]}"
   backend_jvm_memory_limit = "${var.traces["backend_jvm_memory_limit"]}"
   env_vars = "${var.traces["reader_environment_overrides"]}"
+  backend_env_vars = "${var.traces["backend_environment_overrides"]}"
 }
 
 module "es-indices" {

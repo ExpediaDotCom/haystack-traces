@@ -7,6 +7,9 @@ variable "elasticsearch_hostname" {}
 variable "elasticsearch_port" {}
 variable "elasticsearch_template" {}
 variable "cassandra_hostname" {}
+variable "cassandra_retries_max" {}
+variable "cassandra_backoff_initial_ms" {}
+variable "cassandra_backoff_factor" {}
 variable "graphite_hostname" {}
 variable "graphite_port" {}
 variable "graphite_enabled" {}

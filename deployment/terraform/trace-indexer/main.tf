@@ -40,9 +40,6 @@ data "template_file" "deployment_yaml" {
     graphite_host = "${var.graphite_hostname}"
     graphite_enabled = "${var.graphite_enabled}"
     cassandra_hostname = "${var.cassandra_hostname}"
-    cassandra_retries_max = "${var.cassandra_retries_max}"
-    cassandra_backoff_initial_ms = "${var.cassandra_backoff_initial_ms}"
-    cassandra_backoff_factor = "${var.cassandra_backoff_factor}"
     node_selecter_label = "${var.node_selector_label}"
     storage_backend_image = "${var.storage_backend_image}"
     indexer_image = "${var.indexer_image}"
@@ -60,7 +57,7 @@ data "template_file" "deployment_yaml" {
 
     configmap_name = "${local.configmap_name}"
     env_vars= "${indent(9,"${var.env_vars}")}"
-
+    backend_env_vars = "${indent(9,"${var.backend_env_vars}")}"
   }
 }
 

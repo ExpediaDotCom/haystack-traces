@@ -22,6 +22,7 @@ variable "backend_jvm_memory_limit"{}
 variable "backend_cpu_request"{}
 variable "backend_cpu_limit"{}
 variable "env_vars" {}
+variable "backend_env_vars" {}
 
 variable "termination_grace_period" {
   default = 30

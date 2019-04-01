@@ -31,6 +31,12 @@ spec:
         env:
         - name: "HAYSTACK_PROP_CASSANDRA_ENDPOINTS"
           value: "${cassandra_hostname}"
+        - name: "HAYSTACK_PROP_CASSANDRA_RETRIES_MAX"
+          value: "${cassandra_retries_max}"
+        - name: "HAYSTACK_PROP_CASSANDRA_BACKOFF_INITIAL_MS"
+          value: "${cassandra_backoff_initial_ms}"
+        - name: "HAYSTACK_PROP_CASSANDRA_BACKOFF_FACTOR"
+          value: "${cassandra_backoff_factor}"
         - name: "HAYSTACK_GRAPHITE_HOST"
           value: "${graphite_host}"
         - name: "HAYSTACK_GRAPHITE_PORT"

@@ -1,4 +1,5 @@
 # haystack-trace-indexer
+
 This haystack component accumulates the spans associated with a TraceId in a given time window(configurable). 
 The time window for every unique traceId starts with the kafka-record's timestamp of the first observed child span.
 These accumulated spans are  written as single entity to external trace-backends for persistence and elastic search for indexing. We also output these
@@ -17,14 +18,16 @@ primary key and store buffered-spans as a time series.
 In ElasticSearch, we use TraceId appended by a 4 character random ID with every document that we write. This ensures
 that if the same TraceId reappears, we generate a new document.
  
-##Required Reading
+## Required Reading
  
 In order to understand the haystack, we recommend to read the details of [haystack](https://github.com/ExpediaDotCom/haystack) project. 
 Its written in kafka-streams(http://docs.confluent.io/current/streams/index.html) and hence some prior knowledge of kafka-streams would be useful.
  
 
-##Technical Details
+## Technical Details
+
 Fill this as we go along..
 
 ## Building
+
 Check the details on [Build Section](../README.md)

@@ -74,9 +74,11 @@ class IndexTemplateHandler(client: JestClient,
     whitelistFieldConfig.whitelistIndexFields.foreach(wf => {
       val prop = propertyMap.get(wf.name)
       if (prop != null) {
-        prop.asInstanceOf[util.HashMap[String, Object]].put("doc_values", Boolean.box(wf.enableRangeQuery))
-      } else if (wf.enabled && wf.enableRangeQuery) {
-        propertyMap.put(wf.name, Map("type" -> esDataType(wf.`type`), "doc_values" -> true, "norms" -> false).asJava)
+        if (wf.enabled && wf.enableRangeQuery) {
+          propertyMap.put(wf.name, Map("type" -> esDataType(wf.`type`), "doc_values" -> true, "norms" -> false).asJava)
+        } else {
+          prop.asInstanceOf[util.HashMap[String, Object]].put("doc_values", Boolean.box(wf.enableRangeQuery))
+        }
       }
     })
 

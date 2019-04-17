@@ -1,6 +1,6 @@
 module "trace-indexer" {
   source = "trace-indexer"
-  indexer_image = "expediadotcom/haystack-trace-indexer:${var.traces["version"]}"
+  image = "expediadotcom/haystack-trace-indexer:${var.traces["version"]}"
   storage_backend_image = "expediadotcom/haystack-trace-backend-cassandra:${var.traces["version"]}"
   replicas = "${var.traces["indexer_instances"]}"
   enabled = "${var.traces["enabled"]}"
@@ -32,7 +32,7 @@ module "trace-indexer" {
 
 module "trace-reader" {
   source = "trace-reader"
-  reader_image = "expediadotcom/haystack-trace-reader:${var.traces["version"]}"
+  image = "expediadotcom/haystack-trace-reader:${var.traces["version"]}"
   storage_backend_image = "expediadotcom/haystack-trace-backend-cassandra:${var.traces["version"]}"
   replicas = "${var.traces["reader_instances"]}"
   namespace = "${var.namespace}"

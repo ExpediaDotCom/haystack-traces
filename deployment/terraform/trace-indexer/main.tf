@@ -42,7 +42,7 @@ data "template_file" "deployment_yaml" {
     cassandra_hostname = "${var.cassandra_hostname}"
     node_selecter_label = "${var.node_selector_label}"
     storage_backend_image = "${var.storage_backend_image}"
-    indexer_image = "${var.indexer_image}"
+    image = "${var.image}"
     replicas = "${var.replicas}"
     memory_limit = "${var.memory_limit}"
     memory_request = "${var.memory_request}"

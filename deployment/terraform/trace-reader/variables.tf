@@ -1,4 +1,4 @@
-variable "reader_image" {}
+variable "image" {}
 variable "storage_backend_image" {}
 variable "replicas" {}
 variable "namespace" {}

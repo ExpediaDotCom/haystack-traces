@@ -52,7 +52,7 @@ spec:
           timeoutSeconds: 5
           failureThreshold: 3
       - name: ${app_name}
-        image: ${indexer_image}
+        image: ${image}
         volumeMounts:
           # Create on-disk volume to store exec logs
         - mountPath: /config

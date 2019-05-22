@@ -1,0 +1,12 @@
+version: '3'
+services:
+   mysql:
+     image: mysql:8.0.13
+     environment:
+       MAX_HEAP_SIZE: 256m
+       HEAP_NEWSIZE: 256m
+       MYSQL_ROOT_PASSWORD: root
+       MYSQL_DATABASE: haystack-spans
+     ports:
+      - "3306:3306"
+     command: --default-authentication-plugin=mysql_native_password

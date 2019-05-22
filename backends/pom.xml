@@ -18,6 +18,7 @@
     <modules>
         <module>cassandra</module>
         <module>memory</module>
+        <module>mysql</module>
     </modules>
 
     <properties>

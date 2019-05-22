@@ -65,7 +65,7 @@ object SpanUtils {
   }
 
   def containsClientLogTag(span: Span): Boolean = {
-    containsLogTag(span, CLIENT_RECV_EVENT) && containsLogTag(span, CLIENT_RECV_EVENT)
+    containsLogTag(span, CLIENT_RECV_EVENT) && containsLogTag(span, CLIENT_SEND_EVENT)
   }
 
   def addServerLogTag(span: Span): Span = {

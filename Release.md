@@ -1,7 +1,8 @@
-#Releasing
+# Releasing
+
 Currently we publish the repo to docker hub and nexus central repository.
 
-#How to release and publish
+## How to release and publish
 
 * Git tagging: 
 

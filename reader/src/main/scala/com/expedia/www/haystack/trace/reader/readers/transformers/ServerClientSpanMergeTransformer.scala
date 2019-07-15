@@ -25,7 +25,7 @@ class ServerClientSpanMergeTransformer extends SpanTreeTransformer {
     childSpan.getServiceName != parentSpan.getServiceName &&
       !SpanMerger.isAlreadyMergedSpan(parentSpan) &&
       !SpanMerger.isAlreadyMergedSpan(childSpan) &&
-      SpanMerger.areDifferentSpanKinds(parentSpan, childSpan)
+      SpanMerger.shouldMergeSpanKinds(parentSpan, childSpan)
   }
 
   override def transform(spanForest: MutableSpanForest): MutableSpanForest = {

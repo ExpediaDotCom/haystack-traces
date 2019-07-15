@@ -20,10 +20,10 @@ reader: build_reader
 	cd reader && $(MAKE) integration_test
 
 build_reader:
-	./mvnw package -DfinalName=haystack-trace-reader -pl reader -am
+	./mvnw -q package -DfinalName=haystack-trace-reader -pl reader -am
 
 build_indexer:
-	./mvnw package -DfinalName=haystack-trace-indexer -pl indexer -am
+	./mvnw -q package -DfinalName=haystack-trace-indexer -pl indexer -am
 
 #Backends
 backends:

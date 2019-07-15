@@ -28,7 +28,43 @@ import scala.collection.JavaConverters._
 
 class ServerClientSpanMergeTransformerSpec extends BaseUnitTestSpec with ValidTraceBuilder {
 
-  private def createSpansWithClientAndServer() = {
+  private def createProducerAndConsumerSpanKinds(): List[Span] = {
+    val traceId = "traceId"
+
+    val timestamp = System.currentTimeMillis() * 1000
+
+    val producerSpan = Span.newBuilder()
+      .setSpanId("sa")
+      .setTraceId(traceId)
+      .setServiceName("aSvc")
+      .addTags(Tag.newBuilder().setKey("span.kind").setVStr("producer"))
+      .setStartTime(timestamp + 100)
+      .setDuration(1000)
+      .build()
+
+    val consumerASpan = Span.newBuilder()
+      .setSpanId("sb1")
+      .setParentSpanId("sa")
+      .setTraceId(traceId)
+      .setServiceName("bSvc")
+      .addTags(Tag.newBuilder().setKey("span.kind").setVStr("consumer"))
+      .setStartTime(timestamp + 400)
+      .setDuration(1000)
+      .build()
+
+    val consumerBSpan = Span.newBuilder()
+      .setSpanId("sb2")
+      .setParentSpanId("sb1")
+      .setTraceId(traceId)
+      .setServiceName("bSvc")
+      .addTags(Tag.newBuilder().setKey("span.kind").setVStr("producer"))
+      .setStartTime(timestamp + 1000)
+      .setDuration(1000)
+      .build()
+    List(producerSpan, consumerASpan, consumerBSpan)
+  }
+
+  private def createSpansWithClientAndServer(): List[Span] = {
     val traceId = "traceId"
 
     val timestamp = System.currentTimeMillis() * 1000
@@ -195,7 +231,22 @@ class ServerClientSpanMergeTransformerSpec extends BaseUnitTestSpec with ValidTr
       spanTree.children.head.children.map(_.span) should contain allOf(underlyingSpans.apply(2), underlyingSpans.apply(3))
       spanTree.children.head.children.foreach(tree => tree.children.size shouldBe 0)
     }
+
+    it ("should not merge producer and consumer parent-child spans") {
+      Given("a sequence of spans of a given trace")
+      val spans = createProducerAndConsumerSpanKinds()
+
+      When("invoking transform")
+      val mergedSpans =
+        new ServerClientSpanMergeTransformer().transform(MutableSpanForest(spans))
+
+      val underlyingSpans = mergedSpans.getUnderlyingSpans
+      underlyingSpans.size shouldBe 3
+      underlyingSpans.foreach(sp => getTag(sp, AuxiliaryTags.IS_MERGED_SPAN) shouldBe null)
+    }
   }
+
+
 
   private def getTag(span: Span, tagKey: String): Tag = {
     span.getTagsList.asScala.find(tag => tag.getKey.equals(tagKey)).orNull

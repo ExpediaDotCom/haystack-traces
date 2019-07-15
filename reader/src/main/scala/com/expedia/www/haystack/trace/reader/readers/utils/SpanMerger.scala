@@ -133,16 +133,23 @@ object SpanMerger {
     )
   }
 
+  private def isProducerConsumerSpanKind(spanKind: String): Boolean = {
+    "producer".equalsIgnoreCase(spanKind) || "consumer".equalsIgnoreCase(spanKind)
+  }
+
   def isAlreadyMergedSpan(span: Span): Boolean = {
     span.getTagsList.asScala.exists(tag => tag.getKey.equals(AuxiliaryTags.IS_MERGED_SPAN))
   }
 
-  def areDifferentSpanKinds(spanA: Span, spanB: Span): Boolean = {
+  def shouldMergeSpanKinds(spanA: Span, spanB: Span): Boolean = {
     val spanAKind = SpanUtils.spanKind(spanA)
     val spanBKind = SpanUtils.spanKind(spanB)
     // if we find the span kind correctly(non-empty), then return false if they are same
     // for all other cases, return true.
-    if (spanAKind != "" && spanBKind != "" && spanAKind == spanBKind) {
+    // also dont merge the spans with 'producer' and 'consumer' span.kind
+    if ((spanAKind != "" && spanBKind != "" && spanAKind == spanBKind) ||
+      isProducerConsumerSpanKind(spanAKind) ||
+      isProducerConsumerSpanKind(spanBKind)) {
       false
     } else {
       true

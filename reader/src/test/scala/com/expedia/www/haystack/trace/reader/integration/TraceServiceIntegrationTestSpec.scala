@@ -355,12 +355,69 @@ class TraceServiceIntegrationTestSpec extends BaseIntegrationTestSpec {
       traces.getTracesList.asScala.exists(_.getTraceId == traceId) shouldBe true
     }
 
-
-    it("should return traces for expression tree with duration filter") {
+    it("should not return traces for expression tree using not_equal operator based search") {
       Given("traces with tags in trace-backend and elasticsearch")
       val traceId = UUID.randomUUID().toString
       val serviceName = "expressionTraceSvc"
       val operationName = "expressionTraceOp"
+      val tags = Map("uKey" -> "uValue", "vKey" -> "vValue")
+      val startTime = 1
+      val endTime = (System.currentTimeMillis() + 10000000) * 1000
+      putTraceInEsAndTraceBackend(traceId, UUID.randomUUID().toString, serviceName, operationName, tags)
+
+      When("searching traces for tags using expression tree")
+      val expression = ExpressionTree
+        .newBuilder()
+        .setOperator(Operator.AND)
+        .addOperands(Operand.newBuilder().setField(Field.newBuilder().setName(TraceIndexDoc.SERVICE_KEY_NAME).setValue(serviceName)))
+        .addOperands(Operand.newBuilder().setField(Field.newBuilder().setName(TraceIndexDoc.OPERATION_KEY_NAME).setValue(operationName).setOperator(Field.Operator.NOT_EQUAL)))
+
+      val traces = client.searchTraces(TracesSearchRequest
+        .newBuilder()
+        .setFilterExpression(expression)
+        .setStartTime(startTime)
+        .setEndTime(endTime)
+        .setLimit(10)
+        .build())
+
+      Then("should not return traces")
+      traces.getTracesList.size() shouldBe 0
+    }
+
+    it("should return traces for expression tree using not_equal operator based search") {
+      Given("traces with tags in trace-backend and elasticsearch")
+      val traceId = UUID.randomUUID().toString
+      val serviceName = "expressionTraceSvc_1"
+      val operationName = "expressionTraceOp_1"
+      val tags = Map("uKey" -> "uValue", "vKey" -> "vValue")
+      val startTime = 1
+      val endTime = (System.currentTimeMillis() + 10000000) * 1000
+      putTraceInEsAndTraceBackend(traceId, UUID.randomUUID().toString, serviceName, operationName, tags)
+
+      When("searching traces for tags using expression tree")
+      val expression = ExpressionTree
+        .newBuilder()
+        .setOperator(Operator.AND)
+        .addOperands(Operand.newBuilder().setField(Field.newBuilder().setName(TraceIndexDoc.SERVICE_KEY_NAME).setValue(serviceName)))
+        .addOperands(Operand.newBuilder().setField(Field.newBuilder().setName(TraceIndexDoc.OPERATION_KEY_NAME).setValue("somethingelse").setOperator(Field.Operator.NOT_EQUAL)))
+
+      val traces = client.searchTraces(TracesSearchRequest
+        .newBuilder()
+        .setFilterExpression(expression)
+        .setStartTime(startTime)
+        .setEndTime(endTime)
+        .setLimit(10)
+        .build())
+
+      Then("should return traces")
+      traces.getTracesList.asScala.exists(_.getTraceId == traceId) shouldBe true
+    }
+
+    it("should return traces for expression tree with duration filter") {
+      Given("traces with tags in trace-backend and elasticsearch")
+      val traceId = UUID.randomUUID().toString
+      val serviceName = "expressionTraceSvc_1"
+      val operationName = "expressionTraceOp_1"
       val tags = Map("uKey" -> "uValue", "vKey" -> "vValue")
       val startTime = 1
       val endTime = (System.currentTimeMillis() + 10000000) * 1000

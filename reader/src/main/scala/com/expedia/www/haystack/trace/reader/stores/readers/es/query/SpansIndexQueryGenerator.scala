@@ -141,19 +141,20 @@ abstract class SpansIndexQueryGenerator(nestedDocName: String,
     val boolQueryBuilder = boolQuery()
 
     val validFields = fields.filterNot(f => StringUtils.isBlank(f.getValue))
-    val subQueries = validFields map {
+    validFields foreach {
       field => {
         field match {
           case _ if field.getOperator == null || field.getOperator == Field.Operator.EQUAL =>
-            buildNestedTermQuery(field)
+            boolQueryBuilder.filter(buildNestedTermQuery(field))
+          case _ if field.getOperator == Field.Operator.NOT_EQUAL =>
+            boolQueryBuilder.mustNot(buildNestedTermQuery(field))
           case _ if field.getOperator == Field.Operator.GREATER_THAN || field.getOperator == Field.Operator.LESS_THAN =>
-            buildNestedRangeQuery(field)
+            boolQueryBuilder.filter(buildNestedRangeQuery(field))
           case _ => throw new RuntimeException("Fail to understand the operator type of the field!")
         }
       }
     }
 
-    subQueries foreach boolQueryBuilder.filter
 
     boolQueryBuilder
   }

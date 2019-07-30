@@ -30,25 +30,26 @@ import org.slf4j.LoggerFactory
 
 import scala.collection.JavaConverters._
 import scala.concurrent.{ExecutionContextExecutor, Future}
+import scala.util.Try
 
 class EsIndexedTraceStore(traceStoreBackendConfig: TraceStoreBackends,
                           elasticSearchConfiguration: ElasticSearchConfiguration,
                           whitelistedFieldsConfiguration: WhitelistIndexFieldConfiguration)(implicit val executor: ExecutionContextExecutor)
-  extends TraceStore with MetricsSupport with ResponseParser {
+  extends TraceStore with MetricsSupport with ResponseParser with FutureCompanion {
   private val LOGGER = LoggerFactory.getLogger(classOf[ElasticSearchReader])
 
   private val traceReader: GrpcTraceReaders = new GrpcTraceReaders(traceStoreBackendConfig)
-  private val esReader: ElasticSearchReader = new ElasticSearchReader(elasticSearchConfiguration.clientConfiguration)
+  private val esReaders: List[ElasticSearchReader] = elasticSearchConfiguration.clientConfigurations.map(new ElasticSearchReader(_))
   private val traceSearchQueryGenerator = new TraceSearchQueryGenerator(elasticSearchConfiguration.spansIndexConfiguration, ES_NESTED_DOC_NAME, whitelistedFieldsConfiguration)
   private val traceCountsQueryGenerator = new TraceCountsQueryGenerator(elasticSearchConfiguration.spansIndexConfiguration, ES_NESTED_DOC_NAME, whitelistedFieldsConfiguration)
   private val fieldValuesQueryGenerator = new FieldValuesQueryGenerator(elasticSearchConfiguration.spansIndexConfiguration, ES_NESTED_DOC_NAME, whitelistedFieldsConfiguration)
   private val serviceMetadataQueryGenerator = new ServiceMetadataQueryGenerator(elasticSearchConfiguration.serviceMetadataIndexConfiguration)
 
-  private val esCountTraces = (request: TraceCountsRequest, useSpecificIndices: Boolean) => {
+  private val esCountTraces = (esReader: ElasticSearchReader, request: TraceCountsRequest, useSpecificIndices: Boolean) => {
     esReader.count(traceCountsQueryGenerator.generate(request, useSpecificIndices))
   }
 
-  private val esSearchTraces = (request: TracesSearchRequest, useSpecificIndices: Boolean) => {
+  private val esSearchTrace = (esReader: ElasticSearchReader, request: TracesSearchRequest, useSpecificIndices: Boolean) => {
     esReader.search(traceSearchQueryGenerator.generate(request, useSpecificIndices))
   }
 
@@ -60,25 +61,33 @@ class EsIndexedTraceStore(traceStoreBackendConfig: TraceStoreBackends,
   }
 
   override def searchTraces(request: TracesSearchRequest): Future[Seq[Trace]] = {
-    // search ES with specific indices
-    val esResult = esSearchTraces(request, true)
-    // handle the response and retry in case of IndexNotFoundException
-    handleIndexNotFoundResult(esResult, () => esSearchTraces(request, false)).flatMap(result => extractTraces(result))
+    val eventualSearchResults: List[Future[SearchResult]] = esReaders.map(esReader => {
+      // search ES with specific indices
+      val esResult = esSearchTrace(esReader, request, true)
+      // handle the response and retry in case of IndexNotFoundException
+      handleIndexNotFoundResult(esResult, () => esSearchTrace(esReader, request, false))
+    })
+    allSucceededAsTrys(eventualSearchResults).flatMap(extractTraces)
   }
 
-  private def extractTraces(result: SearchResult): Future[Seq[Trace]] = {
+  private def extractTraces(results: List[Try[SearchResult]]): Future[Seq[Trace]] = {
     val traceIdKey = "traceid"
 
+    val searchResults: List[SearchResult] = results.map(searchResult => searchResult.get)
+
     // go through each hit and fetch trace for parsed traceId
-    val sourceList = result.getSourceAsStringList
-    if (sourceList != null && sourceList.size() > 0) {
-      val traceIds = sourceList
+    val traceIds: List[String] = searchResults.map(result => {
+      result.getSourceAsStringList
+    }).filter(sourceList => {
+      sourceList != null && sourceList.size() > 0
+    }).flatMap(sourceList => {
+      sourceList
         .asScala
         .map(source => extractStringFieldFromSource(source, traceIdKey))
         .filter(!_.isEmpty)
-        .toSet[String] // de-dup traceIds
-        .toList
+    }).distinct // de-dup trace Ids
 
+    if (traceIds.nonEmpty) {
       traceReader.readTraces(traceIds)
     } else {
       Future.successful(Nil)
@@ -106,15 +115,17 @@ class EsIndexedTraceStore(traceStoreBackendConfig: TraceStoreBackends,
     if (!serviceMetadataConfig.enabled) return None
 
     if (request.getFieldName.toLowerCase == TraceIndexDoc.SERVICE_KEY_NAME && request.getFiltersCount == 0) {
-      Some(esReader
-        .search(serviceMetadataQueryGenerator.generateSearchServiceQuery())
-        .map(extractServiceMetadata))
+      Some(
+        allSucceededAsTrys(esReaders.map(_.search(serviceMetadataQueryGenerator.generateSearchServiceQuery())))
+          .map(extractServiceMetadata)
+      )
     } else if (request.getFieldName.toLowerCase == TraceIndexDoc.OPERATION_KEY_NAME
       && (request.getFiltersCount == 1)
       && request.getFiltersList.get(0).getName.toLowerCase == TraceIndexDoc.SERVICE_KEY_NAME) {
-      Some(esReader
-        .search(serviceMetadataQueryGenerator.generateSearchOperationQuery(request.getFilters(0).getValue))
-        .map(extractOperationMetadataFromSource(_, request.getFieldName.toLowerCase)))
+      Some(
+        allSucceededAsTrys(esReaders.map(
+          _.search(serviceMetadataQueryGenerator.generateSearchOperationQuery(request.getFilters(0).getValue))))
+          .map(extractOperationMetadataFromSource(_, request.getFieldName.toLowerCase)))
     } else {
       LOGGER.info("read from service metadata request isn't served by elasticsearch")
       None
@@ -124,18 +135,21 @@ class EsIndexedTraceStore(traceStoreBackendConfig: TraceStoreBackends,
 
   override def getFieldValues(request: FieldValuesRequest): Future[Seq[String]] = {
     readFromServiceMetadata(request).getOrElse(
-      esReader
-        .search(fieldValuesQueryGenerator.generate(request))
+      allSucceededAsTrys(esReaders.map(esReader => esReader.search(fieldValuesQueryGenerator.generate(request))))
         .map(extractFieldValues(_, request.getFieldName.toLowerCase)))
   }
 
   override def getTraceCounts(request: TraceCountsRequest): Future[TraceCounts] = {
-    // search ES with specific indices
-    val esResponse = esCountTraces(request, true)
 
-    // handle the response and retry in case of IndexNotFoundException
-    handleIndexNotFoundResult(esResponse, () => esCountTraces(request, false))
-      .map(result => mapSearchResultToTraceCount(request.getStartTime, request.getEndTime, result))
+    val eventualSearchResults: List[Future[SearchResult]] = esReaders.map(esReader => {
+      // search ES with specific indices
+      val esResponse = esCountTraces(esReader, request, true)
+      // handle the response and retry in case of IndexNotFoundException
+      handleIndexNotFoundResult(esResponse, () => esCountTraces(esReader, request, false))
+    })
+
+    allSucceededAsTrys(eventualSearchResults).map(searchResults =>
+      mapSearchResultToTraceCount(request.getStartTime, request.getEndTime, searchResults))
   }
 
   override def getRawTraces(request: RawTracesRequest): Future[Seq[Trace]] = {
@@ -144,6 +158,6 @@ class EsIndexedTraceStore(traceStoreBackendConfig: TraceStoreBackends,
 
   override def close(): Unit = {
     traceReader.close()
-    esReader.close()
+    esReaders.foreach(_.close())
   }
 }

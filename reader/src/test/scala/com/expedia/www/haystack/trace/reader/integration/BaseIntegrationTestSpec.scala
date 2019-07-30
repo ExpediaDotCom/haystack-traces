@@ -53,7 +53,7 @@ trait BaseIntegrationTestSpec extends FunSpec with GivenWhenThen with Matchers w
 
   protected var healthCheckClient: HealthGrpc.HealthBlockingStub = _
 
-  private val ELASTIC_SEARCH_ENDPOINT = "http://elasticsearch:9200"
+  private val ELASTIC_SEARCH_ENDPOINTS = List("http://elasticsearch:9200", "http://a-elasticsearch:9300")
   private val ELASTIC_SEARCH_WHITELIST_INDEX = "reload-configs"
   private val ELASTIC_SEARCH_WHITELIST_TYPE = "whitelist-index-fields"
   private val SPANS_INDEX_TYPE = "spans"
@@ -156,7 +156,7 @@ trait BaseIntegrationTestSpec extends FunSpec with GivenWhenThen with Matchers w
       |""".stripMargin
 
 
-  private var esClient: JestClient = _
+  private var esClients: List[JestClient] = _
   private var traceBackendClient: StorageBackendBlockingStub = _
 
   def setupTraceBackend(): StorageBackendBlockingStub = {
@@ -177,16 +177,19 @@ trait BaseIntegrationTestSpec extends FunSpec with GivenWhenThen with Matchers w
     // setup traceBackend
     traceBackendClient = setupTraceBackend()
 
-    // setup elasticsearch
-    val factory = new JestClientFactory()
-    factory.setHttpClientConfig(
-      new HttpClientConfig.Builder(ELASTIC_SEARCH_ENDPOINT)
-        .multiThreaded(true)
-        .build())
-    esClient = factory.getObject
-    esClient.execute(new CreateIndex.Builder(HAYSTACK_TRACES_INDEX)
-      .settings(INDEX_TEMPLATE)
-      .build)
+    esClients = ELASTIC_SEARCH_ENDPOINTS.map(ELASTIC_SEARCH_ENDPOINT => {
+      // setup elasticsearch
+      val factory = new JestClientFactory()
+      factory.setHttpClientConfig(
+        new HttpClientConfig.Builder(ELASTIC_SEARCH_ENDPOINT)
+          .multiThreaded(true)
+          .build())
+      val esClient = factory.getObject
+      esClient.execute(new CreateIndex.Builder(HAYSTACK_TRACES_INDEX)
+        .settings(INDEX_TEMPLATE)
+        .build)
+      esClient
+    })
 
     executors.submit(new Runnable {
       override def run(): Unit = Service.main(null)
@@ -211,11 +214,36 @@ trait BaseIntegrationTestSpec extends FunSpec with GivenWhenThen with Matchers w
                                             tags: Map[String, String] = Map.empty,
                                             startTime: Long = System.currentTimeMillis() * 1000,
                                             sleep: Boolean = true,
-                                            duration: Long = DEFAULT_DURATION): Unit = {
+                                            duration: Long = DEFAULT_DURATION,
+                                            shouldPutInAllElasticsearch: Boolean = true): Unit = {
     insertTraceInBackend(traceId, spanId, serviceName, operationName, tags, startTime, duration)
-    insertTraceInEs(traceId, spanId, serviceName, operationName, tags, startTime, duration)
+    insertTraceInEs(traceId, spanId, serviceName, operationName, tags, startTime, duration, shouldPutInAllElasticsearch)
 
     // wait for few sec to let ES refresh its index
+    if (sleep) Thread.sleep(5000)
+  }
+
+  protected def putTraceInEs(traceId: String = UUID.randomUUID().toString,
+                             spanId: String = UUID.randomUUID().toString,
+                             serviceName: String = "",
+                             operationName: String = "",
+                             tags: Map[String, String] = Map.empty,
+                             startTime: Long = System.currentTimeMillis() * 1000,
+                             sleep: Boolean = true,
+                             duration: Long = DEFAULT_DURATION,
+                             esClientIndex: Int = 0) = {
+    import TraceIndexDoc._
+    // create map using service, operation and tags
+    val fieldMap: mutable.Map[String, Any] = mutable.Map(
+      SERVICE_KEY_NAME -> serviceName,
+      OPERATION_KEY_NAME -> operationName,
+      START_TIME_KEY_NAME -> mutable.Set[Any](startTime),
+      DURATION_KEY_NAME -> mutable.Set[Any](duration)
+    )
+    tags.foreach(pair => fieldMap.put(pair._1.toLowerCase(), pair._2))
+
+    insertInES(esClients(esClientIndex),traceId, startTime, fieldMap)
+
     if (sleep) Thread.sleep(5000)
   }
 
@@ -225,7 +253,8 @@ trait BaseIntegrationTestSpec extends FunSpec with GivenWhenThen with Matchers w
                               operationName: String,
                               tags: Map[String, String],
                               startTime: Long,
-                              duration: Long) = {
+                              duration: Long,
+                              shouldPutInAllElasticsearch: Boolean) = {
     import TraceIndexDoc._
     // create map using service, operation and tags
     val fieldMap: mutable.Map[String, Any] = mutable.Map(
@@ -237,6 +266,15 @@ trait BaseIntegrationTestSpec extends FunSpec with GivenWhenThen with Matchers w
     tags.foreach(pair => fieldMap.put(pair._1.toLowerCase(), pair._2))
 
     // index the document
+    if (shouldPutInAllElasticsearch) {
+      esClients.foreach(esClient => insertInES(esClient, traceId, startTime, fieldMap))
+    }
+    else {
+      insertInES(esClients.reverse.head, traceId, startTime, fieldMap)
+    }
+  }
+
+  private def insertInES(esClient: JestClient, traceId: String, startTime: Long, fieldMap: mutable.Map[String, Any]) = {
     val result = esClient.execute(new Index.Builder(TraceIndexDoc(traceId, 0, startTime, Seq(fieldMap)).json)
       .index(HAYSTACK_TRACES_INDEX)
       .`type`(SPANS_INDEX_TYPE)
@@ -251,7 +289,8 @@ trait BaseIntegrationTestSpec extends FunSpec with GivenWhenThen with Matchers w
 
   protected def putWhitelistIndexFieldsInEs(fields: List[FieldWithMetadata]): Unit = {
     val whitelistFields = for (field <- fields) yield WhitelistIndexField(field.name, IndexFieldType.string, aliases = Set(s"_${field.name}"), field.isRangeQuery)
-    esClient.execute(new Index.Builder(Serialization.write(WhiteListIndexFields(whitelistFields)))
+
+    esClients.head.execute(new Index.Builder(Serialization.write(WhiteListIndexFields(whitelistFields)))
       .index(ELASTIC_SEARCH_WHITELIST_INDEX)
       .`type`(ELASTIC_SEARCH_WHITELIST_TYPE)
       .build)

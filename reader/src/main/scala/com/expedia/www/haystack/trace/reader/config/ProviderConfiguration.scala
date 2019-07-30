@@ -65,7 +65,7 @@ class ProviderConfiguration {
     */
 
 
-  private val elasticSearchClientConfig: ElasticSearchClientConfiguration = {
+  private val elasticSearchClientConfigs: List[ElasticSearchClientConfiguration] = {
     val es = config.getConfig("elasticsearch.client")
 
     val username = if (es.hasPath("username")) {
@@ -75,13 +75,14 @@ class ProviderConfiguration {
       Option(es.getString("password"))
     } else None
 
-    ElasticSearchClientConfiguration(
-      endpoint = es.getString("endpoint"),
+    es.getString("endpoints").split(",").map( endpoint =>
+      ElasticSearchClientConfiguration(
+      endpoint = endpoint,
       username = username,
       password = password,
       connectionTimeoutMillis = es.getInt("conn.timeout.ms"),
       readTimeoutMillis = es.getInt("read.timeout.ms")
-    )
+    )).toList
   }
   private val spansIndexConfiguration: SpansIndexConfiguration = {
     val indexConfig = config.getConfig("elasticsearch.index.spans")
@@ -105,7 +106,7 @@ class ProviderConfiguration {
 
   val elasticSearchConfiguration: ElasticSearchConfiguration = {
     ElasticSearchConfiguration(
-      clientConfiguration = elasticSearchClientConfig,
+      clientConfigurations = elasticSearchClientConfigs,
       spansIndexConfiguration = spansIndexConfiguration,
       serviceMetadataIndexConfiguration = serviceMetadataIndexConfig
     )

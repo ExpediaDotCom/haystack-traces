@@ -56,9 +56,13 @@ class ConfigurationLoaderSpec extends BaseUnitTestSpec {
 
       val elasticSearchConfig = new ProviderConfiguration().elasticSearchConfiguration
 
-      elasticSearchConfig.clientConfiguration.endpoint shouldEqual "http://elasticsearch:9200"
-      elasticSearchConfig.clientConfiguration.connectionTimeoutMillis shouldEqual 10000
-      elasticSearchConfig.clientConfiguration.readTimeoutMillis shouldEqual 5000
+      elasticSearchConfig.clientConfigurations.head.endpoint shouldEqual "http://elasticsearch:9200"
+      elasticSearchConfig.clientConfigurations.head.connectionTimeoutMillis shouldEqual 10000
+      elasticSearchConfig.clientConfigurations.head.readTimeoutMillis shouldEqual 5000
+
+      elasticSearchConfig.clientConfigurations(1).endpoint shouldEqual "http://a-elasticsearch:9300"
+      elasticSearchConfig.clientConfigurations(1).connectionTimeoutMillis shouldEqual 10000
+      elasticSearchConfig.clientConfigurations(1).readTimeoutMillis shouldEqual 5000
 
 
       elasticSearchConfig.spansIndexConfiguration.indexHourBucket shouldEqual 6

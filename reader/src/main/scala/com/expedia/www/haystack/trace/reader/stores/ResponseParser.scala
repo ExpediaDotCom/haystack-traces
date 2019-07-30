@@ -20,12 +20,14 @@ import com.expedia.open.tracing.api.{TraceCount, TraceCounts}
 import com.expedia.www.haystack.trace.commons.config.entities.IndexFieldType
 import com.expedia.www.haystack.trace.reader.stores.readers.es.query.TraceCountsQueryGenerator
 import io.searchbox.core.SearchResult
+import io.searchbox.core.search.aggregation.HistogramAggregation
 import org.json4s.ext.EnumNameSerializer
 import org.json4s.jackson.JsonMethods.parse
 import org.json4s.{DefaultFormats, Formats}
 
 import scala.collection.JavaConverters._
 import scala.concurrent.Future
+import scala.util.Try
 
 trait ResponseParser {
   protected implicit val formats: Formats = DefaultFormats + new EnumNameSerializer(IndexFieldType)
@@ -55,64 +57,80 @@ trait ResponseParser {
     Future.successful(TraceCounts.newBuilder().addAllTraceCount(traceCounts).build())
   }
 
-  protected def mapSearchResultToTraceCount(startTime: Long, endTime: Long, result: SearchResult): TraceCounts = {
+  protected def mapSearchResultToTraceCount(startTime: Long, endTime: Long, results: List[Try[SearchResult]]): TraceCounts = {
     val traceCountsBuilder = TraceCounts.newBuilder()
 
-    result.getAggregations.getHistogramAggregation(TraceCountsQueryGenerator.COUNT_HISTOGRAM_NAME)
-      .getBuckets.asScala
-      .filter(bucket => startTime <= bucket.getKey && bucket.getKey <= endTime)
-      .foreach(bucket => {
-        val traceCount = TraceCount.newBuilder().setCount(bucket.getCount).setTimestamp(bucket.getKey)
-        traceCountsBuilder.addTraceCount(traceCount)
-      })
+    val searchResults: List[SearchResult] = results.map(searchResult => searchResult.get)
+
+    val buckets: List[HistogramAggregation.Histogram] = searchResults.flatMap(result => {
+      result.getAggregations.getHistogramAggregation(TraceCountsQueryGenerator.COUNT_HISTOGRAM_NAME)
+        .getBuckets.asScala
+        .filter(bucket => startTime <= bucket.getKey && bucket.getKey <= endTime)
+    })
+
+    buckets.groupBy(_.getKey).foreach(timeStampToHistogramMap => {
+      val bucketCount = timeStampToHistogramMap._2.foldLeft(0L)((s, bucket) => s + bucket.getCount)
+      val traceCount = TraceCount.newBuilder().setCount(bucketCount).setTimestamp(timeStampToHistogramMap._1)
+      traceCountsBuilder.addTraceCount(traceCount)
+    })
+
     traceCountsBuilder.build()
   }
 
-  protected def extractFieldValues(result: SearchResult, fieldName: String): List[String] = {
-    val aggregations =
-      result
-        .getJsonObject
-        .getAsJsonObject(ES_FIELD_AGGREGATIONS)
-        .getAsJsonObject(ES_NESTED_DOC_NAME)
-        .getAsJsonObject(fieldName)
+  protected def extractFieldValues(results: List[Try[SearchResult]], fieldName: String): List[String] = {
 
-    if (aggregations.has(ES_FIELD_BUCKETS)) {
-      aggregations
-        .getAsJsonArray(ES_FIELD_BUCKETS)
-        .asScala
-        .map(element => element.getAsJsonObject.get(ES_FIELD_KEY).getAsString)
-        .toList
-    }
-    else {
-      aggregations
-        .getAsJsonObject(fieldName)
-        .getAsJsonArray(ES_FIELD_BUCKETS)
-        .asScala
-        .map(element => element.getAsJsonObject.get(ES_FIELD_KEY).getAsString)
-        .toList
-    }
+    val searchResults: List[SearchResult] = results.map(searchResult => searchResult.get)
+
+    val aggregations =
+      searchResults.map(result => {
+        result.getJsonObject
+          .getAsJsonObject(ES_FIELD_AGGREGATIONS)
+          .getAsJsonObject(ES_NESTED_DOC_NAME)
+          .getAsJsonObject(fieldName)
+      })
+
+    aggregations.flatMap(aggregation => {
+      if (aggregation.has(ES_FIELD_BUCKETS)) {
+        aggregation
+          .getAsJsonArray(ES_FIELD_BUCKETS)
+          .asScala
+          .map(element => element.getAsJsonObject.get(ES_FIELD_KEY).getAsString)
+          .toList
+      }
+      else {
+        aggregation
+          .getAsJsonObject(fieldName)
+          .getAsJsonArray(ES_FIELD_BUCKETS)
+          .asScala
+          .map(element => element.getAsJsonObject.get(ES_FIELD_KEY).getAsString)
+          .toList
+      }
+    }).distinct // de-dup results
+
   }
 
-  protected def extractStringFieldFromSource(source: String, fieldName:String): String = {
+  protected def extractStringFieldFromSource(source: String, fieldName: String): String = {
     (parse(source) \ fieldName).extract[String]
   }
 
-  protected def extractServiceMetadata(result: SearchResult): Seq[String] = {
-    result.getAggregations.getTermsAggregation("distinct_services").getBuckets.asScala.map(_.getKey)
+  protected def extractServiceMetadata(results: List[Try[SearchResult]]): Seq[String] = {
+    val searchResults: List[SearchResult] = results.map(searchResult => searchResult.get)
+    searchResults.flatMap(result => {
+      result.getAggregations.getTermsAggregation("distinct_services").getBuckets.asScala.map(_.getKey)
+    }).distinct
   }
 
-  protected def extractOperationMetadataFromSource(result: SearchResult, fieldName: String): List[String] = {
+  protected def extractOperationMetadataFromSource(results: List[Try[SearchResult]], fieldName: String): List[String] = {
+    val searchResults: List[SearchResult] = results.map(searchResult => searchResult.get)
     // go through each hit and fetch field from service_metadata
-    val sourceList = result.getSourceAsStringList
-    if (sourceList != null && sourceList.size() > 0) {
-      sourceList
+    val operationMetadata: List[String] = searchResults.map(result => result.getSourceAsStringList)
+      .filter(sourceList => sourceList != null && sourceList.size() > 0)
+      .flatMap(sourceList => sourceList
         .asScala
         .map(source => extractStringFieldFromSource(source, fieldName))
-        .filter(!_.isEmpty)
-        .toSet[String] // de-dup fieldValues
-        .toList
-    } else {
-      Nil
-    }
+        .filter(!_.isEmpty))
+      .distinct // de-dup fieldValues
+
+    if (operationMetadata.nonEmpty) operationMetadata else Nil
   }
 }

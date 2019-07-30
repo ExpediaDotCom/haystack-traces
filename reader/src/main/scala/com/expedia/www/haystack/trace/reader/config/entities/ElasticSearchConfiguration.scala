@@ -32,6 +32,6 @@ case class ServiceMetadataIndexConfiguration(enabled: Boolean,
                                              indexName: String,
                                              indexType: String)
 
-case class ElasticSearchConfiguration(clientConfiguration: ElasticSearchClientConfiguration,
+case class ElasticSearchConfiguration(clientConfigurations: List[ElasticSearchClientConfiguration],
                                       spansIndexConfiguration: SpansIndexConfiguration,
                                       serviceMetadataIndexConfiguration: ServiceMetadataIndexConfiguration)

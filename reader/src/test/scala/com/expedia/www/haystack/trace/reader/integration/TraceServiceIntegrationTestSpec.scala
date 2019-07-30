@@ -50,7 +50,7 @@ class TraceServiceIntegrationTestSpec extends BaseIntegrationTestSpec {
     it("should return values of a given fields") {
       Given("trace in trace-backend and elasticsearch")
       val serviceName = "get_values_servicename"
-      putTraceInEsAndTraceBackend(UUID.randomUUID().toString, UUID.randomUUID().toString, serviceName, "op")
+      putTraceInEsAndTraceBackend(UUID.randomUUID().toString, UUID.randomUUID().toString, serviceName, "op", shouldPutInAllElasticsearch = false)
       val request = FieldValuesRequest.newBuilder()
         .setFieldName(TraceIndexDoc.SERVICE_KEY_NAME)
         .build()
@@ -60,6 +60,46 @@ class TraceServiceIntegrationTestSpec extends BaseIntegrationTestSpec {
 
       Then("should return possible values for given field")
       result.getValuesList.asScala should contain(serviceName)
+    }
+
+    it("should return values of a given fields coalesced and de-duped from different elasticsearch") {
+      Given("trace in trace-backend and elasticsearch")
+      val serviceName = "get_values_servicename"
+      putTraceInEsAndTraceBackend(UUID.randomUUID().toString, UUID.randomUUID().toString, serviceName, "op")
+      val request = FieldValuesRequest.newBuilder()
+        .setFieldName(TraceIndexDoc.SERVICE_KEY_NAME)
+        .build()
+
+      When("calling getFieldValues")
+      val result = client.getFieldValues(request)
+
+      Then("should return possible values for given field")
+      result.getValuesCount should be(1)
+      result.getValuesList.asScala should contain(serviceName)
+    }
+
+
+    it("should return values of a given fields with filters coalesced from different ES") {
+      Given("trace in trace-backend and elasticsearch")
+      val serviceName = "get_values_with_filters_servicename"
+      val op1 = "get_values_with_filters_operationname_1"
+      val op2 = "get_values_with_filters_operationname_2"
+
+      putTraceInEsAndTraceBackend(UUID.randomUUID().toString, UUID.randomUUID().toString, serviceName, op1)
+      putTraceInEs(UUID.randomUUID().toString, UUID.randomUUID().toString, serviceName, op2, esClientIndex = 0)
+      putTraceInEsAndTraceBackend(UUID.randomUUID().toString, UUID.randomUUID().toString, "non_matching_servicename", "non_matching_operationname")
+
+      val request = FieldValuesRequest.newBuilder()
+        .addFilters(Field.newBuilder().setName(TraceIndexDoc.SERVICE_KEY_NAME).setValue(serviceName))
+        .setFieldName(TraceIndexDoc.OPERATION_KEY_NAME)
+        .build()
+
+      When("calling getFieldValues")
+      val result = client.getFieldValues(request)
+
+      Then("should return filtered values for given field")
+      result.getValuesList.size() should be(2)
+      result.getValuesList.asScala should contain allOf(op1, op2)
     }
 
     it("should return values of a given fields with filters") {
@@ -216,7 +256,7 @@ class TraceServiceIntegrationTestSpec extends BaseIntegrationTestSpec {
       val operationName = "opName"
       val startTime = 1
       val endTime = (System.currentTimeMillis() + 10000000) * 1000
-      putTraceInEsAndTraceBackend(traceId, spanId, serviceName, operationName)
+      putTraceInEsAndTraceBackend(traceId, spanId, serviceName, operationName, shouldPutInAllElasticsearch = false)
 
       When("searching traces for service and operation")
       val traces = client.searchTraces(TracesSearchRequest
@@ -233,6 +273,68 @@ class TraceServiceIntegrationTestSpec extends BaseIntegrationTestSpec {
       traces.getTraces(0).getTraceId shouldBe traceId
       traces.getTraces(0).getChildSpans(0).getServiceName shouldBe serviceName
       traces.getTraces(0).getChildSpans(0).getOperationName shouldBe operationName
+    }
+
+    it("should search traces for given service and operation and de dup same trace ids from different elasticsearch") {
+      Given("trace in trace-backend and elasticsearch")
+      val traceId = UUID.randomUUID().toString
+      val spanId = UUID.randomUUID().toString
+      val serviceName = "svcName"
+      val operationName = "opName"
+      val startTime = 1
+      val endTime = (System.currentTimeMillis() + 10000000) * 1000
+      putTraceInEsAndTraceBackend(traceId, spanId, serviceName, operationName)
+
+
+      When("searching traces for service and operation")
+      val traces = client.searchTraces(TracesSearchRequest
+        .newBuilder()
+        .addFields(Field.newBuilder().setName(TraceIndexDoc.SERVICE_KEY_NAME).setValue(serviceName).build())
+        .addFields(Field.newBuilder().setName(TraceIndexDoc.OPERATION_KEY_NAME).setValue(operationName).build())
+        .setStartTime(startTime)
+        .setEndTime(endTime)
+        .setLimit(10)
+        .build())
+
+      Then("should return traces for the searched service and operation name")
+      traces.getTracesList.size() should be(1)
+      traces.getTraces(0).getTraceId shouldBe traceId
+      traces.getTraces(0).getChildSpans(0).getServiceName shouldBe serviceName
+      traces.getTraces(0).getChildSpans(0).getOperationName shouldBe operationName
+    }
+
+    it("should search traces for given service and operation and coalesce different trace ids from different elasticsearch") {
+      Given("trace in trace-backend and elasticsearch")
+      val traceId_1 = UUID.randomUUID().toString
+      val traceId_2 = UUID.randomUUID().toString
+      val spanId = UUID.randomUUID().toString
+      val serviceName = "svcName"
+      val operationName = "opName"
+      val startTime = 1
+      val endTime = (System.currentTimeMillis() + 10000000) * 1000
+      putTraceInEsAndTraceBackend(traceId_1, spanId, serviceName, operationName)
+      putTraceInBackend(traceId_2, spanId, serviceName, operationName)
+      putTraceInEs(traceId_2, spanId, serviceName, operationName, esClientIndex = 0)
+
+
+      When("searching traces for service and operation")
+      val traces = client.searchTraces(TracesSearchRequest
+        .newBuilder()
+        .addFields(Field.newBuilder().setName(TraceIndexDoc.SERVICE_KEY_NAME).setValue(serviceName).build())
+        .addFields(Field.newBuilder().setName(TraceIndexDoc.OPERATION_KEY_NAME).setValue(operationName).build())
+        .setStartTime(startTime)
+        .setEndTime(endTime)
+        .setLimit(10)
+        .build())
+
+      Then("should return traces for the searched service and operation name")
+      traces.getTracesList.size() should be(2)
+      traces.getTraces(0).getChildSpans(0).getServiceName shouldBe serviceName
+      traces.getTraces(0).getChildSpans(0).getSpanId shouldBe spanId
+      traces.getTraces(0).getChildSpans(0).getOperationName shouldBe operationName
+      traces.getTraces(1).getChildSpans(0).getServiceName shouldBe serviceName
+      traces.getTraces(1).getChildSpans(0).getSpanId shouldBe spanId
+      traces.getTraces(1).getChildSpans(0).getOperationName shouldBe operationName
     }
 
     it("should search traces for given service") {
@@ -482,7 +584,7 @@ class TraceServiceIntegrationTestSpec extends BaseIntegrationTestSpec {
       val endTimeInMicroSec = currentTimeMicros
 
       randomStartTimes.foreach(startTime =>
-        putTraceInEsAndTraceBackend(serviceName = serviceName, operationName = operationName, startTime = startTime, sleep = false))
+        putTraceInEsAndTraceBackend(serviceName = serviceName, operationName = operationName, startTime = startTime, sleep = false, shouldPutInAllElasticsearch = false))
       Thread.sleep(5000)
 
       When("calling getTraceCounts")
@@ -501,7 +603,43 @@ class TraceServiceIntegrationTestSpec extends BaseIntegrationTestSpec {
       traceCounts.getTraceCountCount shouldEqual bucketCount
       traceCounts.getTraceCountList.asScala.foreach(_.getCount shouldBe 1)
     }
+
+    it("should return trace counts histogram for given time span from different elasticsearch") {
+      Given("traces elasticsearch")
+      val serviceName = "dummy-servicename-1"
+      val operationName = "dummy-operationname-1"
+      val currentTimeMicros = System.currentTimeMillis() * 1000l
+
+      val bucketIntervalInMicros = 10l * 1000 * 10000
+      val bucketCount = 4
+      val randomStartTimes = 0 until bucketCount map (idx => currentTimeMicros - (bucketIntervalInMicros * idx))
+      val startTimeInMicroSec = currentTimeMicros - (bucketIntervalInMicros * bucketCount)
+      val endTimeInMicroSec = currentTimeMicros
+
+      randomStartTimes.foreach(startTime =>
+        putTraceInEsAndTraceBackend(serviceName = serviceName, operationName = operationName, startTime = startTime, sleep = false))
+      Thread.sleep(5000)
+
+      When("calling getTraceCounts")
+      val traceCountsRequest = TraceCountsRequest
+        .newBuilder()
+        .addFields(Field.newBuilder().setName(TraceIndexDoc.SERVICE_KEY_NAME).setValue(serviceName).build())
+        .addFields(Field.newBuilder().setName(TraceIndexDoc.OPERATION_KEY_NAME).setValue(operationName).build())
+        .setStartTime(startTimeInMicroSec)
+        .setEndTime(endTimeInMicroSec)
+        .setInterval(bucketIntervalInMicros)
+        .build()
+
+      val traceCounts = client.getTraceCounts(traceCountsRequest)
+
+      Then("should return possible values for given field")
+      traceCounts.getTraceCountCount shouldEqual bucketCount
+      traceCounts.getTraceCountList.asScala.foreach(_.getCount shouldBe 2)
+    }
+
   }
+
+
 
   describe("TraceReader.getRawTraces") {
     it("should get raw traces for given traceIds from trace-backend") {

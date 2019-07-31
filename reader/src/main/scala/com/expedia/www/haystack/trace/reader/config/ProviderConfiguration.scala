@@ -75,7 +75,7 @@ class ProviderConfiguration {
       Option(es.getString("password"))
     } else None
 
-    es.getString("endpoints").split(",").map( endpoint =>
+    es.getString("endpoints").split(",").filterNot(_.isEmpty).map( endpoint =>
       ElasticSearchClientConfiguration(
       endpoint = endpoint,
       username = username,

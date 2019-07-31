@@ -279,8 +279,8 @@ class TraceServiceIntegrationTestSpec extends BaseIntegrationTestSpec {
       Given("trace in trace-backend and elasticsearch")
       val traceId = UUID.randomUUID().toString
       val spanId = UUID.randomUUID().toString
-      val serviceName = "svcName"
-      val operationName = "opName"
+      val serviceName = "svcName-1"
+      val operationName = "opName-1"
       val startTime = 1
       val endTime = (System.currentTimeMillis() + 10000000) * 1000
       putTraceInEsAndTraceBackend(traceId, spanId, serviceName, operationName)
@@ -308,8 +308,8 @@ class TraceServiceIntegrationTestSpec extends BaseIntegrationTestSpec {
       val traceId_1 = UUID.randomUUID().toString
       val traceId_2 = UUID.randomUUID().toString
       val spanId = UUID.randomUUID().toString
-      val serviceName = "svcName"
-      val operationName = "opName"
+      val serviceName = "svcName-2"
+      val operationName = "opName-2"
       val startTime = 1
       val endTime = (System.currentTimeMillis() + 10000000) * 1000
       putTraceInEsAndTraceBackend(traceId_1, spanId, serviceName, operationName)

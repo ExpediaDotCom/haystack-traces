@@ -40,7 +40,6 @@ import com.expedia.www.haystack.commons.retries.RetryOperation
   */
 
 case class ShowValuesConfiguration(enabled: Boolean,
-                                   fieldNames: List[String],
                                    esEndpoint: String,
                                    username: Option[String],
                                    password: Option[String],

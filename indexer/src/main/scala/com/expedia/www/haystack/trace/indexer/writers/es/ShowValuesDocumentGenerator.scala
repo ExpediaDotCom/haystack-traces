@@ -5,14 +5,15 @@ import java.time.Instant
 import com.expedia.open.tracing.Span
 import com.expedia.www.haystack.commons.metrics.MetricsSupport
 import com.expedia.www.haystack.trace.commons.clients.es.document.ShowValuesDoc
+import com.expedia.www.haystack.trace.commons.config.entities.WhitelistIndexFieldConfiguration
 import com.expedia.www.haystack.trace.indexer.config.entities.ShowValuesConfiguration
 import org.apache.commons.lang3.StringUtils
 
 import scala.collection.mutable
 
-class ShowValuesDocumentGenerator(config: ShowValuesConfiguration) extends MetricsSupport {
+class ShowValuesDocumentGenerator(config: ShowValuesConfiguration, whitelistIndexFieldConfiguration: WhitelistIndexFieldConfiguration) extends MetricsSupport {
 
-  private var showValuesMap = new mutable.HashMap[String, mutable.Set[String]]()
+  private var showValuesMap = new mutable.HashMap[String, mutable.HashMap[String, mutable.Set[String]]]()
   private var lastFlushInstant = Instant.MIN
   private val PAGE_NAME_KEY = "page-name"
   private var fieldCount = 0
@@ -45,14 +46,17 @@ class ShowValuesDocumentGenerator(config: ShowValuesConfiguration) extends Metri
     */
   def getAndUpdateShowValues(spans: Iterable[Span]): Seq[ShowValuesDoc] = {
     this.synchronized {
+      val showValuesTagList = whitelistIndexFieldConfiguration.whitelistIndexFields.filter(p => p.showValue.equals(true))
       spans.foreach(span => {
-        val fieldInfo = span.getTagsList.stream().filter(p => p.getKey.equalsIgnoreCase(PAGE_NAME_KEY))
+        val tagsToSave = span.getTagsList.stream().filter(p => showValuesTagList.contains(p.getKey))
         if (StringUtils.isNotEmpty(span.getServiceName) && fieldInfo.count() > 0) {
-          val pageList = showValuesMap.getOrElseUpdate(span.getServiceName, mutable.Set[String]())
-          val fieldValue = fieldInfo.findFirst().get().getVStr
-          if (pageList.add(fieldValue)) {
-            fieldCount += 1
-          }
+          val serviceInfo = showValuesMap.getOrElseUpdate(span.getServiceName, mutable.HashMap[String, mutable.Set[String]]())
+          tagsToSave.forEach(tag => {
+            var tagValues = serviceInfo.getOrElseUpdate(tag.getKey, mutable.Set[String]())
+            if (tagValues.add(tag.getVStr)) {
+              fieldCount += 1
+            }
+          })
         }
       })
       areStatementReadyToBeExecuted()

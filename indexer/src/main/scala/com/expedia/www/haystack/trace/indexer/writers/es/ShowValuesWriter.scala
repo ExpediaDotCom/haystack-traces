@@ -6,6 +6,7 @@ import com.expedia.open.tracing.buffer.SpanBuffer
 import com.expedia.www.haystack.commons.metrics.MetricsSupport
 import com.expedia.www.haystack.trace.commons.clients.es.document.ShowValuesDoc
 import com.expedia.www.haystack.commons.retries.RetryOperation.withRetryBackoff
+import com.expedia.www.haystack.trace.commons.config.entities.WhitelistIndexFieldConfiguration
 import com.expedia.www.haystack.trace.commons.packer.PackedMessage
 import com.expedia.www.haystack.trace.indexer.config.entities.ShowValuesConfiguration
 import com.expedia.www.haystack.trace.indexer.metrics.AppMetricNames
@@ -33,7 +34,8 @@ object ShowValuesUtils {
     s"$prefix-${dataFormatter.print(eventTime)}"
   }
 }
-class ShowValuesWriter(config: ShowValuesConfiguration) extends TraceWriter with MetricsSupport {
+
+class ShowValuesWriter(config: ShowValuesConfiguration,  whitelistFieldConfig: WhitelistIndexFieldConfiguration) extends TraceWriter with MetricsSupport {
   private val LOGGER: Logger= LoggerFactory.getLogger(ShowValuesConfiguration.getClass)
 
   // a timer that measures the amount of time it takes to complete one bulk write

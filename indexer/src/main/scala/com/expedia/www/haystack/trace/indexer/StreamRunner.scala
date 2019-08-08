@@ -65,7 +65,7 @@ class StreamRunner(kafkaConfig: KafkaConfiguration,
     }
 
     if (showValuesWriteConfig.enabled) {
-      writers += new ShowValuesWriter(showValuesWriteConfig)
+      writers += new ShowValuesWriter(showValuesWriteConfig, indexConfig)
     }
 
     if (StringUtils.isNotEmpty(kafkaConfig.produceTopic)) {

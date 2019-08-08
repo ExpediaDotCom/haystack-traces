@@ -199,7 +199,6 @@ class ProjectConfiguration extends AutoCloseable {
     val password = if (es.hasPath("password")) Option(es.getString("password")) else None
     ShowValuesConfiguration(
       enabled = showValuesConfig.getBoolean("enabled"),
-      fieldNames = showValuesConfig.getStringList("fieldnames").asScala.toList,
       flushIntervalInSec = showValuesConfig.getInt("flush.interval.sec"),
       flushOnMaxFieldCount = showValuesConfig.getInt("flush.operation.count"),
       esEndpoint = es.getString("endpoint"),

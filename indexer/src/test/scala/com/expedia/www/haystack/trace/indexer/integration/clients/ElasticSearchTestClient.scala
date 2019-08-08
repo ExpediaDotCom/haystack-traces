@@ -22,7 +22,7 @@ import java.util.Date
 
 import com.expedia.www.haystack.commons.retries.RetryOperation
 import com.expedia.www.haystack.trace.commons.config.entities._
-import com.expedia.www.haystack.trace.indexer.config.entities.{ElasticSearchConfiguration, ServiceMetadataWriteConfiguration}
+import com.expedia.www.haystack.trace.indexer.config.entities.{ElasticSearchConfiguration, ServiceMetadataWriteConfiguration, ShowValuesConfiguration}
 import io.searchbox.client.config.HttpClientConfig
 import io.searchbox.client.{JestClient, JestClientFactory}
 import io.searchbox.core.Search
@@ -95,6 +95,26 @@ class ElasticSearchTestClient {
       flushIntervalInSec = 10,
       flushOnMaxOperationCount = 10,
       retryConfig = RetryOperation.Config(10, 250, 2))
+  }
+
+  def buildShowValuesConfig: ShowValuesConfiguration = {
+    ShowValuesConfiguration(enabled = true,
+      esEndpoint = ELASTIC_SEARCH_ENDPOINT,
+      username = None,
+      password = None,
+      consistencyLevel = "one",
+      indexTemplateJson = Some(SERVICE_METADATA_INDEX_TEMPLATE),
+      indexName = "service-metadata",
+      indexType = "metadata",
+      connectionTimeoutMillis = 3000,
+      readTimeoutMillis = 3000,
+      maxInFlightBulkRequests = 10,
+      maxDocsInBulk = 5,
+      maxBulkDocSizeInBytes = 50,
+      flushIntervalInSec = 10,
+      flushOnMaxOperationCount = 10,
+      retryConfig = RetryOperation.Config(10, 250, 2))
+    )
   }
 
 

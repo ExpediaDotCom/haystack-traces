@@ -44,6 +44,7 @@ object App extends MetricsSupport {
         appConfig.elasticSearchConfig,
         appConfig.backendConfig,
         appConfig.serviceMetadataWriteConfig,
+        appConfig.showValuesConfig,
         appConfig.indexConfig)
 
       Runtime.getRuntime.addShutdownHook(new Thread {

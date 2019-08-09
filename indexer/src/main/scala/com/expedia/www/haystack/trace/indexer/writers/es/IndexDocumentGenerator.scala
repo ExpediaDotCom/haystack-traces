@@ -90,7 +90,7 @@ class IndexDocumentGenerator(config: WhitelistIndexFieldConfiguration) extends M
 
     for (tag <- span.getTagsList.asScala;
          normalizedTagKey = tag.getKey.toLowerCase;
-         indexField = config.indexFieldMap.get(normalizedTagKey); if indexField != null && indexField.enabled && !indexField.showValue;
+         indexField = config.indexFieldMap.get(normalizedTagKey); if indexField != null && indexField.enabled;
          v = readTagValue(tag);
          indexableValue = transformValueForIndexing(indexField.`type`, v); if indexableValue.isDefined) {
       append(indexField.name, indexableValue)

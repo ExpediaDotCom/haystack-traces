@@ -108,5 +108,25 @@ class ConfigurationLoaderSpec extends FunSpec with Matchers {
       elastic.indexHourBucket shouldBe 6
       elastic.maxConnectionsPerRoute shouldBe 10
     }
+
+    it("should load the show values config from base.conf") {
+      val config = project.showValuesConfig
+      config.flushIntervalInSec shouldBe 60
+      config.flushOnMaxFieldCount shouldBe 10000
+      config.esEndpoint shouldBe "http://elasticsearch:9200"
+      config.maxInFlightBulkRequests shouldBe 10
+      config.maxDocsInBulk shouldBe 100
+      config.maxBulkDocSizeInBytes shouldBe 1000000
+      config.indexTemplateJson shouldBe Some("some_template_json")
+      config.consistencyLevel shouldBe "one"
+      config.readTimeoutMillis shouldBe 5000
+      config.connectionTimeoutMillis shouldBe 10000
+      config.indexName shouldBe "show-values"
+      config.indexType shouldBe "fieldvalues-metadata"
+      config.retryConfig.maxRetries shouldBe 10
+      config.retryConfig.backOffInMillis shouldBe 100
+      config.retryConfig.backoffFactor shouldBe 2
+    }
+
   }
 }

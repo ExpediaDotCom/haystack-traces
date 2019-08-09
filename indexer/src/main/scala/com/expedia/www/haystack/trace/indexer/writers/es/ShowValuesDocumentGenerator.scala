@@ -25,12 +25,12 @@ class ShowValuesDocumentGenerator(config: ShowValuesConfiguration, whitelistInde
   private def areStatementReadyToBeExecuted(): Seq[ShowValuesDoc] = {
     if (showValuesMap.nonEmpty && (shouldFlush || fieldCount > config.flushOnMaxFieldCount)) {
       val statements = showValuesMap.flatMap {
-        case (serviceName, fieldList) =>
-          createShowValuesDoc(serviceName, fieldList)
+        case (serviceName, fieldValuesMap) =>
+          createShowValuesDoc(serviceName, fieldValuesMap)
       }
 
       lastFlushInstant = Instant.now()
-      showValuesMap = new mutable.HashMap[String, mutable.Set[String]]()
+      showValuesMap = new mutable.HashMap[String, mutable.HashMap[String, mutable.Set[String]]]()
       fieldCount = 0
       statements.toSeq
     } else {
@@ -49,7 +49,7 @@ class ShowValuesDocumentGenerator(config: ShowValuesConfiguration, whitelistInde
       val showValuesTagList = whitelistIndexFieldConfiguration.whitelistIndexFields.filter(p => p.showValue.equals(true))
       spans.foreach(span => {
         val tagsToSave = span.getTagsList.stream().filter(p => showValuesTagList.contains(p.getKey))
-        if (StringUtils.isNotEmpty(span.getServiceName) && fieldInfo.count() > 0) {
+        if (StringUtils.isNotEmpty(span.getServiceName) && tagsToSave.count > 0) {
           val serviceInfo = showValuesMap.getOrElseUpdate(span.getServiceName, mutable.HashMap[String, mutable.Set[String]]())
           tagsToSave.forEach(tag => {
             var tagValues = serviceInfo.getOrElseUpdate(tag.getKey, mutable.Set[String]())
@@ -66,8 +66,8 @@ class ShowValuesDocumentGenerator(config: ShowValuesConfiguration, whitelistInde
   /**
     * @return index document that can be put in elastic search
     */
-  def createShowValuesDoc(serviceName: String, fieldValueList: mutable.Set[String]): List[ShowValuesDoc] = {
-    fieldValueList.map(v => ShowValuesDoc(serviceName, PAGE_NAME_KEY, v)).toList
+  def createShowValuesDoc(serviceName: String, fieldValuesMap: mutable.HashMap[String, mutable.Set[String]]): List[ShowValuesDoc] = {
+    fieldValuesMap.flatMap(p => p._2.map(values => ShowValuesDoc(serviceName, p._1, values))).toList
   }
 
 }

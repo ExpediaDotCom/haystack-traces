@@ -112,9 +112,8 @@ class ElasticSearchTestClient {
       maxDocsInBulk = 5,
       maxBulkDocSizeInBytes = 50,
       flushIntervalInSec = 10,
-      flushOnMaxOperationCount = 10,
+      flushOnMaxFieldCount = 10,
       retryConfig = RetryOperation.Config(10, 250, 2))
-    )
   }
 
 

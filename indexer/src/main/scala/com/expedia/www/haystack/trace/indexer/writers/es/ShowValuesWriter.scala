@@ -45,7 +45,7 @@ class ShowValuesWriter(config: ShowValuesConfiguration,  whitelistFieldConfig: W
   private val failureMeter = metricRegistry.meter(AppMetricNames.METADATA_WRITE_FAILURE)
 
   // converts a serviceMetadata object into an indexable document
-  private val documentGenerator = new ShowValuesDocumentGenerator(config)
+  private val documentGenerator = new ShowValuesDocumentGenerator(config, whitelistFieldConfig)
 
 
   // this semaphore controls the parallel writes to service metadata index

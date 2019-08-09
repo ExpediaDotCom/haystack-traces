@@ -41,6 +41,7 @@ class ServiceMetadataIndexingTopologySpec extends BaseIntegrationTestSpec {
       val indexTagsConfig = elastic.indexingConfig
       val backendConfig = traceBackendClient.buildConfig
       val serviceMetadataConfig = elastic.buildServiceMetadataConfig
+      val showValuesConfig = elastic.buildShowValuesConfig
 
       When(s"spans are produced in '${kafka.INPUT_TOPIC}' topic async, and kafka-streams topology is started")
       val traceDescriptions = List(TraceDescription(TRACE_ID_6, SPAN_ID_PREFIX_1), TraceDescription(TRACE_ID_7, SPAN_ID_PREFIX_2))
@@ -51,7 +52,7 @@ class ServiceMetadataIndexingTopologySpec extends BaseIntegrationTestSpec {
         0,
         spanAccumulatorConfig.bufferingWindowMillis)
 
-      val topology = new StreamRunner(kafkaConfig, spanAccumulatorConfig, esConfig, backendConfig, serviceMetadataConfig, indexTagsConfig)
+      val topology = new StreamRunner(kafkaConfig, spanAccumulatorConfig, esConfig, backendConfig, serviceMetadataConfig, showValuesConfig, indexTagsConfig)
       topology.start()
 
       Then(s"we should read two multiple service operation combinations in elastic search")

@@ -1,21 +1,22 @@
 package com.expedia.www.haystack.trace.indexer.writers.es
 
 import java.time.Instant
+import java.util.stream.Collectors
 
-import com.expedia.open.tracing.Span
+import com.expedia.open.tracing.{Span, Tag}
 import com.expedia.www.haystack.commons.metrics.MetricsSupport
 import com.expedia.www.haystack.trace.commons.clients.es.document.ShowValuesDoc
-import com.expedia.www.haystack.trace.commons.config.entities.WhitelistIndexFieldConfiguration
+import com.expedia.www.haystack.trace.commons.config.entities.{WhitelistIndexField, WhitelistIndexFieldConfiguration}
 import com.expedia.www.haystack.trace.indexer.config.entities.ShowValuesConfiguration
 import org.apache.commons.lang3.StringUtils
 
 import scala.collection.mutable
+import scala.collection.JavaConverters._
 
 class ShowValuesDocumentGenerator(config: ShowValuesConfiguration, whitelistIndexFieldConfiguration: WhitelistIndexFieldConfiguration) extends MetricsSupport {
 
   private var showValuesMap = new mutable.HashMap[String, mutable.HashMap[String, mutable.Set[String]]]()
   private var lastFlushInstant = Instant.MIN
-  private val PAGE_NAME_KEY = "page-name"
   private var fieldCount = 0
 
   private def shouldFlush: Boolean = {
@@ -46,13 +47,15 @@ class ShowValuesDocumentGenerator(config: ShowValuesConfiguration, whitelistInde
     */
   def getAndUpdateShowValues(spans: Iterable[Span]): Seq[ShowValuesDoc] = {
     this.synchronized {
-      val showValuesTagList = whitelistIndexFieldConfiguration.whitelistIndexFields.filter(p => p.showValue.equals(true))
+      val showValuesIndexField: List[WhitelistIndexField] = whitelistIndexFieldConfiguration.whitelistIndexFields.filter(p => p.showValue.equals(true))
       spans.foreach(span => {
-        val tagsToSave = span.getTagsList.stream().filter(p => showValuesTagList.contains(p.getKey))
-        if (StringUtils.isNotEmpty(span.getServiceName) && tagsToSave.count > 0) {
+        val tagsToSave: List[Tag] = span.getTagsList.stream()
+          .filter(t => showValuesIndexField.exists(p => p.name.equalsIgnoreCase(t.getKey)))
+          .collect(Collectors.toList[Tag]()).asScala.toList
+        if (StringUtils.isNotEmpty(span.getServiceName) && tagsToSave.nonEmpty) {
           val serviceInfo = showValuesMap.getOrElseUpdate(span.getServiceName, mutable.HashMap[String, mutable.Set[String]]())
-          tagsToSave.forEach(tag => {
-            var tagValues = serviceInfo.getOrElseUpdate(tag.getKey, mutable.Set[String]())
+          tagsToSave.foreach(tag => {
+            val tagValues = serviceInfo.getOrElseUpdate(tag.getKey, mutable.Set[String]())
             if (tagValues.add(tag.getVStr)) {
               fieldCount += 1
             }

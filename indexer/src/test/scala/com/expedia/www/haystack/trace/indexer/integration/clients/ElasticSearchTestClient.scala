@@ -103,7 +103,7 @@ class ElasticSearchTestClient {
       username = None,
       password = None,
       consistencyLevel = "one",
-      indexTemplateJson = Some(SERVICE_METADATA_INDEX_TEMPLATE),
+      indexTemplateJson = Some(SHOW_VALUES_INDEX_TEMPLATE),
       indexName = "show-values",
       indexType = "fieldvalues-metadata",
       connectionTimeoutMillis = 3000,
@@ -120,7 +120,10 @@ class ElasticSearchTestClient {
   def indexingConfig: WhitelistIndexFieldConfiguration = {
     val cfg = WhitelistIndexFieldConfiguration()
     val cfgJsonData = Serialization.write(WhiteListIndexFields(
-      List(WhitelistIndexField(name = "role", `type` = IndexFieldType.string, aliases = Set("_role")), WhitelistIndexField(name = "errorcode", `type` = IndexFieldType.long))))
+      List(
+        WhitelistIndexField(name = "role", `type` = IndexFieldType.string, aliases = Set("_role")),
+        WhitelistIndexField(name = "errorcode", `type` = IndexFieldType.long),
+        WhitelistIndexField(name = "pagename", `type` = IndexFieldType.long, showValue = true))))
     cfg.onReload(cfgJsonData)
     cfg
   }
@@ -140,13 +143,23 @@ class ElasticSearchTestClient {
     }
   }
 
+  def queryShowValuesIndex(query: String): List[String] = {
+    val SHOW_VALUES_INDEX_NAME = "show-values"
+    val SHOW_VALUES_INDEX_TYPE = "fieldvalues-metadata"
+    queryIndex(query, SHOW_VALUES_INDEX_NAME, SHOW_VALUES_INDEX_TYPE)
+  }
+
   def queryServiceMetadataIndex(query: String): List[String] = {
-    import scala.collection.JavaConverters._
     val SERVICE_METADATA_INDEX_NAME = "service-metadata"
     val SERVICE_METADATA_INDEX_TYPE = "metadata"
+    queryIndex(query, SERVICE_METADATA_INDEX_NAME, SERVICE_METADATA_INDEX_TYPE)
+  }
+
+  def queryIndex(query: String, index: String, index_type: String): List[String] = {
+    import scala.collection.JavaConverters._
     val searchQuery = new Search.Builder(query)
-      .addIndex(SERVICE_METADATA_INDEX_NAME)
-      .addType(SERVICE_METADATA_INDEX_TYPE)
+      .addIndex(index)
+      .addType(index_type)
       .build()
     val result = esClient.execute(searchQuery)
     if (result.getSourceAsStringList != null && result.getSourceAsStringList.size() > 0) {
@@ -228,6 +241,53 @@ class ElasticSearchTestClient {
       |    }
       |}
       |""".stripMargin
+
+  private val SHOW_VALUES_INDEX_TEMPLATE =
+    """{
+      |"template": "show-values*",
+      |"aliases": {
+      | "show-values":{}
+      |},
+      |"settings": {
+      | "number_of_shards": 4,
+      | "index.mapping.ignore_malformed": true,
+      | "analysis": {
+      |   "normalizer": {
+      |     "lowercase_normalizer": {
+      |       "type": "custom",
+      |       "filter": ["lowercase"]
+      |     }
+      |   }
+      | }
+      |},
+      |"mappings": {
+      | "fieldvalues-metadata": {
+      |   "_field_names": {
+      |     "enabled": false
+      |   },
+      |   "_all": {
+      |     "enabled": false
+      |   },
+      |   "properties": {
+      |     "servicename": {
+      |       "type": "keyword",
+      |       "norms": false,
+      |       "doc_values": false
+      |     },
+      |     "fieldname": {
+      |      "type": "keyword",
+      |      "norms": false,
+      |      "doc_values": false
+      |     },
+      |     "fieldvalue": {
+      |       "type": "keyword",
+      |       "norms": false,
+      |       "doc_values": false
+      |     }
+      |   }
+      | }
+      |}
+      |}""".stripMargin
 
   private val SERVICE_METADATA_INDEX_TEMPLATE =
     """{

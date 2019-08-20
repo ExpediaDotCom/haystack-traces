@@ -179,7 +179,7 @@ abstract class BaseIntegrationTestSpec extends WordSpec with GivenWhenThen with 
         |  }
         |}""".stripMargin
     val docs = elastic.queryShowValuesIndex(fieldNamesQuery)
-    docs.size shouldBe 5
+    docs.size shouldBe 6
   }
 
   def verifyElasticSearchWrites(traceIds: Seq[String]): Unit = {

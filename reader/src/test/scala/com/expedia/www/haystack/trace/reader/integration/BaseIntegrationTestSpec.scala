@@ -26,7 +26,7 @@ import com.expedia.open.tracing.api.TraceReaderGrpc.TraceReaderBlockingStub
 import com.expedia.open.tracing.backend.StorageBackendGrpc.StorageBackendBlockingStub
 import com.expedia.open.tracing.backend.{StorageBackendGrpc, TraceRecord, WriteSpansRequest, WriteSpansResponse}
 import com.expedia.open.tracing.buffer.SpanBuffer
-import com.expedia.www.haystack.trace.commons.clients.es.document.TraceIndexDoc
+import com.expedia.www.haystack.trace.commons.clients.es.document.{ShowValuesDoc, TraceIndexDoc}
 import com.expedia.www.haystack.trace.commons.config.entities.{IndexFieldType, WhiteListIndexFields, WhitelistIndexField}
 import com.expedia.www.haystack.trace.commons.packer.{PackerFactory, PackerType}
 import com.expedia.www.haystack.trace.reader.Service
@@ -56,6 +56,8 @@ trait BaseIntegrationTestSpec extends FunSpec with GivenWhenThen with Matchers w
   private val ELASTIC_SEARCH_ENDPOINT = "http://elasticsearch:9200"
   private val ELASTIC_SEARCH_WHITELIST_INDEX = "reload-configs"
   private val ELASTIC_SEARCH_WHITELIST_TYPE = "whitelist-index-fields"
+  private val ELASTIC_SEARCH_SHOW_VALUES_INDEX = "show-values"
+  private val ELASTIC_SEARCH_SHOW_VALUES_TYPE = "fieldvalues-metadata"
   private val SPANS_INDEX_TYPE = "spans"
 
   private val executors = Executors.newFixedThreadPool(2)
@@ -258,6 +260,14 @@ trait BaseIntegrationTestSpec extends FunSpec with GivenWhenThen with Matchers w
 
     // wait for few sec to let ES refresh its index and app to reload its config
     Thread.sleep(10000)
+  }
+
+  protected def putShowValueFieldsInEs(serviceName: String, fieldNameValuePairs: Set[(String, String)]): Unit = {
+    val showValuesDocList = fieldNameValuePairs.map(p => ShowValuesDoc(serviceName, p._1, p._2))
+    esClient.execute(new Index.Builder(Serialization.write(showValuesDocList))
+    .index(ELASTIC_SEARCH_SHOW_VALUES_INDEX)
+    .`type`(ELASTIC_SEARCH_SHOW_VALUES_TYPE)
+    .build())
   }
 
   private def insertTraceInBackend(traceId: String,

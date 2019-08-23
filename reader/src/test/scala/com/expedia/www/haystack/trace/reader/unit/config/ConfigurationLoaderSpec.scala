@@ -71,6 +71,10 @@ class ConfigurationLoaderSpec extends BaseUnitTestSpec {
       elasticSearchConfig.serviceMetadataIndexConfiguration.enabled shouldEqual false
       elasticSearchConfig.serviceMetadataIndexConfiguration.indexName shouldEqual "service_metadata"
       elasticSearchConfig.serviceMetadataIndexConfiguration.indexType shouldEqual "metadata"
+
+      elasticSearchConfig.showValuesIndexConfiguration.enabled shouldEqual false
+      elasticSearchConfig.showValuesIndexConfiguration.indexName shouldEqual "show-values"
+      elasticSearchConfig.showValuesIndexConfiguration.indexType shouldEqual "showvalues-metadata"
     }
 
     it("should load trace backend configuration") {

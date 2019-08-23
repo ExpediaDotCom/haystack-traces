@@ -34,4 +34,9 @@ case class ServiceMetadataIndexConfiguration(enabled: Boolean,
 
 case class ElasticSearchConfiguration(clientConfiguration: ElasticSearchClientConfiguration,
                                       spansIndexConfiguration: SpansIndexConfiguration,
-                                      serviceMetadataIndexConfiguration: ServiceMetadataIndexConfiguration)
+                                      serviceMetadataIndexConfiguration: ServiceMetadataIndexConfiguration,
+                                      showValuesIndexConfiguration: ShowValuesIndexConfiguration)
+
+case class ShowValuesIndexConfiguration(enabled: Boolean,
+                                        indexName: String,
+                                        indexType: String)

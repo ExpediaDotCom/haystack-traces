@@ -101,7 +101,7 @@ class TraceServiceIntegrationTestSpec extends BaseIntegrationTestSpec {
 
       Then("should return filtered values for given field")
       result.getValuesList.size() should be(1)
-      result.getValuesList.asScala should contain("tagname1")
+      result.getValuesList.asScala should contain("tagvalue1")
     }
   }
 

@@ -41,6 +41,7 @@ class EsIndexedTraceStore(traceStoreBackendConfig: TraceStoreBackends,
   private val esReader: ElasticSearchReader = new ElasticSearchReader(elasticSearchConfiguration.clientConfiguration)
   private val traceSearchQueryGenerator = new TraceSearchQueryGenerator(elasticSearchConfiguration.spansIndexConfiguration, ES_NESTED_DOC_NAME, whitelistedFieldsConfiguration)
   private val traceCountsQueryGenerator = new TraceCountsQueryGenerator(elasticSearchConfiguration.spansIndexConfiguration, ES_NESTED_DOC_NAME, whitelistedFieldsConfiguration)
+  private val fieldValuesQueryGenerator = new FieldValuesQueryGenerator(elasticSearchConfiguration.spansIndexConfiguration, ES_NESTED_DOC_NAME, whitelistedFieldsConfiguration)
   private val serviceMetadataQueryGenerator = new ServiceMetadataQueryGenerator(elasticSearchConfiguration.serviceMetadataIndexConfiguration)
   private val showValuesQueryGenerator = new ShowValuesQueryGenerator(elasticSearchConfiguration.showValuesIndexConfiguration)
   private val FIELD_VALUE_KEY = "fieldvalue"
@@ -131,11 +132,18 @@ class EsIndexedTraceStore(traceStoreBackendConfig: TraceStoreBackends,
       .map(extractFieldValues(_, FIELD_VALUE_KEY)))
   }
 
+  private def readFromSpansIndex(request: FieldValuesRequest): Future[Seq[String]] = {
+    esReader
+      .search(fieldValuesQueryGenerator.generate(request))
+      .map(extractFieldValues(_, request.getFieldName.toLowerCase))
+  }
+
   override def getFieldValues(request: FieldValuesRequest): Future[Seq[String]] = {
     if (request.getFieldName.equalsIgnoreCase(TraceIndexDoc.SERVICE_KEY_NAME) || request.getFieldName.equalsIgnoreCase(TraceIndexDoc.OPERATION_KEY_NAME)) {
-      readFromServiceMetadata(request).getOrElse(Future.apply(Seq[String]()))
+      readFromServiceMetadata(request).getOrElse(readFromSpansIndex(request))
+    } else {
+      readFromShowValues(request).getOrElse(readFromSpansIndex(request))
     }
-    readFromShowValues(request).getOrElse(Future.apply(Seq[String]()))
   }
 
   override def getTraceCounts(request: TraceCountsRequest): Future[TraceCounts] = {

@@ -56,7 +56,6 @@ trait BaseIntegrationTestSpec extends FunSpec with GivenWhenThen with Matchers w
   private val ELASTIC_SEARCH_ENDPOINT = "http://elasticsearch:9200"
   private val ELASTIC_SEARCH_WHITELIST_INDEX = "reload-configs"
   private val ELASTIC_SEARCH_WHITELIST_TYPE = "whitelist-index-fields"
-  private val ELASTIC_SEARCH_SHOW_VALUES_INDEX = "show-values"
   private val ELASTIC_SEARCH_SHOW_VALUES_TYPE = "fieldvalues-metadata"
   private val SPANS_INDEX_TYPE = "spans"
 
@@ -72,6 +71,16 @@ trait BaseIntegrationTestSpec extends FunSpec with GivenWhenThen with Matchers w
 
     s"haystack-traces-$dateBucket-$hourBucket"
   }
+
+  private val SHOW_VAlUES_INDEX = {
+    val date = new Date()
+
+    val dateBucket = new SimpleDateFormat("yyyy-MM-dd").format(date)
+    val hourBucket = new SimpleDateFormat("HH").format(date).toInt / 6
+
+    s"show-values-$dateBucket"
+  }
+
   private val INDEX_TEMPLATE =
     """{
       |    "template": "haystack-traces*",
@@ -158,6 +167,54 @@ trait BaseIntegrationTestSpec extends FunSpec with GivenWhenThen with Matchers w
       |""".stripMargin
 
 
+  private val SHOW_VALUES_INDEX_TEMPLATE =
+    """{
+      |"template": "show-values*",
+      |"aliases": {
+      | "show-values":{}
+      |},
+      |"settings": {
+      | "number_of_shards": 4,
+      | "index.mapping.ignore_malformed": true,
+      | "analysis": {
+      |   "normalizer": {
+      |     "lowercase_normalizer": {
+      |       "type": "custom",
+      |       "filter": ["lowercase"]
+      |     }
+      |   }
+      | }
+      |},
+      |"mappings": {
+      | "fieldvalues-metadata": {
+      |   "_field_names": {
+      |     "enabled": false
+      |   },
+      |   "_all": {
+      |     "enabled": false
+      |   },
+      |   "properties": {
+      |     "servicename": {
+      |       "type": "keyword",
+      |       "norms": false,
+      |       "doc_values": false
+      |     },
+      |     "fieldname": {
+      |      "type": "keyword",
+      |      "norms": false,
+      |      "doc_values": false
+      |     },
+      |     "fieldvalue": {
+      |       "type": "keyword",
+      |       "norms": false,
+      |       "doc_values": false
+      |     }
+      |   }
+      | }
+      |}
+      |}""".stripMargin
+
+
   private var esClient: JestClient = _
   private var traceBackendClient: StorageBackendBlockingStub = _
 
@@ -189,6 +246,10 @@ trait BaseIntegrationTestSpec extends FunSpec with GivenWhenThen with Matchers w
     esClient.execute(new CreateIndex.Builder(HAYSTACK_TRACES_INDEX)
       .settings(INDEX_TEMPLATE)
       .build)
+
+    esClient.execute(new CreateIndex.Builder(SHOW_VAlUES_INDEX)
+        .settings(SHOW_VALUES_INDEX_TEMPLATE)
+        .build)
 
     executors.submit(new Runnable {
       override def run(): Unit = Service.main(null)
@@ -263,11 +324,13 @@ trait BaseIntegrationTestSpec extends FunSpec with GivenWhenThen with Matchers w
   }
 
   protected def putShowValueFieldsInEs(serviceName: String, fieldNameValuePairs: Set[(String, String)]): Unit = {
-    val showValuesDocList = fieldNameValuePairs.map(p => ShowValuesDoc(serviceName, p._1, p._2))
-    esClient.execute(new Index.Builder(Serialization.write(showValuesDocList))
-    .index(ELASTIC_SEARCH_SHOW_VALUES_INDEX)
-    .`type`(ELASTIC_SEARCH_SHOW_VALUES_TYPE)
-    .build())
+    val showValuesDocList = fieldNameValuePairs.map(p => {
+      esClient.execute(new Index.Builder(Serialization.write(ShowValuesDoc(serviceName, p._1, p._2)))
+        .index(SHOW_VAlUES_INDEX)
+        .`type`(ELASTIC_SEARCH_SHOW_VALUES_TYPE)
+        .build())
+    })
+
   }
 
   private def insertTraceInBackend(traceId: String,

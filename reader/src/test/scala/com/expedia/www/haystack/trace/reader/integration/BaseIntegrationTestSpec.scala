@@ -331,6 +331,7 @@ trait BaseIntegrationTestSpec extends FunSpec with GivenWhenThen with Matchers w
         .build())
     })
 
+    Thread.sleep(10000)
   }
 
   private def insertTraceInBackend(traceId: String,

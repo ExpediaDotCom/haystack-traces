@@ -29,7 +29,7 @@ import com.expedia.www.haystack.trace.indexer.processors._
 import com.expedia.www.haystack.trace.indexer.processors.supplier.SpanIndexProcessorSupplier
 import com.expedia.www.haystack.trace.indexer.store.SpanBufferMemoryStoreSupplier
 import com.expedia.www.haystack.trace.indexer.writers.TraceWriter
-import com.expedia.www.haystack.trace.indexer.writers.es.{ElasticSearchWriter, ServiceMetadataWriter}
+import com.expedia.www.haystack.trace.indexer.writers.es.{ElasticSearchWriter, ServiceMetadataWriter, ShowValuesWriter}
 import com.expedia.www.haystack.trace.indexer.writers.grpc.GrpcTraceWriter
 import com.expedia.www.haystack.trace.indexer.writers.kafka.KafkaWriter
 import org.apache.commons.lang3.StringUtils
@@ -44,6 +44,7 @@ class StreamRunner(kafkaConfig: KafkaConfiguration,
                    esConfig: ElasticSearchConfiguration,
                    traceWriteConfig: TraceBackendConfiguration,
                    serviceMetadataWriteConfig: ServiceMetadataWriteConfiguration,
+                   showValuesWriteConfig: ShowValuesConfiguration,
                    indexConfig: WhitelistIndexFieldConfiguration) extends AutoCloseable with StateListener {
 
   implicit private val executor: ExecutionContextExecutor = scala.concurrent.ExecutionContext.global
@@ -61,6 +62,10 @@ class StreamRunner(kafkaConfig: KafkaConfiguration,
 
     if (serviceMetadataWriteConfig.enabled) {
       writers += new ServiceMetadataWriter(serviceMetadataWriteConfig)
+    }
+
+    if (showValuesWriteConfig.enabled) {
+      writers += new ShowValuesWriter(showValuesWriteConfig, indexConfig)
     }
 
     if (StringUtils.isNotEmpty(kafkaConfig.produceTopic)) {

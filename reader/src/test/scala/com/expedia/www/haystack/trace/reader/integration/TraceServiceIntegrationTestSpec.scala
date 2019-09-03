@@ -84,6 +84,25 @@ class TraceServiceIntegrationTestSpec extends BaseIntegrationTestSpec {
       result.getValuesList.size() should be(2)
       result.getValuesList.asScala should contain allOf(op1, op2)
     }
+
+    it("should return values of a given fields(other than service and operation name) with filters") {
+      Given("trace in trace-backend and elasticsearch")
+      val serviceName = "get_values_with_filters_non_service_operation_type_servicename"
+      val fieldNameValuePairs = Set[(String, String)](("tagname1", "tagvalue1"), ("tagname2", "tagvalue2"))
+
+      putShowValueFieldsInEs(serviceName, fieldNameValuePairs)
+      val request = FieldValuesRequest.newBuilder()
+        .addFilters(Field.newBuilder().setName(TraceIndexDoc.SERVICE_KEY_NAME).setValue(serviceName))
+        .setFieldName("tagname1")
+        .build()
+
+      When("calling getFieldValues")
+      val result = client.getFieldValues(request)
+
+      Then("should return filtered values for given field")
+      result.getValuesList.size() should be(1)
+      result.getValuesList.asScala should contain("tagvalue1")
+    }
   }
 
   describe("TraceReader.getTrace") {

@@ -42,6 +42,7 @@ class FailedTopologyRecoverySpec extends BaseIntegrationTestSpec {
       val backendConfig = traceBackendClient.buildConfig
       val serviceMetadataConfig = elastic.buildServiceMetadataConfig
       val accumulatorConfig = spanAccumulatorConfig.copy(pollIntervalMillis = spanAccumulatorConfig.pollIntervalMillis * 5)
+      val showValuesConfig = elastic.buildShowValuesConfig
       val startTimestamp = System.currentTimeMillis()
       produceSpansAsync(
         MAX_CHILD_SPANS_PER_TRACE,
@@ -51,7 +52,7 @@ class FailedTopologyRecoverySpec extends BaseIntegrationTestSpec {
         spanAccumulatorConfig.bufferingWindowMillis)
 
       When(s"kafka-streams topology is started and then stopped forcefully after few sec")
-      var topology = new StreamRunner(kafkaConfig, accumulatorConfig, esConfig, backendConfig, serviceMetadataConfig, indexTagsConfig)
+      var topology = new StreamRunner(kafkaConfig, accumulatorConfig, esConfig, backendConfig, serviceMetadataConfig, showValuesConfig, indexTagsConfig)
       topology.start()
       Thread.sleep(7000)
       topology.close()
@@ -60,7 +61,7 @@ class FailedTopologyRecoverySpec extends BaseIntegrationTestSpec {
       Thread.sleep(6000)
 
       Then(s"on restart of the topology, we should be able to read complete trace created in previous run from the '${kafka.OUTPUT_TOPIC}' topic in kafka, trace-backend and elasticsearch")
-      topology = new StreamRunner(kafkaConfig, accumulatorConfig, esConfig, backendConfig, serviceMetadataConfig, indexTagsConfig)
+      topology = new StreamRunner(kafkaConfig, accumulatorConfig, esConfig, backendConfig, serviceMetadataConfig, showValuesConfig, indexTagsConfig)
       topology.start()
 
       // produce one more span record with same traceId to trigger punctuate

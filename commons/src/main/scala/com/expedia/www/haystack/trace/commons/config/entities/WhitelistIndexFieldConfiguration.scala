@@ -40,6 +40,7 @@ case class WhitelistIndexField(name: String,
                                aliases: Set[String] = Set(),
                                enableRangeQuery: Boolean = false,
                                searchContext: String = "span",
+                               showValue: Boolean = false,
                                enabled: Boolean = true)
 
 case class WhiteListIndexFields(fields: List[WhitelistIndexField])

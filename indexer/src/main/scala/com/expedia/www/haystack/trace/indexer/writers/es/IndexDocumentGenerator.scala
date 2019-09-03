@@ -34,6 +34,7 @@ import scala.util.{Failure, Success, Try}
 
 class IndexDocumentGenerator(config: WhitelistIndexFieldConfiguration) extends MetricsSupport {
 
+  type SpanDocument = mutable.Map[String, Any]
   private val MIN_DURATION_FOR_TRUNCATION = TimeUnit.SECONDS.toMicros(20)
 
   /**
@@ -44,7 +45,7 @@ class IndexDocumentGenerator(config: WhitelistIndexFieldConfiguration) extends M
     // We maintain a white list of tags that are to be indexed. The whitelist is maintained as a configuration
     // in an external database (outside this app boundary). However, the app periodically reads this whitelist config
     // and applies it to the new spans that are read.
-    val spanIndices = mutable.ListBuffer[mutable.Map[String, Any]]()
+    val spanIndices = mutable.ListBuffer[SpanDocument]()
 
     var traceStartTime = Long.MaxValue
     var rootDuration = 0l

@@ -101,13 +101,22 @@ class ProviderConfiguration {
       metadataCfg.getString("name"),
       metadataCfg.getString("type"))
   }
+  private val showValuesIndexConfiguration: ShowValuesIndexConfiguration = {
+    val showValuesConf = config.getConfig("elasticsearch.index.show.values")
+
+    ShowValuesIndexConfiguration(
+      showValuesConf.getBoolean("enabled"),
+      showValuesConf.getString("name"),
+      showValuesConf.getString("type"))
+  }
 
 
   val elasticSearchConfiguration: ElasticSearchConfiguration = {
     ElasticSearchConfiguration(
       clientConfiguration = elasticSearchClientConfig,
       spansIndexConfiguration = spansIndexConfiguration,
-      serviceMetadataIndexConfiguration = serviceMetadataIndexConfig
+      serviceMetadataIndexConfiguration = serviceMetadataIndexConfig,
+      showValuesIndexConfiguration = showValuesIndexConfiguration
     )
   }
 

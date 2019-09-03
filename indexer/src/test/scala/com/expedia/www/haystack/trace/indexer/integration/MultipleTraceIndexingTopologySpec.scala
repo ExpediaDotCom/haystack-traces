@@ -42,6 +42,7 @@ class MultipleTraceIndexingTopologySpec extends BaseIntegrationTestSpec {
       val indexTagsConfig = elastic.indexingConfig
       val backendConfig = traceBackendClient.buildConfig
       val serviceMetadataConfig = elastic.buildServiceMetadataConfig
+      val showValuesConfig = elastic.buildShowValuesConfig
 
       When(s"spans are produced in '${kafka.INPUT_TOPIC}' topic async, and kafka-streams topology is started")
       val traceDescriptions = List(TraceDescription(TRACE_ID_5, SPAN_ID_PREFIX_2),TraceDescription(TRACE_ID_9, SPAN_ID_PREFIX_1))
@@ -52,7 +53,7 @@ class MultipleTraceIndexingTopologySpec extends BaseIntegrationTestSpec {
         startRecordTimestamp = 0,
         maxRecordTimestamp = spanAccumulatorConfig.bufferingWindowMillis)
 
-      val topology = new StreamRunner(kafkaConfig, spanAccumulatorConfig, esConfig, backendConfig, serviceMetadataConfig, indexTagsConfig)
+      val topology = new StreamRunner(kafkaConfig, spanAccumulatorConfig, esConfig, backendConfig, serviceMetadataConfig, showValuesConfig, indexTagsConfig)
       topology.start()
 
       Then(s"we should read two span buffers with different traceIds from '${kafka.OUTPUT_TOPIC}' topic and same should be read from trace-backend and elastic search")

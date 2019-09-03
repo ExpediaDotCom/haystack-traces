@@ -1,20 +1,3 @@
-/*
- *  Copyright 2017 Expedia, Inc.
- *
- *     Licensed under the Apache License, Version 2.0 (the "License");
- *     you may not use this file except in compliance with the License.
- *     You may obtain a copy of the License at
- *
- *         http://www.apache.org/licenses/LICENSE-2.0
- *
- *     Unless required by applicable law or agreed to in writing, software
- *     distributed under the License is distributed on an "AS IS" BASIS,
- *     WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *     See the License for the specific language governing permissions and
- *     limitations under the License.
- *
- */
-
 package com.expedia.www.haystack.trace.indexer.integration
 
 import java.util
@@ -26,16 +9,16 @@ import org.apache.kafka.streams.integration.utils.IntegrationTestUtils
 
 import scala.concurrent.duration._
 
-class ServiceMetadataIndexingTopologySpec extends BaseIntegrationTestSpec {
+class ShowValuesIndexingTopologySpec extends BaseIntegrationTestSpec {
   private val MAX_CHILD_SPANS_PER_TRACE = 5
   private val TRACE_ID_6 = "traceid-6"
   private val TRACE_ID_7 = "traceid-7"
   private val SPAN_ID_PREFIX_1 = TRACE_ID_6 + "span-id-"
   private val SPAN_ID_PREFIX_2 = TRACE_ID_7 + "span-id-"
 
-  "Trace Indexing Topology" should {
-    s"consume spans from input '${kafka.INPUT_TOPIC}' and buffer them together for every service operation combination and write to elastic search elastic" in {
-      Given("a set of spans with different serviceNames and a project configurations")
+  "Show values topology" should {
+    s"consume spans from input ${kafka.INPUT_TOPIC} and write ShowValueDocs for the whitelisted fields for which showValues is true" in {
+      Given("a set of spans with different servicenames and a project configuration")
       val kafkaConfig = kafka.buildConfig
       val esConfig = elastic.buildConfig
       val indexTagsConfig = elastic.indexingConfig
@@ -60,7 +43,7 @@ class ServiceMetadataIndexingTopologySpec extends BaseIntegrationTestSpec {
         val result: util.List[KeyValue[String, SpanBuffer]] =
           IntegrationTestUtils.waitUntilMinKeyValueRecordsReceived(kafka.RESULT_CONSUMER_CONFIG, kafka.OUTPUT_TOPIC, 2, MAX_WAIT_FOR_OUTPUT_MS)
         Thread.sleep(6000)
-        verifyOperationNames()
+        verifyFields()
       } finally {
         topology.close()
       }

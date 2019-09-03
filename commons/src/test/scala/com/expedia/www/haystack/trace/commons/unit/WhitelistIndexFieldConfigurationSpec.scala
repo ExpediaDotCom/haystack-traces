@@ -21,7 +21,7 @@ import com.expedia.www.haystack.trace.commons.config.entities.{IndexFieldType, W
 import org.json4s.ext.EnumNameSerializer
 import org.json4s.jackson.Serialization
 import org.json4s.{DefaultFormats, Formats}
-import org.scalatest.{Entry, FunSpec, Matchers}
+import org.scalatest.{FunSpec, Matchers}
 
 import scala.collection.JavaConverters._
 

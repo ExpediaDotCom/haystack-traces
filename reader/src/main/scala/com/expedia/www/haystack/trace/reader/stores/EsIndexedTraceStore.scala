@@ -22,7 +22,7 @@ import com.expedia.www.haystack.trace.commons.clients.es.document.TraceIndexDoc
 import com.expedia.www.haystack.trace.commons.config.entities.{TraceStoreBackends, WhitelistIndexFieldConfiguration}
 import com.expedia.www.haystack.trace.reader.config.entities.ElasticSearchConfiguration
 import com.expedia.www.haystack.trace.reader.stores.readers.es.ElasticSearchReader
-import com.expedia.www.haystack.trace.reader.stores.readers.es.query.{FieldValuesQueryGenerator, ServiceMetadataQueryGenerator, TraceCountsQueryGenerator, TraceSearchQueryGenerator}
+import com.expedia.www.haystack.trace.reader.stores.readers.es.query.{FieldValuesQueryGenerator, ServiceMetadataQueryGenerator, ShowValuesQueryGenerator, TraceCountsQueryGenerator, TraceSearchQueryGenerator}
 import com.expedia.www.haystack.trace.reader.stores.readers.grpc.GrpcTraceReaders
 import io.searchbox.core.SearchResult
 import org.elasticsearch.index.IndexNotFoundException
@@ -43,6 +43,8 @@ class EsIndexedTraceStore(traceStoreBackendConfig: TraceStoreBackends,
   private val traceCountsQueryGenerator = new TraceCountsQueryGenerator(elasticSearchConfiguration.spansIndexConfiguration, ES_NESTED_DOC_NAME, whitelistedFieldsConfiguration)
   private val fieldValuesQueryGenerator = new FieldValuesQueryGenerator(elasticSearchConfiguration.spansIndexConfiguration, ES_NESTED_DOC_NAME, whitelistedFieldsConfiguration)
   private val serviceMetadataQueryGenerator = new ServiceMetadataQueryGenerator(elasticSearchConfiguration.serviceMetadataIndexConfiguration)
+  private val showValuesQueryGenerator = new ShowValuesQueryGenerator(elasticSearchConfiguration.showValuesIndexConfiguration)
+  private val FIELD_VALUE_KEY = "fieldvalue"
 
   private val esCountTraces = (request: TraceCountsRequest, useSpecificIndices: Boolean) => {
     esReader.count(traceCountsQueryGenerator.generate(request, useSpecificIndices))
@@ -121,12 +123,27 @@ class EsIndexedTraceStore(traceStoreBackendConfig: TraceStoreBackends,
     }
   }
 
+  private def readFromShowValues(request: FieldValuesRequest): Option[Future[Seq[String]]] = {
+    val showValuesIndexConfiguration = elasticSearchConfiguration.showValuesIndexConfiguration
+    if (!showValuesIndexConfiguration.enabled) return None
+
+    Some(esReader
+      .search(showValuesQueryGenerator.generateSearchFieldValuesQuery(request.getFilters(0).getValue, request.getFieldName))
+      .map(extractFieldValues(_, FIELD_VALUE_KEY)))
+  }
+
+  private def readFromSpansIndex(request: FieldValuesRequest): Future[Seq[String]] = {
+    esReader
+      .search(fieldValuesQueryGenerator.generate(request))
+      .map(extractFieldValues(_, request.getFieldName.toLowerCase))
+  }
 
   override def getFieldValues(request: FieldValuesRequest): Future[Seq[String]] = {
-    readFromServiceMetadata(request).getOrElse(
-      esReader
-        .search(fieldValuesQueryGenerator.generate(request))
-        .map(extractFieldValues(_, request.getFieldName.toLowerCase)))
+    if (request.getFieldName.equalsIgnoreCase(TraceIndexDoc.SERVICE_KEY_NAME) || request.getFieldName.equalsIgnoreCase(TraceIndexDoc.OPERATION_KEY_NAME)) {
+      readFromServiceMetadata(request).getOrElse(readFromSpansIndex(request))
+    } else {
+      readFromShowValues(request).getOrElse(readFromSpansIndex(request))
+    }
   }
 
   override def getTraceCounts(request: TraceCountsRequest): Future[TraceCounts] = {

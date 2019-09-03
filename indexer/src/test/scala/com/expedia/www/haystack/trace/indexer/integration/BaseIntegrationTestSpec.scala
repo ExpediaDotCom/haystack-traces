@@ -89,6 +89,7 @@ abstract class BaseIntegrationTestSpec extends WordSpec with GivenWhenThen with 
       .setStartTime(System.currentTimeMillis() * 1000)
       .addTags(Tag.newBuilder().setKey("errorCode").setType(TagType.LONG).setVLong(404))
       .addTags(Tag.newBuilder().setKey("_role").setType(TagType.STRING).setVStr("haystack"))
+      .addTags(Tag.newBuilder().setKey("pagename").setType(TagType.STRING).setVStr("homepage"))
       .addLogs(Log.newBuilder().addFields(Tag.newBuilder().setKey("exceptiontype").setType(TagType.STRING).setVStr("external").build()).build())
       .build()
   }
@@ -161,6 +162,24 @@ abstract class BaseIntegrationTestSpec extends WordSpec with GivenWhenThen with 
     val docs = elastic.queryServiceMetadataIndex(operationNamesQuery)
     docs.size shouldBe 1
 
+  }
+
+  def verifyFields(): Unit = {
+    val fieldNamesQuery =
+      """{
+        | "query" : {
+        |    "match_all": {}
+        |  },
+        |  "_source" : {
+        |    "includes" : [
+        |      "fieldname",
+        |      "fieldvalue",
+        |      "servicename"
+        |    ]
+        |  }
+        |}""".stripMargin
+    val docs = elastic.queryShowValuesIndex(fieldNamesQuery)
+    docs.size shouldBe 6
   }
 
   def verifyElasticSearchWrites(traceIds: Seq[String]): Unit = {

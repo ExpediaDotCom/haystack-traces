@@ -36,6 +36,10 @@ trait ResponseParser {
   private val ES_COUNT_PER_INTERVAL = "__count_per_interval"
   private val ES_AGG_DOC_COUNT = "doc_count"
   protected val ES_NESTED_DOC_NAME = "spans"
+  private val ES_HITS_KEY = "hits"
+  private val ES_SOURCE_KEY = "_source"
+  private val ES_FIELD_VALUE_KEY = "fieldvalue"
+
 
   protected def mapSearchResultToTraceCounts(result: SearchResult): Future[TraceCounts] = {
     val aggregation = result.getJsonObject
@@ -69,27 +73,36 @@ trait ResponseParser {
   }
 
   protected def extractFieldValues(result: SearchResult, fieldName: String): List[String] = {
-    val aggregations =
-      result
-        .getJsonObject
-        .getAsJsonObject(ES_FIELD_AGGREGATIONS)
-        .getAsJsonObject(ES_NESTED_DOC_NAME)
-        .getAsJsonObject(fieldName)
 
-    if (aggregations.has(ES_FIELD_BUCKETS)) {
-      aggregations
-        .getAsJsonArray(ES_FIELD_BUCKETS)
-        .asScala
-        .map(element => element.getAsJsonObject.get(ES_FIELD_KEY).getAsString)
-        .toList
-    }
-    else {
-      aggregations
-        .getAsJsonObject(fieldName)
-        .getAsJsonArray(ES_FIELD_BUCKETS)
-        .asScala
-        .map(element => element.getAsJsonObject.get(ES_FIELD_KEY).getAsString)
-        .toList
+    val jsonResult = result.getJsonObject
+
+    if (jsonResult.has(ES_FIELD_AGGREGATIONS)) {
+      val aggregations = jsonResult
+          .getAsJsonObject(ES_FIELD_AGGREGATIONS)
+          .getAsJsonObject(ES_NESTED_DOC_NAME)
+          .getAsJsonObject(fieldName)
+
+      if (aggregations.has(ES_FIELD_BUCKETS)) {
+        aggregations
+          .getAsJsonArray(ES_FIELD_BUCKETS)
+          .asScala
+          .map(element => element.getAsJsonObject.get(ES_FIELD_KEY).getAsString)
+          .toList
+      }
+      else {
+        aggregations
+          .getAsJsonObject(fieldName)
+          .getAsJsonArray(ES_FIELD_BUCKETS)
+          .asScala
+          .map(element => element.getAsJsonObject.get(ES_FIELD_KEY).getAsString)
+          .toList
+      }
+    } else {
+      jsonResult
+        .getAsJsonObject(ES_HITS_KEY)
+        .getAsJsonArray(ES_HITS_KEY)
+        .asScala.map(p => p.getAsJsonObject.getAsJsonObject(ES_SOURCE_KEY).get(ES_FIELD_VALUE_KEY).getAsString)
+        .toList.distinct
     }
   }
 

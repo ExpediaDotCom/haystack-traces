@@ -24,6 +24,7 @@ class EvictedSpanBufferSpec extends BaseIntegrationTestSpec {
       val indexTagsConfig = elastic.indexingConfig
       val backendConfig = traceBackendClient.buildConfig
       val serviceMetadataConfig = elastic.buildServiceMetadataConfig
+      val showValuesConfig = elastic.buildShowValuesConfig
       val accumulatorConfig = spanAccumulatorConfig.copy(minTracesPerCache = 1, maxEntriesAllStores = 1)
 
       produceSpansAsync(MAX_CHILD_SPANS,
@@ -32,7 +33,7 @@ class EvictedSpanBufferSpec extends BaseIntegrationTestSpec {
         0L, accumulatorConfig.bufferingWindowMillis)
 
       When(s"kafka-streams topology is started")
-      val topology = new StreamRunner(kafkaConfig, accumulatorConfig, esConfig, backendConfig, serviceMetadataConfig, indexTagsConfig)
+      val topology = new StreamRunner(kafkaConfig, accumulatorConfig, esConfig, backendConfig, serviceMetadataConfig, showValuesConfig, indexTagsConfig)
       topology.start()
 
       Then(s"we should get multiple span-buffers bearing only 1 span due to early eviction from store")

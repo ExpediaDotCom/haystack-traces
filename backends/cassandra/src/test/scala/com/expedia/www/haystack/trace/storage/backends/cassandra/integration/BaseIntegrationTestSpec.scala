@@ -38,7 +38,7 @@ trait BaseIntegrationTestSpec extends FunSpec with GivenWhenThen with Matchers w
   protected var client: StorageBackendGrpc.StorageBackendBlockingStub = _
 
   protected var healthCheckClient: HealthGrpc.HealthBlockingStub = _
-  private val CASSANDRA_ENDPOINT = "cassandra"
+  private val CASSANDRA_ENDPOINT = if (System.getenv("CASSANDRA_HOST") == null) "cassandra" else System.getenv("CASSANDRA_HOST")
   private val CASSANDRA_KEYSPACE = "haystack"
   private val CASSANDRA_TABLE = "traces"
 

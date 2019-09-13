@@ -159,11 +159,13 @@ class ProjectConfiguration extends AutoCloseable {
     }
     val username = if (es.hasPath("username")) Option(es.getString("username")) else None
     val password = if (es.hasPath("password")) Option(es.getString("password")) else None
+    val elasticsearchHost = if (System.getenv("ELASTICSEARCH_HOST") == null) es.getString("endpoint") else System.getenv("ELASTICSEARCH_HOST")
+    val elasticsearchEndpoint = "http://"+elasticsearchHost+":9200"
     ServiceMetadataWriteConfiguration(
       enabled = serviceMetadata.getBoolean("enabled"),
       flushIntervalInSec = serviceMetadata.getInt("flush.interval.sec"),
       flushOnMaxOperationCount = serviceMetadata.getInt("flush.operation.count"),
-      esEndpoint = es.getString("endpoint"),
+      esEndpoint = elasticsearchEndpoint,
       username = username,
       password = password,
       consistencyLevel = es.getString("consistency.level"),

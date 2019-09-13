@@ -24,7 +24,9 @@ class ConfigurationLoaderSpec extends BaseUnitTestSpec {
   describe("ConfigurationLoader") {
     it("should load the service config from base.conf") {
       val serviceConfig: ServiceConfiguration = new ProviderConfiguration().serviceConfig
-      serviceConfig.port shouldBe 8088
+      val readerPort: Int = if (System.getenv("READERPORT") == null) 8088 else Integer.parseInt(System.getenv("READERPORT"))
+
+      serviceConfig.port shouldBe readerPort
       serviceConfig.ssl.enabled shouldBe false
       serviceConfig.ssl.certChainFilePath shouldBe "/ssl/cert"
       serviceConfig.ssl.privateKeyPath shouldBe "/ssl/private-key"
@@ -56,7 +58,9 @@ class ConfigurationLoaderSpec extends BaseUnitTestSpec {
 
       val elasticSearchConfig = new ProviderConfiguration().elasticSearchConfiguration
 
-      elasticSearchConfig.clientConfiguration.endpoint shouldEqual "http://elasticsearch:9200"
+      val ELASTICSEARCH_HOST = if (System.getenv("ELASTICSEARCH_HOST") == null) "elasticsearch" else System.getenv("ELASTICSEARCH_HOST")
+      val ELASTIC_SEARCH_ENDPOINT = "http://"+ELASTICSEARCH_HOST+":9200"
+      elasticSearchConfig.clientConfiguration.endpoint shouldEqual ELASTIC_SEARCH_ENDPOINT
       elasticSearchConfig.clientConfiguration.connectionTimeoutMillis shouldEqual 10000
       elasticSearchConfig.clientConfiguration.readTimeoutMillis shouldEqual 5000
 

@@ -53,10 +53,13 @@ trait BaseIntegrationTestSpec extends FunSpec with GivenWhenThen with Matchers w
 
   protected var healthCheckClient: HealthGrpc.HealthBlockingStub = _
 
-  private val ELASTIC_SEARCH_ENDPOINT = "http://elasticsearch:9200"
+  private val ELASTICSEARCH_HOST = if (System.getenv("ELASTICSEARCH_HOST") == null) "elasticsearch" else System.getenv("ELASTICSEARCH_HOST")
+  private val ELASTIC_SEARCH_ENDPOINT = "http://"+ELASTICSEARCH_HOST+":9200"
   private val ELASTIC_SEARCH_WHITELIST_INDEX = "reload-configs"
   private val ELASTIC_SEARCH_WHITELIST_TYPE = "whitelist-index-fields"
   private val SPANS_INDEX_TYPE = "spans"
+  private val READERPORT:Int = if (System.getenv("READERPORT") == null) 8088 else Integer.parseInt(System.getenv("READERPORT"))
+
 
   private val executors = Executors.newFixedThreadPool(2)
 
@@ -194,11 +197,11 @@ trait BaseIntegrationTestSpec extends FunSpec with GivenWhenThen with Matchers w
 
     Thread.sleep(5000)
 
-    client = TraceReaderGrpc.newBlockingStub(ManagedChannelBuilder.forAddress("localhost", 8088)
+    client = TraceReaderGrpc.newBlockingStub(ManagedChannelBuilder.forAddress("localhost", READERPORT)
       .usePlaintext(true)
       .build())
 
-    healthCheckClient = HealthGrpc.newBlockingStub(ManagedChannelBuilder.forAddress("localhost", 8088)
+    healthCheckClient = HealthGrpc.newBlockingStub(ManagedChannelBuilder.forAddress("localhost", READERPORT)
       .usePlaintext(true)
       .build())
   }

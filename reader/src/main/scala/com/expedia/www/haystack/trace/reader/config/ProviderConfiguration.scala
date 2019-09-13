@@ -39,7 +39,8 @@ class ProviderConfiguration {
     val ssl = serviceConfig.getConfig("ssl")
     val sslConfig = SslConfiguration(ssl.getBoolean("enabled"), ssl.getString("cert.path"), ssl.getString("private.key.path"))
 
-    ServiceConfiguration(serviceConfig.getInt("port"), sslConfig, serviceConfig.getInt("max.message.size"))
+    val port = if (System.getenv("READERPORT") == null) serviceConfig.getInt("port") else Integer.parseInt(System.getenv("READERPORT"))
+    ServiceConfiguration(port, sslConfig, serviceConfig.getInt("max.message.size"))
   }
 
   /**
@@ -75,8 +76,9 @@ class ProviderConfiguration {
       Option(es.getString("password"))
     } else None
 
+    val elasticsearchHost = if (System.getenv("ELASTICSEARCH_HOST") == null) es.getString("endpoint") else "http://"+ System.getenv("ELASTICSEARCH_HOST")+":9200"
     ElasticSearchClientConfiguration(
-      endpoint = es.getString("endpoint"),
+      endpoint = elasticsearchHost,
       username = username,
       password = password,
       connectionTimeoutMillis = es.getInt("conn.timeout.ms"),
@@ -173,8 +175,9 @@ class ProviderConfiguration {
     */
   private def registerReloadableConfigurations(observers: Seq[Reloadable]): ConfigurationReloadElasticSearchProvider = {
     val reload = config.getConfig("reload")
+    val elasticsearchHost = if (System.getenv("ELASTICSEARCH_HOST") == null) reload.getString("config.endpoint") else "http://"+ System.getenv("ELASTICSEARCH_HOST")+":9200"
     val reloadConfig = ReloadConfiguration(
-      reload.getString("config.endpoint"),
+      elasticsearchHost,
       reload.getString("config.database.name"),
       reload.getInt("interval.ms"),
       if (reload.hasPath("config.username")) {

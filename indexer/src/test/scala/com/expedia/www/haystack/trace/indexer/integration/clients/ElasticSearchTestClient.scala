@@ -36,7 +36,8 @@ case class EsSourceDocument(traceid: String)
 class ElasticSearchTestClient {
   protected implicit val formats: Formats = DefaultFormats + new EnumNameSerializer(IndexFieldType)
 
-  private val ELASTIC_SEARCH_ENDPOINT = "http://elasticsearch:9200"
+  private val ELASTICSEARCH_HOST = if (System.getenv("ELASTICSEARCH_HOST") == null) "elasticsearch" else System.getenv("ELASTICSEARCH_HOST")
+  private val ELASTIC_SEARCH_ENDPOINT = "http://"+ELASTICSEARCH_HOST+":9200"
   private val SPANS_INDEX_NAME_PREFIX = "haystack-traces"
   private val SPANS_INDEX_TYPE = "spans"
   private val SPANS_INDEX_HOUR_BUCKET = 6

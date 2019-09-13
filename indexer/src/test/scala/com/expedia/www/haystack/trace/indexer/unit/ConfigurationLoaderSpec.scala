@@ -67,9 +67,11 @@ class ConfigurationLoaderSpec extends FunSpec with Matchers {
 
     it("should load the service metadata config from base.conf") {
       val config = project.serviceMetadataWriteConfig
+      val elasticsearchHost = if (System.getenv("ELASTICSEARCH_HOST") == null) "elasticsearch" else System.getenv("ELASTICSEARCH_HOST")
+      val elasticsearchEndpoint = "http://"+elasticsearchHost+":9200"
       config.flushIntervalInSec shouldBe 60
       config.flushOnMaxOperationCount shouldBe 10000
-      config.esEndpoint shouldBe "http://elasticsearch:9200"
+      config.esEndpoint shouldBe elasticsearchEndpoint
       config.maxInFlightBulkRequests shouldBe 10
       config.maxDocsInBulk shouldBe 100
       config.maxBulkDocSizeInBytes shouldBe 1000000
@@ -92,7 +94,9 @@ class ConfigurationLoaderSpec extends FunSpec with Matchers {
 
     it("should load the elastic search config from base.conf and one property overridden from env variable") {
       val elastic = project.elasticSearchConfig
-      elastic.endpoint shouldBe "http://elasticsearch:9200"
+      val elasticsearchHost = if (System.getenv("ELASTICSEARCH_HOST") == null) "elasticsearch" else System.getenv("ELASTICSEARCH_HOST")
+      val elasticsearchEndpoint = "http://"+elasticsearchHost+":9200"
+      elastic.endpoint shouldBe elasticsearchEndpoint
       elastic.maxInFlightBulkRequests shouldBe 10
       elastic.maxDocsInBulk shouldBe 100
       elastic.maxBulkDocSizeInBytes shouldBe 1000000

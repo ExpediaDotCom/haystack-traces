@@ -5,6 +5,7 @@ ENV APP_NAME haystack-trace-reader
 ENV APP_HOME /app/bin
 ENV JMXTRANS_AGENT jmxtrans-agent-1.2.6
 ENV DOCKERIZE_VERSION v0.6.1
+ENV READERPORT=${READERPORT:-8088}
 
 ADD https://github.com/jwilder/dockerize/releases/download/${DOCKERIZE_VERSION}/dockerize-alpine-linux-amd64-${DOCKERIZE_VERSION}.tar.gz dockerize.tar.gz
 RUN tar xzf dockerize.tar.gz
@@ -25,6 +26,6 @@ ADD https://github.com/jmxtrans/jmxtrans-agent/releases/download/${JMXTRANS_AGEN
 
 WORKDIR ${APP_HOME}
 
-EXPOSE 8088
+EXPOSE ${READERPORT}
 
 ENTRYPOINT ["./start-app.sh"]

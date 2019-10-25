@@ -18,7 +18,8 @@ package com.expedia.www.haystack.trace.reader.stores.readers.es
 
 import com.expedia.www.haystack.commons.metrics.MetricsSupport
 import com.expedia.www.haystack.trace.commons.clients.es.AWSSigningJestClientFactory
-import com.expedia.www.haystack.trace.reader.config.entities.ElasticSearchConfiguration
+import com.expedia.www.haystack.trace.commons.config.entities.AWSRequestSigningConfiguration
+import com.expedia.www.haystack.trace.reader.config.entities.ElasticSearchClientConfiguration
 import com.expedia.www.haystack.trace.reader.metrics.AppMetricNames
 import com.expedia.www.haystack.trace.reader.stores.readers.es.ESUtils._
 import com.google.gson.Gson
@@ -30,24 +31,24 @@ import org.slf4j.LoggerFactory
 import scala.concurrent.{ExecutionContextExecutor, Future, Promise}
 import scala.util.Try
 
-class ElasticSearchReader(config: ElasticSearchConfiguration)(implicit val dispatcher: ExecutionContextExecutor) extends MetricsSupport with AutoCloseable {
+class ElasticSearchReader(config: ElasticSearchClientConfiguration, awsRequestSigningConfig: AWSRequestSigningConfiguration)(implicit val dispatcher: ExecutionContextExecutor) extends MetricsSupport with AutoCloseable {
   private val LOGGER = LoggerFactory.getLogger(classOf[ElasticSearchReader])
   private val readTimer = metricRegistry.timer(AppMetricNames.ELASTIC_SEARCH_READ_TIME)
   private val readFailures = metricRegistry.meter(AppMetricNames.ELASTIC_SEARCH_READ_FAILURES)
 
   // initialize the elastic search client
   private val esClient: JestClient = {
-    LOGGER.info("Initializing the http elastic search client with endpoint={}", config.clientConfiguration.endpoint)
+    LOGGER.info("Initializing the http elastic search client with endpoint={}", config.endpoint)
 
-    val factory = if (config.awsRequestSigningConfiguration.enabled) new JestClientFactory() else new AWSSigningJestClientFactory(config.awsRequestSigningConfiguration)
+    val factory = if (awsRequestSigningConfig.enabled) new JestClientFactory() else new AWSSigningJestClientFactory(awsRequestSigningConfig)
 
-    val builder = new HttpClientConfig.Builder(config.clientConfiguration.endpoint)
+    val builder = new HttpClientConfig.Builder(config.endpoint)
       .multiThreaded(true)
-      .connTimeout(config.clientConfiguration.connectionTimeoutMillis)
-      .readTimeout(config.clientConfiguration.readTimeoutMillis)
+      .connTimeout(config.connectionTimeoutMillis)
+      .readTimeout(config.readTimeoutMillis)
 
-    if (config.clientConfiguration.username.isDefined && config.clientConfiguration.password.isDefined) {
-      builder.defaultCredentials(config.clientConfiguration.username.get, config.clientConfiguration.password.get)
+    if (config.username.isDefined && config.password.isDefined) {
+      builder.defaultCredentials(config.username.get, config.password.get)
     }
 
     factory.setHttpClientConfig(builder.build())

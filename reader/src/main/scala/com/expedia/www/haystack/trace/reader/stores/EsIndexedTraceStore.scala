@@ -38,7 +38,7 @@ class EsIndexedTraceStore(traceStoreBackendConfig: TraceStoreBackends,
   private val LOGGER = LoggerFactory.getLogger(classOf[EsIndexedTraceStore])
 
   private val traceReader: GrpcTraceReaders = new GrpcTraceReaders(traceStoreBackendConfig)
-  private val esReader: ElasticSearchReader = new ElasticSearchReader(elasticSearchConfiguration)
+  private val esReader: ElasticSearchReader = new ElasticSearchReader(elasticSearchConfiguration.clientConfiguration, elasticSearchConfiguration.awsRequestSigningConfiguration)
   private val traceSearchQueryGenerator = new TraceSearchQueryGenerator(elasticSearchConfiguration.spansIndexConfiguration, ES_NESTED_DOC_NAME, whitelistedFieldsConfiguration)
   private val traceCountsQueryGenerator = new TraceCountsQueryGenerator(elasticSearchConfiguration.spansIndexConfiguration, ES_NESTED_DOC_NAME, whitelistedFieldsConfiguration)
   private val fieldValuesQueryGenerator = new FieldValuesQueryGenerator(elasticSearchConfiguration.spansIndexConfiguration, ES_NESTED_DOC_NAME, whitelistedFieldsConfiguration)

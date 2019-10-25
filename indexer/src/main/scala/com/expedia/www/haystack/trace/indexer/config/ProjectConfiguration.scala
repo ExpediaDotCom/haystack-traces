@@ -1,5 +1,5 @@
 /*
- *  Copyright 2017 Expedia, Inc.
+ *  Copyright 2019, Expedia Group.
  *
  *     Licensed under the Apache License, Version 2.0 (the "License");
  *     you may not use this file except in compliance with the License.
@@ -218,7 +218,17 @@ class ProjectConfiguration extends AutoCloseable {
       retryConfig = RetryOperation.Config(
         es.getInt("retries.max"),
         es.getLong("retries.backoff.initial.ms"),
-        es.getDouble("retries.backoff.factor")))
+        es.getDouble("retries.backoff.factor")),
+      awsRequestSigningConfig(config.getConfig("elasticsearch.signing.request.aws")))
+  }
+
+  private def awsRequestSigningConfig (awsESConfig: Config): AWSRequestSigningConfiguration = {
+    AWSRequestSigningConfiguration(
+      awsESConfig.getBoolean("enabled"),
+      awsESConfig.getString("region"),
+      awsESConfig.getString("service.name"),
+      if (awsESConfig.hasPath("access.key")) Some(awsESConfig.getString("access.key")) else None,
+      if (awsESConfig.hasPath("secret.key")) Some(awsESConfig.getString("secret.key")) else None)
   }
 
   /**
@@ -252,7 +262,7 @@ class ProjectConfiguration extends AutoCloseable {
       observers,
       loadOnStartup = reload.getBoolean("startup.load"))
 
-    val loader = new ConfigurationReloadElasticSearchProvider(reloadConfig)
+    val loader = new ConfigurationReloadElasticSearchProvider(reloadConfig, awsRequestSigningConfig(config.getConfig("reload.signing.request.aws")))
     if (reloadConfig.loadOnStartup) loader.load()
     loader
   }

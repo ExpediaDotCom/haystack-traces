@@ -1,5 +1,5 @@
 /*
- *  Copyright 2017 Expedia, Inc.
+ *  Copyright 2019, Expedia Group.
  *
  *     Licensed under the Apache License, Version 2.0 (the "License");
  *     you may not use this file except in compliance with the License.
@@ -22,6 +22,7 @@ import java.util.concurrent.Semaphore
 import com.expedia.open.tracing.buffer.SpanBuffer
 import com.expedia.www.haystack.commons.metrics.MetricsSupport
 import com.expedia.www.haystack.commons.retries.RetryOperation._
+import com.expedia.www.haystack.trace.commons.clients.es.AWSSigningJestClientFactory
 import com.expedia.www.haystack.trace.commons.config.entities.WhitelistIndexFieldConfiguration
 import com.expedia.www.haystack.trace.commons.packer.PackedMessage
 import com.expedia.www.haystack.trace.indexer.config.entities.ElasticSearchConfiguration
@@ -70,7 +71,7 @@ class ElasticSearchWriter(esConfig: ElasticSearchConfiguration, whitelistFieldCo
   private lazy val esClient: JestClient = {
     LOGGER.info("Initializing the http elastic search client with endpoint={}", esConfig.endpoint)
 
-    val factory = new JestClientFactory()
+    val factory = if (esConfig.awsRequestSigningConfiguration.enabled) new JestClientFactory() else new AWSSigningJestClientFactory(esConfig.awsRequestSigningConfiguration)
     val builder = new HttpClientConfig.Builder(esConfig.endpoint)
       .multiThreaded(true)
       .connTimeout(esConfig.connectionTimeoutMillis)

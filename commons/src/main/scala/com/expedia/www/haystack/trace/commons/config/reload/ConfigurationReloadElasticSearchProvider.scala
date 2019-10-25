@@ -1,5 +1,5 @@
 /*
- *  Copyright 2017 Expedia, Inc.
+ *  Copyright 2019, Expedia Group.
  *
  *     Licensed under the Apache License, Version 2.0 (the "License");
  *     you may not use this file except in compliance with the License.
@@ -18,20 +18,21 @@
 package com.expedia.www.haystack.trace.commons.config.reload
 
 import com.expedia.www.haystack.commons.retries.RetryOperation
-import com.expedia.www.haystack.trace.commons.config.entities.ReloadConfiguration
+import com.expedia.www.haystack.trace.commons.clients.es.AWSSigningJestClientFactory
+import com.expedia.www.haystack.trace.commons.config.entities.{AWSRequestSigningConfiguration, ReloadConfiguration}
 import io.searchbox.client.config.HttpClientConfig
 import io.searchbox.client.{JestClient, JestClientFactory}
 import io.searchbox.core.Search
 
 import scala.util.{Failure, Success}
 
-class ConfigurationReloadElasticSearchProvider(reloadConfig: ReloadConfiguration)
+class ConfigurationReloadElasticSearchProvider(reloadConfig: ReloadConfiguration, awsRequestSigningConfig: AWSRequestSigningConfiguration)
   extends ConfigurationReloadProvider(reloadConfig) {
 
   private val matchAllQuery = "{\"query\":{\"match_all\":{\"boost\":1.0}}}"
 
   private val esClient: JestClient = {
-    val factory = new JestClientFactory()
+    val factory = if (awsRequestSigningConfig.enabled) new JestClientFactory() else new AWSSigningJestClientFactory(awsRequestSigningConfig)
     val builder = new HttpClientConfig.Builder(reloadConfig.configStoreEndpoint).multiThreaded(false)
 
     if (reloadConfig.username.isDefined && reloadConfig.password.isDefined){

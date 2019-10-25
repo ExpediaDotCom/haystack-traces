@@ -1,5 +1,5 @@
 /*
- *  Copyright 2017 Expedia, Inc.
+ *  Copyright 2019, Expedia Group.
  *
  *     Licensed under the Apache License, Version 2.0 (the "License");
  *     you may not use this file except in compliance with the License.
@@ -76,7 +76,12 @@ class ElasticSearchTestClient {
     10,
     10,
     10,
-    RetryOperation.Config(3, 2000, 2))
+    RetryOperation.Config(3, 2000, 2),
+    getAWSRequestSigningConfiguration)
+
+  def getAWSRequestSigningConfiguration: AWSRequestSigningConfiguration = {
+    AWSRequestSigningConfiguration(enabled = false, "", "", None, None)
+  }
 
   def buildServiceMetadataConfig: ServiceMetadataWriteConfiguration = {
     ServiceMetadataWriteConfiguration(enabled = true,

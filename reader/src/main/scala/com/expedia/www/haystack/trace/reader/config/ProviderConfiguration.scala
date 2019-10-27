@@ -102,13 +102,24 @@ class ProviderConfiguration {
       metadataCfg.getString("type"))
   }
 
-  private def awsRequestSigningConfig (awsESConfig: Config): AWSRequestSigningConfiguration = {
+  private def awsRequestSigningConfig(awsESConfig: Config): AWSRequestSigningConfiguration = {
+    val accessKey: Option[String] = if (awsESConfig.hasPath("access.key") && awsESConfig.getString("access.key").nonEmpty)
+      Some(awsESConfig.getString("access.key"))
+    else
+      None
+
+    val secretKey: Option[String] = if (awsESConfig.hasPath("secret.key") && awsESConfig.getString("secret.key").nonEmpty) {
+      Some(awsESConfig.getString("secret.key"))
+    }
+    else
+      None
+
     AWSRequestSigningConfiguration(
       awsESConfig.getBoolean("enabled"),
       awsESConfig.getString("region"),
       awsESConfig.getString("service.name"),
-      if (awsESConfig.hasPath("access.key")) Some(awsESConfig.getString("access.key")) else None,
-      if (awsESConfig.hasPath("secret.key")) Some(awsESConfig.getString("secret.key")) else None)
+      accessKey,
+      secretKey)
   }
 
 

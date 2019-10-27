@@ -1,5 +1,5 @@
 /*
- *  Copyright 2018 Expedia, Group.
+ *  Copyright 2019 Expedia, Group.
  *
  *     Licensed under the Apache License, Version 2.0 (the "License");
  *     you may not use this file except in compliance with the License.
@@ -22,7 +22,9 @@ import java.util.concurrent.{Semaphore, TimeUnit}
 import com.expedia.open.tracing.buffer.SpanBuffer
 import com.expedia.www.haystack.commons.metrics.MetricsSupport
 import com.expedia.www.haystack.commons.retries.RetryOperation.withRetryBackoff
+import com.expedia.www.haystack.trace.commons.clients.es.AWSSigningJestClientFactory
 import com.expedia.www.haystack.trace.commons.clients.es.document.ServiceMetadataDoc
+import com.expedia.www.haystack.trace.commons.config.entities.AWSRequestSigningConfiguration
 import com.expedia.www.haystack.trace.commons.packer.PackedMessage
 import com.expedia.www.haystack.trace.indexer.config.entities.ServiceMetadataWriteConfiguration
 import com.expedia.www.haystack.trace.indexer.metrics.AppMetricNames
@@ -51,7 +53,7 @@ object ServiceMetadataUtils {
   }
 }
 
-class ServiceMetadataWriter(config: ServiceMetadataWriteConfiguration)
+class ServiceMetadataWriter(config: ServiceMetadataWriteConfiguration, awsRequestSigningConfig: AWSRequestSigningConfiguration)
   extends TraceWriter with MetricsSupport {
 
   private val LOGGER = LoggerFactory.getLogger(classOf[ServiceMetadataWriter])
@@ -73,7 +75,15 @@ class ServiceMetadataWriter(config: ServiceMetadataWriteConfiguration)
   private val esClient: JestClient = {
     LOGGER.info("Initializing the http elastic search client with endpoint={}", config.esEndpoint)
 
-    val factory = new JestClientFactory()
+    val factory = {
+      if (awsRequestSigningConfig.enabled) {
+        LOGGER.info("using AWSSigningJestClientFactory for es client")
+        new AWSSigningJestClientFactory(awsRequestSigningConfig)
+      } else {
+        LOGGER.info("using JestClientFactory for es client")
+        new JestClientFactory()
+      }
+    }
     val builder = new HttpClientConfig.Builder(config.esEndpoint)
       .multiThreaded(true)
       .maxConnectionIdleTime(config.flushIntervalInSec + 10, TimeUnit.SECONDS)

@@ -40,7 +40,15 @@ class ElasticSearchReader(config: ElasticSearchClientConfiguration, awsRequestSi
   private val esClient: JestClient = {
     LOGGER.info("Initializing the http elastic search client with endpoint={}", config.endpoint)
 
-    val factory = if (awsRequestSigningConfig.enabled) new JestClientFactory() else new AWSSigningJestClientFactory(awsRequestSigningConfig)
+    val factory = {
+      if (awsRequestSigningConfig.enabled) {
+        LOGGER.info("using AWSSigningJestClientFactory for es client")
+        new AWSSigningJestClientFactory(awsRequestSigningConfig)
+      } else {
+        LOGGER.info("using JestClientFactory for es client")
+        new JestClientFactory()
+      }
+    }
 
     val builder = new HttpClientConfig.Builder(config.endpoint)
       .multiThreaded(true)

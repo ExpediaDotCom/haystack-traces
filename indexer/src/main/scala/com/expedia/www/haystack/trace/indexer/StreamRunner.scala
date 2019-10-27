@@ -37,7 +37,6 @@ import org.slf4j.LoggerFactory
 
 import scala.collection.mutable
 import scala.concurrent.ExecutionContextExecutor
-import scala.util.Try
 
 class StreamRunner(kafkaConfig: KafkaConfiguration,
                    accumulatorConfig: SpanAccumulatorConfiguration,
@@ -60,7 +59,7 @@ class StreamRunner(kafkaConfig: KafkaConfiguration,
     writers += new ElasticSearchWriter(esConfig, indexConfig)
 
     if (serviceMetadataWriteConfig.enabled) {
-      writers += new ServiceMetadataWriter(serviceMetadataWriteConfig)
+      writers += new ServiceMetadataWriter(serviceMetadataWriteConfig, esConfig.awsRequestSigningConfiguration)
     }
 
     if (StringUtils.isNotEmpty(kafkaConfig.produceTopic)) {

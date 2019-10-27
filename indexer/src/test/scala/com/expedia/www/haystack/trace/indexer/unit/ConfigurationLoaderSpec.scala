@@ -111,8 +111,8 @@ class ConfigurationLoaderSpec extends FunSpec with Matchers {
       elastic.awsRequestSigningConfiguration.enabled shouldEqual false
       elastic.awsRequestSigningConfiguration.region shouldEqual "us-west-2"
       elastic.awsRequestSigningConfiguration.awsServiceName shouldEqual "es"
-      elastic.awsRequestSigningConfiguration.accessKey.get shouldBe empty
-      elastic.awsRequestSigningConfiguration.secretKey.get shouldBe empty
+      elastic.awsRequestSigningConfiguration.accessKey shouldBe None
+      elastic.awsRequestSigningConfiguration.secretKey shouldBe None
     }
   }
 }

@@ -51,6 +51,7 @@ object ElasticSearchWriterUtils {
     s"$prefix-${dataFormatter.print(eventTime)}-$bucket"
   }
 }
+
 class ElasticSearchWriter(esConfig: ElasticSearchConfiguration, whitelistFieldConfig: WhitelistIndexFieldConfiguration)
   extends TraceWriter with MetricsSupport {
   private val LOGGER = LoggerFactory.getLogger(classOf[ElasticSearchWriter])
@@ -71,7 +72,15 @@ class ElasticSearchWriter(esConfig: ElasticSearchConfiguration, whitelistFieldCo
   private lazy val esClient: JestClient = {
     LOGGER.info("Initializing the http elastic search client with endpoint={}", esConfig.endpoint)
 
-    val factory = if (esConfig.awsRequestSigningConfiguration.enabled) new JestClientFactory() else new AWSSigningJestClientFactory(esConfig.awsRequestSigningConfiguration)
+    val factory = {
+      if (esConfig.awsRequestSigningConfiguration.enabled) {
+        LOGGER.info("using AWSSigningJestClientFactory for es client")
+        new AWSSigningJestClientFactory(esConfig.awsRequestSigningConfiguration)
+      } else {
+        LOGGER.info("using JestClientFactory for es client")
+        new JestClientFactory()
+      }
+    }
     val builder = new HttpClientConfig.Builder(esConfig.endpoint)
       .multiThreaded(true)
       .connTimeout(esConfig.connectionTimeoutMillis)

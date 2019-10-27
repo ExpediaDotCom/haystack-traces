@@ -75,8 +75,8 @@ class ConfigurationLoaderSpec extends BaseUnitTestSpec {
       elasticSearchConfig.awsRequestSigningConfiguration.enabled shouldEqual false
       elasticSearchConfig.awsRequestSigningConfiguration.region shouldEqual "us-west-2"
       elasticSearchConfig.awsRequestSigningConfiguration.awsServiceName shouldEqual "es"
-      elasticSearchConfig.awsRequestSigningConfiguration.accessKey.get shouldBe empty
-      elasticSearchConfig.awsRequestSigningConfiguration.secretKey.get shouldBe empty
+      elasticSearchConfig.awsRequestSigningConfiguration.accessKey shouldBe None
+      elasticSearchConfig.awsRequestSigningConfiguration.secretKey shouldBe None
     }
 
     it("should load trace backend configuration") {

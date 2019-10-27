@@ -32,10 +32,19 @@ class ConfigurationReloadElasticSearchProvider(reloadConfig: ReloadConfiguration
   private val matchAllQuery = "{\"query\":{\"match_all\":{\"boost\":1.0}}}"
 
   private val esClient: JestClient = {
-    val factory = if (awsRequestSigningConfig.enabled) new JestClientFactory() else new AWSSigningJestClientFactory(awsRequestSigningConfig)
+    val factory = {
+      if (awsRequestSigningConfig.enabled) {
+        LOGGER.info("using AWSSigningJestClientFactory for es client")
+        new AWSSigningJestClientFactory(awsRequestSigningConfig)
+      } else {
+        LOGGER.info("using JestClientFactory for es client")
+        new JestClientFactory()
+      }
+    }
+
     val builder = new HttpClientConfig.Builder(reloadConfig.configStoreEndpoint).multiThreaded(false)
 
-    if (reloadConfig.username.isDefined && reloadConfig.password.isDefined){
+    if (reloadConfig.username.isDefined && reloadConfig.password.isDefined) {
       builder.defaultCredentials(reloadConfig.username.get, reloadConfig.password.get)
     }
 

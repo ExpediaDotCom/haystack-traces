@@ -50,7 +50,7 @@ object Service extends MetricsSupport {
       val config = new ProviderConfiguration
 
       val store = new EsIndexedTraceStore(
-        config.traceBackendConfiguration,
+        config.traceBackendResolver,
         config.elasticSearchConfiguration,
         config.whitelistedFieldsConfig)(executor)
 

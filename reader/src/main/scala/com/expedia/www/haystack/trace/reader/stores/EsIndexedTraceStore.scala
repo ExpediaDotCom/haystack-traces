@@ -20,7 +20,7 @@ import com.expedia.open.tracing.api._
 import com.expedia.www.haystack.commons.metrics.MetricsSupport
 import com.expedia.www.haystack.trace.commons.clients.es.document.TraceIndexDoc
 import com.expedia.www.haystack.trace.commons.config.entities.{TraceStoreBackends, WhitelistIndexFieldConfiguration}
-import com.expedia.www.haystack.trace.reader.config.entities.ElasticSearchConfiguration
+import com.expedia.www.haystack.trace.reader.config.entities.{ElasticSearchConfiguration, TraceStoreBackendResolver}
 import com.expedia.www.haystack.trace.reader.stores.readers.es.ElasticSearchReader
 import com.expedia.www.haystack.trace.reader.stores.readers.es.query.{FieldValuesQueryGenerator, ServiceMetadataQueryGenerator, TraceCountsQueryGenerator, TraceSearchQueryGenerator}
 import com.expedia.www.haystack.trace.reader.stores.readers.grpc.GrpcTraceReaders
@@ -31,13 +31,13 @@ import org.slf4j.LoggerFactory
 import scala.collection.JavaConverters._
 import scala.concurrent.{ExecutionContextExecutor, Future}
 
-class EsIndexedTraceStore(traceStoreBackendConfig: TraceStoreBackends,
+class EsIndexedTraceStore(traceStoreBackendResolver: TraceStoreBackendResolver,
                           elasticSearchConfiguration: ElasticSearchConfiguration,
                           whitelistedFieldsConfiguration: WhitelistIndexFieldConfiguration)(implicit val executor: ExecutionContextExecutor)
   extends TraceStore with MetricsSupport with ResponseParser {
   private val LOGGER = LoggerFactory.getLogger(classOf[ElasticSearchReader])
 
-  private val traceReader: GrpcTraceReaders = new GrpcTraceReaders(traceStoreBackendConfig)
+  private val traceReader: GrpcTraceReaders = new GrpcTraceReaders(traceStoreBackendResolver)
   private val esReader: ElasticSearchReader = new ElasticSearchReader(elasticSearchConfiguration.clientConfiguration)
   private val traceSearchQueryGenerator = new TraceSearchQueryGenerator(elasticSearchConfiguration.spansIndexConfiguration, ES_NESTED_DOC_NAME, whitelistedFieldsConfiguration)
   private val traceCountsQueryGenerator = new TraceCountsQueryGenerator(elasticSearchConfiguration.spansIndexConfiguration, ES_NESTED_DOC_NAME, whitelistedFieldsConfiguration)

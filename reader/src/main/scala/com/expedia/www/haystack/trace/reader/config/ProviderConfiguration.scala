@@ -45,20 +45,23 @@ class ProviderConfiguration {
   /**
     * trace backend configuration object
     */
-  val traceBackendConfiguration: TraceStoreBackends = {
+  val traceBackendResolver: TraceStoreBackendResolver = {
     val traceBackendConfig = config.getConfig("backend")
 
-    val grpcClients = traceBackendConfig.entrySet().asScala
-      .map(k => StringUtils.split(k.getKey, '.')(0)).toSeq
-      .map(cl => traceBackendConfig.getConfig(cl))
-      .filter(cl => cl.hasPath("host") && cl.hasPath("port"))
-      .map(cl => GrpcClientConfig(cl.getString("host"), cl.getInt("port")))
+    if (false) {
+      val grpcClients = traceBackendConfig.entrySet().asScala
+        .map(k => StringUtils.split(k.getKey, '.')(0)).toSeq
+        .map(cl => traceBackendConfig.getConfig(cl))
+        .filter(cl => cl.hasPath("host") && cl.hasPath("port"))
+        .map(cl => GrpcClientConfig(cl.getString("host"), cl.getInt("port")))
 
-    require(grpcClients.nonEmpty)
+      require(grpcClients.nonEmpty)
 
-    TraceStoreBackends(grpcClients)
+      StaticTraceStoreBackedResolver(TraceStoreBackends(grpcClients))
+    } else {
+      AwsDiscoveryTraceStoreBackedResolver()
+    }
   }
-
 
   /**
     * ElasticSearch configuration

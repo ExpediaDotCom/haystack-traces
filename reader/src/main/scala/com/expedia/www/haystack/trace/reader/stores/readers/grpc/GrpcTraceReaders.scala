@@ -19,7 +19,7 @@ package com.expedia.www.haystack.trace.reader.stores.readers.grpc
 import com.expedia.open.tracing.api.Trace
 import com.expedia.open.tracing.backend.{ReadSpansRequest, StorageBackendGrpc}
 import com.expedia.www.haystack.commons.metrics.MetricsSupport
-import com.expedia.www.haystack.trace.commons.config.entities.TraceStoreBackends
+import com.expedia.www.haystack.trace.reader.config.entities.TraceStoreBackendResolver
 import com.expedia.www.haystack.trace.reader.exceptions.TraceNotFoundException
 import com.expedia.www.haystack.trace.reader.metrics.AppMetricNames
 import com.expedia.www.haystack.trace.reader.readers.utils.TraceMerger
@@ -29,15 +29,15 @@ import org.slf4j.LoggerFactory
 import scala.collection.JavaConverters._
 import scala.concurrent.{ExecutionContextExecutor, Future, Promise}
 
-class GrpcTraceReaders(config: TraceStoreBackends)
+class GrpcTraceReaders(traceStoreBackendResolver: TraceStoreBackendResolver)
                       (implicit val dispatcher: ExecutionContextExecutor) extends MetricsSupport with AutoCloseable {
   private val LOGGER = LoggerFactory.getLogger(classOf[GrpcTraceReaders])
-
   private val readTimer = metricRegistry.timer(AppMetricNames.BACKEND_READ_TIME)
   private val readFailures = metricRegistry.meter(AppMetricNames.BACKEND_READ_FAILURES)
   private val tracesFailures = metricRegistry.meter(AppMetricNames.BACKEND_TRACES_FAILURE)
 
-  private val clients: Seq[GrpcChannelClient] =  config.backends.map {
+
+  private def getClients: Seq[GrpcChannelClient] =  traceStoreBackendResolver.get.backends.map {
     backend => {
       val channel = ManagedChannelBuilder
         .forAddress(backend.host, backend.port)
@@ -50,7 +50,7 @@ class GrpcTraceReaders(config: TraceStoreBackends)
   }
 
   def readTraces(traceIds: List[String]): Future[Seq[Trace]] = {
-    val allFutures = clients.map {
+    val allFutures = getClients.map {
       client =>
         readTraces(traceIds, client.stub) recoverWith  {
           case _: Exception => Future.successful(Seq.empty[Trace])
@@ -92,7 +92,7 @@ class GrpcTraceReaders(config: TraceStoreBackends)
   }
 
   override def close(): Unit = {
-    clients.foreach(_.channel.shutdown())
+    getClients.foreach(_.channel.shutdown())
   }
 
   case class GrpcChannelClient(channel: ManagedChannel, stub: StorageBackendGrpc.StorageBackendFutureStub)

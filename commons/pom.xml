@@ -16,13 +16,11 @@
         <dependency>
             <groupId>vc.inreach.aws</groupId>
             <artifactId>aws-signing-request-interceptor</artifactId>
-            <version>0.0.22</version>
         </dependency>
 
         <dependency>
             <groupId>com.amazonaws</groupId>
             <artifactId>aws-java-sdk-sts</artifactId>
-            <version>1.11.431</version>
         </dependency>
 
         <dependency>

@@ -23,8 +23,9 @@ import com.expedia.open.tracing.{Span, Tag}
 import com.expedia.open.tracing.buffer.SpanBuffer
 import com.expedia.www.haystack.trace.commons.packer.{PackerFactory, PackerType, Unpacker}
 import org.scalatest.{FunSpec, Matchers}
+import org.scalatest.easymock.EasyMockSugar
 
-class PackerSpec extends FunSpec with Matchers {
+class PackerSpec extends FunSpec with Matchers with EasyMockSugar {
   describe("A Packer") {
     it("should pack and unpack spanBuffer proto object for all packer types") {
       PackerType.values.foreach(packerType => {
@@ -51,7 +52,7 @@ class PackerSpec extends FunSpec with Matchers {
         val spanBuffer = SpanBuffer.newBuilder().setTraceId("trace-1").addChildSpans(span_1).addChildSpans(span_2).build()
         val packedMessage = packer.apply(spanBuffer)
         val packedDataBytes = packedMessage.packedDataBytes
-        packedDataBytes should not be null
+        packedDataBytes should not be empty
         val spanBufferProto = Unpacker.readSpanBuffer(packedDataBytes)
         spanBufferProto shouldEqual spanBuffer
       })

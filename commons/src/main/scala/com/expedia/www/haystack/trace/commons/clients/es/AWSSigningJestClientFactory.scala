@@ -32,6 +32,11 @@ import com.amazonaws.auth.DefaultAWSCredentialsProviderChain
 import com.amazonaws.internal.StaticCredentialsProvider
 
 
+/**
+  * wrapper for JestClientFactory. Provides support for AWS ES request signing by adding an interceptor to the client.
+  *
+  * @param awsRequestSigningConfig config required for request signing like creds, region
+  */
 class AWSSigningJestClientFactory(awsRequestSigningConfig: AWSRequestSigningConfiguration) extends JestClientFactory {
   private val LOGGER = LoggerFactory.getLogger(classOf[AWSSigningJestClientFactory])
 

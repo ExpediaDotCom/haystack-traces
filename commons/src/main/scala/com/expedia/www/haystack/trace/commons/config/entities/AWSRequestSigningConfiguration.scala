@@ -18,13 +18,13 @@
 package com.expedia.www.haystack.trace.commons.config.entities
 
 /**
-  * defines the configuration parameters for reloading the app configs from external store like ElasticSearch
+  * defines the configuration parameters for AWS request signing
  *
-  * @param enabled: endpoint for external store where app configuration is stored
-  * @param region: name of the database
-  * @param awsServiceName: app config will be refreshed after this given interval in millis
-  * @param accessKey: list of reloadable configuration objects that subscribe to the reloader
-  * @param secretKey: loads the app configuration from external store on startup, default is true
+  * @param enabled: signing will be performed if this flag is enabled
+  * @param region: aws region
+  * @param awsServiceName: aws service name for which signing needs to be done
+  * @param accessKey: aws access key. If not present DefaultAWSCredentialsProviderChain is used
+  * @param secretKey: aws secret key
   */
 case class AWSRequestSigningConfiguration (enabled: Boolean,
                                            region: String,

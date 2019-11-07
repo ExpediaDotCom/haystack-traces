@@ -36,6 +36,7 @@ import com.expedia.www.haystack.trace.commons.config.entities.AWSRequestSigningC
   * @param maxDocsInBulk maximum number of index documents in a single bulk
   * @param maxBulkDocSizeInBytes maximum size (in bytes) of a single bulk request
   * @param retryConfig retry max retries limit, initial backoff and exponential factor values
+  * @param awsRequestSigningConfiguration aws ES request signing config
   */
 case class ElasticSearchConfiguration(endpoint: String,
                                       username: Option[String],

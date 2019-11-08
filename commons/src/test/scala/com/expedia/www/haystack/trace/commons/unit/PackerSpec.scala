@@ -52,7 +52,7 @@ class PackerSpec extends FunSpec with Matchers with EasyMockSugar {
         val spanBuffer = SpanBuffer.newBuilder().setTraceId("trace-1").addChildSpans(span_1).addChildSpans(span_2).build()
         val packedMessage = packer.apply(spanBuffer)
         val packedDataBytes = packedMessage.packedDataBytes
-        packedDataBytes should not be empty
+        packedDataBytes should not be null
         val spanBufferProto = Unpacker.readSpanBuffer(packedDataBytes)
         spanBufferProto shouldEqual spanBuffer
       })

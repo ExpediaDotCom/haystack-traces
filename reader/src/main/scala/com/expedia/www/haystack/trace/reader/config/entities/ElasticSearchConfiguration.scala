@@ -1,5 +1,5 @@
 /*
- *  Copyright 2017 Expedia, Inc.
+ *  Copyright 2019, Expedia Group.
  *
  *     Licensed under the Apache License, Version 2.0 (the "License");
  *     you may not use this file except in compliance with the License.
@@ -15,6 +15,8 @@
  *
  */
 package com.expedia.www.haystack.trace.reader.config.entities
+
+import com.expedia.www.haystack.trace.commons.config.entities.AWSRequestSigningConfiguration
 
 case class ElasticSearchClientConfiguration(endpoint: String,
                                             username: Option[String],
@@ -34,4 +36,5 @@ case class ServiceMetadataIndexConfiguration(enabled: Boolean,
 
 case class ElasticSearchConfiguration(clientConfiguration: ElasticSearchClientConfiguration,
                                       spansIndexConfiguration: SpansIndexConfiguration,
-                                      serviceMetadataIndexConfiguration: ServiceMetadataIndexConfiguration)
+                                      serviceMetadataIndexConfiguration: ServiceMetadataIndexConfiguration,
+                                      awsRequestSigningConfiguration: AWSRequestSigningConfiguration)

@@ -1,5 +1,5 @@
 /*
- * Copyright 2017 Expedia, Inc.
+ *  Copyright 2019, Expedia Group.
  *
  *       Licensed under the Apache License, Version 2.0 (the "License");
  *       you may not use this file except in compliance with the License.
@@ -102,12 +102,33 @@ class ProviderConfiguration {
       metadataCfg.getString("type"))
   }
 
+  private def awsRequestSigningConfig(awsESConfig: Config): AWSRequestSigningConfiguration = {
+    val accessKey: Option[String] = if (awsESConfig.hasPath("access.key") && awsESConfig.getString("access.key").nonEmpty)
+      Some(awsESConfig.getString("access.key"))
+    else
+      None
+
+    val secretKey: Option[String] = if (awsESConfig.hasPath("secret.key") && awsESConfig.getString("secret.key").nonEmpty) {
+      Some(awsESConfig.getString("secret.key"))
+    }
+    else
+      None
+
+    AWSRequestSigningConfiguration(
+      awsESConfig.getBoolean("enabled"),
+      awsESConfig.getString("region"),
+      awsESConfig.getString("service.name"),
+      accessKey,
+      secretKey)
+  }
+
 
   val elasticSearchConfiguration: ElasticSearchConfiguration = {
     ElasticSearchConfiguration(
       clientConfiguration = elasticSearchClientConfig,
       spansIndexConfiguration = spansIndexConfiguration,
-      serviceMetadataIndexConfiguration = serviceMetadataIndexConfig
+      serviceMetadataIndexConfiguration = serviceMetadataIndexConfig,
+      awsRequestSigningConfiguration = awsRequestSigningConfig(config.getConfig("elasticsearch.signing.request.aws"))
     )
   }
 
@@ -190,7 +211,8 @@ class ProviderConfiguration {
       observers,
       loadOnStartup = reload.getBoolean("startup.load"))
 
-    val loader = new ConfigurationReloadElasticSearchProvider(reloadConfig)
+    val awsConfig: AWSRequestSigningConfiguration = awsRequestSigningConfig(config.getConfig("reload.signing.request.aws"))
+    val loader = new ConfigurationReloadElasticSearchProvider(reloadConfig, awsConfig)
     if (reloadConfig.loadOnStartup) loader.load()
     loader
   }

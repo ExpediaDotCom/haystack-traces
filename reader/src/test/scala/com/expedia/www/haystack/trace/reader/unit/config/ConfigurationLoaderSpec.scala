@@ -1,5 +1,5 @@
 /*
- *  Copyright 2017 Expedia, Inc.
+ *  Copyright 2019, Expedia Group.
  *
  *       Licensed under the Apache License, Version 2.0 (the "License");
  *       you may not use this file except in compliance with the License.
@@ -71,6 +71,12 @@ class ConfigurationLoaderSpec extends BaseUnitTestSpec {
       elasticSearchConfig.serviceMetadataIndexConfiguration.enabled shouldEqual false
       elasticSearchConfig.serviceMetadataIndexConfiguration.indexName shouldEqual "service_metadata"
       elasticSearchConfig.serviceMetadataIndexConfiguration.indexType shouldEqual "metadata"
+
+      elasticSearchConfig.awsRequestSigningConfiguration.enabled shouldEqual false
+      elasticSearchConfig.awsRequestSigningConfiguration.region shouldEqual "us-west-2"
+      elasticSearchConfig.awsRequestSigningConfiguration.awsServiceName shouldEqual "es"
+      elasticSearchConfig.awsRequestSigningConfiguration.accessKey shouldBe None
+      elasticSearchConfig.awsRequestSigningConfiguration.secretKey shouldBe None
     }
 
     it("should load trace backend configuration") {

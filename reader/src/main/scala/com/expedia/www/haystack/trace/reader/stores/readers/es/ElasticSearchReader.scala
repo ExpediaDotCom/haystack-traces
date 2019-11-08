@@ -1,5 +1,5 @@
 /*
- *  Copyright 2017 Expedia, Inc.
+ *  Copyright 2019, Expedia Group.
  *
  *       Licensed under the Apache License, Version 2.0 (the "License");
  *       you may not use this file except in compliance with the License.
@@ -17,6 +17,8 @@
 package com.expedia.www.haystack.trace.reader.stores.readers.es
 
 import com.expedia.www.haystack.commons.metrics.MetricsSupport
+import com.expedia.www.haystack.trace.commons.clients.es.AWSSigningJestClientFactory
+import com.expedia.www.haystack.trace.commons.config.entities.AWSRequestSigningConfiguration
 import com.expedia.www.haystack.trace.reader.config.entities.ElasticSearchClientConfiguration
 import com.expedia.www.haystack.trace.reader.metrics.AppMetricNames
 import com.expedia.www.haystack.trace.reader.stores.readers.es.ESUtils._
@@ -29,7 +31,7 @@ import org.slf4j.LoggerFactory
 import scala.concurrent.{ExecutionContextExecutor, Future, Promise}
 import scala.util.Try
 
-class ElasticSearchReader(config: ElasticSearchClientConfiguration)(implicit val dispatcher: ExecutionContextExecutor) extends MetricsSupport with AutoCloseable {
+class ElasticSearchReader(config: ElasticSearchClientConfiguration, awsRequestSigningConfig: AWSRequestSigningConfiguration)(implicit val dispatcher: ExecutionContextExecutor) extends MetricsSupport with AutoCloseable {
   private val LOGGER = LoggerFactory.getLogger(classOf[ElasticSearchReader])
   private val readTimer = metricRegistry.timer(AppMetricNames.ELASTIC_SEARCH_READ_TIME)
   private val readFailures = metricRegistry.meter(AppMetricNames.ELASTIC_SEARCH_READ_FAILURES)
@@ -37,7 +39,17 @@ class ElasticSearchReader(config: ElasticSearchClientConfiguration)(implicit val
   // initialize the elastic search client
   private val esClient: JestClient = {
     LOGGER.info("Initializing the http elastic search client with endpoint={}", config.endpoint)
-    val factory = new JestClientFactory()
+
+    val factory = {
+      if (awsRequestSigningConfig.enabled) {
+        LOGGER.info("using AWSSigningJestClientFactory for es client")
+        new AWSSigningJestClientFactory(awsRequestSigningConfig)
+      } else {
+        LOGGER.info("using JestClientFactory for es client")
+        new JestClientFactory()
+      }
+    }
+
     val builder = new HttpClientConfig.Builder(config.endpoint)
       .multiThreaded(true)
       .connTimeout(config.connectionTimeoutMillis)

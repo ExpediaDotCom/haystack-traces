@@ -1,5 +1,5 @@
 /*
- *  Copyright 2017 Expedia, Inc.
+ *  Copyright 2019, Expedia Group.
  *
  *     Licensed under the Apache License, Version 2.0 (the "License");
  *     you may not use this file except in compliance with the License.
@@ -33,7 +33,6 @@ import org.apache.kafka.clients.producer.ProducerConfig
 import org.apache.kafka.common.serialization.{ByteArraySerializer, StringDeserializer, StringSerializer}
 
 import scala.collection.JavaConverters._
-import scala.collection.mutable
 import scala.util.Try
 
 class ProjectConfiguration extends AutoCloseable {
@@ -218,7 +217,27 @@ class ProjectConfiguration extends AutoCloseable {
       retryConfig = RetryOperation.Config(
         es.getInt("retries.max"),
         es.getLong("retries.backoff.initial.ms"),
-        es.getDouble("retries.backoff.factor")))
+        es.getDouble("retries.backoff.factor")),
+      awsRequestSigningConfig(config.getConfig("elasticsearch.signing.request.aws")))
+  }
+
+  private def awsRequestSigningConfig(awsESConfig: Config): AWSRequestSigningConfiguration = {
+    val accessKey: Option[String] = if (awsESConfig.hasPath("access.key") && awsESConfig.getString("access.key").nonEmpty) {
+      Some(awsESConfig.getString("access.key"))
+    } else
+      None
+
+    val secretKey: Option[String] = if (awsESConfig.hasPath("secret.key") && awsESConfig.getString("secret.key").nonEmpty) {
+      Some(awsESConfig.getString("secret.key"))
+    } else
+      None
+
+    AWSRequestSigningConfiguration(
+      awsESConfig.getBoolean("enabled"),
+      awsESConfig.getString("region"),
+      awsESConfig.getString("service.name"),
+      accessKey,
+      secretKey)
   }
 
   /**
@@ -252,7 +271,7 @@ class ProjectConfiguration extends AutoCloseable {
       observers,
       loadOnStartup = reload.getBoolean("startup.load"))
 
-    val loader = new ConfigurationReloadElasticSearchProvider(reloadConfig)
+    val loader = new ConfigurationReloadElasticSearchProvider(reloadConfig, awsRequestSigningConfig(config.getConfig("reload.signing.request.aws")))
     if (reloadConfig.loadOnStartup) loader.load()
     loader
   }

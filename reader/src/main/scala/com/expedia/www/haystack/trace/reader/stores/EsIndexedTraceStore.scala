@@ -1,5 +1,5 @@
 /*
- *  Copyright 2017 Expedia, Inc.
+ *  Copyright 2019, Expedia Group.
  *
  *       Licensed under the Apache License, Version 2.0 (the "License");
  *       you may not use this file except in compliance with the License.
@@ -35,10 +35,10 @@ class EsIndexedTraceStore(traceStoreBackendConfig: TraceStoreBackends,
                           elasticSearchConfiguration: ElasticSearchConfiguration,
                           whitelistedFieldsConfiguration: WhitelistIndexFieldConfiguration)(implicit val executor: ExecutionContextExecutor)
   extends TraceStore with MetricsSupport with ResponseParser {
-  private val LOGGER = LoggerFactory.getLogger(classOf[ElasticSearchReader])
+  private val LOGGER = LoggerFactory.getLogger(classOf[EsIndexedTraceStore])
 
   private val traceReader: GrpcTraceReaders = new GrpcTraceReaders(traceStoreBackendConfig)
-  private val esReader: ElasticSearchReader = new ElasticSearchReader(elasticSearchConfiguration.clientConfiguration)
+  private val esReader: ElasticSearchReader = new ElasticSearchReader(elasticSearchConfiguration.clientConfiguration, elasticSearchConfiguration.awsRequestSigningConfiguration)
   private val traceSearchQueryGenerator = new TraceSearchQueryGenerator(elasticSearchConfiguration.spansIndexConfiguration, ES_NESTED_DOC_NAME, whitelistedFieldsConfiguration)
   private val traceCountsQueryGenerator = new TraceCountsQueryGenerator(elasticSearchConfiguration.spansIndexConfiguration, ES_NESTED_DOC_NAME, whitelistedFieldsConfiguration)
   private val fieldValuesQueryGenerator = new FieldValuesQueryGenerator(elasticSearchConfiguration.spansIndexConfiguration, ES_NESTED_DOC_NAME, whitelistedFieldsConfiguration)

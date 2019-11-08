@@ -1,5 +1,5 @@
 /*
- *  Copyright 2017 Expedia, Inc.
+ *  Copyright 2019, Expedia Group.
  *
  *     Licensed under the Apache License, Version 2.0 (the "License");
  *     you may not use this file except in compliance with the License.
@@ -18,6 +18,7 @@
 package com.expedia.www.haystack.trace.indexer.config.entities
 
 import com.expedia.www.haystack.commons.retries.RetryOperation
+import com.expedia.www.haystack.trace.commons.config.entities.AWSRequestSigningConfiguration
 
 /**
   * defines the config parameters for elastic search writes
@@ -35,6 +36,7 @@ import com.expedia.www.haystack.commons.retries.RetryOperation
   * @param maxDocsInBulk maximum number of index documents in a single bulk
   * @param maxBulkDocSizeInBytes maximum size (in bytes) of a single bulk request
   * @param retryConfig retry max retries limit, initial backoff and exponential factor values
+  * @param awsRequestSigningConfiguration aws ES request signing config
   */
 case class ElasticSearchConfiguration(endpoint: String,
                                       username: Option[String],
@@ -50,4 +52,5 @@ case class ElasticSearchConfiguration(endpoint: String,
                                       maxInFlightBulkRequests: Int,
                                       maxDocsInBulk: Int,
                                       maxBulkDocSizeInBytes: Int,
-                                      retryConfig: RetryOperation.Config)
+                                      retryConfig: RetryOperation.Config,
+                                      awsRequestSigningConfiguration: AWSRequestSigningConfiguration)

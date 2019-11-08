@@ -12,6 +12,17 @@
     <packaging>jar</packaging>
 
     <dependencies>
+        <!-- Request Interceptor for Apache Client that signs the request for AWS -->
+        <dependency>
+            <groupId>vc.inreach.aws</groupId>
+            <artifactId>aws-signing-request-interceptor</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>com.amazonaws</groupId>
+            <artifactId>aws-java-sdk-sts</artifactId>
+        </dependency>
+
         <dependency>
             <groupId>org.json4s</groupId>
             <artifactId>json4s-jackson_${scala.major.minor.version}</artifactId>

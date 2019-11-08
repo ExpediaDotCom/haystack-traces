@@ -220,11 +220,24 @@
                 <version>${commons-io.version}</version>
             </dependency>
 
-            <!-- AWS EC2 SDK -->
+            <!-- AWS -->
+            <dependency>
+                <groupId>com.amazonaws</groupId>
+                <artifactId>aws-java-sdk-sts</artifactId>
+                <version>${aws-sdk.version}</version>
+            </dependency>
+
             <dependency>
                 <groupId>com.amazonaws</groupId>
                 <artifactId>aws-java-sdk-ec2</artifactId>
                 <version>${aws-sdk.version}</version>
+            </dependency>
+
+            <!-- Request Interceptor for Apache Client that signs the request for AWS -->
+            <dependency>
+                <groupId>vc.inreach.aws</groupId>
+                <artifactId>aws-signing-request-interceptor</artifactId>
+                <version>0.0.22</version>
             </dependency>
 
             <dependency>

@@ -27,7 +27,7 @@ if [ -n "${TRAVIS_TAG}" ]
 then
     echo "travis tag is set, applying gpg signing"
     GPG_SKIP=false
-    ./mvnw -q org.codehaus.mojo:versions-maven-plugin:2.5:set -DnewVersion=$TRAVIS_TAG
+    ./mvnw -q org.codehaus.mojo:versions-maven-plugin:2.5:set -DnewVersion=$TRAVIS_TAG 1>/dev/null 2>/dev/null
 else
     echo "no travis tag is set, skipping gpg signing"
     GPG_SKIP=true

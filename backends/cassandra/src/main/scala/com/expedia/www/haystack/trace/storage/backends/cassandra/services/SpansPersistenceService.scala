@@ -55,4 +55,18 @@ class SpansPersistenceService(reader: CassandraTraceRecordReader,
       }
     }
   }
+<<<<<<< Updated upstream
+=======
+
+  override def updateSpansDuration(request: UpdateSpansDurationRequest, responseObserver: StreamObserver[UpdateSpansDurationResponse]): Unit = {
+    handleUpdateSpansDurationResponse.handle(request, responseObserver) {
+      reader.readTraceRecords(request.getTraceIdsList.iterator().asScala.toList).map ({
+        records => {
+          writer.updateDurationOfRecords(records.toList,request.getDuration())
+        }
+      }).map(_=>
+      UpdateSpansDurationResponse.newBuilder().setCode(UpdateSpansDurationResponse.ResultCode.SUCCESS).build())
+    }
+  }
+>>>>>>> Stashed changes
 }

@@ -63,7 +63,7 @@ class CassandraSessionSpec extends FunSpec with Matchers with EasyMockSugar {
       whenExecuting(factory, cluster, session, metadata, keyspaceMetadata, tableMetadata, insertPrepStatement) {
         val session = new CassandraSession(config, factory)
         session.ensureKeyspace(config.tracesKeyspace)
-        val stmt = session.createSpanInsertPreparedStatement(keyspaceConfig)
+        val stmt = session.createSpanInsertPreparedStatement(keyspaceConfig,-1)
         stmt shouldBe insertPrepStatement
         captured.getValue.getQueryString() shouldEqual "INSERT INTO \"keyspace-1\".\"table-1\" (id,ts,spans) VALUES (:id,:ts,:spans) USING TTL 100;"
         session.close()

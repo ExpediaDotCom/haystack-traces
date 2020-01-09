@@ -39,7 +39,12 @@ class CassandraTraceRecordWriter(cassandra: CassandraSession,
   private lazy val writeFailures = metricRegistry.meter(AppMetricNames.CASSANDRA_WRITE_FAILURE)
 
   cassandra.ensureKeyspace(config.clientConfig.tracesKeyspace)
+<<<<<<< Updated upstream
   private val spanInsertPreparedStmt = cassandra.createSpanInsertPreparedStatement(config.clientConfig.tracesKeyspace)
+=======
+  cassandra.ensureKeyspace(config.clientConfig.tracesKeyspaceForMoreDays)
+  private val spanInsertPreparedStmt = cassandra.createSpanInsertPreparedStatement(config.clientConfig.tracesKeyspace,-1)
+>>>>>>> Stashed changes
 
   private def execute(record: TraceRecord): Future[Unit] = {
 
@@ -94,4 +99,34 @@ class CassandraTraceRecordWriter(cassandra: CassandraSession,
     promise.future
 
   }
+<<<<<<< Updated upstream
+=======
+  /**
+    * writes the traceId and its spans to cassandra. Use the current timestamp as the sort key for the writes to same
+    * TraceId. Also if the parallel writes exceed the max inflight requests, then we block and this puts backpressure on
+    * upstream
+    *
+    * @param traceRecords : trace records which need to be written
+    * @return
+    */
+  def writeTraceRecords(traceRecords: List[TraceRecord]): Future[Unit] = {
+    writeTraceRecordsGivenPreparedStmt(traceRecords,spanInsertPreparedStmt)
+
+  }
+
+  /**
+   * writes the traceId and its spans to cassandra. Use the current timestamp as the sort key for the writes to same
+   * TraceId. Also if the parallel writes exceed the max inflight requests, then we block and this puts backpressure on
+   * upstream
+   *
+   * @param traceRecords : trace records which need to be written
+   * @return
+   */
+
+  def updateDurationOfRecords(traceRecords: List[TraceRecord], ttlInSec: Int): Future[Unit] = {
+    val spanInsertMoreDaysPreparedStmt = cassandra.createSpanInsertPreparedStatement(config.clientConfig.tracesKeyspaceForMoreDays,ttlInSec)
+    writeTraceRecordsGivenPreparedStmt(traceRecords, spanInsertMoreDaysPreparedStmt)
+  }
+
+>>>>>>> Stashed changes
 }

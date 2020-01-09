@@ -75,15 +75,18 @@ class CassandraSession(config: ClientConfiguration, factory: ClusterFactory) {
   }
 
 
-  def createSpanInsertPreparedStatement(keyspace: KeyspaceConfiguration): PreparedStatement = {
+  def createSpanInsertPreparedStatement(keyspace: KeyspaceConfiguration, ttlInSec: Int): PreparedStatement = {
     import QueryBuilder.{bindMarker, ttl}
-
+    var recordTTLInSec: Int = keyspace.recordTTLInSec
+    if(ttlInSec != -1){
+      recordTTLInSec = ttlInSec
+    }
     val insert = QueryBuilder
       .insertInto(keyspace.name, keyspace.table)
       .value(ID_COLUMN_NAME, bindMarker(ID_COLUMN_NAME))
       .value(TIMESTAMP_COLUMN_NAME, bindMarker(TIMESTAMP_COLUMN_NAME))
       .value(SPANS_COLUMN_NAME, bindMarker(SPANS_COLUMN_NAME))
-      .using(ttl(keyspace.recordTTLInSec))
+      .using(ttl(recordTTLInSec))
 
     session.prepare(insert)
   }

@@ -74,6 +74,18 @@ class ProjectConfiguration {
       KeyspaceConfiguration(kConfig.getString("name"), kConfig.getString("table.name"), ttl, autoCreateSchema)
     }
 
+    def keyspaceConfig28days(kConfig: Config, ttl: Int): KeyspaceConfiguration = {
+      val autoCreateSchemaField = "auto.create.28days.schema"
+      val autoCreateSchema = if (kConfig.hasPath(autoCreateSchemaField)
+        && StringUtils.isNotEmpty(kConfig.getString(autoCreateSchemaField))) {
+        Some(kConfig.getString(autoCreateSchemaField))
+      } else {
+        None
+      }
+
+      KeyspaceConfiguration(kConfig.getString("name"), kConfig.getString("table.28days.name"), ttl, autoCreateSchema)
+    }
+
     val cs = config.getConfig("cassandra")
 
     val awsConfig: Option[AwsNodeDiscoveryConfiguration] =
@@ -113,6 +125,7 @@ class ProjectConfiguration {
         awsConfig,
         credentialsConfig,
         keyspaceConfig(cs.getConfig("keyspace"), cs.getInt("ttl.sec")),
+        keyspaceConfig28days(cs.getConfig("keyspace"), cs.getInt("ttl.28days.sec")),
         socket),
       consistencyLevel = consistencyLevel,
       retryConfig = RetryOperation.Config(

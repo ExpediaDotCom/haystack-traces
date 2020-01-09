@@ -30,6 +30,7 @@ class SpansPersistenceService(reader: CassandraTraceRecordReader,
 
   private val handleReadSpansResponse = new GrpcHandler(StorageBackendGrpc.METHOD_READ_SPANS.getFullMethodName)
   private val handleWriteSpansResponse = new GrpcHandler(StorageBackendGrpc.METHOD_WRITE_SPANS.getFullMethodName)
+  private val handleUpdateSpansDurationResponse = new GrpcHandler(StorageBackendGrpc.METHOD_UPDATE_SPANS_DURATION.getFullMethodName)
 
   override def writeSpans(request: WriteSpansRequest, responseObserver: StreamObserver[WriteSpansResponse]): Unit = {
     handleWriteSpansResponse.handle(request, responseObserver) {
@@ -53,6 +54,17 @@ class SpansPersistenceService(reader: CassandraTraceRecordReader,
             .build()
         }
       }
+    }
+  }
+
+  override def updateSpansDuration(request: UpdateSpansDurationRequest, responseObserver: StreamObserver[UpdateSpansDurationResponse]): Unit = {
+    handleUpdateSpansDurationResponse.handle(request, responseObserver) {
+      reader.readTraceRecords(request.getTraceIdsList.iterator().asScala.toList).map ({
+        records => {
+          writer.updateDurationOfRecords(records.toList)
+        }
+      }).map(_=>
+      UpdateSpansDurationResponse.newBuilder().setCode(UpdateSpansDurationResponse.ResultCode.SUCCESS).build())
     }
   }
 }

@@ -45,6 +45,7 @@ class CassandraSessionSpec extends FunSpec with Matchers with EasyMockSugar {
         None,
         None,
         keyspaceConfig,
+        keyspaceConfig,//check
         SocketConfiguration(10, keepAlive = true, 1000, 1000))
 
       val captured = EasyMock.newCapture[Insert.Options]()
@@ -88,6 +89,7 @@ class CassandraSessionSpec extends FunSpec with Matchers with EasyMockSugar {
         None,
         None,
         keyspaceConfig,
+        keyspaceConfig,//check
         SocketConfiguration(10, keepAlive = true, 1000, 1000))
 
       val captured = EasyMock.newCapture[Select.Where]()

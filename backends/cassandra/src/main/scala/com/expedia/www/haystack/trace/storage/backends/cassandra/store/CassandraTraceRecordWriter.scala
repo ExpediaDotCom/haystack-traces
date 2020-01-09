@@ -19,6 +19,7 @@ package com.expedia.www.haystack.trace.storage.backends.cassandra.store
 
 import java.util.concurrent.atomic.AtomicInteger
 
+import com.datastax.driver.core.PreparedStatement
 import com.expedia.open.tracing.backend.TraceRecord
 import com.expedia.www.haystack.commons.metrics.MetricsSupport
 import com.expedia.www.haystack.commons.retries.RetryOperation._
@@ -40,8 +41,9 @@ class CassandraTraceRecordWriter(cassandra: CassandraSession,
 
   cassandra.ensureKeyspace(config.clientConfig.tracesKeyspace)
   private val spanInsertPreparedStmt = cassandra.createSpanInsertPreparedStatement(config.clientConfig.tracesKeyspace)
+  private val spanInsertMoreDaysPreparedStmt = cassandra.createSpanInsertPreparedStatement(config.clientConfig.tracesKeyspaceForMoreDays)
 
-  private def execute(record: TraceRecord): Future[Unit] = {
+  private def execute(record: TraceRecord, spanInsertPreparedStmt: PreparedStatement): Future[Unit] = {
 
     val promise = Promise[Unit]
     // execute the request async with retry
@@ -67,20 +69,12 @@ class CassandraTraceRecordWriter(cassandra: CassandraSession,
     promise.future
   }
 
-  /**
-    * writes the traceId and its spans to cassandra. Use the current timestamp as the sort key for the writes to same
-    * TraceId. Also if the parallel writes exceed the max inflight requests, then we block and this puts backpressure on
-    * upstream
-    *
-    * @param traceRecords : trace records which need to be written
-    * @return
-    */
-  def writeTraceRecords(traceRecords: List[TraceRecord]): Future[Unit] = {
+  def writeTraceRecordsGivenPreparedStmt(traceRecords: List[TraceRecord], spanInsertPreparedStmt: PreparedStatement): Future[Unit] = {
     val promise = Promise[Unit]
     val writableRecordsLatch = new AtomicInteger(traceRecords.size)
     traceRecords.foreach(record => {
       /* write spanBuffer for a given traceId */
-      execute(record).onComplete {
+      execute(record,spanInsertPreparedStmt).onComplete {
         case Success(_) => if (writableRecordsLatch.decrementAndGet() == 0) {
           promise.success()
         }
@@ -94,4 +88,30 @@ class CassandraTraceRecordWriter(cassandra: CassandraSession,
     promise.future
 
   }
+  /**
+    * writes the traceId and its spans to cassandra. Use the current timestamp as the sort key for the writes to same
+    * TraceId. Also if the parallel writes exceed the max inflight requests, then we block and this puts backpressure on
+    * upstream
+    *
+    * @param traceRecords : trace records which need to be written
+    * @return
+    */
+  def writeTraceRecords(traceRecords: List[TraceRecord]): Future[Unit] = {
+    writeTraceRecordsGivenPreparedStmt(traceRecords,spanInsertPreparedStmt)
+
+  }
+
+  /**
+   * writes the traceId and its spans to cassandra. Use the current timestamp as the sort key for the writes to same
+   * TraceId. Also if the parallel writes exceed the max inflight requests, then we block and this puts backpressure on
+   * upstream
+   *
+   * @param traceRecords : trace records which need to be written
+   * @return
+   */
+
+  def updateDurationOfRecords(traceRecords: List[TraceRecord]): Future[Unit] = {
+    writeTraceRecordsGivenPreparedStmt(traceRecords, spanInsertMoreDaysPreparedStmt)
+  }
+
 }

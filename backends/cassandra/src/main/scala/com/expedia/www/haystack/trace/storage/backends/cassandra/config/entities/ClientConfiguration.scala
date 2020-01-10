@@ -51,7 +51,7 @@ case class ClientConfiguration(endpoints: List[String],
                                awsNodeDiscovery: Option[AwsNodeDiscoveryConfiguration],
                                plaintextCredentials: Option[CredentialsConfiguration],
                                tracesKeyspace: KeyspaceConfiguration,
-                               tracesKeyspacePermStorage: KeyspaceConfiguration,
+                               tracesLongTermKeyspace: KeyspaceConfiguration,
                                socket: SocketConfiguration)
 
 /**

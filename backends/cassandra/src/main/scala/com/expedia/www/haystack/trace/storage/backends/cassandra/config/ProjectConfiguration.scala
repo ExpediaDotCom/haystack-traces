@@ -64,25 +64,15 @@ class ProjectConfiguration {
 
     def keyspaceConfig(kConfig: Config, ttl: Int): KeyspaceConfiguration = {
       val autoCreateSchemaField = "auto.create.schema"
-      val autoCreateSchema = if (kConfig.hasPath(autoCreateSchemaField)
-        && StringUtils.isNotEmpty(kConfig.getString(autoCreateSchemaField))) {
-        Some(kConfig.getString(autoCreateSchemaField))
-      } else {
-        None
-      }
+      val autoCreateSchema: _root_.scala.Option[_root_.java.lang.String] = getAutoCreateSchema(kConfig, autoCreateSchemaField)
 
       KeyspaceConfiguration(kConfig.getString("name"), kConfig.getString("table.name"), ttl, autoCreateSchema)
     }
 
-    def keyspaceConfigPermStorage(kConfig: Config, ttl: Int): KeyspaceConfiguration = {
-      val autoCreateSchemaField = "auto.create.perm.schema"
-      val autoCreateSchema = if (kConfig.hasPath(autoCreateSchemaField)
-        && StringUtils.isNotEmpty(kConfig.getString(autoCreateSchemaField))) {
-        Some(kConfig.getString(autoCreateSchemaField))
-      } else {
-        None
-      }
-      KeyspaceConfiguration(kConfig.getString("name"), kConfig.getString("perm.table.name"), ttl, autoCreateSchema)
+    def longTermKeyspaceConfig(kConfig: Config): KeyspaceConfiguration = {
+      val autoCreateSchemaField = "auto.create.long.term.schema"
+      val autoCreateSchema: _root_.scala.Option[_root_.java.lang.String] = getAutoCreateSchema(kConfig, autoCreateSchemaField)
+      KeyspaceConfiguration(kConfig.getString("name"), kConfig.getString("long.term.table.name"), -1, autoCreateSchema)
     }
 
     val cs = config.getConfig("cassandra")
@@ -124,7 +114,7 @@ class ProjectConfiguration {
         awsConfig,
         credentialsConfig,
         keyspaceConfig(cs.getConfig("keyspace"), cs.getInt("ttl.sec")),
-        keyspaceConfigPermStorage(cs.getConfig("keyspace"),  cs.getInt("ttl.sec")),
+        longTermKeyspaceConfig(cs.getConfig("keyspace")),
         socket),
       consistencyLevel = consistencyLevel,
       retryConfig = RetryOperation.Config(
@@ -134,4 +124,13 @@ class ProjectConfiguration {
       consistencyLevelOnErrors(cs))
   }
 
+  private def getAutoCreateSchema(kConfig: Config, autoCreateSchemaField: String) = {
+    val autoCreateSchema = if (kConfig.hasPath(autoCreateSchemaField)
+      && StringUtils.isNotEmpty(kConfig.getString(autoCreateSchemaField))) {
+      Some(kConfig.getString(autoCreateSchemaField))
+    } else {
+      None
+    }
+    autoCreateSchema
+  }
 }

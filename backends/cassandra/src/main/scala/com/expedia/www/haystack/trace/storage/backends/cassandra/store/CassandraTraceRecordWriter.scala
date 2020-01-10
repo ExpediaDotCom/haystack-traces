@@ -40,7 +40,7 @@ class CassandraTraceRecordWriter(cassandra: CassandraSession,
   private lazy val writeFailures = metricRegistry.meter(AppMetricNames.CASSANDRA_WRITE_FAILURE)
 
   cassandra.ensureKeyspace(config.clientConfig.tracesKeyspace)
-  cassandra.ensureKeyspace(config.clientConfig.tracesKeyspaceForMoreDays)
+  cassandra.ensureKeyspace(config.clientConfig.tracesKeyspacePermStorage)
   private val spanInsertPreparedStmt = cassandra.createSpanInsertPreparedStatement(config.clientConfig.tracesKeyspace,-1)
 
   private def execute(record: TraceRecord, spanInsertPreparedStmt: PreparedStatement): Future[Unit] = {
@@ -111,9 +111,9 @@ class CassandraTraceRecordWriter(cassandra: CassandraSession,
    * @return
    */
     
-  def updateDurationOfRecords(traceRecords: List[TraceRecord], ttlInSec: Long): Future[Unit] = {
-    val spanInsertMoreDaysPreparedStmt = cassandra.createSpanInsertPreparedStatement(config.clientConfig.tracesKeyspaceForMoreDays,ttlInSec)
-    writeTraceRecordsGivenPreparedStmt(traceRecords, spanInsertMoreDaysPreparedStmt)
+  def updateTraceRetentionPeriod(traceRecords: List[TraceRecord], ttlInSec: Long): Future[Unit] = {
+    val spanRetentionUpdatePreparedStmt = cassandra.createSpanInsertPreparedStatement(config.clientConfig.tracesKeyspacePermStorage,ttlInSec)
+    writeTraceRecordsGivenPreparedStmt(traceRecords, spanRetentionUpdatePreparedStmt)
   }
   
 }

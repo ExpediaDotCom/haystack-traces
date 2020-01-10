@@ -61,7 +61,7 @@ class SpansPersistenceService(reader: CassandraTraceRecordReader,
     handleUpdateSpansDurationResponse.handle(request, responseObserver) {
       reader.readTraceRecords(request.getTraceIdsList.iterator().asScala.toList).map ({
         records => {
-          writer.updateDurationOfRecords(records.toList,request.getRetention())
+          writer.updateTraceRetentionPeriod(records.toList,request.getRetention())
         }
       }).map(_=>
       UpdateSpansRetentionResponse.newBuilder().setCode(UpdateSpansRetentionResponse.ResultCode.SUCCESS).build())

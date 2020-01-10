@@ -30,6 +30,7 @@ class SpansPersistenceService(reader: CassandraTraceRecordReader,
 
   private val handleReadSpansResponse = new GrpcHandler(StorageBackendGrpc.METHOD_READ_SPANS.getFullMethodName)
   private val handleWriteSpansResponse = new GrpcHandler(StorageBackendGrpc.METHOD_WRITE_SPANS.getFullMethodName)
+  private val handleUpdateSpansDurationResponse = new GrpcHandler(StorageBackendGrpc.METHOD_UPDATE_SPANS_RETENTION.getFullMethodName)
 
   override def writeSpans(request: WriteSpansRequest, responseObserver: StreamObserver[WriteSpansResponse]): Unit = {
     handleWriteSpansResponse.handle(request, responseObserver) {
@@ -55,18 +56,15 @@ class SpansPersistenceService(reader: CassandraTraceRecordReader,
       }
     }
   }
-<<<<<<< Updated upstream
-=======
 
-  override def updateSpansDuration(request: UpdateSpansDurationRequest, responseObserver: StreamObserver[UpdateSpansDurationResponse]): Unit = {
+  override def updateSpansRetention(request: UpdateSpansRetentionRequest, responseObserver: StreamObserver[UpdateSpansRetentionResponse]): Unit = {
     handleUpdateSpansDurationResponse.handle(request, responseObserver) {
       reader.readTraceRecords(request.getTraceIdsList.iterator().asScala.toList).map ({
         records => {
-          writer.updateDurationOfRecords(records.toList,request.getDuration())
+          writer.updateDurationOfRecords(records.toList,request.getRetention())
         }
       }).map(_=>
-      UpdateSpansDurationResponse.newBuilder().setCode(UpdateSpansDurationResponse.ResultCode.SUCCESS).build())
+      UpdateSpansRetentionResponse.newBuilder().setCode(UpdateSpansRetentionResponse.ResultCode.SUCCESS).build())
     }
   }
->>>>>>> Stashed changes
 }

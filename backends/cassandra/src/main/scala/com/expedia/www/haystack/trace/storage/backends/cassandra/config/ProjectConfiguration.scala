@@ -74,6 +74,17 @@ class ProjectConfiguration {
       KeyspaceConfiguration(kConfig.getString("name"), kConfig.getString("table.name"), ttl, autoCreateSchema)
     }
 
+    def keyspaceConfigExtentRetention(kConfig: Config, ttl: Int): KeyspaceConfiguration = {
+      val autoCreateSchemaField = "auto.create.perm.schema"
+      val autoCreateSchema = if (kConfig.hasPath(autoCreateSchemaField)
+        && StringUtils.isNotEmpty(kConfig.getString(autoCreateSchemaField))) {
+        Some(kConfig.getString(autoCreateSchemaField))
+      } else {
+        None
+      }
+      KeyspaceConfiguration(kConfig.getString("name"), kConfig.getString("table.perm.name"), ttl, autoCreateSchema)
+    }
+
     val cs = config.getConfig("cassandra")
 
     val awsConfig: Option[AwsNodeDiscoveryConfiguration] =
@@ -113,6 +124,7 @@ class ProjectConfiguration {
         awsConfig,
         credentialsConfig,
         keyspaceConfig(cs.getConfig("keyspace"), cs.getInt("ttl.sec")),
+        keyspaceConfigExtentRetention(cs.getConfig("keyspace"),  cs.getInt("ttl.sec")),
         socket),
       consistencyLevel = consistencyLevel,
       retryConfig = RetryOperation.Config(

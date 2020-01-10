@@ -19,6 +19,7 @@ package com.expedia.www.haystack.trace.storage.backends.cassandra.store
 
 import java.util.concurrent.atomic.AtomicInteger
 
+import com.datastax.driver.core.PreparedStatement
 import com.expedia.open.tracing.backend.TraceRecord
 import com.expedia.www.haystack.commons.metrics.MetricsSupport
 import com.expedia.www.haystack.commons.retries.RetryOperation._
@@ -39,14 +40,10 @@ class CassandraTraceRecordWriter(cassandra: CassandraSession,
   private lazy val writeFailures = metricRegistry.meter(AppMetricNames.CASSANDRA_WRITE_FAILURE)
 
   cassandra.ensureKeyspace(config.clientConfig.tracesKeyspace)
-<<<<<<< Updated upstream
-  private val spanInsertPreparedStmt = cassandra.createSpanInsertPreparedStatement(config.clientConfig.tracesKeyspace)
-=======
   cassandra.ensureKeyspace(config.clientConfig.tracesKeyspaceForMoreDays)
   private val spanInsertPreparedStmt = cassandra.createSpanInsertPreparedStatement(config.clientConfig.tracesKeyspace,-1)
->>>>>>> Stashed changes
 
-  private def execute(record: TraceRecord): Future[Unit] = {
+  private def execute(record: TraceRecord, spanInsertPreparedStmt: PreparedStatement): Future[Unit] = {
 
     val promise = Promise[Unit]
     // execute the request async with retry
@@ -72,20 +69,12 @@ class CassandraTraceRecordWriter(cassandra: CassandraSession,
     promise.future
   }
 
-  /**
-    * writes the traceId and its spans to cassandra. Use the current timestamp as the sort key for the writes to same
-    * TraceId. Also if the parallel writes exceed the max inflight requests, then we block and this puts backpressure on
-    * upstream
-    *
-    * @param traceRecords : trace records which need to be written
-    * @return
-    */
-  def writeTraceRecords(traceRecords: List[TraceRecord]): Future[Unit] = {
+  def writeTraceRecordsGivenPreparedStmt(traceRecords: List[TraceRecord], spanInsertPreparedStmt: PreparedStatement): Future[Unit] = {
     val promise = Promise[Unit]
     val writableRecordsLatch = new AtomicInteger(traceRecords.size)
     traceRecords.foreach(record => {
       /* write spanBuffer for a given traceId */
-      execute(record).onComplete {
+      execute(record,spanInsertPreparedStmt).onComplete {
         case Success(_) => if (writableRecordsLatch.decrementAndGet() == 0) {
           promise.success()
         }
@@ -99,8 +88,7 @@ class CassandraTraceRecordWriter(cassandra: CassandraSession,
     promise.future
 
   }
-<<<<<<< Updated upstream
-=======
+
   /**
     * writes the traceId and its spans to cassandra. Use the current timestamp as the sort key for the writes to same
     * TraceId. Also if the parallel writes exceed the max inflight requests, then we block and this puts backpressure on
@@ -122,11 +110,10 @@ class CassandraTraceRecordWriter(cassandra: CassandraSession,
    * @param traceRecords : trace records which need to be written
    * @return
    */
-
-  def updateDurationOfRecords(traceRecords: List[TraceRecord], ttlInSec: Int): Future[Unit] = {
+    
+  def updateDurationOfRecords(traceRecords: List[TraceRecord], ttlInSec: Long): Future[Unit] = {
     val spanInsertMoreDaysPreparedStmt = cassandra.createSpanInsertPreparedStatement(config.clientConfig.tracesKeyspaceForMoreDays,ttlInSec)
     writeTraceRecordsGivenPreparedStmt(traceRecords, spanInsertMoreDaysPreparedStmt)
   }
-
->>>>>>> Stashed changes
+  
 }

@@ -1,4 +1,4 @@
-/*
+  /*
  *  Copyright 2017 Expedia, Inc.
  *
  *     Licensed under the Apache License, Version 2.0 (the "License");
@@ -75,11 +75,11 @@ class CassandraSession(config: ClientConfiguration, factory: ClusterFactory) {
   }
 
 
-  def createSpanInsertPreparedStatement(keyspace: KeyspaceConfiguration, ttlInSec: Int): PreparedStatement = {
+  def createSpanInsertPreparedStatement(keyspace: KeyspaceConfiguration, ttlInSec: Long): PreparedStatement = {
     import QueryBuilder.{bindMarker, ttl}
     var recordTTLInSec: Int = keyspace.recordTTLInSec
     if(ttlInSec != -1){
-      recordTTLInSec = ttlInSec
+      recordTTLInSec = ttlInSec.toInt
     }
     val insert = QueryBuilder
       .insertInto(keyspace.name, keyspace.table)

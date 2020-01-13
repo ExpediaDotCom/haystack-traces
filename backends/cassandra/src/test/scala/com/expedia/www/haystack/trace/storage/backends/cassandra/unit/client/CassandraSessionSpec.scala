@@ -30,6 +30,7 @@ class CassandraSessionSpec extends FunSpec with Matchers with EasyMockSugar {
     it("should connect to the cassandra cluster and provide prepared statement for inserts") {
       val keyspaceName = "keyspace-1"
       val tableName = "table-1"
+      var longTermTableName = "table-2"
 
       val factory = mock[CassandraClusterFactory]
       val session = mock[Session]
@@ -39,13 +40,14 @@ class CassandraSessionSpec extends FunSpec with Matchers with EasyMockSugar {
       val tableMetadata = mock[TableMetadata]
       val insertPrepStatement = mock[PreparedStatement]
       val keyspaceConfig = KeyspaceConfiguration(keyspaceName, tableName, 100, None)
+      val longTermKeyspaceConfig = KeyspaceConfiguration(keyspaceName, longTermTableName, 100, None)
 
       val config = ClientConfiguration(List("cassandra1"),
         autoDiscoverEnabled = false,
         None,
         None,
         keyspaceConfig,
-        keyspaceConfig,
+        longTermKeyspaceConfig,
         SocketConfiguration(10, keepAlive = true, 1000, 1000))
 
       val captured = EasyMock.newCapture[Insert.Options]()
@@ -74,7 +76,7 @@ class CassandraSessionSpec extends FunSpec with Matchers with EasyMockSugar {
     it("should connect to the cassandra cluster and provide prepared statement for select with traces") {
       val keyspaceName = "keyspace-1"
       val tableName = "table-1"
-      val permTableName = "table-2"
+      val longTermTableName = "table-2"
 
       val factory = mock[CassandraClusterFactory]
       val session = mock[Session]
@@ -84,14 +86,14 @@ class CassandraSessionSpec extends FunSpec with Matchers with EasyMockSugar {
       val tableMetadata = mock[TableMetadata]
       val selectPrepStatement = mock[PreparedStatement]
       val keyspaceConfig = KeyspaceConfiguration(keyspaceName, tableName, 100, None)
-      val keyspaceConfigPermStorage = KeyspaceConfiguration(keyspaceName, permTableName, 100, None)
+      val longTermKeyspaceConfig = KeyspaceConfiguration(keyspaceName, longTermTableName, 100, None)
 
       val config = ClientConfiguration(List("cassandra1"),
         autoDiscoverEnabled = false,
         None,
         None,
         keyspaceConfig,
-        keyspaceConfigPermStorage,
+        longTermKeyspaceConfig,
         SocketConfiguration(10, keepAlive = true, 1000, 1000))
 
       val captured = EasyMock.newCapture[Select.Where]()
@@ -120,7 +122,7 @@ class CassandraSessionSpec extends FunSpec with Matchers with EasyMockSugar {
     it("should connect to the cassandra cluster and provide prepared statement for updating retention") {
       val keyspaceName = "keyspace-1"
       val tableName = "table-1"
-      val permTableName = "table-2"
+      val longTermTableName = "table-2"
 
       val factory = mock[CassandraClusterFactory]
       val session = mock[Session]
@@ -130,21 +132,21 @@ class CassandraSessionSpec extends FunSpec with Matchers with EasyMockSugar {
       val tableMetadata = mock[TableMetadata]
       val insertPrepStatement = mock[PreparedStatement]
       val keyspaceConfig = KeyspaceConfiguration(keyspaceName, tableName, 100, None)
-      val keyspaceConfigPermStorage = KeyspaceConfiguration(keyspaceName, permTableName, 100, None)
+      val longTermKeyspaceConfig = KeyspaceConfiguration(keyspaceName, longTermTableName, 100, None)
 
       val config = ClientConfiguration(List("cassandra1"),
         autoDiscoverEnabled = false,
         None,
         None,
         keyspaceConfig,
-        keyspaceConfigPermStorage,
+        longTermKeyspaceConfig,
         SocketConfiguration(10, keepAlive = true, 1000, 1000))
 
       val captured = EasyMock.newCapture[Insert.Options]()
       expecting {
         factory.buildCluster(config).andReturn(cluster).once()
         cluster.connect().andReturn(session).once()
-        keyspaceMetadata.getTable(permTableName).andReturn(tableMetadata).once()
+        keyspaceMetadata.getTable(longTermTableName).andReturn(tableMetadata).once()
         metadata.getKeyspace(keyspaceName).andReturn(keyspaceMetadata).once()
         cluster.getMetadata.andReturn(metadata).once()
         session.getCluster.andReturn(cluster).once()
@@ -156,59 +158,11 @@ class CassandraSessionSpec extends FunSpec with Matchers with EasyMockSugar {
       whenExecuting(factory, cluster, session, metadata, keyspaceMetadata, tableMetadata, insertPrepStatement) {
         val session = new CassandraSession(config, factory)
         session.ensureKeyspace(config.tracesLongTermKeyspace)
-        val stmt = session.createSpanInsertPreparedStatement(keyspaceConfigPermStorage,20)
+        val stmt = session.createSpanInsertPreparedStatement(longTermKeyspaceConfig,20)
         stmt shouldBe insertPrepStatement
         captured.getValue.getQueryString() shouldEqual "INSERT INTO \"keyspace-1\".\"table-2\" (id,ts,spans) VALUES (:id,:ts,:spans) USING TTL 20;"
         session.close()
       }
     }
-
-//    it("should connect to the cassandra cluster and provide prepared statement for select  traces with custom retention") {
-//      val keyspaceName = "keyspace-1"
-//      val tableName = "table-1"
-//      val permTableName = "table-2"
-//
-//      val factory = mock[CassandraClusterFactory]
-//      val session = mock[Session]
-//      val cluster = mock[Cluster]
-//      val metadata = mock[Metadata]
-//      val keyspaceMetadata = mock[KeyspaceMetadata]
-//      val tableMetadata = mock[TableMetadata]
-//      val selectPrepStatement = mock[PreparedStatement]
-//      val keyspaceConfig = KeyspaceConfiguration(keyspaceName, tableName, 100, None)
-//      val keyspaceConfigPermStorage = KeyspaceConfiguration(keyspaceName, permTableName, 100, None)
-//
-//      val config = ClientConfiguration(List("cassandra1"),
-//        autoDiscoverEnabled = false,
-//        None,
-//        None,
-//        keyspaceConfig,
-//        keyspaceConfigPermStorage,
-//        SocketConfiguration(10, keepAlive = true, 1000, 1000))
-//
-//      val captured = EasyMock.newCapture[Select.Where]()
-//      expecting {
-//        factory.buildCluster(config).andReturn(cluster).once()
-//        cluster.connect().andReturn(session).once()
-//        keyspaceMetadata.getTable(tableName).andReturn(tableMetadata).once()
-//        keyspaceMetadata.getTable(permTableName).andReturn(tableMetadata).once()
-//        metadata.getKeyspace(keyspaceName).andReturn(keyspaceMetadata).once()
-//        cluster.getMetadata.andReturn(metadata).once()
-//        session.getCluster.andReturn(cluster).once()
-//        session.prepare(EasyMock.capture(captured)).andReturn(selectPrepStatement).anyTimes()
-//        session.close().once()
-//        cluster.close().once()
-//      }
-//
-//      whenExecuting(factory, cluster, session, metadata, keyspaceMetadata, tableMetadata, selectPrepStatement) {
-//        val session = new CassandraSession(config, factory)
-//        session.ensureKeyspace(config.tracesKeyspace)
-//        session.ensureKeyspace(config.tracesKeyspacePermStorage)
-//        val stmt = session.selectRawTracesPreparedStmt
-//        stmt shouldBe selectPrepStatement
-//        captured.getValue.getQueryString() shouldEqual "SELECT * FROM \"keyspace-1\".\"table-1\" WHERE id IN :id;"
-//        session.close()
-//      }
-//    }
   }
 }

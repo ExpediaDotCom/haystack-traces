@@ -57,14 +57,14 @@ class SpansPersistenceService(reader: CassandraTraceRecordReader,
     }
   }
 
-  override def updateSpansRetention(request: UpdateSpansRetentionRequest, responseObserver: StreamObserver[UpdateSpansRetentionResponse]): Unit = {
+  override def updateTraceRetentionPeriod(request: TraceRetentionRequest, responseObserver: StreamObserver[TraceRetentionResponse]): Unit = {
     handleUpdateSpansDurationResponse.handle(request, responseObserver) {
       reader.readTraceRecords(request.getTraceIdsList.iterator().asScala.toList).map ({
         records => {
-          writer.updateTraceRetentionPeriod(records.toList,request.getRetention())
+          writer.writeTraceRecordsGivenRetention(records.toList,request.getRetention())
         }
       }).map(_=>
-      UpdateSpansRetentionResponse.newBuilder().setCode(UpdateSpansRetentionResponse.ResultCode.SUCCESS).build())
+      TraceRetentionResponse.newBuilder().setCode(TraceRetentionResponse.ResultCode.SUCCESS).build())
     }
   }
 }

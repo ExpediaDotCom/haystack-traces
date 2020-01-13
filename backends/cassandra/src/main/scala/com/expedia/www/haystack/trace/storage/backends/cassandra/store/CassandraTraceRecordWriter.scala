@@ -108,12 +108,13 @@ class CassandraTraceRecordWriter(cassandra: CassandraSession,
    * upstream
    *
    * @param traceRecords : trace records which need to be written
+   * @param ttlInSec : ttl in seconds for the given trace records
    * @return
    */
 
-  def updateTraceRetentionPeriod(traceRecords: List[TraceRecord], ttlInSec: Long): Future[Unit] = {
-    val spanRetentionUpdatePreparedStmt = cassandra.createSpanInsertPreparedStatement(config.clientConfig.tracesLongTermKeyspace,ttlInSec)
-    writeTraceRecordsGivenPreparedStmt(traceRecords, spanRetentionUpdatePreparedStmt)
+  def writeTraceRecordsGivenRetention(traceRecords: List[TraceRecord], ttlInSec: Long): Future[Unit] = {
+    val spanInsertGivenTTLPreparedStmt = cassandra.createSpanInsertPreparedStatement(config.clientConfig.tracesLongTermKeyspace,ttlInSec)
+    writeTraceRecordsGivenPreparedStmt(traceRecords, spanInsertGivenTTLPreparedStmt)
   }
   
 }

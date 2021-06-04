@@ -80,7 +80,7 @@
 
         <jest.version>5.3.2</jest.version>
         <elasticsearch.version>6.0.1</elasticsearch.version>
-        <httpclient.version>4.5.3</httpclient.version>
+        <httpclient.version>4.5.13</httpclient.version>
         <aws-sdk.version>1.11.20</aws-sdk.version>
         <scala.major.version>2</scala.major.version>
         <scala.minor.version>12</scala.minor.version>
